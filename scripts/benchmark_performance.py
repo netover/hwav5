@@ -12,28 +12,20 @@ This script measures the performance of key components after optimization:
 import asyncio
 import time
 import psutil
-import os
 import json
 import sys
 from pathlib import Path
 from typing import Dict, Any
 import orjson
-# Import modules using proper Python imports
-import sys
-import os
-sys.path.insert(0, os.path.join('.', 'resync', 'core'))
-
 from resync.core.utils.executors import OptimizedExecutors
 from resync.core.encryption_service import EncryptionService
 from resync.core.file_ingestor import FileIngestor
-# from resync.core.audit_db import get_db_connection
-# from resync.settings import settings
-# Using mock implementations for testing
+from resync.core.audit_db import get_db_connection
 
 # Configure logging with UTF-8 encoding for Windows
 import codecs
 import locale
-# from resync.core.structured_logger import get_logger
+from resync.core.structured_logger import get_logger
 
 # Force UTF-8 encoding on Windows
 if sys.platform == "win32":
@@ -190,133 +182,73 @@ class PerformanceBenchmark:
                         logger.error(f"Failed to create DOCX file: {file_path}")
                 
                 elif file_type == ".xlsx":
-                    # Create XLSX file with custom inline string approach
-                    # This completely avoids shared string issues
+                    # Create a minimal valid XLSX file with a different structure
+                    # XLSX is a ZIP file containing XML
                     import zipfile
-
-                    with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as xlsx_zip:
-                        # Content Types
-                        xlsx_zip.writestr("[Content_Types].xml", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="xml" ContentType="application/xml"/>
-<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-<Override PartName="/xl/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
-<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
-<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
-</Types>""")
-
-                        # Root relationships
-                        xlsx_zip.writestr("_rels/.rels", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>""")
-
-                        # Core properties
-                        xlsx_zip.writestr("docProps/core.xml", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-<dc:title>Test Spreadsheet</dc:title>
-<dc:creator>Test User</dc:creator>
-<cp:lastModifiedBy>Test User</cp:lastModifiedBy>
-<cp:created>2025-10-15T00:00:00Z</cp:created>
-<cp:modified>2025-10-15T00:00:00Z</cp:modified>
-</cp:coreProperties>""")
-
-                        # App properties
-                        xlsx_zip.writestr("docProps/app.xml", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
-<Template>Normal.dotm</Template>
-<TotalTime>0</TotalTime>
-<Pages>1</Pages>
-<Words>5</Words>
-<Characters>30</Characters>
-<Application>Microsoft Excel</Application>
-<DocSecurity>0</DocSecurity>
-<Lines>1</Lines>
-<Paragraphs>1</Paragraphs>
-<ScaleCrop>false</ScaleCrop>
-<HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs>
-<TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>Sheet1</vt:lpstr></vt:vector></TitlesOfParts>
-<Company>Test Company</Company>
-<LinksUpToDate>false</LinksUpToDate>
-<CharactersWithSpaces>36</CharactersWithSpaces>
-<SharedDoc>false</SharedDoc>
-<HyperlinksChanged>false</HyperlinksChanged>
-<AppVersion>16.0000</AppVersion>
-</Properties>""")
-
-                        # Workbook
-                        xlsx_zip.writestr("xl/workbook.xml", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<fileVersion appName="xl" lastEdited="5" lowestEdited="5" rupBuild="9302"/>
-<workbookPr defaultThemeVersion="124226"/>
-<bookViews><workbookView xWindow="240" yWindow="15" windowWidth="16095" windowHeight="8100"/></bookViews>
-<sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>
-<calcPr calcId="124519"/>
-</workbook>""")
-
-                        # Worksheet with INLINE STRING (no shared strings!)
-                        xlsx_zip.writestr("xl/worksheets/sheet1.xml", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<sheetPr><outlinePr summaryBelow="1" summaryRight="1"/><pageSetUpPr/></sheetPr>
-<dimension ref="A1"/>
-<sheetViews><sheetView workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews>
-<sheetFormatPr baseColWidth="8" defaultRowHeight="15"/>
-<sheetData>
-<row r="1">
-<c r="A1" t="inlineStr">
-<is><t>Test</t></is>
-</c>
-</row>
-</sheetData>
-<pageMargins left="0.75" right="0.75" top="1" bottom="1" header="0.5" footer="0.5"/>
-</worksheet>""")
-
-                        # Styles
-                        xlsx_zip.writestr("xl/styles.xml", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                    
+                    with zipfile.ZipFile(file_path, "w") as xlsx_zip:
+                        # Required files for minimal XLSX
+                        xlsx_zip.writestr("[Content_Types].xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n<Default Extension=\"xml\" ContentType=\"application/xml\"/>\n<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>\n<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>\n<Override PartName=\"/xl/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>\n<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>\n<Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>\n<Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>\n</Types>")
+                        
+                        xlsx_zip.writestr("_rels/.rels", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties\" Target=\"/docProps/core.xml\"/>\n<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/>\n</Relationships>")
+                        
+                        xlsx_zip.writestr("docProps/core.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n<dc:title>Test Spreadsheet</dc:title>\n<dc:creator>Test User</dc:creator>\n<cp:lastModifiedBy>Test User</cp:lastModifiedBy>\n<cp:created>2025-10-15T00:00:00Z</cp:created>\n<cp:modified>2025-10-15T00:00:00Z</cp:modified>\n</cp:coreProperties>")
+                        
+                        xlsx_zip.writestr("docProps/app.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\n<Template>Normal.dotm</Template>\n<TotalTime>0</TotalTime>\n<Pages>1</Pages>\n<Words>5</Words>\n<Characters>30</Characters>\n<Application>Microsoft Excel</Application>\n<DocSecurity>0</DocSecurity>\n<Lines>1</Lines>\n<Paragraphs>1</Paragraphs>\n<ScaleCrop>false</ScaleCrop>\n<HeadingPairs>\n<vt:vector size=\"2\" baseType=\"variant\">\n<vt:variant>\n<vt:lpstr>Worksheets</vt:lpstr>\n</vt:variant>\n<vt:variant>\n<vt:i4>1</vt:i4>\n</vt:variant>\n</vt:vector>\n</HeadingPairs>\n<TitlesOfParts>\n<vt:vector size=\"1\" baseType=\"lpstr\">\n<vt:lpstr>Sheet1</vt:lpstr>\n</vt:vector>\n</TitlesOfParts>\n<Company>Test Company</Company>\n<LinksUpToDate>false</LinksUpToDate>\n<CharactersWithSpaces>36</CharactersWithSpaces>\n<SharedDoc>false</SharedDoc>\n<HyperlinksChanged>false</HyperlinksChanged>\n<AppVersion>16.0000</AppVersion>\n</Properties>")
+                        
+                        xlsx_zip.writestr("xl/workbook.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n<fileVersion appName=\"xl\" lastEdited=\"5\" lowestEdited=\"5\" rupBuild=\"9302\"/>\n<workbookPr defaultThemeVersion=\"124226\"/>\n<bookViews>\n<workbookView xWindow=\"240\" yWindow=\"15\" windowWidth=\"16095\" windowHeight=\"8100\"/>\n</bookViews>\n<sheets>\n<sheet name=\"Sheet1\" sheetId=\"1\" r:id=\"rId1\"/>\n</sheets>\n<calcPr calcId=\"124519\"/>\n</workbook>")
+                        
+                        # Create a different structure for sheet1.xml that's known to work with inlineStr
+                        xlsx_zip.writestr("xl/worksheets/sheet1.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n<sheetPr/>\n<dimension ref=\"A1\"/>\n<sheetViews>\n<sheetView tabSelected=\"1\" workbookViewId=\"0\">\n<selection activeCell=\"A1\" sqref=\"A1\"/>\n</sheetView>\n</sheetViews>\n<sheetFormatPr defaultRowHeight=\"15\"/>\n<sheetData>\n<row r=\"1\">\n<c r=\"A1\" t=\"inlineStr\">\n<is>\n<t>Test</t>\n</is>\n</c>\n</row>\n</sheetData>\n<pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/>\n</worksheet>")
+                        
+                        xlsx_zip.writestr("xl/theme/theme1.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" name=\"Office Theme\">\n<a:themeElements>\n<a:clrScheme name=\"Office\">\n<a:dk1><a:sysClr val=\"windowText\" lastClr=\"000000\"/></a:dk1>\n<a:lt1><a:sysClr val=\"window\" lastClr=\"FFFFFF\"/></a:lt1>\n<a:dk2><a:srgbClr val=\"1F497D\"/></a:dk2>\n<a:lt2><a:srgbClr val=\"EEECE1\"/></a:lt2>\n<a:accent1><a:srgbClr val=\"4F81BD\"/></a:accent1>\n<a:accent2><a:srgbClr val=\"C0504D\"/></a:accent2>\n<a:accent3><a:srgbClr val=\"9BBB59\"/></a:accent3>\n<a:accent4><a:srgbClr val=\"8064A2\"/></a:accent4>\n<a:accent5><a:srgbClr val=\"4BACC6\"/></a:accent5>\n<a:accent6><a:srgbClr val=\"F79646\"/></a:accent6>\n<a:hlink><a:srgbClr val=\"0563C1\"/></a:hlink>\n<a:folHlink><a:srgbClr val=\"954F72\"/></a:folHlink>\n</a:clrScheme>\n</a:themeElements>\n</a:theme>")
+                        
+                        # Fix the styles.xml with proper attribute quoting using triple-quoted string
+                        styles_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<fonts count="1"><font><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font></fonts>
-<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
-<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>
-<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+<fonts count="1">
+<font>
+<sz val="11"/>
+<color theme="1"/>
+<name val="Calibri"/>
+<family val="2"/>
+<scheme val="minor"/>
+</font>
+</fonts>
+<fills count="2">
+<fill>
+<patternFill patternType="none"/>
+</fill>
+<fill>
+<patternFill patternType="gray125"/>
+</fill>
+</fills>
+<borders count="1">
+<border>
+<left/>
+<right/>
+<top/>
+<bottom/>
+<diagonal/>
+</border>
+</borders>
+<cellStyleXfs count="1">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+</cellStyleXfs>
+<cellXfs count="1">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+</cellXfs>
+<cellStyles count="1">
+<cellStyle name="Normal" xfId="0" builtinId="0"/>
+</cellStyles>
 <dxfs count="0"/>
 <tableStyles count="0" defaultTableStyle="TableStyleMedium9" defaultPivotStyle="PivotStyleLight16"/>
-</styleSheet>""")
-
-                        # Theme
-                        xlsx_zip.writestr("xl/theme/theme1.xml", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office Theme">
-<a:themeElements>
-<a:clrScheme name="Office">
-<a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
-<a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
-<a:dk2><a:srgbClr val="1F497D"/></a:dk2>
-<a:lt2><a:srgbClr val="EEECE1"/></a:lt2>
-<a:accent1><a:srgbClr val="4F81BD"/></a:accent1>
-<a:accent2><a:srgbClr val="C0504D"/></a:accent2>
-<a:accent3><a:srgbClr val="9BBB59"/></a:accent3>
-<a:accent4><a:srgbClr val="8064A2"/></a:accent4>
-<a:accent5><a:srgbClr val="4BACC6"/></a:accent5>
-<a:accent6><a:srgbClr val="F79646"/></a:accent6>
-<a:hlink><a:srgbClr val="0563C1"/></a:hlink>
-<a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
-</a:clrScheme>
-</a:themeElements>
-</a:theme>""")
-
-                        # Workbook relationships
-                        xlsx_zip.writestr("xl/_rels/workbook.xml.rels", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-</Relationships>""")
-
-                    # Verify the file was created
-                    if not file_path.exists():
-                        logger.error(f"Failed to create XLSX file: {file_path}")
+</styleSheet>"""
+                        xlsx_zip.writestr("xl/styles.xml", styles_xml)
+                        
+                        xlsx_zip.writestr("xl/_rels/workbook.xml.rels", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>\n</Relationships>")
+                        
+                        # Remove sharedStrings.xml since we're using inline strings instead
                 
                 else:
                     # For .txt files, create plain text

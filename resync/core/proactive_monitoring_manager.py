@@ -93,7 +93,7 @@ class ProactiveMonitoringManager:
         from resync.core.tws_status_store import init_status_store
         
         self._status_store = await init_status_store(
-            db_path="data/tws_status.db",
+            # db_path removed - using PostgreSQL
             retention_days_full=self._config.retention_days_full,
             retention_days_summary=self._config.retention_days_summary,
             retention_days_patterns=self._config.retention_days_patterns,

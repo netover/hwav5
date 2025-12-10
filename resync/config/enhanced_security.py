@@ -10,7 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from resync.api.validation.enhanced_security_fixed import SecurityHeadersMiddleware
+from resync.api.validation.enhanced_security import SecurityHeadersMiddleware
 from resync.settings import settings
 
 logger = logging.getLogger(__name__)

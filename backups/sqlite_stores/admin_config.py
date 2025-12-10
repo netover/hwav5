@@ -2,7 +2,7 @@
 API routes for admin configuration management.
 
 This module provides simple endpoints to persist and retrieve configuration
-settings for administration UI.  Currently it supports only the
+settings for the administration UI.  Currently it supports only the
 Microsoft Teams integration settings, but it can be extended to cover
 additional configuration domains (e.g., TWS instances, system settings)
 without changing the core logic.
@@ -36,10 +36,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Determine the path to the configuration file.  We place the file
-# alongside other configuration resources (e.g., settings.toml) inside the
-# top-level ``config`` directory.  ``__file__`` is
+# alongside other configuration resources (e.g., settings.toml) inside
+# the top-level ``config`` directory.  ``__file__`` is
 # ``.../resync/fastapi_app/api/v1/routes/admin_config.py``.
-CONFIG_PATH = Path(__file__).resolve().parent.parent.parent.parent / "config" / "admin_config.json"
+CONFIG_PATH = Path(__file__).resolve().parent.parent.parent.parent.parent / "config" / "admin_config.json"
 
 # Default configuration values used when the config file does not exist.
 DEFAULT_CONFIG: Dict[str, Any] = {
@@ -71,6 +71,13 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "notify_alerts": True,
         "notify_performance": False,
     },
+    # Auto-tuning configuration for Active Learning thresholds.
+    # Levels: "off" (static), "low" (metrics only), "mid" (suggestions), "high" (auto-adjust)
+    "auto_tuning": {
+        "level": "off",
+        "last_change": None,
+        "changed_by": None,
+    },
 }
 
 # -----------------------------------------------------------------------------
@@ -95,7 +102,7 @@ def _get_health_report() -> Dict[str, Any]:
         "llm": True,
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
     }
-    # If Teams integration is enabled in config, mark as active
+    # If Teams integration is enabled in the config, mark as active
     cfg = _load_config()
     teams_cfg = cfg.get("teams_config", DEFAULT_CONFIG["teams_config"])
     report["teams"] = bool(teams_cfg.get("enabled"))
@@ -104,7 +111,7 @@ def _get_health_report() -> Dict[str, Any]:
 
 
 def _load_config() -> Dict[str, Any]:
-    """Read configuration from disk or return defaults.
+    """Read the configuration from disk or return defaults.
 
     Returns
     -------
@@ -274,22 +281,19 @@ async def get_logs(file: str = "app.log", lines: int = 100) -> Dict[str, Any]:
     Parameters
     ----------
     file : str, optional
-        Name of log file (must be located in the project's ``logs`` directory).
+        Name of the log file (must be located in the project's ``logs`` directory).
     lines : int, optional
         Number of lines to return from the end of the file.
 
     Returns
     -------
     dict
-        A dictionary containing the filename and text content of the log.
+        A dictionary containing the filename and the text content of the log.
     """
-    logs_dir = Path(__file__).resolve().parent.parent.parent.parent / "logs"
+    logs_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "logs"
     log_path = logs_dir / file
     if not log_path.is_file():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Log file not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Log file not found")
     try:
         # Read the last ``lines`` lines efficiently
         with log_path.open("r", encoding="utf-8", errors="ignore") as f:
@@ -299,99 +303,68 @@ async def get_logs(file: str = "app.log", lines: int = 100) -> Dict[str, Any]:
             content = "".join(dq)
         return {"file": file, "content": content}
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to read log file: {exc}"
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Failed to read log file: {exc}")
 
 
 # ----- Backup and Restore Endpoints -----
 
 @router.post("/backup", tags=["Admin"])
 async def create_backup() -> Dict[str, str]:
-    """Create a backup of audit data.
+    """Create a timestamped backup of critical databases.
 
-    With PostgreSQL, this exports audit entries to a JSON file
-    for archival purposes.
-    
-    Returns:
-        Dictionary with backup status and filename.
+    Copies ``audit_log.db`` and ``audit_queue.db`` (if present) into a
+    ``backup`` directory within the project, appending a timestamp to the
+    filenames.  Returns the names of the created backup files.
     """
-    from resync.core.database.repositories import AuditEntryRepository
-    
     timestamp = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
     backup_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "backup"
     backup_dir.mkdir(parents=True, exist_ok=True)
-    
-    try:
-        repo = AuditEntryRepository()
-        entries = await repo.get_all(limit=10000)
-        
-        backup_data = [
-            {
-                "id": e.id,
-                "action": e.action,
-                "user_id": e.user_id,
-                "entity_type": e.entity_type,
-                "entity_id": e.entity_id,
-                "timestamp": e.timestamp.isoformat() if e.timestamp else None,
-            }
-            for e in entries
-        ]
-        
-        backup_file = backup_dir / f"audit_backup_{timestamp}.json"
-        with open(backup_file, "w") as f:
-            json.dump(backup_data, f, indent=2)
-        
-        return {"created": [backup_file.name], "count": len(backup_data)}
-    except Exception as exc:
-        logger.error("backup_failed", error=str(exc), exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Backup failed: {exc}"
-        )
+    created = []
+    for db_name in ["audit_log.db", "audit_queue.db"]:
+        src = Path(__file__).resolve().parent.parent.parent.parent.parent / db_name
+        if src.is_file():
+            dest = backup_dir / f"{src.stem}_{timestamp}{src.suffix}"
+            try:
+                shutil.copy2(src, dest)
+                created.append(dest.name)
+            except Exception as exc:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                    detail=f"Failed to backup {db_name}: {exc}")
+    return {"created": created}
 
 
 @router.post("/restore", tags=["Admin"])
 async def restore_from_latest() -> Dict[str, str]:
-    """Restore audit data from the most recent backup.
+    """Restore the most recent backup of the audit databases.
 
-    Note: With PostgreSQL, this is primarily for disaster recovery.
-    Normal operations should use PostgreSQL's native backup tools (pg_dump).
-    
-    Returns:
-        Dictionary with restore status.
+    Finds the latest files in the ``backup`` directory matching
+    ``audit_log_*`` and ``audit_queue_*`` and copies them back into the
+    project root.  Returns the names of the files restored.
     """
     backup_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "backup"
     if not backup_dir.is_dir():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="No backup directory found"
-        )
-    
-    # Find latest JSON backup
-    backups = sorted(
-        backup_dir.glob("audit_backup_*.json"), 
-        key=lambda p: p.stat().st_mtime, 
-        reverse=True
-    )
-    
-    if not backups:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No backup files found"
-        )
-    
-    return {
-        "message": "PostgreSQL restore should be done via pg_restore",
-        "latest_backup": backups[0].name,
-        "recommendation": "Use: pg_restore -d resync backup.dump"
-    }
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No backup directory found")
+    restored = []
+    for pattern in ["audit_log_*.db", "audit_queue_*.db"]:
+        backups = sorted(backup_dir.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+        if backups:
+            latest = backups[0]
+            target = Path(__file__).resolve().parent.parent.parent.parent.parent / latest.name.split("_")[0] + ".db"
+            try:
+                shutil.copy2(latest, target)
+                restored.append(latest.name)
+            except Exception as exc:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                    detail=f"Failed to restore {latest.name}: {exc}")
+    return {"restored": restored}
 
+
+# ----- Audit Logs Endpoint -----
 
 @router.get("/audit", tags=["Admin"])
 async def get_audit_logs(limit: int = 50) -> Dict[str, Any]:
-    """Return the latest entries from the audit log.
+    """Return the latest entries from the audit log database.
 
     Parameters
     ----------
@@ -401,31 +374,12 @@ async def get_audit_logs(limit: int = 50) -> Dict[str, Any]:
     Returns
     -------
     dict
-        A dictionary containing a list of audit records.
+        A dictionary containing a list of audit records.  If the database
+        cannot be read, returns an empty list.
     """
-    from resync.core.database.repositories import AuditEntryRepository
-    
-    try:
-        repo = AuditEntryRepository()
-        entries = await repo.get_all(limit=limit, order_by="timestamp", desc=True)
-        
-        records = [
-            {
-                "id": e.id,
-                "action": e.action,
-                "user_id": e.user_id,
-                "entity_type": e.entity_type,
-                "entity_id": e.entity_id,
-                "timestamp": e.timestamp.isoformat() if e.timestamp else None,
-                "metadata": e.metadata_,
-            }
-            for e in entries
-        ]
-        
-        return {"records": records, "count": len(records)}
-    except Exception as exc:
-        logger.error("audit_query_failed", error=str(exc), exc_info=True)
-        return {"records": [], "error": str(exc)}
+    db_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "audit_log.db"
+    if not db_path.is_file():
+        return {"records": []}
 
 
 # ----- Health Monitoring Endpoint -----

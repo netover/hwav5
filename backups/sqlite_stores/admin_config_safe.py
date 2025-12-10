@@ -309,89 +309,74 @@ async def get_logs(file: str = "app.log", lines: int = 100) -> Dict[str, Any]:
 
 @router.post("/backup", tags=["Admin"])
 async def create_backup() -> Dict[str, str]:
-    """Create a backup of audit data.
+    """Create a timestamped backup of critical databases.
 
-    With PostgreSQL, this exports audit entries to a JSON file
-    for archival purposes.
-    
-    Returns:
-        Dictionary with backup status and filename.
+    Copies ``audit_log.db`` and ``audit_queue.db`` (if present) into a
+    ``backup`` directory within the project, appending a timestamp to the
+    filenames.  Returns the names of the created backup files.
     """
-    from resync.core.database.repositories import AuditEntryRepository
-    
     timestamp = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    backup_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "backup"
+    backup_dir = Path(__file__).resolve().parent.parent.parent.parent / "backup"
     backup_dir.mkdir(parents=True, exist_ok=True)
-    
-    try:
-        repo = AuditEntryRepository()
-        entries = await repo.get_all(limit=10000)
-        
-        backup_data = [
-            {
-                "id": e.id,
-                "action": e.action,
-                "user_id": e.user_id,
-                "entity_type": e.entity_type,
-                "entity_id": e.entity_id,
-                "timestamp": e.timestamp.isoformat() if e.timestamp else None,
-            }
-            for e in entries
-        ]
-        
-        backup_file = backup_dir / f"audit_backup_{timestamp}.json"
-        with open(backup_file, "w") as f:
-            json.dump(backup_data, f, indent=2)
-        
-        return {"created": [backup_file.name], "count": len(backup_data)}
-    except Exception as exc:
-        logger.error("backup_failed", error=str(exc), exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Backup failed: {exc}"
-        )
+    created = []
+    for db_name in ["audit_log.db", "audit_queue.db"]:
+        src = Path(__file__).resolve().parent.parent.parent.parent / db_name
+        if src.is_file():
+            dest = backup_dir / f"{src.stem}_{timestamp}{src.suffix}"
+            try:
+                shutil.copy2(src, dest)
+                created.append(dest.name)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to backup {db_name}: {exc}"
+                )
+    return {"created": created}
 
 
 @router.post("/restore", tags=["Admin"])
 async def restore_from_latest() -> Dict[str, str]:
-    """Restore audit data from the most recent backup.
+    """Restore the most recent backup of the audit databases.
 
-    Note: With PostgreSQL, this is primarily for disaster recovery.
-    Normal operations should use PostgreSQL's native backup tools (pg_dump).
-    
-    Returns:
-        Dictionary with restore status.
+    Finds the latest files in the ``backup`` directory matching
+    ``audit_log_*`` and ``audit_queue_*`` and copies them back into the
+    project root.  Returns the names of the files restored.
     """
-    backup_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "backup"
+    backup_dir = Path(__file__).resolve().parent.parent.parent.parent / "backup"
     if not backup_dir.is_dir():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail="No backup directory found"
         )
-    
-    # Find latest JSON backup
-    backups = sorted(
-        backup_dir.glob("audit_backup_*.json"), 
-        key=lambda p: p.stat().st_mtime, 
-        reverse=True
-    )
-    
-    if not backups:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No backup files found"
+    restored = []
+    for pattern in ["audit_log_*.db", "audit_queue_*.db"]:
+        backups = sorted(
+            backup_dir.glob(pattern), 
+            key=lambda p: p.stat().st_mtime, 
+            reverse=True
         )
-    
-    return {
-        "message": "PostgreSQL restore should be done via pg_restore",
-        "latest_backup": backups[0].name,
-        "recommendation": "Use: pg_restore -d resync backup.dump"
-    }
+        if backups:
+            latest = backups[0]
+            target = (
+                Path(__file__).resolve().parent.parent.parent.parent / 
+                latest.name.split("_")[0] + ".db"
+            )
+            try:
+                shutil.copy2(latest, target)
+                restored.append(latest.name)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to restore {latest.name}: {exc}"
+                )
+    return {"restored": restored}
 
+
+# ----- Audit Logs Endpoint -----
 
 @router.get("/audit", tags=["Admin"])
 async def get_audit_logs(limit: int = 50) -> Dict[str, Any]:
-    """Return the latest entries from the audit log.
+    """Return the latest entries from the audit log database.
 
     Parameters
     ----------
@@ -401,31 +386,43 @@ async def get_audit_logs(limit: int = 50) -> Dict[str, Any]:
     Returns
     -------
     dict
-        A dictionary containing a list of audit records.
+        A dictionary containing a list of audit records.  If the database
+        cannot be read, returns an empty list.
     """
-    from resync.core.database.repositories import AuditEntryRepository
-    
+    db_path = Path(__file__).resolve().parent.parent.parent.parent / "audit_log.db"
+    if not db_path.is_file():
+        return {"records": []}
     try:
-        repo = AuditEntryRepository()
-        entries = await repo.get_all(limit=limit, order_by="timestamp", desc=True)
-        
-        records = [
-            {
-                "id": e.id,
-                "action": e.action,
-                "user_id": e.user_id,
-                "entity_type": e.entity_type,
-                "entity_id": e.entity_id,
-                "timestamp": e.timestamp.isoformat() if e.timestamp else None,
-                "metadata": e.metadata_,
-            }
-            for e in entries
-        ]
-        
-        return {"records": records, "count": len(records)}
+        import sqlite3
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        # Attempt to read a table named 'audit_log' or 'log'; adapt as needed.
+        # Fallback if table does not exist.
+        table = None
+        for candidate in ["audit_log", "log", "logs", "events"]:
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                (candidate,)
+            )
+            if cursor.fetchone():
+                table = candidate
+                break
+        if not table:
+            return {"records": []}
+        # Use parameterized query to prevent SQL injection
+        cursor.execute(
+            "SELECT * FROM ? ORDER BY rowid DESC LIMIT ?", 
+            (table, limit,)
+        )
+        rows = cursor.fetchall()
+        records = [dict(r) for r in rows]
+        conn.close()
+        return {"records": records}
     except Exception as exc:
-        logger.error("audit_query_failed", error=str(exc), exc_info=True)
-        return {"records": [], "error": str(exc)}
+        logger.error("exception_caught", error=str(exc), exc_info=True)
+        # If reading fails, return empty list to avoid exposing internals
+        return {"records": []}
 
 
 # ----- Health Monitoring Endpoint -----

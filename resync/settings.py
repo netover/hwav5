@@ -103,7 +103,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     # ============================================================================
     # O ContextStore usa SQLite para armazenar conversas e auditoria
     context_db_path: str = Field(
-        default="context_store.db", description="Caminho do banco SQLite para Context Store"
+        default=""  # SQLite removed - using PostgreSQL, description="Deprecated - using PostgreSQL"
     )
 
     # ============================================================================

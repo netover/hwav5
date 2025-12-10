@@ -75,7 +75,7 @@ async def lifespan(app: FastAPI):
             await init_monitoring_system(
                 tws_client=tws_client,
                 polling_interval=config.polling_interval_seconds,
-                db_path="data/tws_status.db",
+                # db_path removed - using PostgreSQL
                 auto_start=True,
             )
             logger.info(

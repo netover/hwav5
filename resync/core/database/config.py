@@ -1,194 +1,141 @@
 """
-Database Configuration - PostgreSQL as Default.
+Database Configuration - PostgreSQL Only.
 
-Production-ready database configuration with PostgreSQL as the primary backend.
+Production-ready database configuration with PostgreSQL as the only backend.
+All SQLite references have been removed as part of the consolidation.
 
 Environment Variables:
-- DATABASE_URL: Full connection string (overrides all other settings)
-- DATABASE_DRIVER: postgresql (default), sqlite, mysql
-- DATABASE_HOST: Database host (default: localhost)
-- DATABASE_PORT: Database port (default: 5432)
+- DATABASE_URL: Full PostgreSQL connection string
+- DATABASE_HOST: PostgreSQL host (default: localhost)
+- DATABASE_PORT: PostgreSQL port (default: 5432)
 - DATABASE_NAME: Database name (default: resync)
 - DATABASE_USER: Username (default: resync)
-- DATABASE_PASSWORD: Password (required for non-SQLite)
-- DATABASE_POOL_SIZE: Connection pool size (default: 10)
-- DATABASE_MAX_OVERFLOW: Max overflow connections (default: 20)
+- DATABASE_PASSWORD: Password
 """
 
 import os
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
-from urllib.parse import quote_plus
+from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseDriver(str, Enum):
-    """Supported database drivers."""
-    POSTGRESQL = "postgresql"  # Default, recommended
-    SQLITE = "sqlite"          # Development only
-    MYSQL = "mysql"            # Alternative
-    MARIADB = "mariadb"        # Alternative
+    """Database driver enumeration."""
+    POSTGRESQL = "postgresql"  # Only supported backend
 
 
 @dataclass
 class DatabaseConfig:
     """
-    Database configuration.
+    PostgreSQL database configuration.
     
-    PostgreSQL is the default and recommended database for production.
-    SQLite can be used for development/testing only.
+    PostgreSQL is the only supported database for production and development.
     """
-    
-    # Connection settings
-    driver: DatabaseDriver = DatabaseDriver.POSTGRESQL  # Changed to PostgreSQL
+    driver: DatabaseDriver = DatabaseDriver.POSTGRESQL
     host: str = "localhost"
     port: int = 5432
     name: str = "resync"
     user: str = "resync"
     password: str = ""
     
-    # Connection pool settings (for PostgreSQL/MySQL)
+    # Connection pool settings
     pool_size: int = 10
     max_overflow: int = 20
     pool_timeout: int = 30
-    pool_recycle: int = 1800
-    pool_pre_ping: bool = True  # Test connections before use
-    
-    # SQLite-specific (development only)
-    sqlite_path: str = "resync_dev.db"
+    pool_recycle: int = 3600
     
     # SSL settings
-    ssl_mode: str = "prefer"  # disable, prefer, require, verify-ca, verify-full
-    ssl_cert: Optional[str] = None
-    ssl_key: Optional[str] = None
-    ssl_ca: Optional[str] = None
-    
-    # Query settings
-    echo_queries: bool = False  # Log all SQL queries
+    ssl_mode: str = "prefer"  # disable, allow, prefer, require, verify-ca, verify-full
     
     @property
     def url(self) -> str:
-        """Generate async database URL."""
-        if self.driver == DatabaseDriver.SQLITE:
-            return f"sqlite+aiosqlite:///{self.sqlite_path}"
-        
-        # Encode password for special characters
-        password = quote_plus(self.password) if self.password else ""
-        
-        if self.driver == DatabaseDriver.POSTGRESQL:
-            base_url = f"postgresql+asyncpg://{self.user}:{password}@{self.host}:{self.port}/{self.name}"
-            # Add SSL mode if not default
-            if self.ssl_mode != "prefer":
-                base_url += f"?ssl={self.ssl_mode}"
-            return base_url
-        
-        if self.driver in (DatabaseDriver.MYSQL, DatabaseDriver.MARIADB):
-            return f"mysql+aiomysql://{self.user}:{password}@{self.host}:{self.port}/{self.name}"
-        
-        raise ValueError(f"Unsupported driver: {self.driver}")
+        """Get async database URL for SQLAlchemy."""
+        password = self.password or os.getenv("DATABASE_PASSWORD", "")
+        return f"postgresql+asyncpg://{self.user}:{password}@{self.host}:{self.port}/{self.name}"
     
     @property
     def sync_url(self) -> str:
-        """Generate synchronous database URL (for migrations/alembic)."""
-        if self.driver == DatabaseDriver.SQLITE:
-            return f"sqlite:///{self.sqlite_path}"
-        
-        password = quote_plus(self.password) if self.password else ""
-        
-        if self.driver == DatabaseDriver.POSTGRESQL:
-            return f"postgresql+psycopg2://{self.user}:{password}@{self.host}:{self.port}/{self.name}"
-        
-        if self.driver in (DatabaseDriver.MYSQL, DatabaseDriver.MARIADB):
-            return f"mysql+pymysql://{self.user}:{password}@{self.host}:{self.port}/{self.name}"
-        
-        raise ValueError(f"Unsupported driver: {self.driver}")
+        """Get sync database URL for SQLAlchemy."""
+        password = self.password or os.getenv("DATABASE_PASSWORD", "")
+        return f"postgresql+psycopg2://{self.user}:{password}@{self.host}:{self.port}/{self.name}"
     
-    @classmethod
-    def from_env(cls) -> "DatabaseConfig":
-        """Create configuration from environment variables."""
-        # Check for full URL first
-        url = os.getenv("DATABASE_URL")
-        if url:
-            return cls._from_url(url)
-        
-        # Build from individual vars - default to PostgreSQL
-        driver_str = os.getenv("DATABASE_DRIVER", "postgresql").lower()
-        
-        try:
-            driver = DatabaseDriver(driver_str)
-        except ValueError:
-            # Fallback to PostgreSQL if invalid driver
-            driver = DatabaseDriver.POSTGRESQL
-        
-        return cls(
-            driver=driver,
-            host=os.getenv("DATABASE_HOST", "localhost"),
-            port=int(os.getenv("DATABASE_PORT", "5432")),
-            name=os.getenv("DATABASE_NAME", "resync"),
-            user=os.getenv("DATABASE_USER", "resync"),
-            password=os.getenv("DATABASE_PASSWORD", ""),
-            sqlite_path=os.getenv("SQLITE_PATH", "resync_dev.db"),
-            pool_size=int(os.getenv("DATABASE_POOL_SIZE", "10")),
-            max_overflow=int(os.getenv("DATABASE_MAX_OVERFLOW", "20")),
-            pool_timeout=int(os.getenv("DATABASE_POOL_TIMEOUT", "30")),
-            pool_recycle=int(os.getenv("DATABASE_POOL_RECYCLE", "1800")),
-            ssl_mode=os.getenv("DATABASE_SSL_MODE", "prefer"),
-            echo_queries=os.getenv("DATABASE_ECHO", "false").lower() == "true",
-        )
-    
-    @classmethod
-    def _from_url(cls, url: str) -> "DatabaseConfig":
-        """Parse configuration from URL."""
-        config = cls()
-        
-        if "sqlite" in url:
-            config.driver = DatabaseDriver.SQLITE
-            if ":///" in url:
-                config.sqlite_path = url.split("///")[1].split("?")[0]
-        elif "postgresql" in url or "postgres" in url:
-            config.driver = DatabaseDriver.POSTGRESQL
-        elif "mysql" in url:
-            config.driver = DatabaseDriver.MYSQL
-        
-        return config
-    
-    @classmethod
-    def for_testing(cls) -> "DatabaseConfig":
-        """Create configuration for testing (uses SQLite in-memory)."""
-        return cls(
-            driver=DatabaseDriver.SQLITE,
-            sqlite_path=":memory:",
-        )
-    
-    def validate(self) -> bool:
-        """Validate configuration."""
-        if self.driver != DatabaseDriver.SQLITE:
-            if not self.password:
-                raise ValueError("Password is required for non-SQLite databases")
-            if not self.host:
-                raise ValueError("Host is required for non-SQLite databases")
-        return True
-
-
-# Global configuration instance
-_config: Optional[DatabaseConfig] = None
+    def get_pool_options(self) -> dict:
+        """Get connection pool options."""
+        return {
+            "pool_size": self.pool_size,
+            "max_overflow": self.max_overflow,
+            "pool_timeout": self.pool_timeout,
+            "pool_recycle": self.pool_recycle,
+        }
 
 
 def get_database_config() -> DatabaseConfig:
-    """Get or create database configuration."""
+    """
+    Get database configuration from environment.
+    
+    Returns:
+        DatabaseConfig: Configured database settings
+    """
+    # Check for full DATABASE_URL first
+    url = os.getenv("DATABASE_URL")
+    
+    if url:
+        return _parse_database_url(url)
+    
+    # Build from individual environment variables
+    return DatabaseConfig(
+        driver=DatabaseDriver.POSTGRESQL,
+        host=os.getenv("DATABASE_HOST", "localhost"),
+        port=int(os.getenv("DATABASE_PORT", "5432")),
+        name=os.getenv("DATABASE_NAME", "resync"),
+        user=os.getenv("DATABASE_USER", "resync"),
+        password=os.getenv("DATABASE_PASSWORD", ""),
+        pool_size=int(os.getenv("DATABASE_POOL_SIZE", "10")),
+        max_overflow=int(os.getenv("DATABASE_MAX_OVERFLOW", "20")),
+        pool_timeout=int(os.getenv("DATABASE_POOL_TIMEOUT", "30")),
+        pool_recycle=int(os.getenv("DATABASE_POOL_RECYCLE", "3600")),
+        ssl_mode=os.getenv("DATABASE_SSL_MODE", "prefer"),
+    )
+
+
+def _parse_database_url(url: str) -> DatabaseConfig:
+    """
+    Parse a database URL into DatabaseConfig.
+    
+    Args:
+        url: PostgreSQL connection URL
+        
+    Returns:
+        DatabaseConfig: Parsed configuration
+    """
+    config = DatabaseConfig()
+    
+    # Handle postgres:// vs postgresql://
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    
+    parsed = urlparse(url)
+    
+    config.host = parsed.hostname or "localhost"
+    config.port = parsed.port or 5432
+    config.name = parsed.path.lstrip("/") if parsed.path else "resync"
+    config.user = parsed.username or "resync"
+    config.password = parsed.password or ""
+    
+    return config
+
+
+# Singleton config instance
+_config: Optional[DatabaseConfig] = None
+
+
+def get_config() -> DatabaseConfig:
+    """Get singleton database config."""
     global _config
     if _config is None:
-        _config = DatabaseConfig.from_env()
+        _config = get_database_config()
     return _config
-
-
-def set_database_config(config: DatabaseConfig) -> None:
-    """Set database configuration (for testing)."""
-    global _config
-    _config = config
-
-
-def reset_database_config() -> None:
-    """Reset database configuration (for testing)."""
-    global _config
-    _config = None

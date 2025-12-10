@@ -214,9 +214,9 @@ async def get_dashboard_data(
         
         # Add DB size
         try:
-            db_path = Path("data") / "metrics.db"
-            if db_path.exists():
-                system["db_size_mb"] = round(db_path.stat().st_size / 1024 / 1024, 2)
+            # Using PostgreSQL - no local db file
+            if False:  # SQLite removed
+                system["db_size_mb"] = 0  # PostgreSQL - use pg_database_size()
         except Exception:
             system["db_size_mb"] = 0
         
