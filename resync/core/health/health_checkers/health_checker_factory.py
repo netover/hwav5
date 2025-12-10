@@ -4,7 +4,6 @@ Health Checker Factory
 This module provides a factory for creating and managing health checker instances.
 """
 
-from __future__ import annotations
 
 from typing import Dict, List, Optional, Type
 

@@ -3,7 +3,6 @@ Connection pool manager implementation for the Resync project.
 Separated to follow Single Responsibility Principle.
 """
 
-from __future__ import annotations
 
 import asyncio
 import logging

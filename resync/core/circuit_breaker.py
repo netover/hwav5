@@ -5,7 +5,6 @@ This module provides a standalone circuit breaker utility for health checks
 and service protection.
 """
 
-from __future__ import annotations
 
 from datetime import datetime
 import structlog

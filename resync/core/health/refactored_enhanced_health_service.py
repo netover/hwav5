@@ -5,7 +5,6 @@ This module provides the refactored enhanced health service using the new
 modular architecture with dependency injection and extracted health checkers.
 """
 
-from __future__ import annotations
 
 import asyncio
 import time

@@ -5,7 +5,6 @@ This module provides the refactored basic health check service using the new
 modular architecture with dependency injection and extracted health checkers.
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime

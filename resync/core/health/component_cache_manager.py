@@ -6,7 +6,6 @@ components, including cache management, expiry handling, and performance
 optimization for health monitoring systems.
 """
 
-from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta

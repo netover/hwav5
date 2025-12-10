@@ -5,7 +5,6 @@ This module provides global service management functionality for health services
 including singleton pattern implementation and service lifecycle management.
 """
 
-from __future__ import annotations
 
 import asyncio
 from typing import Optional

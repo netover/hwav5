@@ -10,18 +10,16 @@ Architecture:
 - Qdrant: Semantic search (unchanged)
 """
 
-from __future__ import annotations
-
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 import json
 
 from sqlalchemy import (
-    Column, String, Boolean, DateTime, Text, Integer, Float, 
-    ForeignKey, Index, UniqueConstraint, Enum as SQLEnum
+    String, Boolean, DateTime, Text, Integer, Float, 
+    ForeignKey, Index, UniqueConstraint
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from resync.core.database.engine import Base
 

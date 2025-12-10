@@ -4,7 +4,6 @@ This module provides real-time monitoring of the TWS environment,
 performance metrics collection, and alert generation for anomalies.
 """
 
-from __future__ import annotations
 
 import asyncio
 import time

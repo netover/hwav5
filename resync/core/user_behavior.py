@@ -11,7 +11,6 @@ This module provides intelligent behavioral analysis including:
 - SQLite persistence for user profiles (v5.2.3.25)
 """
 
-from __future__ import annotations
 
 import asyncio
 import hashlib

@@ -11,16 +11,14 @@ Key Features:
 - Human-in-the-loop review queue
 """
 
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from resync.core.structured_logger import get_logger
 from resync.core.knowledge_graph.models import (
-    NodeType, RelationType, ExtractedTriplet
+    NodeType, ExtractedTriplet
 )
 from resync.core.database.engine import get_db_session as get_async_session
 

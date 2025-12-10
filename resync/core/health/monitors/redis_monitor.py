@@ -6,7 +6,6 @@ functionality, including connection testing, performance metrics, and
 detailed health reporting.
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime

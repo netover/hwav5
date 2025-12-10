@@ -6,7 +6,6 @@ including database connection pools, WebSocket pools, and connection
 utilization tracking.
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime

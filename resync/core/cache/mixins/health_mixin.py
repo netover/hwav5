@@ -4,7 +4,6 @@ Cache Health Check Mixin.
 Provides health check functionality for cache implementations.
 """
 
-from __future__ import annotations
 
 import asyncio
 import logging

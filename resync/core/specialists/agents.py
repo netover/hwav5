@@ -11,8 +11,6 @@ Author: Resync Team
 Version: 5.2.3.29
 """
 
-from __future__ import annotations
-
 import asyncio
 import time
 from typing import Any, Dict, List, Optional
@@ -48,9 +46,6 @@ try:
     from agno.agent import Agent
     from agno.team.team import Team
     from agno.models.litellm import LiteLLM
-    from agno.knowledge.knowledge import Knowledge
-    from agno.vectordb.qdrant import Qdrant
-    from agno.storage.postgres import PgAgentStorage
     
     AGNO_AVAILABLE = True
     logger.info("agno_framework_available", version="1.x+")

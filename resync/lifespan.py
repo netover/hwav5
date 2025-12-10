@@ -10,7 +10,6 @@ managing the lifecycle of critical application components including:
 - Resource cleanup and graceful shutdown
 """
 
-from __future__ import annotations
 
 import asyncio
 import os

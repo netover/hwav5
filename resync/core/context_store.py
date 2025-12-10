@@ -12,7 +12,6 @@ Benefícios:
 - Baixo consumo de recursos
 """
 
-from __future__ import annotations
 
 import json
 import os

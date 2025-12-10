@@ -6,7 +6,6 @@ monitoring systems, including memory usage tracking, cleanup operations, and
 memory optimization strategies.
 """
 
-from __future__ import annotations
 
 import asyncio
 import gc

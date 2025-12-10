@@ -6,7 +6,6 @@ including performance metrics, connectivity testing, and detailed health
 reporting for the cache hierarchy system.
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime

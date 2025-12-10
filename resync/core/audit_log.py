@@ -5,7 +5,6 @@ This module implements comprehensive audit logging to persist audit events to a 
 in addition to the existing Redis-based audit queue functionality.
 """
 
-from __future__ import annotations
 
 import logging
 from contextlib import contextmanager

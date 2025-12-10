@@ -11,7 +11,6 @@ This module provides intelligent incident response capabilities including:
 - Continuous learning and improvement
 """
 
-from __future__ import annotations
 
 import asyncio
 import time

@@ -13,7 +13,6 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-from __future__ import annotations
 
 import re
 from dataclasses import dataclass

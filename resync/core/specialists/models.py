@@ -8,7 +8,6 @@ Author: Resync Team
 Version: 5.2.3.29
 """
 
-from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum

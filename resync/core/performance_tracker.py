@@ -5,7 +5,6 @@ This module provides comprehensive performance tracking capabilities including
 cache statistics, response time monitoring, and performance metrics collection.
 """
 
-from __future__ import annotations
 
 import asyncio
 import time

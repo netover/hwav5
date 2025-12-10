@@ -5,7 +5,6 @@ This module provides monitoring capabilities for circuit breakers,
 including metrics, statistics, and management operations.
 """
 
-from __future__ import annotations
 
 from typing import Any, Dict, List
 

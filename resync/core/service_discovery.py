@@ -12,7 +12,6 @@ This module provides intelligent service discovery capabilities including:
 - Metrics and observability
 """
 
-from __future__ import annotations
 
 import asyncio
 import socket

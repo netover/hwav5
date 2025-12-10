@@ -10,7 +10,6 @@ This module provides intelligent anomaly detection capabilities using:
 - Self-learning and model updates
 """
 
-from __future__ import annotations
 
 import asyncio
 import hashlib

@@ -66,29 +66,35 @@ workers = (2 * CPU_CORES) + 1
 
 ## Otimizações de Memória
 
-### 1. Lazy Loading
-Componentes pesados são carregados apenas quando necessários:
+### 1. Cache Eficiente com LRU
+Cache LRU otimizado para alta performance:
 
 ```python
-from resync.core.resource_optimizer import LazyLoader
+from resync.core.utils.data_structures import LRUCache, create_lru_cache
 
-# Modelo de embedding só é carregado na primeira query
-embedding_model = LazyLoader(
-    lambda: SentenceTransformer("all-MiniLM-L6-v2"),
-    name="embedding_model"
-)
+# Cache com capacidade de 1000 itens
+cache = create_lru_cache(capacity=1000)
+
+# Ou instanciar diretamente
+cache = LRUCache(capacity=1000)
+cache.put("key", "value")
+value = cache.get("key")
 ```
 
-### 2. Cache Eficiente
-Cache LRU com limite de memória:
+### 2. Estruturas de Dados Otimizadas
+Estruturas especializadas para casos de uso específicos:
 
 ```python
-from resync.core.resource_optimizer import MemoryEfficientCache
+from resync.core.utils.data_structures import FastSet, create_priority_queue
 
-cache = MemoryEfficientCache(
-    max_items=1000,
-    max_size_mb=100  # Limite de 100MB
-)
+# FastSet para membership testing rápido
+fast_set = FastSet()
+fast_set.add("item")
+exists = "item" in fast_set
+
+# Priority Queue indexada
+pq = create_priority_queue()
+pq.push("task", priority=1)
 ```
 
 ### 3. Reciclagem de Workers
@@ -111,16 +117,17 @@ preload_app = True
 ## Otimizações de CPU
 
 ### 1. Batch Processing
-Operações são agrupadas para melhor throughput:
+Operações são agrupadas para melhor throughput usando o cache com batching:
 
 ```python
-from resync.core.resource_optimizer import BatchProcessor
+from resync.core.cache import RobustCacheManager
 
-processor = BatchProcessor(
-    process_fn=bulk_insert,
-    batch_size=100,
-    max_wait_ms=500
-)
+# Cache manager com suporte a batch operations
+cache = RobustCacheManager()
+
+# Batch get/set para múltiplas chaves
+await cache.mset({"key1": "val1", "key2": "val2"})
+values = await cache.mget(["key1", "key2"])
 ```
 
 ### 2. Async I/O
@@ -144,16 +151,15 @@ REDIS_POOL_MAX_SIZE=20
 
 ## Monitoramento
 
-### Resource Monitor
+### Health Check Service
 ```python
-from resync.core.resource_optimizer import get_resource_monitor
+from resync.core.health import HealthCheckService
 
-monitor = get_resource_monitor()
-stats = monitor.get_stats()
+health = HealthCheckService()
+status = await health.check_all()
 
-print(f"Memory: {stats.memory_mb}MB ({stats.memory_percent}%)")
-print(f"CPU: {stats.cpu_percent}%")
-print(f"Threads: {stats.threads}")
+print(f"Status: {status.status}")
+print(f"Components: {status.components}")
 ```
 
 ### Dashboard de Métricas

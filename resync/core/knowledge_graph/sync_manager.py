@@ -25,16 +25,13 @@ Usage:
     changes = await sync.sync_now()
 """
 
-from __future__ import annotations
-
 import asyncio
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Callable, Awaitable
 
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from resync.core.structured_logger import get_logger
 from resync.core.database.engine import get_db_session as get_async_session

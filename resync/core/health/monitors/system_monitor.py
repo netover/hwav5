@@ -5,7 +5,6 @@ This module provides comprehensive system resource monitoring functionality,
 including CPU usage, memory utilization, and system performance metrics.
 """
 
-from __future__ import annotations
 
 import asyncio
 import time

@@ -5,7 +5,6 @@ This module provides continuous health monitoring coordination and lifecycle man
 for the health check service, including monitoring loops and service lifecycle management.
 """
 
-from __future__ import annotations
 
 import asyncio
 from typing import Optional

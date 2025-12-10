@@ -5,7 +5,6 @@ This module provides Redis client initialization with connection pooling,
 distributed locking, health checks, and proper error handling.
 """
 
-from __future__ import annotations
 
 import asyncio
 import logging

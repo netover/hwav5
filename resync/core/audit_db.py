@@ -26,7 +26,6 @@ backward compatibility through SQLite fallback mechanisms.
 - Async context managers for proper resource cleanup
 """
 
-from __future__ import annotations
 
 import logging
 import os

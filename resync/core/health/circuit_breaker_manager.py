@@ -5,7 +5,6 @@ This module provides comprehensive management functionality for multiple
 circuit breakers across different system components.
 """
 
-from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta

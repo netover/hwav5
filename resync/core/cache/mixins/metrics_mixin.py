@@ -4,7 +4,6 @@ Cache Metrics Mixin.
 Provides metrics and monitoring functionality for cache implementations.
 """
 
-from __future__ import annotations
 
 import logging
 import time

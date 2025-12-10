@@ -34,18 +34,14 @@ Usage:
     thresholds = await manager.get_thresholds()
 """
 
-from __future__ import annotations
-
 import asyncio
-import hashlib
 import json
 import os
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from collections import deque
-from statistics import mean, stdev
 
 import aiosqlite
 

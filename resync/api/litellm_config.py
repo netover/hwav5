@@ -14,7 +14,6 @@ Endpoints:
 - GET  /api/v1/litellm/providers     - List configured providers
 """
 
-from __future__ import annotations
 
 import asyncio
 import os

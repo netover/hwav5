@@ -16,7 +16,6 @@ Key Features:
 - Automatic threshold calibration
 """
 
-from __future__ import annotations
 
 import asyncio
 import hashlib

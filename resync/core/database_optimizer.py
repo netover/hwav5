@@ -9,7 +9,6 @@ This module provides advanced database optimization features including:
 - Automatic query rewriting for better performance
 """
 
-from __future__ import annotations
 
 import asyncio
 import hashlib

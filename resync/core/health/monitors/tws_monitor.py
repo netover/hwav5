@@ -6,7 +6,6 @@ and other external API services, including connectivity testing and status
 monitoring.
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime

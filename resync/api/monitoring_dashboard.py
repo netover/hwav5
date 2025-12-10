@@ -7,7 +7,6 @@
 #   - Zero dependências externas
 #   - Integrado com métricas existentes do Resync
 
-from __future__ import annotations
 
 import asyncio
 import logging

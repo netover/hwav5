@@ -11,7 +11,6 @@ This module provides cryptographically secure audit trails including:
 - Compliance-ready audit reporting
 """
 
-from __future__ import annotations
 
 import asyncio
 import base64

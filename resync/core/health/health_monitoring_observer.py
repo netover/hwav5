@@ -5,7 +5,6 @@ This module implements the Observer pattern for coordinating between different
 health monitors and providing a unified interface for health monitoring events.
 """
 
-from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod

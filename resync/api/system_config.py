@@ -20,7 +20,6 @@ Security:
 - Some changes require restart (marked in response)
 """
 
-from __future__ import annotations
 
 import os
 from datetime import datetime

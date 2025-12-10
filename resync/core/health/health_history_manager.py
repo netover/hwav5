@@ -5,7 +5,6 @@ This module provides comprehensive health history management functionality
 including storage, cleanup, and retrieval of health check history data.
 """
 
-from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta

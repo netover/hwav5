@@ -15,7 +15,6 @@
 #
 # (Ver documentação: https://prometheus.io/docs/... e Python docs para contextvars e perf_counter)
 
-from __future__ import annotations
 
 import logging
 import threading

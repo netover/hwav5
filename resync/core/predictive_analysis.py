@@ -4,7 +4,6 @@ Predictive Analysis Engine
 This module provides predictive analysis for potential issues in the health monitoring system.
 """
 
-from __future__ import annotations
 
 from typing import Any, Dict, List
 import structlog

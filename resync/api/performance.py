@@ -4,7 +4,6 @@ Performance Monitoring API Endpoints.
 Provides REST API endpoints for monitoring and optimizing system performance.
 """
 
-from __future__ import annotations
 
 import logging
 from typing import Any, Dict

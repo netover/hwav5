@@ -5,7 +5,6 @@ This module provides the main coordination logic for health checks,
 integrating various health monitoring components into a unified service.
 """
 
-from __future__ import annotations
 
 import asyncio
 import time

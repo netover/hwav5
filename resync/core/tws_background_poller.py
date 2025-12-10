@@ -15,7 +15,6 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-from __future__ import annotations
 
 import asyncio
 import time

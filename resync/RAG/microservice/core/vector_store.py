@@ -4,7 +4,6 @@ Qdrant-based vector store implementation for RAG.
 Provides async-safe upsert, query, and deduplication with payload indexing.
 """
 
-from __future__ import annotations
 
 import asyncio
 import functools

@@ -4,7 +4,6 @@ Qdrant collection snapshot management for versioning and rollback.
 Provides create, list, and delete operations for Qdrant snapshots to enable safe migrations and rollbacks.
 """
 
-from __future__ import annotations
 
 import asyncio
 import functools

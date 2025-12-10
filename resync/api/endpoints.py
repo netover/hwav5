@@ -6,7 +6,6 @@ information from the TWS engine, model and current plan. All routes depend on
 an authenticated operator role by default.
 """
 
-from __future__ import annotations
 
 from typing import Any, Optional
 

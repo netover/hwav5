@@ -6,8 +6,6 @@ with the smart pooling system for automatic scaling and circuit breaker protecti
 It combines traditional pool management with intelligent load-based scaling.
 """
 
-from __future__ import annotations
-
 import asyncio
 import statistics
 import threading

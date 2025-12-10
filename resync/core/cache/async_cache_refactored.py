@@ -8,7 +8,6 @@ This is the modernized version of async_cache.py that uses:
 - CacheTransactionMixin: Transaction support
 """
 
-from __future__ import annotations
 
 import asyncio
 import logging

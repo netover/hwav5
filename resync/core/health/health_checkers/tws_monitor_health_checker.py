@@ -4,7 +4,6 @@ TWS Monitor Health Checker
 This module provides health checking functionality for TWS monitor (external API service).
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime

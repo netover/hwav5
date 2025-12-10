@@ -9,7 +9,6 @@ This module provides specialized caching for database queries with:
 - Prepared statement result caching
 """
 
-from __future__ import annotations
 
 import asyncio
 import hashlib

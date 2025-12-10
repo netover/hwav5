@@ -5,7 +5,6 @@ This module provides intelligent health monitoring that preemptively detects
 connection issues, monitors pool utilization, and performs predictive analysis.
 """
 
-from __future__ import annotations
 
 import time
 from typing import Any, Dict

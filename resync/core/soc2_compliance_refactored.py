@@ -5,7 +5,6 @@ This refactored version separates the complex report generation logic into
 individual strategies, making the code more modular, testable, and maintainable.
 """
 
-from __future__ import annotations
 
 import asyncio
 import hashlib

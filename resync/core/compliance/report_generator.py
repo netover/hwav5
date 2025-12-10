@@ -5,7 +5,6 @@ This module provides a centralized report generation system for various
 compliance frameworks including SOC 2 and GDPR compliance reports.
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime

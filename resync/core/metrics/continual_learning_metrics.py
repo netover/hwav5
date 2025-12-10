@@ -11,7 +11,6 @@ Collects metrics from all continual learning components:
 Designed to work with LightweightMetricsStore.
 """
 
-from __future__ import annotations
 
 import time
 from contextlib import asynccontextmanager

@@ -4,7 +4,6 @@ Connection Pools Health Checker
 This module provides health checking functionality for connection pools.
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime

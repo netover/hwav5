@@ -2,7 +2,6 @@
 TWS-optimized LLM integration with prompt caching and model routing.
 """
 
-from __future__ import annotations
 
 import hashlib
 import logging

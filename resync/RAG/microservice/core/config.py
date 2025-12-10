@@ -4,7 +4,6 @@ Configuration for the Qdrant-only RAG system.
 Defines environment variables and defaults for Qdrant connection, embedding model, and search parameters.
 """
 
-from __future__ import annotations
 
 import os
 from dataclasses import dataclass

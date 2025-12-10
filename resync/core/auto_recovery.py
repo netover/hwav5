@@ -4,7 +4,6 @@ Auto-Recovery System
 This module provides automatic recovery capabilities for failed components and services.
 """
 
-from __future__ import annotations
 
 import time
 from typing import Any, Dict, List

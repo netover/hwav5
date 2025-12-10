@@ -4,7 +4,6 @@ Database Health Checker
 This module provides health checking functionality for database connections.
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime

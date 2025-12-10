@@ -5,7 +5,6 @@ This module provides comprehensive security configurations including
 headers, rate limiting, input validation, and threat protection.
 """
 
-from __future__ import annotations
 
 import hashlib
 import hmac

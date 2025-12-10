@@ -6,7 +6,6 @@ coordinating between different managers, monitors, and observers to provide
 a simplified and consistent API.
 """
 
-from __future__ import annotations
 
 import asyncio
 import time

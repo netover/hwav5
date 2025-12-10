@@ -1,5 +1,4 @@
 # resync/core/rag_watcher.py
-from __future__ import annotations
 
 import asyncio
 import logging

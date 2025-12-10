@@ -5,7 +5,6 @@ This module provides predictive analysis capabilities for detecting potential is
 before they become critical problems.
 """
 
-from __future__ import annotations
 
 import asyncio
 from typing import Any, Dict, List

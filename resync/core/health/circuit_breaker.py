@@ -6,7 +6,6 @@ and external service calls. The circuit breaker prevents cascading failures by
 temporarily stopping calls to failing services.
 """
 
-from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Callable, Optional

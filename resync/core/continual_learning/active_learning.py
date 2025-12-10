@@ -10,7 +10,6 @@ Este módulo implementa Active Learning para melhorar continuamente:
 5. Reduz taxa de erros ao longo do tempo
 """
 
-from __future__ import annotations
 
 import hashlib
 import json

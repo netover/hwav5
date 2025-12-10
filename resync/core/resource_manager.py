@@ -6,7 +6,6 @@ resource tracking, and leak detection following best practices from
 Java's try-with-resources and Python's context managers.
 """
 
-from __future__ import annotations
 
 import asyncio
 import logging

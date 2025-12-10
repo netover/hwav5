@@ -5,7 +5,6 @@ This module provides utilities for collecting and managing performance metrics
 across different system components for health monitoring purposes.
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime

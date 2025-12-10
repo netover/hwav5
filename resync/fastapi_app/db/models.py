@@ -7,7 +7,7 @@ Compatible with PostgreSQL (recommended) and SQLite (development).
 from datetime import datetime
 from enum import Enum
 from typing import Optional, List
-from sqlalchemy import Column, String, Boolean, DateTime, Text, Integer
+from sqlalchemy import String, Boolean, DateTime, Text, Integer
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column

@@ -6,7 +6,6 @@ It implements the HealthRecoveryManager class with methods for recovering
 different types of system components when they become unhealthy.
 """
 
-from __future__ import annotations
 
 import asyncio
 import time

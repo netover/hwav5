@@ -14,7 +14,6 @@ This module provides a comprehensive API Gateway with enterprise-grade features 
 - Traffic management and canary deployments
 """
 
-from __future__ import annotations
 
 import asyncio
 import hashlib

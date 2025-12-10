@@ -11,7 +11,6 @@ This module provides comprehensive GDPR compliance capabilities including:
 - Breach detection and notification systems
 """
 
-from __future__ import annotations
 
 import asyncio
 import hashlib

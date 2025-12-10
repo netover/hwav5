@@ -2,7 +2,6 @@
 LLM cost monitoring and streaming implementation for TWS optimization.
 """
 
-from __future__ import annotations
 
 import asyncio
 import logging

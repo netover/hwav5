@@ -10,7 +10,6 @@ para adicionar contexto relevante às queries antes do RAG retrieval:
 4. Enriquece com padrões de dependência conhecidos
 """
 
-from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta

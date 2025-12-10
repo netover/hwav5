@@ -8,7 +8,6 @@ This module provides advanced performance optimization features including:
 - Performance metrics collection and analysis
 """
 
-from __future__ import annotations
 
 import asyncio
 import logging

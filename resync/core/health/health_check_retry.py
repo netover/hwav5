@@ -5,7 +5,6 @@ This module provides retry mechanisms with exponential backoff for health checks
 ensuring reliable health monitoring even in the face of transient failures.
 """
 
-from __future__ import annotations
 
 import asyncio
 from typing import Any, Callable, TypeVar

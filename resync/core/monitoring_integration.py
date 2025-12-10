@@ -8,7 +8,6 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-from __future__ import annotations
 
 from typing import Any, Dict, Optional
 

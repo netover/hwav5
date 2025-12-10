@@ -10,7 +10,6 @@ This module provides an intelligent caching system with:
 - Cascade invalidation for related data
 """
 
-from __future__ import annotations
 
 import asyncio
 import json

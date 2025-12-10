@@ -8,7 +8,6 @@ em feedback histórico de usuários:
 - Query-specific feedback tem maior peso que global
 """
 
-from __future__ import annotations
 
 import math
 from typing import Any, Dict, List, Optional

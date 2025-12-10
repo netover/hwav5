@@ -4,7 +4,6 @@ Cache Snapshot Mixin.
 Provides backup and restore functionality for cache implementations.
 """
 
-from __future__ import annotations
 
 import asyncio
 import logging

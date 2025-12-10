@@ -14,7 +14,6 @@ Supports multiple embedding providers through LiteLLM's unified interface:
 Falls back to deterministic SHA-256 hash-based vectors for development/testing.
 """
 
-from __future__ import annotations
 
 import asyncio
 import hashlib

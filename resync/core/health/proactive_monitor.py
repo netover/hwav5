@@ -5,7 +5,6 @@ This module provides proactive health monitoring functionality for
 predictive analysis and automated recovery of system components.
 """
 
-from __future__ import annotations
 
 import time
 from datetime import datetime, timedelta

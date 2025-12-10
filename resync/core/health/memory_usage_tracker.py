@@ -5,7 +5,6 @@ This module provides comprehensive memory usage tracking and monitoring
 functionality for health checks and system monitoring.
 """
 
-from __future__ import annotations
 
 import asyncio
 import gc

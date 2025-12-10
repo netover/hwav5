@@ -5,7 +5,6 @@ This module provides intelligent memory management and cleanup capabilities for 
 including health history cleanup, memory bounds enforcement, and resource optimization.
 """
 
-from __future__ import annotations
 
 import asyncio
 import gc

@@ -5,7 +5,6 @@ Provides lightweight metrics collection without external dependencies.
 Metrics can be exported to JSON for any visualization tool.
 """
 
-from __future__ import annotations
 
 import asyncio
 import logging

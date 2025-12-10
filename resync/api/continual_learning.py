@@ -8,7 +8,6 @@ Provides REST endpoints for:
 - Configuring continual learning settings
 """
 
-from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional

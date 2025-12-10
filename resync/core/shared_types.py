@@ -7,7 +7,6 @@ across the Resync application, eliminating duplicate class definitions.
 All modules should import these types from here rather than defining their own.
 """
 
-from __future__ import annotations
 
 import logging
 import time

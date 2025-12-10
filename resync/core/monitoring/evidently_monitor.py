@@ -14,8 +14,6 @@ Author: Resync Team
 Version: 5.2.3.29
 """
 
-from __future__ import annotations
-
 import asyncio
 import json
 import os
@@ -26,7 +24,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 from pydantic import BaseModel, Field
@@ -39,19 +37,11 @@ logger = structlog.get_logger(__name__)
 
 try:
     import pandas as pd
-    from evidently import ColumnMapping
-    from evidently.metric_preset import DataDriftPreset, TargetDriftPreset
     from evidently.metrics import (
-        ColumnDriftMetric,
         DataDriftTable,
         DatasetDriftMetric,
     )
     from evidently.report import Report
-    from evidently.test_suite import TestSuite
-    from evidently.tests import (
-        TestColumnDrift,
-        TestShareOfDriftedColumns,
-    )
     
     EVIDENTLY_AVAILABLE = True
     logger.info("evidently_available", version="0.4+")

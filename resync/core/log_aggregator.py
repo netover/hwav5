@@ -14,7 +14,6 @@ This module provides comprehensive log aggregation and analysis capabilities inc
 - Performance monitoring and optimization
 """
 
-from __future__ import annotations
 
 import asyncio
 import json

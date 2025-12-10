@@ -25,17 +25,14 @@ Usage:
     critical = await kg.get_critical_jobs()
 """
 
-from __future__ import annotations
-
 import asyncio
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 import networkx as nx
-from sqlalchemy import select, delete, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from resync.core.structured_logger import get_logger
 from resync.core.database.engine import get_db_session as get_async_session

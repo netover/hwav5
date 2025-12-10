@@ -5,7 +5,6 @@ This module provides transaction management functionality for cache operations,
 allowing atomic multi-key operations with rollback capabilities.
 """
 
-from __future__ import annotations
 
 import logging
 import uuid

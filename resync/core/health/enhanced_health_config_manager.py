@@ -5,7 +5,6 @@ This module provides enhanced configuration management for health checks,
 integrating with the new health checker architecture.
 """
 
-from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 

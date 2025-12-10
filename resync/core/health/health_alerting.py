@@ -6,7 +6,6 @@ health monitoring, including alert generation, summary creation, and health
 status reporting.
 """
 
-from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional

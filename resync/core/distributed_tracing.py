@@ -14,7 +14,6 @@ This module provides comprehensive distributed tracing capabilities including:
 - Trace correlation with logs and metrics
 """
 
-from __future__ import annotations
 
 import asyncio
 import contextlib

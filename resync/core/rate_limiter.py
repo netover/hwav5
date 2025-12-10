@@ -6,7 +6,6 @@ with Redis backend, including tiered rate limiting strategies and custom
 rate limit exceeded responses.
 """
 
-from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Callable, Optional

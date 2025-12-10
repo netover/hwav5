@@ -8,7 +8,6 @@ Provides:
 - System health metrics
 """
 
-from __future__ import annotations
 
 import psutil
 from datetime import datetime, timezone

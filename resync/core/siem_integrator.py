@@ -11,7 +11,6 @@ This module provides comprehensive SIEM integration capabilities including:
 - Performance monitoring and alerting
 """
 
-from __future__ import annotations
 
 import asyncio
 import json

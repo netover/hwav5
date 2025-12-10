@@ -5,7 +5,6 @@ This module provides comprehensive configuration management for health checks,
 including thresholds, intervals, and component-specific settings.
 """
 
-from __future__ import annotations
 
 import os
 from datetime import datetime

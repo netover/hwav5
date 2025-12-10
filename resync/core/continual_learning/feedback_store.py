@@ -7,7 +7,6 @@ Este módulo permite que o RAG aprenda com interações passadas:
 - Tracking de qualidade por documento e query pattern
 """
 
-from __future__ import annotations
 
 import json
 import hashlib

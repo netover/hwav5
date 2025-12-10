@@ -32,7 +32,6 @@ Audit:
     GET  /api/v1/admin/threshold-tuning/audit-log      - Get audit history
 """
 
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, status

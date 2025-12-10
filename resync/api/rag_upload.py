@@ -6,12 +6,11 @@ Generation (RAG) pipeline. The endpoint validates file size and metadata using
 Pydantic models and delegates saving and ingestion to the configured file
 ingestor. Errors are handled explicitly and returned as HTTP exceptions.
 
-Note: `from __future__ import annotations` must appear at the top of the file
+Note: `` must appear at the top of the file
 before any other import statements to satisfy Python's import rules. See
 PEP 563 and PEP 649 for details.
 """
 
-from __future__ import annotations
 
 # resync/api/rag_upload.py
 

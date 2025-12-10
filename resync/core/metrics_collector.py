@@ -14,7 +14,6 @@ This module provides comprehensive metrics collection and visualization capabili
 - Metrics aggregation and analysis
 """
 
-from __future__ import annotations
 
 import asyncio
 import json

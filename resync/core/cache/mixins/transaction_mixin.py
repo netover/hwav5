@@ -4,7 +4,6 @@ Cache Transaction Mixin.
 Provides transaction and rollback functionality for cache implementations.
 """
 
-from __future__ import annotations
 
 import logging
 from typing import Any, Dict, List, Optional

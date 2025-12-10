@@ -6,7 +6,6 @@ that have been extracted from the main AsyncTTLCache class to improve modularity
 and maintainability.
 """
 
-from __future__ import annotations
 
 import asyncio
 import logging

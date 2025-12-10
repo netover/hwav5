@@ -10,7 +10,6 @@ Quando o IA Auditor identifica erros, este pipeline:
 4. Cria knowledge entries para evitar erros futuros
 """
 
-from __future__ import annotations
 
 import re
 import hashlib

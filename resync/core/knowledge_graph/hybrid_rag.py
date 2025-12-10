@@ -16,8 +16,6 @@ Architecture:
                                   └─→ Context Merger → LLM → Response
 """
 
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass
 from enum import Enum

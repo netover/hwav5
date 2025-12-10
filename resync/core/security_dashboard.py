@@ -11,7 +11,6 @@ This module provides comprehensive security monitoring and dashboard capabilitie
 - Role-based access control for dashboard views
 """
 
-from __future__ import annotations
 
 import asyncio
 import time
