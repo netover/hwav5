@@ -46,17 +46,14 @@ __all__ = [
     "LangFuseConfig",
     "EvidentlyConfig",
     "get_observability_config",
-
     # LangFuse
     "setup_langfuse",
     "shutdown_langfuse",
     "get_langfuse_client",
-
     # Evidently
     "setup_evidently",
     "get_evidently_monitor",
     "EvidentlyMonitor",
-
     # Combined
     "setup_observability",
     "shutdown_observability",

@@ -4,7 +4,6 @@ Cache Snapshot Mixin.
 Provides backup and restore functionality for cache implementations.
 """
 
-
 import logging
 import time
 from typing import Any
@@ -34,7 +33,7 @@ class CacheSnapshotMixin:
             "shards": [],
         }
 
-        for i, shard in enumerate(self.shards):
+        for _i, shard in enumerate(self.shards):
             shard_data = {}
             for key, entry in shard.items():
                 shard_data[key] = {
@@ -46,9 +45,7 @@ class CacheSnapshotMixin:
 
         snapshot["total_entries"] = sum(len(s) for s in self.shards)
 
-        logger.info(
-            f"Created snapshot with {snapshot['total_entries']} entries"
-        )
+        logger.info(f"Created snapshot with {snapshot['total_entries']} entries")
 
         return snapshot
 

@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import secrets
+from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
+
 import pytest
 from fastapi import FastAPI, Request
-from fastapi.testclient import TestClient
 from fastapi.templating import Jinja2Templates
+from fastapi.testclient import TestClient
 from starlette.middleware.base import BaseHTTPMiddleware
+
 from resync.core.header_parser import CSPParser
 
 
@@ -88,9 +91,7 @@ def _check_security_headers(response_headers: Any) -> None:
     }
     for header, expected_value in security_headers.items():
         assert header in response_headers, f"{header} header is missing"
-        assert (
-            response_headers[header] == expected_value
-        ), f"{header} header has incorrect value"
+        assert response_headers[header] == expected_value, f"{header} header has incorrect value"
 
 
 def _check_csp_policy(csp_header: str) -> None:
@@ -209,9 +210,7 @@ def test_script_src_with_nonce(client):
     assert "script-src" in csp_directives
     script_src_values = csp_directives["script-src"]
     script_src_str = (
-        " ".join(script_src_values)
-        if isinstance(script_src_values, list)
-        else script_src_values
+        " ".join(script_src_values) if isinstance(script_src_values, list) else script_src_values
     )
     assert "'self'" in script_src_str
     # Check that there's a nonce value (not the literal {nonce})

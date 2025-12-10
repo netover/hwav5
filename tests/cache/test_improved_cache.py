@@ -5,7 +5,9 @@ Testes básicos para ImprovedAsyncCache.
 from __future__ import annotations
 
 import asyncio
+
 import pytest
+
 from resync.core.improved_cache import ImprovedAsyncCache  # type: ignore[attr-defined]
 
 

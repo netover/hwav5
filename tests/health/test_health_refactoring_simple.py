@@ -10,7 +10,8 @@ import sys
 from datetime import datetime
 
 # Add the project root to Python path
-sys.path.insert(0, '/d/Python/GITHUB/hwa-new')
+sys.path.insert(0, "/d/Python/GITHUB/hwa-new")
+
 
 async def test_observer_pattern():
     """Test the observer pattern implementation."""
@@ -19,11 +20,11 @@ async def test_observer_pattern():
 
     try:
         from resync.core.health.health_monitoring_observer import (
+            AlertingHealthObserver,
+            HealthMonitoringEvent,
             HealthMonitoringSubject,
             LoggingHealthObserver,
-            AlertingHealthObserver,
             MetricsHealthObserver,
-            HealthMonitoringEvent,
         )
         from resync.core.health_models import HealthStatus
 
@@ -41,11 +42,11 @@ async def test_observer_pattern():
         print(f"   ✅ Observers attached: {subject.get_observer_count()}")
 
         # Create test event
-        event = HealthMonitoringEvent(
+        HealthMonitoringEvent(
             event_type="test_event",
             component_name="test_component",
             health_status=HealthStatus.DEGRADED,
-            metadata={"test": True}
+            metadata={"test": True},
         )
 
         # Test notifications
@@ -71,6 +72,7 @@ async def test_observer_pattern():
     except Exception as e:
         print(f"❌ Observer pattern test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -82,11 +84,11 @@ async def test_health_models():
 
     try:
         from resync.core.health_models import (
-            HealthStatus,
-            ComponentType,
             ComponentHealth,
+            ComponentType,
             HealthCheckConfig,
             HealthCheckResult,
+            HealthStatus,
         )
 
         # Test health status
@@ -124,7 +126,9 @@ async def test_health_models():
             components={"test": comp_health},
             summary={"healthy": 1},
         )
-        print(f"   ✅ HealthCheckResult: {result.overall_status}, {len(result.components)} components")
+        print(
+            f"   ✅ HealthCheckResult: {result.overall_status}, {len(result.components)} components"
+        )
 
         print("   ✅ Health models test completed")
         print()
@@ -134,6 +138,7 @@ async def test_health_models():
     except Exception as e:
         print(f"❌ Health models test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -171,18 +176,21 @@ async def test_complexity_reduction():
         print("   🔧 Testing functionality preservation...")
 
         # Test health models (basic functionality)
-        from resync.core.health_models import HealthStatus, ComponentType, ComponentHealth
+        from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
 
         # Test key enums and classes exist and work
         test_cases = [
             ("HealthStatus", HealthStatus.HEALTHY),
             ("ComponentType", ComponentType.DATABASE),
-            ("ComponentHealth", ComponentHealth(
-                name="test", component_type=ComponentType.DATABASE, status=HealthStatus.HEALTHY
-            )),
+            (
+                "ComponentHealth",
+                ComponentHealth(
+                    name="test", component_type=ComponentType.DATABASE, status=HealthStatus.HEALTHY
+                ),
+            ),
         ]
 
-        for name, obj in test_cases:
+        for name, _obj in test_cases:
             print(f"      ✅ {name} class works correctly")
 
         print("   ✅ Functionality preservation test completed")
@@ -204,6 +212,7 @@ async def test_facade_integration():
         # Test that we can import the facade (it might fail due to dependencies, but that's OK)
         try:
             from resync.core.health.health_service_facade import HealthServiceFacade
+
             print("   ✅ HealthServiceFacade imported successfully")
         except ImportError as e:
             print(f"   ⚠️  HealthServiceFacade import failed (expected due to dependencies): {e}")
@@ -214,7 +223,7 @@ async def test_facade_integration():
         from resync.core.health_models import HealthCheckConfig
 
         config = HealthCheckConfig()
-        facade = HealthServiceFacade(config)
+        HealthServiceFacade(config)
 
         print("   ✅ HealthServiceFacade instantiated")
         print("   ✅ Configuration manager available")
@@ -229,6 +238,7 @@ async def test_facade_integration():
     except Exception as e:
         print(f"❌ Facade integration test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -266,9 +276,8 @@ async def main():
     if passed >= 3:  # Allow for facade dependency issues
         print("🎉 Core refactoring tests passed! Health service refactoring structure is sound.")
         return 0
-    else:
-        print("⚠️  Some core tests failed. Please review the issues above.")
-        return 1
+    print("⚠️  Some core tests failed. Please review the issues above.")
+    return 1
 
 
 if __name__ == "__main__":
@@ -281,5 +290,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n💥 Test suite failed with error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

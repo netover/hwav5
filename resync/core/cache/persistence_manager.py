@@ -45,9 +45,7 @@ class CachePersistenceManager:
         try:
             os.makedirs(self.snapshot_dir, exist_ok=True)
         except OSError as e:
-            logger.error(
-                f"Failed to create snapshot directory {self.snapshot_dir}: {e}"
-            )
+            logger.error(f"Failed to create snapshot directory {self.snapshot_dir}: {e}")
             raise
 
     def create_backup_snapshot(self, cache_data: dict[str, Any]) -> str:
@@ -102,17 +100,15 @@ class CachePersistenceManager:
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(snapshot, f, indent=2, ensure_ascii=False)
 
-            logger.info(
-                f"Created cache backup snapshot: {filepath} ({total_entries} entries)"
-            )
+            logger.info(f"Created cache backup snapshot: {filepath} ({total_entries} entries)")
             return filepath
 
         except OSError as e:
             logger.error(f"Failed to write snapshot to {filepath}: {e}")
-            raise OSError(f"Failed to create snapshot: {e}")
+            raise OSError(f"Failed to create snapshot: {e}") from None
         except (TypeError, ValueError) as e:
             logger.error(f"Failed to serialize cache data: {e}")
-            raise ValueError(f"Serialization failed: {e}")
+            raise ValueError(f"Serialization failed: {e}") from None
 
     def restore_from_snapshot(self, snapshot_path: str) -> dict[str, Any]:
         """
@@ -143,10 +139,10 @@ class CachePersistenceManager:
 
         except OSError as e:
             logger.error(f"Failed to read snapshot from {snapshot_path}: {e}")
-            raise OSError(f"Failed to read snapshot: {e}")
+            raise OSError(f"Failed to read snapshot: {e}") from None
         except (json.JSONDecodeError, ValueError) as e:
             logger.error(f"Failed to parse snapshot JSON from {snapshot_path}: {e}")
-            raise ValueError(f"Invalid snapshot format: {e}")
+            raise ValueError(f"Invalid snapshot format: {e}") from None
 
         # Validate snapshot structure
         if not isinstance(snapshot, dict):
@@ -173,9 +169,7 @@ class CachePersistenceManager:
         # Check snapshot age (max 24 hours)
         snapshot_age = time() - created_at
         if snapshot_age > 86400:  # 24 hours
-            logger.warning(
-                f"Snapshot is {snapshot_age:.0f}s old (max recommended: 86400s)"
-            )
+            logger.warning(f"Snapshot is {snapshot_age:.0f}s old (max recommended: 86400s)")
 
         # Validate total entries
         total_entries = metadata["total_entries"]
@@ -220,9 +214,7 @@ class CachePersistenceManager:
 
         try:
             for filename in os.listdir(self.snapshot_dir):
-                if not filename.startswith("cache_snapshot_") or not filename.endswith(
-                    ".json"
-                ):
+                if not filename.startswith("cache_snapshot_") or not filename.endswith(".json"):
                     continue
 
                 filepath = os.path.join(self.snapshot_dir, filename)
@@ -234,23 +226,17 @@ class CachePersistenceManager:
 
                     # Extract timestamp from filename
                     try:
-                        timestamp_str = filename.replace("cache_snapshot_", "").replace(
-                            ".json", ""
-                        )
+                        timestamp_str = filename.replace("cache_snapshot_", "").replace(".json", "")
                         created_at = int(timestamp_str)
                     except ValueError:
-                        logger.warning(
-                            f"Could not parse timestamp from filename: {filename}"
-                        )
+                        logger.warning(f"Could not parse timestamp from filename: {filename}")
                         continue
 
                     # Try to read metadata for total_entries
                     try:
                         with open(filepath, encoding="utf-8") as f:
                             snapshot_data = json.load(f)
-                        total_entries = snapshot_data.get("_metadata", {}).get(
-                            "total_entries", 0
-                        )
+                        total_entries = snapshot_data.get("_metadata", {}).get("total_entries", 0)
                     except (json.JSONDecodeError, KeyError):
                         total_entries = 0
 
@@ -290,18 +276,14 @@ class CachePersistenceManager:
 
         try:
             for filename in os.listdir(self.snapshot_dir):
-                if not filename.startswith("cache_snapshot_") or not filename.endswith(
-                    ".json"
-                ):
+                if not filename.startswith("cache_snapshot_") or not filename.endswith(".json"):
                     continue
 
                 filepath = os.path.join(self.snapshot_dir, filename)
 
                 try:
                     # Extract timestamp from filename
-                    timestamp_str = filename.replace("cache_snapshot_", "").replace(
-                        ".json", ""
-                    )
+                    timestamp_str = filename.replace("cache_snapshot_", "").replace(".json", "")
                     created_at = int(timestamp_str)
 
                     # Check if snapshot is too old
@@ -315,9 +297,7 @@ class CachePersistenceManager:
                     continue
 
         except OSError as e:
-            logger.error(
-                f"Failed to cleanup snapshot directory {self.snapshot_dir}: {e}"
-            )
+            logger.error(f"Failed to cleanup snapshot directory {self.snapshot_dir}: {e}")
 
         if removed_count > 0:
             logger.info(f"Cleaned up {removed_count} old snapshots")

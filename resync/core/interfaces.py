@@ -42,15 +42,11 @@ class IKnowledgeGraph(Protocol):
         """Stores a conversation between a user and an agent."""
         ...
 
-    async def search_similar_issues(
-        self, query: str, limit: int = 5
-    ) -> list[dict[str, Any]]:
+    async def search_similar_issues(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
         """Searches the knowledge graph for similar past issues and solutions."""
         ...
 
-    def search_similar_issues_sync(
-        self, query: str, limit: int = 5
-    ) -> list[dict[str, Any]]:
+    def search_similar_issues_sync(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
         """Searches the knowledge graph for similar past issues and solutions."""
         ...
 
@@ -74,27 +70,19 @@ class IKnowledgeGraph(Protocol):
         """Optimized search method for conversations."""
         ...
 
-    async def add_solution_feedback(
-        self, memory_id: str, feedback: str, rating: int
-    ) -> None:
+    async def add_solution_feedback(self, memory_id: str, feedback: str, rating: int) -> None:
         """Adds user feedback to a specific memory."""
         ...
 
-    def add_solution_feedback_sync(
-        self, memory_id: str, feedback: str, rating: int
-    ) -> None:
+    def add_solution_feedback_sync(self, memory_id: str, feedback: str, rating: int) -> None:
         """Adds user feedback to a specific memory."""
         ...
 
-    async def get_all_recent_conversations(
-        self, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    async def get_all_recent_conversations(self, limit: int = 100) -> list[dict[str, Any]]:
         """Retrieves all recent conversation-type memories for auditing."""
         ...
 
-    def get_all_recent_conversations_sync(
-        self, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    def get_all_recent_conversations_sync(self, limit: int = 100) -> list[dict[str, Any]]:
         """Retrieves all recent conversation-type memories for auditing."""
         ...
 
@@ -146,15 +134,11 @@ class IKnowledgeGraph(Protocol):
         """Atomically checks if a memory has already been processed."""
         ...
 
-    async def atomic_check_and_flag(
-        self, memory_id: str, reason: str, confidence: float
-    ) -> bool:
+    async def atomic_check_and_flag(self, memory_id: str, reason: str, confidence: float) -> bool:
         """Atomically checks if memory is already processed, and if not, flags it."""
         ...
 
-    def atomic_check_and_flag_sync(
-        self, memory_id: str, reason: str, confidence: float
-    ) -> bool:
+    def atomic_check_and_flag_sync(self, memory_id: str, reason: str, confidence: float) -> bool:
         """Atomically checks if memory is already processed, and if not, flags it."""
         ...
 

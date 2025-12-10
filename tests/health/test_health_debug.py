@@ -9,11 +9,12 @@ from pathlib import Path
 # Add the current directory to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
+
 def test_health_calculations():
     """Test health status calculations directly."""
     try:
         # Test imports
-        from resync.core.health_models import HealthStatus, ComponentHealth, ComponentType
+        from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
         from resync.core.health_service import HealthCheckService
 
         print("OK Imports successful")
@@ -33,7 +34,9 @@ def test_health_calculations():
         assert result == expected, f"Expected {expected}, got {result}"
 
         # Test 2: Mixed statuses (degraded)
-        components["comp1"] = ComponentHealth("comp1", ComponentType.DATABASE, HealthStatus.DEGRADED)
+        components["comp1"] = ComponentHealth(
+            "comp1", ComponentType.DATABASE, HealthStatus.DEGRADED
+        )
         result = service._calculate_overall_status(components)
         expected = HealthStatus.DEGRADED
         print(f"OK Test 2 - With degraded: {result} (expected: {expected})")
@@ -68,8 +71,10 @@ def test_health_calculations():
     except Exception as e:
         print(f"ERROR Error during testing: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     print("Running health check tests directly...")

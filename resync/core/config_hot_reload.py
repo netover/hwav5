@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ConfigChange:
     """Represents a configuration change."""
+
     key: str
     old_value: Any
     new_value: Any
@@ -155,7 +156,7 @@ class ConfigManager:
         config_file = self.config_dir / self.main_config
 
         try:
-            with open(config_file, 'w') as f:
+            with open(config_file, "w") as f:
                 json.dump(self._config, f, indent=2, default=str)
             logger.info("Configuration saved")
         except Exception as e:
@@ -167,7 +168,7 @@ class ConfigManager:
 
         Supports dot notation: "database.host"
         """
-        keys = key.split('.')
+        keys = key.split(".")
         value = self._config
 
         for k in keys:
@@ -198,7 +199,7 @@ class ConfigManager:
             old_value = self.get(key)
 
             # Set new value
-            keys = key.split('.')
+            keys = key.split(".")
             config = self._config
 
             for k in keys[:-1]:

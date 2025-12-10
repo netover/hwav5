@@ -10,10 +10,14 @@ import asyncio
 import logging
 import sys
 import time
+
 import pytest
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
 
 @pytest.mark.asyncio
 async def test_basic_functionality():
@@ -38,7 +42,7 @@ async def test_basic_functionality():
 
         # Test delete operation
         deleted = await cache.delete("test_key")
-        assert deleted == True, "Delete should return True for existing key"
+        assert deleted, "Delete should return True for existing key"
         print(f"✅ Delete operation successful: {deleted}")
 
         # Verify key is gone
@@ -48,7 +52,7 @@ async def test_basic_functionality():
 
         # Test delete non-existent key
         deleted = await cache.delete("non_existent")
-        assert deleted == False, "Delete should return False for non-existent key"
+        assert not deleted, "Delete should return False for non-existent key"
         print(f"✅ Non-existent key delete handled correctly: {deleted}")
 
         print("🎉 All basic functionality tests passed!")
@@ -56,6 +60,7 @@ async def test_basic_functionality():
     except Exception as e:
         print(f"❌ Basic functionality test failed: {e}")
         raise
+
 
 @pytest.mark.asyncio
 async def test_memory_management():
@@ -91,6 +96,7 @@ async def test_memory_management():
         print(f"❌ Memory management test failed: {e}")
         raise
 
+
 @pytest.mark.asyncio
 async def test_rollback_functionality():
     """Test transaction rollback functionality."""
@@ -110,8 +116,18 @@ async def test_rollback_functionality():
 
         # Simulate operations to rollback
         operations = [
-            {"operation": "set", "key": "user_1", "value": "new_value_1", "previous_value": "initial_value"},
-            {"operation": "set", "key": "user_2", "value": "new_value_2", "previous_value": "initial_value"},
+            {
+                "operation": "set",
+                "key": "user_1",
+                "value": "new_value_1",
+                "previous_value": "initial_value",
+            },
+            {
+                "operation": "set",
+                "key": "user_2",
+                "value": "new_value_2",
+                "previous_value": "initial_value",
+            },
             {"operation": "set", "key": "user_3", "value": "new_value_3"},
         ]
 
@@ -125,7 +141,7 @@ async def test_rollback_functionality():
 
         # Rollback operations
         rollback_success = await cache.rollback_transaction(operations)
-        assert rollback_success == True, "Rollback should succeed"
+        assert rollback_success, "Rollback should succeed"
 
         print(f"✅ Rollback completed: {rollback_success}")
 
@@ -145,6 +161,7 @@ async def test_rollback_functionality():
     except Exception as e:
         print(f"❌ Rollback functionality test failed: {e}")
         raise
+
 
 @pytest.mark.asyncio
 async def test_snapshot_functionality():
@@ -182,7 +199,7 @@ async def test_snapshot_functionality():
 
         # Restore from snapshot
         restore_success = await cache.restore_from_snapshot(snapshot)
-        assert restore_success == True, "Restore should succeed"
+        assert restore_success, "Restore should succeed"
 
         restored_size = cache.size()
         print(f"✅ Restored {restored_size} entries")
@@ -190,7 +207,9 @@ async def test_snapshot_functionality():
         # Verify restored data
         for key, expected_value in test_data.items():
             actual_value = await cache.get(key)
-            assert actual_value == expected_value, f"Key {key}: expected {expected_value}, got {actual_value}"
+            assert actual_value == expected_value, (
+                f"Key {key}: expected {expected_value}, got {actual_value}"
+            )
 
         print("✅ Snapshot data verification successful")
 
@@ -199,6 +218,7 @@ async def test_snapshot_functionality():
     except Exception as e:
         print(f"❌ Snapshot functionality test failed: {e}")
         raise
+
 
 async def test_health_check():
     """Test health check functionality."""
@@ -218,7 +238,7 @@ async def test_health_check():
         print(f"✅ Health check result: {health}")
 
         assert health["status"] == "healthy", f"Expected healthy status, got {health['status']}"
-        assert health["production_ready"] == True, "Expected production ready"
+        assert health["production_ready"], "Expected production ready"
         assert "size" in health, "Health check should include size"
         assert "num_shards" in health, "Health check should include num_shards"
 
@@ -227,6 +247,7 @@ async def test_health_check():
     except Exception as e:
         print(f"❌ Health check test failed: {e}")
         raise
+
 
 async def test_concurrent_access():
     """Test concurrent access to cache."""
@@ -256,10 +277,7 @@ async def test_concurrent_access():
         operations_per_worker = 20
 
         start_time = time.time()
-        tasks = [
-            worker(wid, operations_per_worker)
-            for wid in range(num_workers)
-        ]
+        tasks = [worker(wid, operations_per_worker) for wid in range(num_workers)]
 
         await asyncio.gather(*tasks)
         end_time = time.time()
@@ -276,6 +294,7 @@ async def test_concurrent_access():
     except Exception as e:
         print(f"❌ Concurrent access test failed: {e}")
         raise
+
 
 async def main():
     """Run all tests."""
@@ -295,8 +314,10 @@ async def main():
     except Exception as e:
         print(f"\n❌ Tests failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     success = asyncio.run(main())

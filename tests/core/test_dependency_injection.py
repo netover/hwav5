@@ -24,9 +24,7 @@ class TestDependencyInjection:
         # This is a robust way to reset the singleton used by the dependency injector
         if "resync.core.dependencies" in __import__("sys").modules:
             # Re-importing won't work due to caching, so we directly manipulate the singleton
-            __import__("sys").modules[
-                "resync.core.dependencies"
-            ].agent_manager = AgentManager()
+            __import__("sys").modules["resync.core.dependencies"].agent_manager = AgentManager()
             AgentManager._instance = None
 
     @pytest.mark.asyncio
@@ -41,7 +39,6 @@ class TestDependencyInjection:
                 return_value=mock_tws_client_instance,
             ) as mock_get_client,
         ):
-
             mock_settings.TWS_MOCK_MODE = False
 
             client = await anext(get_tws_client())
@@ -56,11 +53,8 @@ class TestDependencyInjection:
 
         with (
             patch("resync.core.dependencies.settings") as mock_settings,
-            patch(
-                "resync.core.dependencies.agent_manager"
-            ) as mock_agent_manager_module,
+            patch("resync.core.dependencies.agent_manager") as mock_agent_manager_module,
         ):
-
             mock_settings.TWS_MOCK_MODE = True
             mock_agent_manager_module._mock_tws_client = mock_tws_client_instance
 
@@ -78,7 +72,6 @@ class TestDependencyInjection:
                 new_callable=AsyncMock,
             ) as mock_get_client,
         ):
-
             mock_settings.TWS_MOCK_MODE = False
             mock_get_client.side_effect = Exception("TWS client unavailable")
 
@@ -92,13 +85,9 @@ class TestDependencyInjection:
             mock_settings.TWS_MOCK_MODE = False
 
             # Since get_tws_client uses the global agent_manager, we need to reset its client
-            __import__("sys").modules[
-                "resync.core.dependencies"
-            ].agent_manager.tws_client = None
+            __import__("sys").modules["resync.core.dependencies"].agent_manager.tws_client = None
 
-            with patch(
-                "resync.core.agent_manager.OptimizedTWSClient"
-            ) as MockClientClass:
+            with patch("resync.core.agent_manager.OptimizedTWSClient") as MockClientClass:
                 mock_instance = MagicMock()
                 MockClientClass.return_value = mock_instance
 

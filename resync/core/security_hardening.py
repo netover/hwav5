@@ -5,7 +5,6 @@ This module provides comprehensive security configurations including
 headers, rate limiting, input validation, and threat protection.
 """
 
-
 import hashlib
 import hmac
 import logging
@@ -159,9 +158,7 @@ class SecurityHardeningConfig:
         return secrets.token_urlsafe(length)
 
     @classmethod
-    def hash_password(
-        cls, password: str, salt: bytes | None = None
-    ) -> tuple[bytes, bytes]:
+    def hash_password(cls, password: str, salt: bytes | None = None) -> tuple[bytes, bytes]:
         """Hash a password using PBKDF2."""
         if salt is None:
             salt = secrets.token_bytes(16)
@@ -186,9 +183,7 @@ class SecurityHardeningConfig:
             return ""
 
         # Remove null bytes and other dangerous characters
-        sanitized = (
-            input_str.replace("\x00", "").replace("\r\n", "\n").replace("\r", "\n")
-        )
+        sanitized = input_str.replace("\x00", "").replace("\r\n", "\n").replace("\r", "\n")
 
         # Limit length if specified
         if max_length and len(sanitized) > max_length:

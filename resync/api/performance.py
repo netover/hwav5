@@ -4,7 +4,6 @@ Performance Monitoring API Endpoints.
 Provides REST API endpoints for monitoring and optimizing system performance.
 """
 
-
 import logging
 from typing import Any
 
@@ -43,7 +42,7 @@ async def get_performance_report() -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate performance report: {str(e)}",
-        )
+        ) from e
 
 
 @performance_router.get("/cache/metrics")
@@ -73,15 +72,13 @@ async def get_cache_metrics() -> dict[str, Any]:
                 "average_access_time_ms": f"{metrics.average_access_time_ms:.2f}",
             }
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK, content={"caches": cache_metrics}
-        )
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"caches": cache_metrics})
     except Exception as e:
         logger.error(f"Error getting cache metrics: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get cache metrics: {str(e)}",
-        )
+        ) from e
 
 
 @performance_router.get("/cache/recommendations")
@@ -97,9 +94,7 @@ async def get_cache_recommendations() -> dict[str, Any]:
 
         recommendations = {}
         for cache_name, monitor in performance_service.cache_monitors.items():
-            recommendations[cache_name] = (
-                await monitor.get_optimization_recommendations()
-            )
+            recommendations[cache_name] = await monitor.get_optimization_recommendations()
 
         return JSONResponse(
             status_code=status.HTTP_200_OK, content={"recommendations": recommendations}
@@ -109,7 +104,7 @@ async def get_cache_recommendations() -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get cache recommendations: {str(e)}",
-        )
+        ) from e
 
 
 @performance_router.get("/pools/metrics")
@@ -130,7 +125,7 @@ async def get_pool_metrics() -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get pool metrics: {str(e)}",
-        )
+        ) from e
 
 
 @performance_router.get("/pools/recommendations")
@@ -153,7 +148,7 @@ async def get_pool_recommendations() -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get pool recommendations: {str(e)}",
-        )
+        ) from e
 
 
 @performance_router.get("/resources/stats")
@@ -168,15 +163,13 @@ async def get_resource_stats() -> dict[str, Any]:
         resource_pool = get_global_resource_pool()
         stats = resource_pool.get_stats()
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK, content={"resource_stats": stats}
-        )
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"resource_stats": stats})
     except Exception as e:
         logger.error(f"Error getting resource stats: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get resource stats: {str(e)}",
-        )
+        ) from e
 
 
 @performance_router.get("/resources/leaks")
@@ -218,7 +211,7 @@ async def detect_resource_leaks(max_lifetime_seconds: int = 3600) -> dict[str, A
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to detect resource leaks: {str(e)}",
-        )
+        ) from e
 
 
 @performance_router.get("/health")
@@ -237,7 +230,7 @@ async def get_performance_health() -> dict[str, Any]:
         # Get cache health
         cache_health = "healthy"
         cache_issues = 0
-        for cache_name, monitor in performance_service.cache_monitors.items():
+        for _cache_name, monitor in performance_service.cache_monitors.items():
             metrics = await monitor.get_current_metrics()
             if metrics.hit_rate < 0.5 or metrics.calculate_efficiency_score() < 50:
                 cache_health = "degraded"
@@ -247,11 +240,8 @@ async def get_performance_health() -> dict[str, Any]:
         pool_health = "healthy"
         pool_issues = 0
         pool_stats = pool_manager.get_pool_stats()
-        for pool_name, stats in pool_stats.items():
-            if (
-                stats.get("connection_errors", 0) > 10
-                or stats.get("pool_exhaustions", 0) > 0
-            ):
+        for _pool_name, stats in pool_stats.items():
+            if stats.get("connection_errors", 0) > 10 or stats.get("pool_exhaustions", 0) > 0:
                 pool_health = "degraded"
                 pool_issues += 1
 
@@ -263,11 +253,7 @@ async def get_performance_health() -> dict[str, Any]:
 
         # Determine overall health
         overall_health = "healthy"
-        if (
-            cache_health == "degraded"
-            or pool_health == "degraded"
-            or resource_health == "degraded"
-        ):
+        if cache_health == "degraded" or pool_health == "degraded" or resource_health == "degraded":
             overall_health = "degraded"
 
         return JSONResponse(
@@ -287,4 +273,4 @@ async def get_performance_health() -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get performance health: {str(e)}",
-        )
+        ) from e

@@ -8,9 +8,9 @@ import pytest
 
 from resync.core.exceptions import DatabaseError, LLMError
 from resync.core.ia_auditor import (
+    _analyze_memories_concurrently,
     _cleanup_locks,
     _fetch_recent_memories,
-    _analyze_memories_concurrently,
     _process_analysis_results,
     analyze_and_flag_memories,
     analyze_memory,
@@ -21,19 +21,12 @@ from resync.core.ia_auditor import (
 def mock_dependencies():
     """Fixture to mock all external dependencies for the ia_auditor module."""
     with (
-        patch(
-            "resync.core.ia_auditor.audit_lock", new_callable=AsyncMock
-        ) as mock_audit_lock,
-        patch(
-            "resync.core.ia_auditor.knowledge_graph", new_callable=AsyncMock
-        ) as mock_kg,
-        patch(
-            "resync.core.ia_auditor.audit_queue", new_callable=AsyncMock
-        ) as mock_audit_queue,
+        patch("resync.core.ia_auditor.audit_lock", new_callable=AsyncMock) as mock_audit_lock,
+        patch("resync.core.ia_auditor.knowledge_graph", new_callable=AsyncMock) as mock_kg,
+        patch("resync.core.ia_auditor.audit_queue", new_callable=AsyncMock) as mock_audit_queue,
         patch("resync.core.ia_auditor.call_llm") as mock_call_llm,
         patch("resync.core.ia_auditor.parse_llm_json_response") as mock_parse_json,
     ):
-
         # Configure default behaviors
         mock_audit_lock.acquire.return_value.__aenter__.return_value = None
         mock_kg.get_all_recent_conversations.return_value = []
@@ -63,24 +56,18 @@ class TestIAAuditor:
     async def test_fetch_recent_memories_success(self, mock_dependencies):
         """Test that _fetch_recent_memories returns data on success."""
         mock_memories = [{"id": "mem1"}]
-        mock_dependencies["kg"].get_all_recent_conversations.return_value = (
-            mock_memories
-        )
+        mock_dependencies["kg"].get_all_recent_conversations.return_value = mock_memories
         result = await _fetch_recent_memories()
         assert result == mock_memories
 
     async def test_fetch_recent_memories_failure(self, mock_dependencies):
         """Test that _fetch_recent_memories returns None on database error."""
-        mock_dependencies["kg"].get_all_recent_conversations.side_effect = (
-            DatabaseError("DB down")
-        )
+        mock_dependencies["kg"].get_all_recent_conversations.side_effect = DatabaseError("DB down")
         result = await _fetch_recent_memories()
         assert result is None
 
     @patch("resync.core.ia_auditor.analyze_memory", new_callable=AsyncMock)
-    async def test_analyze_memories_concurrently(
-        self, mock_analyze_memory, mock_dependencies
-    ):
+    async def test_analyze_memories_concurrently(self, mock_analyze_memory, mock_dependencies):
         """Test that memories are analyzed concurrently."""
         memories = [{"id": "mem1"}, {"id": "mem2"}]
         mock_analyze_memory.side_effect = [("flag", {}), ("delete", "mem2")]
@@ -108,14 +95,10 @@ class TestIAAuditor:
         """Test the main orchestrator function with a successful flow."""
         # Arrange
         mock_memories = [{"id": "mem1", "user_query": "q", "agent_response": "a"}]
-        mock_dependencies["kg"].get_all_recent_conversations.return_value = (
-            mock_memories
-        )
+        mock_dependencies["kg"].get_all_recent_conversations.return_value = mock_memories
 
         # Mock the analyze_memory call within the main function
-        with patch(
-            "resync.core.ia_auditor.analyze_memory", new_callable=AsyncMock
-        ) as mock_analyze:
+        with patch("resync.core.ia_auditor.analyze_memory", new_callable=AsyncMock) as mock_analyze:
             mock_analyze.return_value = ("delete", "mem1")
 
             # Act
@@ -163,8 +146,6 @@ class TestIAAuditor:
         mock_dependencies["kg"].is_memory_approved.return_value = False
         mock_dependencies["call_llm"].side_effect = LLMError("API is down")
 
-        result = await analyze_memory(
-            {"id": "mem1", "user_query": "q", "agent_response": "a"}
-        )
+        result = await analyze_memory({"id": "mem1", "user_query": "q", "agent_response": "a"})
 
         assert result is None

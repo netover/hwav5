@@ -256,9 +256,7 @@ class TestConnectionPoolIntegration:
                 await asyncio.sleep(0.001)
 
                 # Send message
-                await ws_manager.send_personal_message(
-                    f"WS message {task_id}", client_id
-                )
+                await ws_manager.send_personal_message(f"WS message {task_id}", client_id)
                 results["websocket_messages"] += 1
 
                 # Disconnect
@@ -297,9 +295,7 @@ class TestConnectionPoolIntegration:
 
         # Analyze results
         successful_tasks = sum(
-            1
-            for outcome in outcomes
-            if isinstance(outcome, str) and "success" in outcome
+            1 for outcome in outcomes if isinstance(outcome, str) and "success" in outcome
         )
 
         assert successful_tasks >= len(tasks) * 0.85  # At least 85% success rate
@@ -352,8 +348,7 @@ class TestConnectionPoolIntegration:
         # Verify active connections exist
         initial_pool_stats = pool_manager.get_all_pools()
         has_active_connections = any(
-            pool.get_stats().active_connections > 0
-            for pool in initial_pool_stats.values()
+            pool.get_stats().active_connections > 0 for pool in initial_pool_stats.values()
         )
 
         # Shutdown system
@@ -423,9 +418,7 @@ class TestConnectionPoolIntegration:
                     db_pool = pool_manager.get_pool("database")
                     if db_pool:
                         # Mock health check failure
-                        with patch.object(
-                            db_pool, "_validate_connection", return_value=False
-                        ):
+                        with patch.object(db_pool, "_validate_connection", return_value=False):
                             health_result = await db_pool.health_check()
                             if not health_result:
                                 error_scenarios.append(f"health_fail_{scenario_id}")
@@ -495,9 +488,7 @@ class TestConnectionPoolIntegration:
                 return await stress_operation(operation_id)
 
         stress_start_time = time.time()
-        stress_tasks = [
-            limited_stress_operation(i) for i in range(num_stress_operations)
-        ]
+        stress_tasks = [limited_stress_operation(i) for i in range(num_stress_operations)]
         await asyncio.gather(*stress_tasks, return_exceptions=True)
         stress_end_time = time.time()
 
@@ -505,8 +496,7 @@ class TestConnectionPoolIntegration:
 
         # Analyze stress test results
         success_rate = stress_results["successful_operations"] / (
-            stress_results["successful_operations"]
-            + stress_results["failed_operations"]
+            stress_results["successful_operations"] + stress_results["failed_operations"]
         )
 
         assert success_rate > 0.7  # At least 70% success rate under stress
@@ -516,10 +506,10 @@ class TestConnectionPoolIntegration:
         print(f"  Total operations: {num_stress_operations}")
         print(f"  Successful: {stress_results['successful_operations']}")
         print(f"  Failed: {stress_results['failed_operations']}")
-        print(f"  Success rate: {success_rate*100:.1f}%")
+        print(f"  Success rate: {success_rate * 100:.1f}%")
         print(f"  Total time: {total_stress_time:.2f}s")
         print(
-            f"  Average time per operation: {stress_results['total_time']/num_stress_operations*1000:.1f}ms"
+            f"  Average time per operation: {stress_results['total_time'] / num_stress_operations * 1000:.1f}ms"
         )
 
 

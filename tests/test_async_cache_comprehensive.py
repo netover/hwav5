@@ -7,10 +7,11 @@ health checks, and edge cases.
 """
 
 import asyncio
-import pytest
 import tempfile
 import time
 from unittest.mock import patch
+
+import pytest
 
 from resync.core.async_cache import AsyncTTLCache, CacheEntry, get_redis_client
 
@@ -42,13 +43,13 @@ class TestAsyncTTLCacheInitialization:
             max_memory_mb=50,
             paranoia_mode=True,
             enable_wal=True,
-            wal_path="/tmp/test_wal"
+            wal_path="/tmp/test_wal",
         )
         assert cache.ttl_seconds == 120
         assert cache.cleanup_interval == 60
         assert cache.num_shards == 8
         assert cache.max_entries == 10000  # Reduced due to paranoia mode
-        assert cache.max_memory_mb == 10   # Reduced due to paranoia mode
+        assert cache.max_memory_mb == 10  # Reduced due to paranoia mode
         assert cache.paranoia_mode is True
         assert cache.enable_wal is True
         assert cache.wal_path == "/tmp/test_wal"
@@ -64,7 +65,7 @@ class TestAsyncTTLCacheInitialization:
 
     def test_settings_fallback(self):
         """Test that cache falls back to settings when available."""
-        with patch('resync.settings.settings') as mock_settings:
+        with patch("resync.settings.settings") as mock_settings:
             mock_settings.ASYNC_CACHE_TTL = 300
             mock_settings.ASYNC_CACHE_CLEANUP_INTERVAL = 45
             mock_settings.ASYNC_CACHE_NUM_SHARDS = 32
@@ -81,7 +82,7 @@ class TestAsyncTTLCacheInitialization:
             assert cache.enable_wal is True
             assert cache.wal_path == "/custom/wal/path"
             assert cache.max_entries == 10000  # Reduced due to paranoia mode
-            assert cache.max_memory_mb == 10   # Reduced due to paranoia mode
+            assert cache.max_memory_mb == 10  # Reduced due to paranoia mode
 
 
 class TestAsyncTTLCacheBasicOperations:
@@ -283,7 +284,7 @@ class TestAsyncTTLCacheMemoryBounds:
             max_entries=3,
             max_memory_mb=1,
             num_shards=2,
-            ttl_seconds=300  # Long TTL to avoid expiration during test
+            ttl_seconds=300,  # Long TTL to avoid expiration during test
         )
 
     @pytest.mark.asyncio
@@ -363,15 +364,13 @@ class TestAsyncTTLCacheConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_set_operations(self, cache):
         """Test concurrent set operations."""
+
         async def set_operation(key, value):
             await cache.set(key, value)
             return await cache.get(key)
 
         # Run multiple set operations concurrently
-        tasks = [
-            set_operation(f"key{i}", f"value{i}")
-            for i in range(100)
-        ]
+        tasks = [set_operation(f"key{i}", f"value{i}") for i in range(100)]
 
         results = await asyncio.gather(*tasks)
 
@@ -394,12 +393,11 @@ class TestAsyncTTLCacheConcurrency:
             if i % 3 == 0:
                 result = await cache.get(f"initial_key{i % 50}")
                 return result is not None  # Return boolean for get operations
-            elif i % 3 == 1:
+            if i % 3 == 1:
                 await cache.set(f"new_key{i}", f"new_value{i}")
                 result = await cache.get(f"new_key{i}")
                 return result is not None  # Return boolean for set operations
-            else:
-                return await cache.delete(f"initial_key{i % 50}")  # Delete returns boolean
+            return await cache.delete(f"initial_key{i % 50}")  # Delete returns boolean
 
         # Run mixed operations concurrently
         tasks = [mixed_operation(i) for i in range(150)]  # Reduced number for stability
@@ -433,7 +431,11 @@ class TestAsyncTTLCacheShardDistribution:
     def test_shard_distribution(self, cache):
         """Test that keys are distributed across shards."""
         # Add many varied keys and check distribution
-        keys = [f"key{i}" for i in range(100)] + [f"different_prefix_{i}" for i in range(100)] + [f"another_{i}_suffix" for i in range(100)]
+        keys = (
+            [f"key{i}" for i in range(100)]
+            + [f"different_prefix_{i}" for i in range(100)]
+            + [f"another_{i}_suffix" for i in range(100)]
+        )
 
         shard_counts = {}
         for key in keys:
@@ -470,12 +472,13 @@ class TestAsyncTTLCacheShardDistribution:
 
         # Manually add entries with different timestamps
         import time
+
         current_time = time.time()
 
         entries = {
             "key1": CacheEntry("value1", current_time - 100, 300),  # Oldest
-            "key2": CacheEntry("value2", current_time - 50, 300),   # Middle
-            "key3": CacheEntry("value3", current_time - 10, 300),   # Newest
+            "key2": CacheEntry("value2", current_time - 50, 300),  # Middle
+            "key3": CacheEntry("value3", current_time - 10, 300),  # Newest
         }
 
         for key, entry in entries.items():
@@ -493,11 +496,7 @@ class TestAsyncTTLCacheWAL:
     async def test_wal_initialization(self):
         """Test WAL initialization."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            cache = AsyncTTLCache(
-                enable_wal=True,
-                wal_path=temp_dir + "/test_wal",
-                ttl_seconds=60
-            )
+            cache = AsyncTTLCache(enable_wal=True, wal_path=temp_dir + "/test_wal", ttl_seconds=60)
 
             assert cache.enable_wal is True
             assert cache.wal is not None
@@ -508,10 +507,7 @@ class TestAsyncTTLCacheWAL:
         """Test that SET operations are logged to WAL."""
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
-                cache = AsyncTTLCache(
-                    enable_wal=True,
-                    wal_path=temp_dir + "/test_wal"
-                )
+                cache = AsyncTTLCache(enable_wal=True, wal_path=temp_dir + "/test_wal")
 
                 # Mock WAL to capture logged operations
                 logged_operations = []
@@ -541,10 +537,7 @@ class TestAsyncTTLCacheWAL:
         """Test that DELETE operations are logged to WAL."""
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
-                cache = AsyncTTLCache(
-                    enable_wal=True,
-                    wal_path=temp_dir + "/test_wal"
-                )
+                cache = AsyncTTLCache(enable_wal=True, wal_path=temp_dir + "/test_wal")
 
                 await cache.set("test_key", "test_value")
 
@@ -665,7 +658,7 @@ class TestAsyncTTLCacheSnapshot:
         assert "created_at" in snapshot["_metadata"]
 
         # Check that shards are included
-        shard_keys = [k for k in snapshot.keys() if k.startswith("shard_")]
+        shard_keys = [k for k in snapshot if k.startswith("shard_")]
         assert len(shard_keys) > 0
 
     @pytest.mark.asyncio
@@ -727,7 +720,7 @@ class TestAsyncTTLCacheTransactionRollback:
                 "key": "key1",
                 "value": "new_value",
                 "previous_value": "original_value",
-                "previous_ttl": 300
+                "previous_ttl": 300,
             }
         ]
 
@@ -750,7 +743,7 @@ class TestAsyncTTLCacheTransactionRollback:
                 "operation": "delete",
                 "key": "key1",
                 "previous_value": "value_to_restore",
-                "previous_ttl": 300
+                "previous_ttl": 300,
             }
         ]
 
@@ -814,6 +807,7 @@ class TestAsyncTTLCacheErrorHandling:
     def test_cache_entry_creation(self):
         """Test CacheEntry dataclass."""
         import time
+
         current_time = time.time()
 
         entry = CacheEntry(data="test_data", timestamp=current_time, ttl=60)
@@ -825,10 +819,10 @@ class TestAsyncTTLCacheErrorHandling:
     @pytest.mark.asyncio
     async def test_redis_client_creation_failure(self):
         """Test Redis client creation when Redis is unavailable."""
-        with patch('resync.settings.settings') as mock_settings:
+        with patch("resync.settings.settings") as mock_settings:
             mock_settings.REDIS_URL = "redis://invalid_host:6379"
 
-            with patch('redis.asyncio.Redis.from_url') as mock_redis:
+            with patch("redis.asyncio.Redis.from_url") as mock_redis:
                 mock_redis.side_effect = Exception("Connection failed")
 
                 with pytest.raises(Exception):
@@ -863,7 +857,7 @@ class TestAsyncTTLCachePerformance:
 
         # Should complete in reasonable time (adjust thresholds as needed)
         assert set_duration < 10  # Less than 10 seconds for 1000 sets
-        assert get_duration < 5   # Less than 5 seconds for 1000 gets
+        assert get_duration < 5  # Less than 5 seconds for 1000 gets
 
         # Verify all operations succeeded
         cache_size = cache.size()

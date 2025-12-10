@@ -4,11 +4,12 @@ Simple test for the refactored cache implementation.
 """
 
 import asyncio
-import sys
 import os
+import sys
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 # Mock the dependencies
 class MockRuntimeMetrics:
@@ -32,12 +33,14 @@ class MockRuntimeMetrics:
     def get_health_status(self):
         return {}
 
+
 class MockCounter:
     def __init__(self):
         self.value = 0
 
     def increment(self, amount=1):
         self.value += amount
+
 
 class MockGauge:
     def __init__(self):
@@ -46,22 +49,26 @@ class MockGauge:
     def set(self, value):
         self.value = value
 
+
 class MockCorrelationID:
     def __init__(self):
         self.id = "test-correlation-id"
+
 
 class MockExceptions:
     class CacheError(Exception):
         pass
 
+
 # Mock the modules before importing
-sys.modules['resync.core.metrics'] = MockRuntimeMetrics()
-sys.modules['resync.core.exceptions'] = MockExceptions()
+sys.modules["resync.core.metrics"] = MockRuntimeMetrics()
+sys.modules["resync.core.exceptions"] = MockExceptions()
 
 # Now import the cache components
-from resync.core.cache.memory_manager import CacheMemoryManager, CacheEntry
+from resync.core.cache.memory_manager import CacheEntry, CacheMemoryManager
 from resync.core.cache.persistence_manager import CachePersistenceManager
 from resync.core.cache.transaction_manager import CacheTransactionManager
+
 
 async def test_components():
     """Test the cache components."""
@@ -87,11 +94,7 @@ async def test_components():
     from resync.core.cache.async_cache_refactored import AsyncTTLCache
 
     cache = AsyncTTLCache(
-        ttl_seconds=60,
-        num_shards=2,
-        max_entries=100,
-        max_memory_mb=1,
-        enable_wal=False
+        ttl_seconds=60, num_shards=2, max_entries=100, max_memory_mb=1, enable_wal=False
     )
 
     print("✓ Refactored AsyncTTLCache created")
@@ -140,9 +143,11 @@ async def test_components():
         os.remove(snapshot_path)
     if os.path.exists("./test_snapshots"):
         import shutil
+
         shutil.rmtree("./test_snapshots")
 
     return True
+
 
 if __name__ == "__main__":
     try:
@@ -156,5 +161,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ Test execution failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

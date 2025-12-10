@@ -5,7 +5,6 @@ This module implements the Factory pattern for creating standardized error respo
 based on different exception types, making the code more modular, testable, and maintainable.
 """
 
-
 from fastapi import Request
 
 from resync.core.exceptions import (
@@ -41,16 +40,21 @@ from resync.models.error_models import (
 def _get_error_response_builder():
     """Lazy import to avoid circular dependency."""
     from resync.core.utils.error_utils import ErrorResponseBuilder
+
     return ErrorResponseBuilder
+
 
 def _get_generate_correlation_id():
     """Lazy import to avoid circular dependency."""
     from resync.core.utils.error_utils import generate_correlation_id
+
     return generate_correlation_id
+
 
 def _get_should_include_stack_trace():
     """Lazy import to avoid circular dependency."""
     from resync.core.utils.error_utils import should_include_stack_trace
+
     return should_include_stack_trace
 
 
@@ -79,7 +83,11 @@ class ErrorFactory:
             builder.with_request_context(request)
 
         # Enhanced security: only include stack traces in non-production environments
-        is_production = getattr(request.state, "app_env", "development") == "production" if request else "production"
+        is_production = (
+            getattr(request.state, "app_env", "development") == "production"
+            if request
+            else "production"
+        )
         should_include_stack_trace_func = _get_should_include_stack_trace()
         include_stack_trace = should_include_stack_trace_func() and not is_production
 
@@ -110,9 +118,9 @@ class EnhancedResyncExceptionFactory:
 
     @staticmethod
     def create_response(
-        builder, # ErrorResponseBuilder
+        builder,  # ErrorResponseBuilder
         exception: EnhancedResyncException,
-        is_production: bool
+        is_production: bool,
     ) -> BaseErrorResponse:
         """Create response for enhanced Resync exceptions."""
         # Use the enhanced exception's information to create a more detailed response
@@ -151,9 +159,7 @@ class EnhancedResyncExceptionFactory:
             )
         if exception.error_category == "EXTERNAL_SERVICE":
             service_name = (
-                details.get("service", "External Service")
-                if details
-                else "External Service"
+                details.get("service", "External Service") if details else "External Service"
             )
             return builder.build_external_service_error(
                 service_name,
@@ -181,9 +187,9 @@ class TWSConnectionExceptionFactory:
 
     @staticmethod
     def create_response(
-        builder, # ErrorResponseBuilder
+        builder,  # ErrorResponseBuilder
         exception: Exception,
-        is_production: bool
+        is_production: bool,
     ) -> BaseErrorResponse:
         """Create response for TWS connection exceptions."""
         return builder.build_external_service_error("TWS", "service_error")
@@ -194,9 +200,9 @@ class LLMExceptionFactory:
 
     @staticmethod
     def create_response(
-        builder, # ErrorResponseBuilder
+        builder,  # ErrorResponseBuilder
         exception: Exception,
-        is_production: bool
+        is_production: bool,
     ) -> BaseErrorResponse:
         """Create response for LLM exceptions."""
         return builder.build_external_service_error("LLM", "service_error")
@@ -207,9 +213,9 @@ class DatabaseExceptionFactory:
 
     @staticmethod
     def create_response(
-        builder, # ErrorResponseBuilder
+        builder,  # ErrorResponseBuilder
         exception: Exception,
-        is_production: bool
+        is_production: bool,
     ) -> BaseErrorResponse:
         """Create response for database exceptions."""
         return builder.build_system_error("database_error")
@@ -220,9 +226,9 @@ class NotFoundExceptionHandler:
 
     @staticmethod
     def create_response(
-        builder, # ErrorResponseBuilder
+        builder,  # ErrorResponseBuilder
         exception: Exception,
-        is_production: bool
+        is_production: bool,
     ) -> BaseErrorResponse:
         """Create response for not found exceptions."""
         return builder.build_business_logic_error("resource_not_found", resource="Resource")
@@ -233,9 +239,9 @@ class BaseResyncExceptionFactory:
 
     @staticmethod
     def create_response(
-        builder, # ErrorResponseBuilder
+        builder,  # ErrorResponseBuilder
         exception: BaseResyncException,
-        is_production: bool
+        is_production: bool,
     ) -> BaseErrorResponse:
         """Create response for base Resync exceptions."""
         return builder.build_system_error(
@@ -248,9 +254,9 @@ class UnknownExceptionFactory:
 
     @staticmethod
     def create_response(
-        builder, # ErrorResponseBuilder
+        builder,  # ErrorResponseBuilder
         exception: Exception,
-        is_production: bool
+        is_production: bool,
     ) -> BaseErrorResponse:
         """Create response for unknown exceptions."""
         return builder.build_system_error(
@@ -259,7 +265,7 @@ class UnknownExceptionFactory:
 
 
 def _handle_business_logic_exception(
-    builder, # ErrorResponseBuilder
+    builder,  # ErrorResponseBuilder
     exception: Exception,
     message: str,
     user_friendly_message: str,
@@ -270,9 +276,7 @@ def _handle_business_logic_exception(
     from resync.core.exceptions_enhanced import NotFoundError as EnhancedNotFoundError
 
     if isinstance(exception, EnhancedNotFoundError):
-        return builder.build_business_logic_error(
-            "resource_not_found", resource="Resource"
-        )
+        return builder.build_business_logic_error("resource_not_found", resource="Resource")
     return builder.build_business_logic_error(
         "invalid_operation",
         user_friendly_message=sanitize_error_message(user_friendly_message),
@@ -288,4 +292,5 @@ def sanitize_error_message(message: str) -> str:
     Use ErrorSanitizer.sanitize() for new code.
     """
     from resync.core.utils.error_utils import ErrorSanitizer
+
     return ErrorSanitizer.sanitize(message)

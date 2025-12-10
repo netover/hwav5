@@ -1,16 +1,21 @@
 import io
 import logging
 from unittest.mock import patch
+
 import pytest
+
 from resync.core.encoding_utils import can_encode, symbol
 from resync.core.structured_logger import SafeEncodingFormatter
 
 
-@pytest.mark.parametrize("encoding,expected_ok,expected_err", [
-    ("utf-8", "✅", "❌"),
-    ("cp1252", "[OK]", "[ERR]"),
-    (None, "✅", "❌"),  # None defaults to utf-8 fallback
-])
+@pytest.mark.parametrize(
+    "encoding,expected_ok,expected_err",
+    [
+        ("utf-8", "✅", "❌"),
+        ("cp1252", "[OK]", "[ERR]"),
+        (None, "✅", "❌"),  # None defaults to utf-8 fallback
+    ],
+)
 def test_symbol_fallback(encoding, expected_ok, expected_err):
     # Simulate stream with encoding
     stream = io.TextIOWrapper(io.BytesIO(), encoding=encoding) if encoding else None
@@ -29,13 +34,18 @@ def test_safe_formatter(caplog):
 
     # Mock record with emoji
     record = logging.LogRecord(
-        name="test", level=logging.INFO, pathname="", lineno=0,
-        msg="Status: ✅", args=(), exc_info=None
+        name="test",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="Status: ✅",
+        args=(),
+        exc_info=None,
     )
 
     # Simulate cp1252 encoding
-    with patch('sys.stdout') as mock_stdout:
-        mock_stdout.encoding = 'cp1252'
+    with patch("sys.stdout") as mock_stdout:
+        mock_stdout.encoding = "cp1252"
         formatted = formatter.format(record)
         assert "[OK]" in formatted  # Fallback applied
         assert "✅" not in formatted
@@ -46,13 +56,18 @@ def test_safe_formatter_utf8(caplog):
 
     # Mock record with emoji
     record = logging.LogRecord(
-        name="test", level=logging.INFO, pathname="", lineno=0,
-        msg="Status: ✅", args=(), exc_info=None
+        name="test",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="Status: ✅",
+        args=(),
+        exc_info=None,
     )
 
     # Simulate UTF-8 encoding
-    with patch('sys.stdout') as mock_stdout:
-        mock_stdout.encoding = 'utf-8'
+    with patch("sys.stdout") as mock_stdout:
+        mock_stdout.encoding = "utf-8"
         formatted = formatter.format(record)
         assert "✅" in formatted  # Emoji preserved
         assert "[OK]" not in formatted
@@ -63,13 +78,18 @@ def test_safe_formatter_unknown_encoding():
 
     # Mock record with emoji
     record = logging.LogRecord(
-        name="test", level=logging.INFO, pathname="", lineno=0,
-        msg="Status: ✅", args=(), exc_info=None
+        name="test",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="Status: ✅",
+        args=(),
+        exc_info=None,
     )
 
     # Simulate unknown encoding
-    with patch('sys.stdout') as mock_stdout:
-        mock_stdout.encoding = 'unknown-encoding'
+    with patch("sys.stdout") as mock_stdout:
+        mock_stdout.encoding = "unknown-encoding"
         formatted = formatter.format(record)
         # Should fall back to ASCII or error handling
         assert "[ENCODING ERROR]" in formatted or "[OK]" in formatted
@@ -85,7 +105,7 @@ def test_no_unicode_encode_error():
     ]
 
     for encoding, message in test_cases:
-        with patch('sys.stdout') as mock_stdout:
+        with patch("sys.stdout") as mock_stdout:
             mock_stdout.encoding = encoding
 
             # Should not raise UnicodeEncodeError
@@ -95,8 +115,13 @@ def test_no_unicode_encode_error():
             # Safe formatter should also work
             formatter = SafeEncodingFormatter()
             record = logging.LogRecord(
-                name="test", level=logging.INFO, pathname="", lineno=0,
-                msg=message, args=(), exc_info=None
+                name="test",
+                level=logging.INFO,
+                pathname="",
+                lineno=0,
+                msg=message,
+                args=(),
+                exc_info=None,
             )
 
             formatted = formatter.format(record)

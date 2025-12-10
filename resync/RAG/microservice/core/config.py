@@ -4,7 +4,6 @@ Configuration for the pgvector-based RAG system.
 Defines environment variables and defaults for PostgreSQL connection, embedding model, and search parameters.
 """
 
-
 import os
 from dataclasses import dataclass
 
@@ -22,8 +21,7 @@ class RagConfig:
 
     # PostgreSQL connection (uses main DATABASE_URL)
     database_url: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://resync:password@localhost:5432/resync"
+        "DATABASE_URL", "postgresql://resync:password@localhost:5432/resync"
     )
 
     # Collection names (stored in collection_name column)

@@ -6,7 +6,6 @@ including database connection pools, WebSocket pools, and connection
 utilization tracking.
 """
 
-
 import time
 from datetime import datetime
 
@@ -103,9 +102,7 @@ class ConnectionPoolMonitor:
             # Enhance metadata with calculated percentages and thresholds
             enhanced_metadata = dict(pool_stats)
             if "active_connections" in pool_stats and "total_connections" in pool_stats:
-                enhanced_metadata["connection_usage_percent"] = round(
-                    connection_usage_percent, 1
-                )
+                enhanced_metadata["connection_usage_percent"] = round(connection_usage_percent, 1)
                 enhanced_metadata["threshold_percent"] = threshold_percent
 
             health = ComponentHealth(

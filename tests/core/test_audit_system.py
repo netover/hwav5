@@ -10,19 +10,19 @@ This module includes tests for:
 
 import json
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 import pytest_asyncio
 
 from resync.core.audit_log import AuditLogManager
-from resync.core.logger import log_audit_event, _sanitize_audit_details
 from resync.core.audit_queue import AsyncAuditQueue
 from resync.core.connection_pool_manager import (
     ConnectionPoolManager,
     DatabaseConnectionPool,
     RedisConnectionPool,
 )
+from resync.core.logger import _sanitize_audit_details, log_audit_event
 
 
 @pytest.fixture
@@ -93,15 +93,11 @@ class TestAuditLogManager:
     def test_query_audit_logs_with_filters(self, audit_log_manager):
         """Test querying audit logs with various filters."""
         # Add some test logs
-        audit_log_manager.log_audit_event(
-            "action1", "user1", {"data": "value1"}, severity="INFO"
-        )
+        audit_log_manager.log_audit_event("action1", "user1", {"data": "value1"}, severity="INFO")
         audit_log_manager.log_audit_event(
             "action2", "user2", {"data": "value2"}, severity="WARNING"
         )
-        audit_log_manager.log_audit_event(
-            "action1", "user1", {"data": "value3"}, severity="ERROR"
-        )
+        audit_log_manager.log_audit_event("action1", "user1", {"data": "value3"}, severity="ERROR")
 
         # Test action filter
         logs = audit_log_manager.query_audit_logs(action="action1")
@@ -128,15 +124,11 @@ class TestAuditLogManager:
     def test_get_audit_metrics(self, audit_log_manager):
         """Test getting audit metrics."""
         # Add some test logs
-        audit_log_manager.log_audit_event(
-            "action1", "user1", {"data": "value1"}, severity="INFO"
-        )
+        audit_log_manager.log_audit_event("action1", "user1", {"data": "value1"}, severity="INFO")
         audit_log_manager.log_audit_event(
             "action2", "user2", {"data": "value2"}, severity="WARNING"
         )
-        audit_log_manager.log_audit_event(
-            "action1", "user1", {"data": "value3"}, severity="INFO"
-        )
+        audit_log_manager.log_audit_event("action1", "user1", {"data": "value3"}, severity="INFO")
 
         metrics = audit_log_manager.get_audit_metrics()
 
@@ -156,9 +148,7 @@ class TestLoggerIntegration:
         db_manager = AuditLogManager(db_path=temp_db_path)
 
         # Patch the global get_audit_log_manager to use our test database
-        with patch(
-            "resync.core.audit_log.get_audit_log_manager", return_value=db_manager
-        ):
+        with patch("resync.core.audit_log.get_audit_log_manager", return_value=db_manager):
             log_audit_event(
                 action="test_integration",
                 user_id="integration_user",
@@ -223,7 +213,7 @@ class TestConnectionPoolInitialization:
         manager = ConnectionPoolManager()
         await manager.initialize()
 
-        pools = manager.get_all_pools()
+        manager.get_all_pools()
         # Test that pools are created based on settings
         # At least Redis and Database pools should exist if properly configured
 
@@ -236,9 +226,7 @@ class TestConnectionPoolInitialization:
         from resync.core.connection_pool_manager import ConnectionPoolConfig
 
         # Use an in-memory SQLite database for testing
-        config = ConnectionPoolConfig(
-            pool_name="test_db_pool", min_size=1, max_size=5, timeout=10
-        )
+        config = ConnectionPoolConfig(pool_name="test_db_pool", min_size=1, max_size=5, timeout=10)
         db_pool = DatabaseConnectionPool(
             config, "sqlite:///file:memdb_test?mode=memory&cache=shared"
         )
@@ -290,16 +278,16 @@ class TestAuditQueueIntegration:
     @pytest.mark.asyncio
     async def test_audit_api_logging(self, temp_db_path):
         """Test that audit API calls properly log to the audit log database."""
-        from resync.api.audit import get_flagged_memories, get_audit_metrics
-        from fastapi import Request
-        from unittest.mock import AsyncMock
         import uuid
+        from unittest.mock import AsyncMock
+
+        from fastapi import Request
+
+        from resync.api.audit import get_audit_metrics, get_flagged_memories
 
         # Create audit log manager and patch global function
         db_manager = AuditLogManager(db_path=temp_db_path)
-        with patch(
-            "resync.core.audit_log.get_audit_log_manager", return_value=db_manager
-        ):
+        with patch("resync.core.audit_log.get_audit_log_manager", return_value=db_manager):
             # Mock request object
             mock_request = AsyncMock(spec=Request)
             mock_request.state.user_id = "test_user"
@@ -323,9 +311,7 @@ class TestAuditQueueIntegration:
             mock_kg.client.delete = AsyncMock()
 
             # Test get_flagged_memories
-            result = get_flagged_memories(
-                request=mock_request, audit_queue=mock_audit_queue
-            )
+            result = get_flagged_memories(request=mock_request, audit_queue=mock_audit_queue)
             assert result == []
 
             # Check that audit event was logged
@@ -334,9 +320,7 @@ class TestAuditQueueIntegration:
             assert logs[0].user_id == "test_user"
 
             # Test get_audit_metrics
-            metrics_result = get_audit_metrics(
-                request=mock_request, audit_queue=mock_audit_queue
-            )
+            metrics_result = get_audit_metrics(request=mock_request, audit_queue=mock_audit_queue)
             assert metrics_result == {
                 "total": 0,
                 "pending": 0,
@@ -352,8 +336,8 @@ class TestAuditQueueIntegration:
 
 def test_audit_db_functions():
     """Test the audit_db functions directly."""
-    import tempfile
     import os
+    import tempfile
 
     # Create a temporary database for testing
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp_file:

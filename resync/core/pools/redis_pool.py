@@ -3,7 +3,6 @@ Redis connection pool implementation for the Resync project.
 Separated to follow Single Responsibility Principle.
 """
 
-
 import logging
 
 # Soft import for redis (optional dependency)
@@ -27,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 class RedisPool:
     """Connection pool for redis resources."""
+
     def __init__(self, url: str | None = None):
         self._url = url
         self._client = None
@@ -41,12 +41,14 @@ class RedisPool:
             if self._url:
                 # usa URL explícita
                 import redis.asyncio as redis  # type: ignore
+
                 self._client = redis.from_url(self._url, encoding="utf-8", decode_responses=True)
                 logger.info("Initialized Redis client from explicit URL (lazy).")
             else:
                 # usa factory centralizada
                 self._client = get_redis_client()
         return self._client
+
 
 # Adicionar alias para compatibilidade
 RedisConnectionPool = RedisPool

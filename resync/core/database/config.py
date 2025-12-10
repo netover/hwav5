@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 class DatabaseDriver(str, Enum):
     """Database driver enumeration."""
+
     POSTGRESQL = "postgresql"  # Only supported backend
 
 
@@ -40,6 +41,7 @@ class DatabaseConfig:
     PostgreSQL is the only supported database for production and development.
     All operations use asyncpg for async execution.
     """
+
     driver: DatabaseDriver = DatabaseDriver.POSTGRESQL
     host: str = "localhost"
     port: int = 5432

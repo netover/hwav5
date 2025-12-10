@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 from urllib.parse import urljoin, urlparse
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 class DocumentType(str, Enum):
     """Supported document types."""
+
     PDF = "pdf"
     HTML = "html"
     MARKDOWN = "markdown"
@@ -47,6 +48,7 @@ class DocumentType(str, Enum):
 @dataclass
 class DocumentChunk:
     """Represents a chunk of parsed document."""
+
     content: str
     chunk_index: int
     total_chunks: int
@@ -63,6 +65,7 @@ class DocumentChunk:
 @dataclass
 class ParsedDocument:
     """Represents a fully parsed document."""
+
     title: str
     content: str
     source: str
@@ -81,6 +84,7 @@ class ParsedDocument:
 # =============================================================================
 # PDF Parser
 # =============================================================================
+
 
 class PDFParser:
     """
@@ -115,6 +119,7 @@ class PDFParser:
         # Check for pypdf availability
         try:
             import pypdf
+
             self._pypdf_available = True
         except ImportError:
             self._pypdf_available = False
@@ -280,11 +285,13 @@ class PDFParser:
             for pattern in heading_patterns:
                 match = re.match(pattern, stripped)
                 if match:
-                    sections.append({
-                        "level": match.group(1) if len(match.groups()) > 1 else "1",
-                        "title": match.group(2) if len(match.groups()) > 1 else match.group(1),
-                        "page": page_num,
-                    })
+                    sections.append(
+                        {
+                            "level": match.group(1) if len(match.groups()) > 1 else "1",
+                            "title": match.group(2) if len(match.groups()) > 1 else match.group(1),
+                            "page": page_num,
+                        }
+                    )
                     break
 
         return sections
@@ -310,21 +317,25 @@ class PDFParser:
                 else:
                     # End of table
                     if len(table_lines) >= 3:  # Minimum 3 rows for a table
-                        tables.append({
-                            "page": page_num,
-                            "rows": len(table_lines),
-                            "content": "\n".join(table_lines),
-                        })
+                        tables.append(
+                            {
+                                "page": page_num,
+                                "rows": len(table_lines),
+                                "content": "\n".join(table_lines),
+                            }
+                        )
                     table_lines = []
                     in_table = False
 
         # Handle table at end of page
         if len(table_lines) >= 3:
-            tables.append({
-                "page": page_num,
-                "rows": len(table_lines),
-                "content": "\n".join(table_lines),
-            })
+            tables.append(
+                {
+                    "page": page_num,
+                    "rows": len(table_lines),
+                    "content": "\n".join(table_lines),
+                }
+            )
 
         return tables
 
@@ -338,8 +349,11 @@ class PDFParser:
         text = text.replace("ﬁ", "fi")
         text = text.replace("ﬂ", "fl")
         text = text.replace("'", "'")
-        text = text.replace(""", '"')
-        text = text.replace(""", '"')
+        text = text.replace(
+            """, '"')
+        text = text.replace(""",
+            '"',
+        )
 
         return text.strip()
 
@@ -347,6 +361,7 @@ class PDFParser:
 # =============================================================================
 # HTML Parser
 # =============================================================================
+
 
 class HTMLParser:
     """
@@ -381,6 +396,7 @@ class HTMLParser:
         # Check for BeautifulSoup availability
         try:
             from bs4 import BeautifulSoup
+
             self._bs4_available = True
         except ImportError:
             self._bs4_available = False
@@ -494,15 +510,29 @@ class HTMLParser:
         """Remove navigation, sidebar, and header/footer elements."""
         # Common navigation selectors
         selectors = [
-            "nav", "header", "footer",
-            ".navigation", ".nav", ".navbar",
-            ".sidebar", ".side-nav", ".sidenav",
-            ".toc", ".table-of-contents",
-            ".breadcrumb", ".breadcrumbs",
-            "#header", "#footer", "#nav", "#sidebar",
-            "[role='navigation']", "[role='banner']",
-            ".ibm-masthead", ".ibm-footer",  # IBM-specific
-            ".hcl-header", ".hcl-footer",  # HCL-specific
+            "nav",
+            "header",
+            "footer",
+            ".navigation",
+            ".nav",
+            ".navbar",
+            ".sidebar",
+            ".side-nav",
+            ".sidenav",
+            ".toc",
+            ".table-of-contents",
+            ".breadcrumb",
+            ".breadcrumbs",
+            "#header",
+            "#footer",
+            "#nav",
+            "#sidebar",
+            "[role='navigation']",
+            "[role='banner']",
+            ".ibm-masthead",
+            ".ibm-footer",  # IBM-specific
+            ".hcl-header",
+            ".hcl-footer",  # HCL-specific
         ]
 
         for selector in selectors:
@@ -513,9 +543,14 @@ class HTMLParser:
         """Extract main content area."""
         # Common main content selectors
         selectors = [
-            "main", "article",
-            ".content", ".main-content", ".doc-content",
-            "#content", "#main-content", "#article",
+            "main",
+            "article",
+            ".content",
+            ".main-content",
+            ".doc-content",
+            "#content",
+            "#main-content",
+            "#article",
             ".ibm-content",  # IBM-specific
             ".hcl-content",  # HCL-specific
             "[role='main']",
@@ -536,11 +571,13 @@ class HTMLParser:
         for level in range(1, 7):
             for heading in soup.find_all(f"h{level}"):
                 section_id = heading.get("id", "")
-                sections.append({
-                    "level": str(level),
-                    "title": heading.get_text(strip=True),
-                    "id": section_id,
-                })
+                sections.append(
+                    {
+                        "level": str(level),
+                        "title": heading.get_text(strip=True),
+                        "id": section_id,
+                    }
+                )
 
         return sections
 
@@ -591,10 +628,12 @@ class HTMLParser:
             if base_url and not href.startswith(("http://", "https://", "//")):
                 href = urljoin(base_url, href)
 
-            links.append({
-                "url": href,
-                "text": text,
-            })
+            links.append(
+                {
+                    "url": href,
+                    "text": text,
+                }
+            )
 
         return links
 
@@ -619,6 +658,7 @@ class HTMLParser:
 # =============================================================================
 # URL Fetcher for Online Documentation
 # =============================================================================
+
 
 class DocumentationFetcher:
     """
@@ -713,6 +753,7 @@ class DocumentationFetcher:
 # Unified Document Parser
 # =============================================================================
 
+
 class DocumentParser:
     """
     Unified document parser for RAG ingestion.
@@ -773,7 +814,9 @@ class DocumentParser:
                     ".xml": DocumentType.XML,
                 }
                 return type_map.get(suffix, DocumentType.TEXT)
-            if source.startswith(("http://", "https://")) or source.strip().startswith(("<html", "<!DOCTYPE", "<HTML")):
+            if source.startswith(("http://", "https://")) or source.strip().startswith(
+                ("<html", "<!DOCTYPE", "<HTML")
+            ):
                 return DocumentType.HTML
         elif isinstance(source, bytes):
             if source.startswith(b"%PDF"):
@@ -800,10 +843,12 @@ class DocumentParser:
         # Extract sections
         sections = []
         for match in re.finditer(r"^(#{1,6})\s+(.+)$", content, re.MULTILINE):
-            sections.append({
-                "level": str(len(match.group(1))),
-                "title": match.group(2),
-            })
+            sections.append(
+                {
+                    "level": str(len(match.group(1))),
+                    "title": match.group(2),
+                }
+            )
 
         return ParsedDocument(
             title=title,
@@ -898,6 +943,7 @@ class DocumentParser:
 # =============================================================================
 # Factory Functions
 # =============================================================================
+
 
 def create_pdf_parser(**kwargs) -> PDFParser:
     """Create a PDF parser instance."""

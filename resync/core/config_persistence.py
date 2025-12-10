@@ -26,7 +26,6 @@ class ConfigPersistenceError(Exception):
     """Base exception for configuration persistence errors."""
 
 
-
 class ConfigPersistenceManager:
     """Manages persistent storage of application configuration.
 
@@ -53,9 +52,7 @@ class ConfigPersistenceManager:
             max_backups: Maximum number of backup files to keep
         """
         self.config_file = Path(config_file)
-        self.backup_dir = (
-            Path(backup_dir) if backup_dir else self.config_file.parent / "backups"
-        )
+        self.backup_dir = Path(backup_dir) if backup_dir else self.config_file.parent / "backups"
         self.max_backups = max_backups
 
         self._validate_config_file()
@@ -68,14 +65,10 @@ class ConfigPersistenceManager:
             ConfigPersistenceError: If file doesn't exist or isn't writable
         """
         if not self.config_file.exists():
-            raise ConfigPersistenceError(
-                f"Configuration file not found: {self.config_file}"
-            )
+            raise ConfigPersistenceError(f"Configuration file not found: {self.config_file}")
 
         if not os.access(self.config_file, os.W_OK):
-            raise ConfigPersistenceError(
-                f"Configuration file not writable: {self.config_file}"
-            )
+            raise ConfigPersistenceError(f"Configuration file not writable: {self.config_file}")
 
     def _ensure_backup_dir(self) -> None:
         """Ensure backup directory exists."""
@@ -97,9 +90,7 @@ class ConfigPersistenceManager:
             logger.error(f"Failed to load configuration: {e}", exc_info=True)
             raise ConfigPersistenceError(f"Failed to load config: {e}") from e
 
-    def save_config(
-        self, section: str, data: dict[str, Any], create_backup: bool = True
-    ) -> None:
+    def save_config(self, section: str, data: dict[str, Any], create_backup: bool = True) -> None:
         """Save configuration section to file with atomic write.
 
         Args:
@@ -140,8 +131,7 @@ class ConfigPersistenceManager:
             temp_file.replace(self.config_file)
 
             logger.info(
-                f"Configuration saved successfully: section={section}, "
-                f"keys={list(data.keys())}"
+                f"Configuration saved successfully: section={section}, keys={list(data.keys())}"
             )
 
             # Clean old backups

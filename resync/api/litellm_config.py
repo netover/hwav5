@@ -14,7 +14,6 @@ Endpoints:
 - GET  /api/v1/litellm/providers     - List configured providers
 """
 
-
 import asyncio
 import os
 import time
@@ -40,8 +39,10 @@ router = APIRouter(
 # PYDANTIC MODELS
 # =============================================================================
 
+
 class LiteLLMStatus(BaseModel):
     """LiteLLM router status."""
+
     initialized: bool
     router_available: bool
     init_success_count: int
@@ -52,6 +53,7 @@ class LiteLLMStatus(BaseModel):
 
 class ModelInfo(BaseModel):
     """Information about an available model."""
+
     name: str
     provider: str
     model_type: str  # chat, completion, embedding
@@ -65,6 +67,7 @@ class ModelInfo(BaseModel):
 
 class UsageStats(BaseModel):
     """LLM usage statistics."""
+
     total_requests: int
     total_input_tokens: int
     total_output_tokens: int
@@ -78,6 +81,7 @@ class UsageStats(BaseModel):
 
 class CostBreakdown(BaseModel):
     """Cost breakdown by model and time."""
+
     daily_costs: dict[str, float]
     model_costs: dict[str, float]
     total_cost_usd: float
@@ -88,6 +92,7 @@ class CostBreakdown(BaseModel):
 
 class ProviderStatus(BaseModel):
     """Status of an LLM provider."""
+
     name: str
     enabled: bool
     configured: bool
@@ -99,13 +104,17 @@ class ProviderStatus(BaseModel):
 
 class ModelTestRequest(BaseModel):
     """Request to test a model."""
+
     model: str = Field(..., description="Model name to test")
-    prompt: str = Field(default="Hello, respond with 'OK' if you're working.", description="Test prompt")
+    prompt: str = Field(
+        default="Hello, respond with 'OK' if you're working.", description="Test prompt"
+    )
     timeout: int = Field(default=30, ge=5, le=120, description="Timeout in seconds")
 
 
 class ModelTestResponse(BaseModel):
     """Response from model test."""
+
     success: bool
     model: str
     response: str | None = None
@@ -117,6 +126,7 @@ class ModelTestResponse(BaseModel):
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 def get_litellm_status() -> LiteLLMStatus:
     """Get current LiteLLM router status."""
@@ -150,54 +160,168 @@ def get_available_models() -> list[ModelInfo]:
     # Define known models with their properties
     model_definitions = [
         # OpenAI
-        {"name": "gpt-4o", "provider": "openai", "type": "chat", "max_tokens": 128000,
-         "input_cost": 0.005, "output_cost": 0.015, "streaming": True, "functions": True},
-        {"name": "gpt-4o-mini", "provider": "openai", "type": "chat", "max_tokens": 128000,
-         "input_cost": 0.00015, "output_cost": 0.0006, "streaming": True, "functions": True},
-        {"name": "gpt-4-turbo", "provider": "openai", "type": "chat", "max_tokens": 128000,
-         "input_cost": 0.01, "output_cost": 0.03, "streaming": True, "functions": True},
-        {"name": "gpt-4", "provider": "openai", "type": "chat", "max_tokens": 8192,
-         "input_cost": 0.03, "output_cost": 0.06, "streaming": True, "functions": True},
-        {"name": "gpt-3.5-turbo", "provider": "openai", "type": "chat", "max_tokens": 16385,
-         "input_cost": 0.0005, "output_cost": 0.0015, "streaming": True, "functions": True},
-
+        {
+            "name": "gpt-4o",
+            "provider": "openai",
+            "type": "chat",
+            "max_tokens": 128000,
+            "input_cost": 0.005,
+            "output_cost": 0.015,
+            "streaming": True,
+            "functions": True,
+        },
+        {
+            "name": "gpt-4o-mini",
+            "provider": "openai",
+            "type": "chat",
+            "max_tokens": 128000,
+            "input_cost": 0.00015,
+            "output_cost": 0.0006,
+            "streaming": True,
+            "functions": True,
+        },
+        {
+            "name": "gpt-4-turbo",
+            "provider": "openai",
+            "type": "chat",
+            "max_tokens": 128000,
+            "input_cost": 0.01,
+            "output_cost": 0.03,
+            "streaming": True,
+            "functions": True,
+        },
+        {
+            "name": "gpt-4",
+            "provider": "openai",
+            "type": "chat",
+            "max_tokens": 8192,
+            "input_cost": 0.03,
+            "output_cost": 0.06,
+            "streaming": True,
+            "functions": True,
+        },
+        {
+            "name": "gpt-3.5-turbo",
+            "provider": "openai",
+            "type": "chat",
+            "max_tokens": 16385,
+            "input_cost": 0.0005,
+            "output_cost": 0.0015,
+            "streaming": True,
+            "functions": True,
+        },
         # Anthropic
-        {"name": "claude-3-opus-20240229", "provider": "anthropic", "type": "chat", "max_tokens": 200000,
-         "input_cost": 0.015, "output_cost": 0.075, "streaming": True, "functions": True},
-        {"name": "claude-3-sonnet-20240229", "provider": "anthropic", "type": "chat", "max_tokens": 200000,
-         "input_cost": 0.003, "output_cost": 0.015, "streaming": True, "functions": True},
-        {"name": "claude-3-5-sonnet-20240620", "provider": "anthropic", "type": "chat", "max_tokens": 200000,
-         "input_cost": 0.003, "output_cost": 0.015, "streaming": True, "functions": True},
-        {"name": "claude-3-haiku-20240307", "provider": "anthropic", "type": "chat", "max_tokens": 200000,
-         "input_cost": 0.00025, "output_cost": 0.00125, "streaming": True, "functions": True},
-
+        {
+            "name": "claude-3-opus-20240229",
+            "provider": "anthropic",
+            "type": "chat",
+            "max_tokens": 200000,
+            "input_cost": 0.015,
+            "output_cost": 0.075,
+            "streaming": True,
+            "functions": True,
+        },
+        {
+            "name": "claude-3-sonnet-20240229",
+            "provider": "anthropic",
+            "type": "chat",
+            "max_tokens": 200000,
+            "input_cost": 0.003,
+            "output_cost": 0.015,
+            "streaming": True,
+            "functions": True,
+        },
+        {
+            "name": "claude-3-5-sonnet-20240620",
+            "provider": "anthropic",
+            "type": "chat",
+            "max_tokens": 200000,
+            "input_cost": 0.003,
+            "output_cost": 0.015,
+            "streaming": True,
+            "functions": True,
+        },
+        {
+            "name": "claude-3-haiku-20240307",
+            "provider": "anthropic",
+            "type": "chat",
+            "max_tokens": 200000,
+            "input_cost": 0.00025,
+            "output_cost": 0.00125,
+            "streaming": True,
+            "functions": True,
+        },
         # Ollama (Local)
-        {"name": "ollama/llama3", "provider": "ollama", "type": "chat", "max_tokens": 8192,
-         "input_cost": 0.0, "output_cost": 0.0, "streaming": True, "functions": False, "local": True},
-        {"name": "ollama/mistral", "provider": "ollama", "type": "chat", "max_tokens": 32768,
-         "input_cost": 0.0, "output_cost": 0.0, "streaming": True, "functions": False, "local": True},
-        {"name": "ollama/codellama", "provider": "ollama", "type": "chat", "max_tokens": 16384,
-         "input_cost": 0.0, "output_cost": 0.0, "streaming": True, "functions": False, "local": True},
-
+        {
+            "name": "ollama/llama3",
+            "provider": "ollama",
+            "type": "chat",
+            "max_tokens": 8192,
+            "input_cost": 0.0,
+            "output_cost": 0.0,
+            "streaming": True,
+            "functions": False,
+            "local": True,
+        },
+        {
+            "name": "ollama/mistral",
+            "provider": "ollama",
+            "type": "chat",
+            "max_tokens": 32768,
+            "input_cost": 0.0,
+            "output_cost": 0.0,
+            "streaming": True,
+            "functions": False,
+            "local": True,
+        },
+        {
+            "name": "ollama/codellama",
+            "provider": "ollama",
+            "type": "chat",
+            "max_tokens": 16384,
+            "input_cost": 0.0,
+            "output_cost": 0.0,
+            "streaming": True,
+            "functions": False,
+            "local": True,
+        },
         # Together AI
-        {"name": "together_ai/llama-3-70b", "provider": "together_ai", "type": "chat", "max_tokens": 8192,
-         "input_cost": 0.0009, "output_cost": 0.0009, "streaming": True, "functions": False},
-        {"name": "together_ai/mixtral-8x7b", "provider": "together_ai", "type": "chat", "max_tokens": 32768,
-         "input_cost": 0.0006, "output_cost": 0.0006, "streaming": True, "functions": False},
+        {
+            "name": "together_ai/llama-3-70b",
+            "provider": "together_ai",
+            "type": "chat",
+            "max_tokens": 8192,
+            "input_cost": 0.0009,
+            "output_cost": 0.0009,
+            "streaming": True,
+            "functions": False,
+        },
+        {
+            "name": "together_ai/mixtral-8x7b",
+            "provider": "together_ai",
+            "type": "chat",
+            "max_tokens": 32768,
+            "input_cost": 0.0006,
+            "output_cost": 0.0006,
+            "streaming": True,
+            "functions": False,
+        },
     ]
 
     for m in model_definitions:
-        models.append(ModelInfo(
-            name=m["name"],
-            provider=m["provider"],
-            model_type=m["type"],
-            max_tokens=m.get("max_tokens"),
-            input_cost_per_1k=m.get("input_cost"),
-            output_cost_per_1k=m.get("output_cost"),
-            supports_streaming=m.get("streaming", True),
-            supports_function_calling=m.get("functions", False),
-            is_local=m.get("local", False),
-        ))
+        models.append(
+            ModelInfo(
+                name=m["name"],
+                provider=m["provider"],
+                model_type=m["type"],
+                max_tokens=m.get("max_tokens"),
+                input_cost_per_1k=m.get("input_cost"),
+                output_cost_per_1k=m.get("output_cost"),
+                supports_streaming=m.get("streaming", True),
+                supports_function_calling=m.get("functions", False),
+                is_local=m.get("local", False),
+            )
+        )
 
     return models
 
@@ -283,57 +407,74 @@ def get_provider_status() -> list[ProviderStatus]:
 
     # OpenAI
     openai_key = os.environ.get("OPENAI_API_KEY", "")
-    providers.append(ProviderStatus(
-        name="OpenAI",
-        enabled=bool(openai_key),
-        configured=bool(openai_key),
-        models_available=["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
-    ))
+    providers.append(
+        ProviderStatus(
+            name="OpenAI",
+            enabled=bool(openai_key),
+            configured=bool(openai_key),
+            models_available=["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+        )
+    )
 
     # Anthropic
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    providers.append(ProviderStatus(
-        name="Anthropic",
-        enabled=bool(anthropic_key),
-        configured=bool(anthropic_key),
-        models_available=["claude-3-opus", "claude-3-sonnet", "claude-3-haiku", "claude-3-5-sonnet"],
-    ))
+    providers.append(
+        ProviderStatus(
+            name="Anthropic",
+            enabled=bool(anthropic_key),
+            configured=bool(anthropic_key),
+            models_available=[
+                "claude-3-opus",
+                "claude-3-sonnet",
+                "claude-3-haiku",
+                "claude-3-5-sonnet",
+            ],
+        )
+    )
 
     # Ollama (Local)
-    providers.append(ProviderStatus(
-        name="Ollama (Local)",
-        enabled=True,  # Always available if installed
-        configured=True,
-        models_available=["llama3", "mistral", "codellama", "phi"],
-    ))
+    providers.append(
+        ProviderStatus(
+            name="Ollama (Local)",
+            enabled=True,  # Always available if installed
+            configured=True,
+            models_available=["llama3", "mistral", "codellama", "phi"],
+        )
+    )
 
     # Together AI
     together_key = os.environ.get("TOGETHER_API_KEY", "")
-    providers.append(ProviderStatus(
-        name="Together AI",
-        enabled=bool(together_key),
-        configured=bool(together_key),
-        models_available=["llama-3-70b", "mixtral-8x7b"],
-    ))
+    providers.append(
+        ProviderStatus(
+            name="Together AI",
+            enabled=bool(together_key),
+            configured=bool(together_key),
+            models_available=["llama-3-70b", "mixtral-8x7b"],
+        )
+    )
 
     # OpenRouter
     openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
-    providers.append(ProviderStatus(
-        name="OpenRouter",
-        enabled=bool(openrouter_key),
-        configured=bool(openrouter_key),
-        models_available=["Various (100+ models)"],
-    ))
+    providers.append(
+        ProviderStatus(
+            name="OpenRouter",
+            enabled=bool(openrouter_key),
+            configured=bool(openrouter_key),
+            models_available=["Various (100+ models)"],
+        )
+    )
 
     # NVIDIA NIM
     nvidia_key = os.environ.get("NVIDIA_API_KEY", "") or getattr(settings, "llm_api_key", None)
     nvidia_configured = bool(nvidia_key) or "nvidia" in settings.llm_endpoint.lower()
-    providers.append(ProviderStatus(
-        name="NVIDIA NIM",
-        enabled=nvidia_configured,
-        configured=nvidia_configured,
-        models_available=["llama3-70b-instruct", "mixtral-8x7b-instruct"],
-    ))
+    providers.append(
+        ProviderStatus(
+            name="NVIDIA NIM",
+            enabled=nvidia_configured,
+            configured=nvidia_configured,
+            models_available=["llama3-70b-instruct", "mixtral-8x7b-instruct"],
+        )
+    )
 
     return providers
 
@@ -341,6 +482,7 @@ def get_provider_status() -> list[ProviderStatus]:
 # =============================================================================
 # API ENDPOINTS
 # =============================================================================
+
 
 @router.get("/status", response_model=LiteLLMStatus)
 async def get_status():
@@ -465,19 +607,22 @@ async def reset_router():
         reset_litellm_router()
         logger.info("litellm_router_reset")
 
-        return {"success": True, "message": "LiteLLM router reset. Will reinitialize on next request."}
+        return {
+            "success": True,
+            "message": "LiteLLM router reset. Will reinitialize on next request.",
+        }
 
     except ImportError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="LiteLLM not installed",
-        )
+        ) from None
     except Exception as e:
         logger.error("litellm_reset_failed", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset router: {str(e)}",
-        )
+        ) from e
 
 
 @router.get("/dashboard-data")

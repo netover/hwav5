@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from resync.core.health_models import ComponentType, HealthCheckConfig, HealthStatus
 from resync.core.health.health_checkers.database_health_checker import DatabaseHealthChecker
+from resync.core.health_models import ComponentType, HealthCheckConfig, HealthStatus
 
 
 class TestDatabaseHealthChecker:
@@ -57,12 +57,12 @@ class TestDatabaseHealthChecker:
         mock_pool_stats.average_wait_time = 0.1
         mock_pool_stats.last_health_check = datetime.now()
 
-        mock_pool_manager.get_pool_stats = MagicMock(return_value={
-            "database": mock_pool_stats
-        })
+        mock_pool_manager.get_pool_stats = MagicMock(return_value={"database": mock_pool_stats})
 
-        with patch('resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager',
-                  return_value=mock_pool_manager):
+        with patch(
+            "resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager",
+            return_value=mock_pool_manager,
+        ):
             result = await checker.check_health()
 
         assert result.status == HealthStatus.HEALTHY
@@ -77,8 +77,10 @@ class TestDatabaseHealthChecker:
         """Test database health check when pool manager is not available."""
         checker = DatabaseHealthChecker()
 
-        with patch('resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager',
-                  return_value=None):
+        with patch(
+            "resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager",
+            return_value=None,
+        ):
             result = await checker.check_health()
 
         assert result.status == HealthStatus.UNKNOWN
@@ -97,8 +99,10 @@ class TestDatabaseHealthChecker:
         mock_connection.__aexit__ = AsyncMock(return_value=None)
         mock_pool_manager.acquire_connection = MagicMock(return_value=mock_connection)
 
-        with patch('resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager',
-                  return_value=mock_pool_manager):
+        with patch(
+            "resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager",
+            return_value=mock_pool_manager,
+        ):
             result = await checker.check_health()
 
         assert result.status == HealthStatus.UNHEALTHY
@@ -138,12 +142,12 @@ class TestDatabaseHealthChecker:
         mock_pool_stats.average_wait_time = 0.1
         mock_pool_stats.last_health_check = datetime.now()
 
-        mock_pool_manager.get_pool_stats = MagicMock(return_value={
-            "database": mock_pool_stats
-        })
+        mock_pool_manager.get_pool_stats = MagicMock(return_value={"database": mock_pool_stats})
 
-        with patch('resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager',
-                  return_value=mock_pool_manager):
+        with patch(
+            "resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager",
+            return_value=mock_pool_manager,
+        ):
             result = await checker.check_health()
 
         assert result.status == HealthStatus.DEGRADED
@@ -168,8 +172,10 @@ class TestDatabaseHealthChecker:
         mock_pool_manager.acquire_connection = MagicMock(return_value=mock_connection)
         mock_pool_manager.get_pool_stats = MagicMock(return_value={})  # Empty stats
 
-        with patch('resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager',
-                  return_value=mock_pool_manager):
+        with patch(
+            "resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager",
+            return_value=mock_pool_manager,
+        ):
             result = await checker.check_health()
 
         assert result.status == HealthStatus.UNHEALTHY
@@ -191,12 +197,16 @@ class TestDatabaseHealthChecker:
         mock_connection.execute.return_value = mock_result
 
         mock_pool_manager.acquire_connection = MagicMock(return_value=mock_connection)
-        mock_pool_manager.get_pool_stats = MagicMock(return_value={
-            "other_pool": MagicMock()  # No database pool
-        })
+        mock_pool_manager.get_pool_stats = MagicMock(
+            return_value={
+                "other_pool": MagicMock()  # No database pool
+            }
+        )
 
-        with patch('resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager',
-                  return_value=mock_pool_manager):
+        with patch(
+            "resync.core.health.health_checkers.database_health_checker.get_connection_pool_manager",
+            return_value=mock_pool_manager,
+        ):
             result = await checker.check_health()
 
         assert result.status == HealthStatus.UNHEALTHY

@@ -30,6 +30,7 @@ MAX_SAMPLES = HISTORY_WINDOW_SECONDS // SAMPLE_INTERVAL_SECONDS  # 1440 amostras
 @dataclass
 class MetricSample:
     """Uma amostra de métricas em um ponto no tempo."""
+
     timestamp: float
     datetime_str: str
 
@@ -107,39 +108,47 @@ class DashboardMetricsStore:
 
         # Alerta: Error rate > 5%
         if sample.error_rate > 5.0:
-            new_alerts.append({
-                "type": "error_rate",
-                "severity": "warning" if sample.error_rate < 10 else "critical",
-                "message": f"Error rate elevado: {sample.error_rate:.1f}%",
-                "timestamp": sample.datetime_str
-            })
+            new_alerts.append(
+                {
+                    "type": "error_rate",
+                    "severity": "warning" if sample.error_rate < 10 else "critical",
+                    "message": f"Error rate elevado: {sample.error_rate:.1f}%",
+                    "timestamp": sample.datetime_str,
+                }
+            )
 
         # Alerta: Cache hit ratio < 80%
         if sample.cache_hit_ratio < 80.0 and (sample.cache_hits + sample.cache_misses) > 100:
-            new_alerts.append({
-                "type": "cache_ratio",
-                "severity": "warning",
-                "message": f"Cache hit ratio baixo: {sample.cache_hit_ratio:.1f}%",
-                "timestamp": sample.datetime_str
-            })
+            new_alerts.append(
+                {
+                    "type": "cache_ratio",
+                    "severity": "warning",
+                    "message": f"Cache hit ratio baixo: {sample.cache_hit_ratio:.1f}%",
+                    "timestamp": sample.datetime_str,
+                }
+            )
 
         # Alerta: Response time > 500ms
         if sample.response_time_p95 > 500:
-            new_alerts.append({
-                "type": "latency",
-                "severity": "warning" if sample.response_time_p95 < 1000 else "critical",
-                "message": f"Latência P95 elevada: {sample.response_time_p95:.0f}ms",
-                "timestamp": sample.datetime_str
-            })
+            new_alerts.append(
+                {
+                    "type": "latency",
+                    "severity": "warning" if sample.response_time_p95 < 1000 else "critical",
+                    "message": f"Latência P95 elevada: {sample.response_time_p95:.0f}ms",
+                    "timestamp": sample.datetime_str,
+                }
+            )
 
         # Alerta: TWS desconectado
         if not sample.tws_connected:
-            new_alerts.append({
-                "type": "tws_connection",
-                "severity": "critical",
-                "message": "TWS desconectado",
-                "timestamp": sample.datetime_str
-            })
+            new_alerts.append(
+                {
+                    "type": "tws_connection",
+                    "severity": "critical",
+                    "message": "TWS desconectado",
+                    "timestamp": sample.datetime_str,
+                }
+            )
 
         # Manter últimos 20 alertas
         self.alerts = (new_alerts + self.alerts)[:20]
@@ -164,7 +173,6 @@ class DashboardMetricsStore:
                 "version": "5.1.0",
                 "last_update": current.datetime_str,
                 "timestamp": current.timestamp,
-
                 "api": {
                     "requests_per_sec": round(current.requests_per_sec, 1),
                     "requests_total": current.requests_total,
@@ -175,10 +183,9 @@ class DashboardMetricsStore:
                     "response_time_avg": round(current.response_time_avg, 1),
                     "trend": self._calc_trend(
                         current.requests_per_sec,
-                        trend_sample.requests_per_sec if trend_sample else 0
-                    )
+                        trend_sample.requests_per_sec if trend_sample else 0,
+                    ),
                 },
-
                 "cache": {
                     "hit_ratio": round(current.cache_hit_ratio, 1),
                     "hits": current.cache_hits,
@@ -186,52 +193,42 @@ class DashboardMetricsStore:
                     "size": current.cache_size,
                     "evictions": current.cache_evictions,
                     "trend": self._calc_trend(
-                        current.cache_hit_ratio,
-                        trend_sample.cache_hit_ratio if trend_sample else 0
-                    )
+                        current.cache_hit_ratio, trend_sample.cache_hit_ratio if trend_sample else 0
+                    ),
                 },
-
                 "agents": {
                     "active": current.agents_active,
                     "created_total": current.agents_created,
                     "failed_total": current.agents_failed,
                     "trend": self._calc_trend(
-                        current.agents_active,
-                        trend_sample.agents_active if trend_sample else 0
-                    )
+                        current.agents_active, trend_sample.agents_active if trend_sample else 0
+                    ),
                 },
-
                 "llm": {
                     "requests": current.llm_requests,
                     "tokens_used": current.llm_tokens_used,
-                    "errors": current.llm_errors
+                    "errors": current.llm_errors,
                 },
-
                 "tws": {
                     "connected": current.tws_connected,
                     "latency_ms": round(current.tws_latency_ms, 1),
                     "requests_success": current.tws_requests_success,
                     "requests_failed": current.tws_requests_failed,
-                    "status": "online" if current.tws_connected else "offline"
+                    "status": "online" if current.tws_connected else "offline",
                 },
-
                 "system": {
                     "availability": round(current.system_availability, 2),
                     "async_operations": current.async_operations_active,
-                    "correlation_ids": current.correlation_ids_active
+                    "correlation_ids": current.correlation_ids_active,
                 },
-
-                "alerts": self.alerts[:5]  # Últimos 5 alertas
+                "alerts": self.alerts[:5],  # Últimos 5 alertas
             }
 
     async def get_history(self, minutes: int = 120) -> dict[str, Any]:
         """Retorna histórico de métricas para gráficos."""
         async with self._lock:
             # Calcular quantas amostras pegar
-            samples_needed = min(
-                len(self.samples),
-                (minutes * 60) // SAMPLE_INTERVAL_SECONDS
-            )
+            samples_needed = min(len(self.samples), (minutes * 60) // SAMPLE_INTERVAL_SECONDS)
 
             if samples_needed == 0:
                 return self._empty_history()
@@ -246,22 +243,22 @@ class DashboardMetricsStore:
                     "requests_per_sec": [round(s.requests_per_sec, 1) for s in recent_samples],
                     "error_rate": [round(s.error_rate, 2) for s in recent_samples],
                     "response_time_p50": [round(s.response_time_p50, 1) for s in recent_samples],
-                    "response_time_p95": [round(s.response_time_p95, 1) for s in recent_samples]
+                    "response_time_p95": [round(s.response_time_p95, 1) for s in recent_samples],
                 },
                 "cache": {
                     "hit_ratio": [round(s.cache_hit_ratio, 1) for s in recent_samples],
-                    "operations": [s.cache_hits + s.cache_misses for s in recent_samples]
+                    "operations": [s.cache_hits + s.cache_misses for s in recent_samples],
                 },
                 "agents": {
                     "active": [s.agents_active for s in recent_samples],
-                    "created": [s.agents_created for s in recent_samples]
+                    "created": [s.agents_created for s in recent_samples],
                 },
                 "tws": {
                     "latency": [round(s.tws_latency_ms, 1) for s in recent_samples],
-                    "connected": [1 if s.tws_connected else 0 for s in recent_samples]
+                    "connected": [1 if s.tws_connected else 0 for s in recent_samples],
                 },
                 "sample_count": len(recent_samples),
-                "interval_seconds": SAMPLE_INTERVAL_SECONDS
+                "interval_seconds": SAMPLE_INTERVAL_SECONDS,
             }
 
     def _empty_metrics(self) -> dict[str, Any]:
@@ -279,19 +276,24 @@ class DashboardMetricsStore:
             "llm": {"requests": 0, "tokens_used": 0, "errors": 0},
             "tws": {"connected": False, "latency_ms": 0, "status": "unknown"},
             "system": {"availability": 0, "async_operations": 0},
-            "alerts": []
+            "alerts": [],
         }
 
     def _empty_history(self) -> dict[str, Any]:
         """Retorna estrutura vazia de histórico."""
         return {
             "timestamps": [],
-            "api": {"requests_per_sec": [], "error_rate": [], "response_time_p50": [], "response_time_p95": []},
+            "api": {
+                "requests_per_sec": [],
+                "error_rate": [],
+                "response_time_p50": [],
+                "response_time_p95": [],
+            },
             "cache": {"hit_ratio": [], "operations": []},
             "agents": {"active": [], "created": []},
             "tws": {"latency": [], "connected": []},
             "sample_count": 0,
-            "interval_seconds": SAMPLE_INTERVAL_SECONDS
+            "interval_seconds": SAMPLE_INTERVAL_SECONDS,
         }
 
     def _format_uptime(self, seconds: float) -> str:
@@ -341,13 +343,16 @@ async def collect_metrics_sample() -> MetricSample:
 
         # Calcular requests/sec baseado no delta
         requests_total = (
-            snapshot.get("agent", {}).get("initializations", 0) +
-            snapshot.get("tws", {}).get("success", 0) if "tws" in snapshot else
-            snapshot.get("audit", {}).get("records_created", 0)
+            snapshot.get("agent", {}).get("initializations", 0)
+            + snapshot.get("tws", {}).get("success", 0)
+            if "tws" in snapshot
+            else snapshot.get("audit", {}).get("records_created", 0)
         )
 
         # Estimar requests/sec (simplificado)
-        time_delta = now - store.last_sample_time if store.last_sample_time > 0 else SAMPLE_INTERVAL_SECONDS
+        time_delta = (
+            now - store.last_sample_time if store.last_sample_time > 0 else SAMPLE_INTERVAL_SECONDS
+        )
         requests_delta = requests_total - store._prev_requests
         requests_per_sec = requests_delta / time_delta if time_delta > 0 else 0
         store._prev_requests = requests_total
@@ -362,10 +367,9 @@ async def collect_metrics_sample() -> MetricSample:
         # SLO metrics
         slo = snapshot.get("slo", {})
 
-        sample = MetricSample(
+        return MetricSample(
             timestamp=now,
             datetime_str=datetime.now().strftime("%H:%M:%S"),
-
             # API
             requests_total=requests_total,
             requests_per_sec=max(0, requests_per_sec),
@@ -373,47 +377,41 @@ async def collect_metrics_sample() -> MetricSample:
             error_rate=slo.get("api_error_rate", 0) * 100,
             response_time_p50=slo.get("api_response_time_p50", 0) * 1000,  # ms
             response_time_p95=slo.get("api_response_time_p95", 0) * 1000,  # ms
-            response_time_avg=(slo.get("api_response_time_p50", 0) + slo.get("api_response_time_p95", 0)) / 2 * 1000,
-
+            response_time_avg=(
+                slo.get("api_response_time_p50", 0) + slo.get("api_response_time_p95", 0)
+            )
+            / 2
+            * 1000,
             # Cache
             cache_hits=cache_hits,
             cache_misses=cache_misses,
             cache_hit_ratio=cache_hit_ratio,
             cache_size=int(cache.get("size", 0)),
             cache_evictions=cache.get("evictions", 0),
-
             # Agents
             agents_active=snapshot.get("agent", {}).get("active_count", 0),
             agents_created=snapshot.get("agent", {}).get("initializations", 0),
             agents_failed=snapshot.get("agent", {}).get("creation_failures", 0),
-
             # LLM metrics from snapshot
             llm_requests=snapshot.get("llm", {}).get("requests", 0),
             llm_tokens_used=snapshot.get("llm", {}).get("tokens_used", 0),
             llm_errors=snapshot.get("llm", {}).get("errors", 0),
-
             # TWS
             tws_connected=slo.get("tws_connection_success_rate", 0) > 0.5,
             tws_latency_ms=slo.get("api_response_time_p50", 0) * 1000,
             tws_errors=0,
             tws_requests_success=0,
             tws_requests_failed=0,
-
             # System
             system_uptime=now - store.start_time,
             system_availability=slo.get("availability", 1.0) * 100,
             async_operations_active=snapshot.get("system", {}).get("async_operations_active", 0),
-            correlation_ids_active=snapshot.get("system", {}).get("correlation_ids_active", 0)
+            correlation_ids_active=snapshot.get("system", {}).get("correlation_ids_active", 0),
         )
-
-        return sample
 
     except Exception as e:
         logger.error(f"Erro ao coletar métricas: {e}")
-        return MetricSample(
-            timestamp=time.time(),
-            datetime_str=datetime.now().strftime("%H:%M:%S")
-        )
+        return MetricSample(timestamp=time.time(), datetime_str=datetime.now().strftime("%H:%M:%S"))
 
 
 async def metrics_collector_loop():
@@ -501,24 +499,23 @@ async def get_active_alerts():
     """Retorna alertas ativos do sistema."""
     store = get_metrics_store()
     async with store._lock:
-        return JSONResponse(content={
-            "alerts": store.alerts,
-            "count": len(store.alerts)
-        })
+        return JSONResponse(content={"alerts": store.alerts, "count": len(store.alerts)})
 
 
 @router.get("/health")
 async def monitoring_health():
     """Health check do sistema de monitoramento."""
     store = get_metrics_store()
-    return JSONResponse(content={
-        "status": "healthy",
-        "samples_collected": len(store.samples),
-        "max_samples": MAX_SAMPLES,
-        "history_window": f"{HISTORY_WINDOW_SECONDS // 3600}h",
-        "sample_interval": f"{SAMPLE_INTERVAL_SECONDS}s",
-        "memory_estimate_mb": round(len(store.samples) * 0.001, 2)  # ~1KB por amostra
-    })
+    return JSONResponse(
+        content={
+            "status": "healthy",
+            "samples_collected": len(store.samples),
+            "max_samples": MAX_SAMPLES,
+            "history_window": f"{HISTORY_WINDOW_SECONDS // 3600}h",
+            "sample_interval": f"{SAMPLE_INTERVAL_SECONDS}s",
+            "memory_estimate_mb": round(len(store.samples) * 0.001, 2),  # ~1KB por amostra
+        }
+    )
 
 
 # WebSocket para atualizações em tempo real

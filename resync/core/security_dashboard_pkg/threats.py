@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class ThreatSeverity(str, Enum):
     """Threat severity levels."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -21,6 +22,7 @@ class ThreatSeverity(str, Enum):
 
 class ThreatType(str, Enum):
     """Types of security threats."""
+
     BRUTE_FORCE = "brute_force"
     SQL_INJECTION = "sql_injection"
     XSS = "xss"

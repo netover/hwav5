@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import contextlib
 import logging
 from dataclasses import dataclass
 from time import time
@@ -90,7 +91,7 @@ class AsyncTTLCache:
             self.anomaly_history = collections.deque()  # More efficient
             # Pre-allocate with reasonable max size to avoid frequent reallocations
             self.anomaly_history = collections.deque(maxlen=1000)
-        # Initialize cache configuration efficiently
+            # Initialize cache configuration efficiently
             self.shards: list[dict[str, CacheEntry]] = [{} for _ in range(self.num_shards)]
             self.shard_locks: [asyncio.Lock() for _ in range(self.num_shards)]
             self.cleanup_task: asyncio.Task[None] | None = None
@@ -98,9 +99,7 @@ class AsyncTTLCache:
             self._background_cleanup_started = False
 
         except Exception as e:
-            runtime_metrics.record_health_check(
-                "async_cache", "init_failed", {"error": str(e)}
-            )
+            runtime_metrics.record_health_check("async_cache", "init_failed", {"error": str(e)})
             log_with_correlation(
                 logging.CRITICAL,
                 f"Failed to initialize AsyncTTLCache: {e}",
@@ -125,10 +124,9 @@ class AsyncTTLCache:
         Carrega configurações do cache com fallback para settings.
         """
         # Create correlation_id for logging
-        correlation_id = runtime_metrics.create_correlation_id({
-            "component": "async_cache",
-            "operation": "load_configuration"
-        })
+        correlation_id = runtime_metrics.create_correlation_id(
+            {"component": "async_cache", "operation": "load_configuration"}
+        )
 
         try:
             # Try to load from settings module
@@ -151,7 +149,7 @@ class AsyncTTLCache:
             )
             self.enable_wal = (
                 enable_wal
-                if enable_wal != False
+                if enable_wal
                 else getattr(settings, "ASYNC_CACHE_ENABLE_WAL", enable_wal)
             )
             self.wal_path = (
@@ -171,7 +169,7 @@ class AsyncTTLCache:
             )
             self.paranoia_mode = (
                 paranoia_mode
-                if paranoia_mode != False
+                if paranoia_mode
                 else getattr(settings, "ASYNC_CACHE_PARANOIA_MODE", paranoia_mode)
             )
 
@@ -213,9 +211,7 @@ class AsyncTTLCache:
         """
         Inicializa a estrutura do cache (shards e locks).
         """
-        self.shards: list[dict[str, CacheEntry]] = [
-            {} for _ in range(self.num_shards)
-        ]
+        self.shards: list[dict[str, CacheEntry]] = [{} for _ in range(self.num_shards)]
         self.shard_locks = [asyncio.Lock() for _ in range(self.num_shards)]
         self.cleanup_task: asyncio.Task[None] | None = None
         self.is_running = False
@@ -227,10 +223,9 @@ class AsyncTTLCache:
         """
         if enable_wal:
             # Create correlation_id for logging
-            correlation_id = runtime_metrics.create_correlation_id({
-                "component": "async_cache",
-                "operation": "setup_wal"
-            })
+            correlation_id = runtime_metrics.create_correlation_id(
+                {"component": "async_cache", "operation": "setup_wal"}
+            )
 
             try:
                 wal_path_to_use = wal_path or "./cache_wal"
@@ -295,8 +290,7 @@ class AsyncTTLCache:
             return 0
 
         # Replay the WAL to rebuild cache state
-        replayed_count = await self.wal.replay_log(self)
-        return replayed_count
+        return await self.wal.replay_log(self)
 
     def _get_shard(self, key: str) -> tuple[dict[str, CacheEntry], asyncio.Lock]:
         """Get the shard and lock for a given key with bounds checking."""
@@ -338,8 +332,7 @@ class AsyncTTLCache:
             return None
 
         # Find the entry with the oldest timestamp
-        lru_key = min(shard.keys(), key=lambda k: shard[k].timestamp)
-        return lru_key
+        return min(shard.keys(), key=lambda k: shard[k].timestamp)
 
     def _start_cleanup_task(self) -> None:
         """Start the background cleanup task."""
@@ -389,9 +382,7 @@ class AsyncTTLCache:
                     f"Key error in AsyncTTLCache cleanup task: {e}",
                     correlation_id,
                 )
-                runtime_metrics.record_health_check(
-                    "async_cache", "key_error", {"error": str(e)}
-                )
+                runtime_metrics.record_health_check("async_cache", "key_error", {"error": str(e)})
                 raise CacheError(f"Key error during cache cleanup: {e}") from e
             except RuntimeError as e:  # pragma: no cover
                 log_with_correlation(
@@ -415,9 +406,7 @@ class AsyncTTLCache:
                 )
                 # Depending on the desired behavior, we might want to stop the loop
                 # or just log and continue. For now, we re-raise to make the failure visible.
-                raise CacheError(
-                    "Unexpected critical error during cache cleanup"
-                ) from e
+                raise CacheError("Unexpected critical error during cache cleanup") from e
 
         runtime_metrics.close_correlation_id(correlation_id)
 
@@ -505,17 +494,12 @@ class AsyncTTLCache:
         self._start_cleanup_task()
 
         # Perform WAL replay if needed on first use
-        if (
-            hasattr(self, "_needs_wal_replay_on_first_use")
-            and self._needs_wal_replay_on_first_use
-        ):
+        if hasattr(self, "_needs_wal_replay_on_first_use") and self._needs_wal_replay_on_first_use:
             # Remove the flag to prevent replay on every operation
             self._needs_wal_replay_on_first_use = False
             # Perform the WAL replay
             replayed_ops = await self._replay_wal_on_startup()
-            logger.info(
-                "replayed_operations_from_WAL_on_first_use", replayed_ops=replayed_ops
-            )
+            logger.info("replayed_operations_from_WAL_on_first_use", replayed_ops=replayed_ops)
 
         try:
             # Validate and normalize key
@@ -534,9 +518,7 @@ class AsyncTTLCache:
                         raise ValueError("Cache key cannot contain null bytes")
                     key = str_key
                 except Exception as _e:
-                    raise TypeError(
-                        f"Cache key must be convertible to string: {type(key)}"
-                    )
+                    raise TypeError(f"Cache key must be convertible to string: {type(key)}") from _e
             else:
                 key = str(key)
 
@@ -544,9 +526,7 @@ class AsyncTTLCache:
             if len(key) == 0:
                 raise ValueError("Cache key cannot be empty")
             if len(key) > 1000:
-                raise ValueError(
-                    f"Cache key too long: {len(key)} characters (max 1000)"
-                )
+                raise ValueError(f"Cache key too long: {len(key)} characters (max 1000)")
             if "\x00" in key or "\r" in key or "\n" in key:
                 raise ValueError("Cache key cannot contain control characters")
 
@@ -559,8 +539,7 @@ class AsyncTTLCache:
                         runtime_metrics.cache_hits.increment()
                         # Update hit rate dynamically
                         total_requests = (
-                            runtime_metrics.cache_hits.value
-                            + runtime_metrics.cache_misses.value
+                            runtime_metrics.cache_hits.value + runtime_metrics.cache_misses.value
                         )
                         if total_requests > 0:
                             hit_rate = runtime_metrics.cache_hits.value / total_requests
@@ -604,8 +583,7 @@ class AsyncTTLCache:
                 runtime_metrics.cache_misses.increment()
                 # Update miss rate
                 total_requests = (
-                    runtime_metrics.cache_hits.value
-                    + runtime_metrics.cache_misses.value
+                    runtime_metrics.cache_hits.value + runtime_metrics.cache_misses.value
                 )
                 if total_requests > 0:
                     miss_rate = runtime_metrics.cache_misses.value / total_requests
@@ -636,9 +614,7 @@ class AsyncTTLCache:
         finally:
             runtime_metrics.close_correlation_id(correlation_id)
 
-    async def set(
-        self, key: str, value: Any, ttl_seconds: float | None = None
-    ) -> None:
+    async def set(self, key: str, value: Any, ttl_seconds: float | None = None) -> None:
         """
         Asynchronously add an item to the cache with comprehensive input validation.
 
@@ -664,17 +640,12 @@ class AsyncTTLCache:
         self._start_cleanup_task()
 
         # Perform WAL replay if needed on first use
-        if (
-            hasattr(self, "_needs_wal_replay_on_first_use")
-            and self._needs_wal_replay_on_first_use
-        ):
+        if hasattr(self, "_needs_wal_replay_on_first_use") and self._needs_wal_replay_on_first_use:
             # Remove the flag to prevent replay on every operation
             self._needs_wal_replay_on_first_use = False
             # Perform the WAL replay
             replayed_ops = await self._replay_wal_on_startup()
-            logger.info(
-                "replayed_operations_from_WAL_on_first_use", replayed_ops=replayed_ops
-            )
+            logger.info("replayed_operations_from_WAL_on_first_use", replayed_ops=replayed_ops)
 
         try:
             # FUZZING-HARDENED INPUT VALIDATION
@@ -715,9 +686,7 @@ class AsyncTTLCache:
                 while not self._check_cache_bounds() and eviction_count < max_evictions:
                     # Cache is too large, trigger LRU eviction
                     lru_key = self._get_lru_key(shard)
-                    if (
-                        lru_key and lru_key != key
-                    ):  # Don't evict the entry we just added
+                    if lru_key and lru_key != key:  # Don't evict the entry we just added
                         # Remove LRU entry from this shard
                         del shard[lru_key]
                         runtime_metrics.cache_evictions.increment()
@@ -834,14 +803,12 @@ class AsyncTTLCache:
             try:
                 str_key = str(key)
                 if len(str_key) > 1000:  # Prevent extremely long keys
-                    raise ValueError(
-                        f"Cache key too long: {len(str_key)} characters (max 1000)"
-                    )
+                    raise ValueError(f"Cache key too long: {len(str_key)} characters (max 1000)")
                 if "\x00" in str_key:  # Prevent null bytes
                     raise ValueError("Cache key cannot contain null bytes")
                 key = str_key
             except Exception as _e:
-                raise TypeError(f"Cache key must be convertible to string: {type(key)}")
+                raise TypeError(f"Cache key must be convertible to string: {type(key)}") from _e
         else:
             key = str(key)
 
@@ -870,7 +837,7 @@ class AsyncTTLCache:
         except (TypeError, AttributeError, pickle.PicklingError) as e:
             # Allow some common non-pickleable types that are safe
             if not isinstance(value, (object, type, lambda: None)):
-                raise ValueError(f"Cache value must be serializable: {e}")
+                raise ValueError(f"Cache value must be serializable: {e}") from e
 
     def _validate_cache_ttl(self, ttl_seconds: float | None) -> float:
         """Validate the TTL value."""
@@ -901,17 +868,12 @@ class AsyncTTLCache:
         )
 
         # Perform WAL replay if needed on first use
-        if (
-            hasattr(self, "_needs_wal_replay_on_first_use")
-            and self._needs_wal_replay_on_first_use
-        ):
+        if hasattr(self, "_needs_wal_replay_on_first_use") and self._needs_wal_replay_on_first_use:
             # Remove the flag to prevent replay on every operation
             self._needs_wal_replay_on_first_use = False
             # Perform the WAL replay
             replayed_ops = await self._replay_wal_on_startup()
-            logger.info(
-                "replayed_operations_from_WAL_on_first_use", replayed_ops=replayed_ops
-            )
+            logger.info("replayed_operations_from_WAL_on_first_use", replayed_ops=replayed_ops)
 
         try:
             # If WAL is enabled, log the operation before applying it to the cache
@@ -969,21 +931,15 @@ class AsyncTTLCache:
 
             # Prevent excessive rollback operations (DoS protection)
             if len(operations) > 10000:
-                raise ValueError(
-                    f"Too many operations for rollback: {len(operations)} (max 10000)"
-                )
+                raise ValueError(f"Too many operations for rollback: {len(operations)} (max 10000)")
 
             # Validate each operation structure
             for i, op in enumerate(operations):
                 if not isinstance(op, dict):
-                    raise TypeError(
-                        f"Operation at index {i} must be a dict, got {type(op)}"
-                    )
+                    raise TypeError(f"Operation at index {i} must be a dict, got {type(op)}")
 
                 if "key" not in op:
-                    raise ValueError(
-                        f"Operation at index {i} missing required 'key' field"
-                    )
+                    raise ValueError(f"Operation at index {i} missing required 'key' field")
 
                 if op["operation"] not in ["set", "delete"]:
                     raise ValueError(
@@ -1000,7 +956,7 @@ class AsyncTTLCache:
                                 f"Key too long in operation {i}: {len(key)} characters"
                             )
                     except Exception as _e:
-                        raise ValueError(f"Invalid key in operation {i}: {type(key)}")
+                        raise ValueError(f"Invalid key in operation {i}: {type(key)}") from _e
 
             # Group operations by shard to minimize lock contention with bounds checking
             shard_operations: dict[int, list[dict[str, Any]]] = {}
@@ -1008,9 +964,7 @@ class AsyncTTLCache:
                 try:
                     # Use the same bounds-checked shard calculation
                     _, lock = self._get_shard(op["key"])
-                    shard_idx = self.shard_locks.index(
-                        lock
-                    )  # Get shard index from lock
+                    shard_idx = self.shard_locks.index(lock)  # Get shard index from lock
 
                     if shard_idx not in shard_operations:
                         shard_operations[shard_idx] = []
@@ -1109,8 +1063,7 @@ class AsyncTTLCache:
         # Return approximate size without blocking on locks for performance
         # This is acceptable for bounds checking but may be slightly inaccurate
         # under heavy concurrent modifications
-        total_size = sum(len(shard) for shard in self.shards)
-        return total_size
+        return sum(len(shard) for shard in self.shards)
 
     def _check_cache_bounds(self) -> bool:
         """
@@ -1178,9 +1131,7 @@ class AsyncTTLCache:
             # Extrapolate to full cache size
             if sample_count > 0:
                 avg_memory_per_item = sample_memory / sample_count
-                estimated_memory_mb = (avg_memory_per_item * current_size) / (
-                    1024 * 1024
-                )
+                estimated_memory_mb = (avg_memory_per_item * current_size) / (1024 * 1024)
             else:
                 # Fallback to rough calculation if no items sampled
                 estimated_memory_mb = current_size * 0.5  # ~500KB per 1000 entries
@@ -1256,9 +1207,7 @@ class AsyncTTLCache:
 
     def get_detailed_metrics(self) -> dict[str, Any]:
         """Get comprehensive cache metrics for monitoring."""
-        total_requests = (
-            runtime_metrics.cache_hits.value + runtime_metrics.cache_misses.value
-        )
+        total_requests = runtime_metrics.cache_hits.value + runtime_metrics.cache_misses.value
         total_sets = runtime_metrics.cache_sets.value
         total_evictions = runtime_metrics.cache_evictions.value
 
@@ -1273,14 +1222,10 @@ class AsyncTTLCache:
             "evictions": total_evictions,
             "cleanup_cycles": runtime_metrics.cache_cleanup_cycles.value,
             "hit_rate": (
-                (runtime_metrics.cache_hits.value / total_requests)
-                if total_requests > 0
-                else 0
+                (runtime_metrics.cache_hits.value / total_requests) if total_requests > 0 else 0
             ),
             "miss_rate": (
-                (runtime_metrics.cache_misses.value / total_requests)
-                if total_requests > 0
-                else 0
+                (runtime_metrics.cache_misses.value / total_requests) if total_requests > 0 else 0
             ),
             "eviction_rate": (total_evictions / total_sets) if total_sets > 0 else 0,
             "shard_distribution": [len(shard) for shard in self.shards],
@@ -1304,9 +1249,7 @@ class AsyncTTLCache:
             for shard_idx, shard in enumerate(self.shards):
                 shard_snapshot = {}
                 for key, entry in shard.items():
-                    if (
-                        current_time - entry.timestamp <= entry.ttl
-                    ):  # Only backup valid entries
+                    if current_time - entry.timestamp <= entry.ttl:  # Only backup valid entries
                         shard_snapshot[key] = {
                             "data": entry.data,
                             "timestamp": entry.timestamp,
@@ -1316,9 +1259,7 @@ class AsyncTTLCache:
 
             snapshot["_metadata"] = {
                 "created_at": current_time,
-                "total_entries": sum(
-                    len(s) for s in snapshot.values() if isinstance(s, dict)
-                ),
+                "total_entries": sum(len(s) for s in snapshot.values() if isinstance(s, dict)),
                 "correlation_id": correlation_id,
             }
 
@@ -1341,9 +1282,7 @@ class AsyncTTLCache:
             {
                 "component": "async_cache",
                 "operation": "restore_snapshot",
-                "snapshot_entries": snapshot.get("_metadata", {}).get(
-                    "total_entries", 0
-                ),
+                "snapshot_entries": snapshot.get("_metadata", {}).get("total_entries", 0),
             }
         )
 
@@ -1439,10 +1378,8 @@ class AsyncTTLCache:
         self.is_running = False
         if self.cleanup_task and not self.cleanup_task.done():
             self.cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.cleanup_task
-            except asyncio.CancelledError:
-                pass
         logger.debug("AsyncTTLCache stopped")
 
     async def _health_check_functionality(self, correlation_id) -> dict[str, Any]:
@@ -1464,9 +1401,7 @@ class AsyncTTLCache:
 
         # Test set operation with validation
         try:
-            await self.set(
-                test_key, test_value, ttl_seconds=300
-            )  # 5 min TTL for safety
+            await self.set(test_key, test_value, ttl_seconds=300)  # 5 min TTL for safety
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
             return {
@@ -1523,9 +1458,7 @@ class AsyncTTLCache:
 
         return {"status": "ok"}
 
-    async def _health_check_integrity(
-        self, is_production: bool, correlation_id
-    ) -> dict[str, Any]:
+    async def _health_check_integrity(self, is_production: bool, correlation_id) -> dict[str, Any]:
         """
         Perform cache bounds and integrity checks.
 
@@ -1648,9 +1581,7 @@ class AsyncTTLCache:
             Dict with status or error details if background task checks fail
         """
         cleanup_status = (
-            "running"
-            if self.cleanup_task and not self.cleanup_task.done()
-            else "stopped"
+            "running" if self.cleanup_task and not self.cleanup_task.done() else "stopped"
         )
         if is_production and cleanup_status != "running":
             return {
@@ -1736,16 +1667,12 @@ class AsyncTTLCache:
             security_level = env_detector.get_security_level()
 
             # 1. BASIC FUNCTIONALITY TESTS
-            functionality_result = await self._health_check_functionality(
-                correlation_id
-            )
+            functionality_result = await self._health_check_functionality(correlation_id)
             if functionality_result["status"] != "ok":
                 return functionality_result
 
             # 2. CACHE BOUNDS AND INTEGRITY CHECKS
-            integrity_result = await self._health_check_integrity(
-                is_production, correlation_id
-            )
+            integrity_result = await self._health_check_integrity(is_production, correlation_id)
             if integrity_result["status"] != "ok":
                 return integrity_result
             current_size = integrity_result["current_size"]
@@ -1909,15 +1836,13 @@ async def get_redis_client():
         from resync.settings import settings
 
         # Create async Redis client
-        client = AsyncRedis.from_url(
+        return AsyncRedis.from_url(
             settings.REDIS_URL,
             socket_connect_timeout=5,
             socket_timeout=5,
             retry_on_timeout=True,
             decode_responses=False,
         )
-
-        return client
 
     except Exception as e:
         logger.error("Failed to create Redis client", error=str(e))

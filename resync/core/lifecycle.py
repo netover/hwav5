@@ -31,9 +31,7 @@ class ResourceManager:
         self._resources: dict[str, Any] = {}
         self._cleanup_tasks: list[callable] = []
 
-    def register_resource(
-        self, name: str, resource: Any, cleanup_func: callable = None
-    ):
+    def register_resource(self, name: str, resource: Any, cleanup_func: callable = None):
         """
         Register a resource with an optional cleanup function.
 
@@ -104,9 +102,7 @@ async def validate_runtime_config() -> dict:
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
             validation_results["services"]["agent_manager"] = f"error: {str(e)}"
-            validation_results["issues"].append(
-                f"Agent manager configuration error: {str(e)}"
-            )
+            validation_results["issues"].append(f"Agent manager configuration error: {str(e)}")
 
         # Validate TWS client
         try:
@@ -115,9 +111,7 @@ async def validate_runtime_config() -> dict:
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
             validation_results["services"]["tws_client"] = f"error: {str(e)}"
-            validation_results["issues"].append(
-                f"TWS client configuration error: {str(e)}"
-            )
+            validation_results["issues"].append(f"TWS client configuration error: {str(e)}")
 
         # Validate knowledge graph
         try:
@@ -126,9 +120,7 @@ async def validate_runtime_config() -> dict:
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
             validation_results["services"]["knowledge_graph"] = f"error: {str(e)}"
-            validation_results["issues"].append(
-                f"Knowledge graph configuration error: {str(e)}"
-            )
+            validation_results["issues"].append(f"Knowledge graph configuration error: {str(e)}")
 
         # Update overall status based on issues
         if validation_results["issues"]:
@@ -177,9 +169,7 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Connection pool manager initialized and registered.")
     except Exception as e:
-        logger.error(
-            f"Failed to initialize connection pool manager: {e}", exc_info=True
-        )
+        logger.error(f"Failed to initialize connection pool manager: {e}", exc_info=True)
         # Continue startup even if connection pools fail to initialize
 
     # Initialize agent manager

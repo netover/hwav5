@@ -15,8 +15,8 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-
 import asyncio
+import contextlib
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -172,7 +172,7 @@ class SystemSnapshot:
                 "jobs_failed": self.jobs_failed,
                 "jobs_pending": self.jobs_pending,
                 "system_health": self.system_health,
-            }
+            },
         }
 
 
@@ -231,7 +231,7 @@ class TWSBackgroundPoller:
 
         # Configurações de detecção
         self.job_stuck_threshold_minutes = 60  # Job rodando há mais de 60 min
-        self.job_late_threshold_minutes = 30   # Job atrasado mais de 30 min
+        self.job_late_threshold_minutes = 30  # Job atrasado mais de 30 min
 
         logger.info(
             "tws_background_poller_initialized",
@@ -263,10 +263,8 @@ class TWSBackgroundPoller:
 
         if self._polling_task:
             self._polling_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._polling_task
-            except asyncio.CancelledError:
-                pass
             self._polling_task = None
 
         logger.info(
@@ -362,8 +360,7 @@ class TWSBackgroundPoller:
 
             # Coleta jobs ativos (running + recent)
             jobs_data = await self.tws_client.get_plan_jobs(
-                status=["EXEC", "READY", "HOLD", "ABEND", "SUCC"],
-                limit=500
+                status=["EXEC", "READY", "HOLD", "ABEND", "SUCC"], limit=500
             )
             jobs = self._parse_jobs(jobs_data)
 
@@ -381,7 +378,7 @@ class TWSBackgroundPoller:
             elif jobs_failed > 5 or ws_offline > 0:
                 system_health = "degraded"
 
-            snapshot = SystemSnapshot(
+            return SystemSnapshot(
                 timestamp=datetime.now(),
                 workstations=workstations,
                 jobs=jobs,
@@ -392,8 +389,6 @@ class TWSBackgroundPoller:
                 jobs_pending=jobs_pending,
                 system_health=system_health,
             )
-
-            return snapshot
 
         except Exception as e:
             logger.error("snapshot_collection_failed", error=str(e))
@@ -435,20 +430,12 @@ class TWSBackgroundPoller:
             start_time = None
             end_time = None
             if item.get("startTime"):
-                try:
-                    start_time = datetime.fromisoformat(
-                        item["startTime"].replace("Z", "+00:00")
-                    )
-                except (ValueError, TypeError):
-                    pass
+                with contextlib.suppress(ValueError, TypeError):
+                    start_time = datetime.fromisoformat(item["startTime"].replace("Z", "+00:00"))
 
             if item.get("endTime"):
-                try:
-                    end_time = datetime.fromisoformat(
-                        item["endTime"].replace("Z", "+00:00")
-                    )
-                except (ValueError, TypeError):
-                    pass
+                with contextlib.suppress(ValueError, TypeError):
+                    end_time = datetime.fromisoformat(item["endTime"].replace("Z", "+00:00"))
 
             # Calcula duração
             duration = None
@@ -508,37 +495,43 @@ class TWSBackgroundPoller:
             if not prev_job:
                 # Novo job detectado
                 if job.status == "EXEC":
-                    events.append(self._create_event(
-                        EventType.JOB_STARTED,
-                        AlertSeverity.INFO,
-                        job.job_name,
-                        f"Job {job.job_name} iniciado na workstation {job.workstation}",
-                        {"job": job.to_dict()},
-                        current_state=job.status,
-                    ))
+                    events.append(
+                        self._create_event(
+                            EventType.JOB_STARTED,
+                            AlertSeverity.INFO,
+                            job.job_name,
+                            f"Job {job.job_name} iniciado na workstation {job.workstation}",
+                            {"job": job.to_dict()},
+                            current_state=job.status,
+                        )
+                    )
             else:
                 # Job existente - verifica mudança de status
                 if prev_job.status != job.status:
                     if job.status == "SUCC":
-                        events.append(self._create_event(
-                            EventType.JOB_COMPLETED,
-                            AlertSeverity.INFO,
-                            job.job_name,
-                            f"Job {job.job_name} completado com sucesso",
-                            {"job": job.to_dict(), "duration": job.duration_seconds},
-                            previous_state=prev_job.status,
-                            current_state=job.status,
-                        ))
+                        events.append(
+                            self._create_event(
+                                EventType.JOB_COMPLETED,
+                                AlertSeverity.INFO,
+                                job.job_name,
+                                f"Job {job.job_name} completado com sucesso",
+                                {"job": job.to_dict(), "duration": job.duration_seconds},
+                                previous_state=prev_job.status,
+                                current_state=job.status,
+                            )
+                        )
                     elif job.status == "ABEND":
-                        events.append(self._create_event(
-                            EventType.JOB_ABEND,
-                            AlertSeverity.ERROR,
-                            job.job_name,
-                            f"Job {job.job_name} falhou com erro: {job.error_message or 'N/A'}",
-                            {"job": job.to_dict(), "return_code": job.return_code},
-                            previous_state=prev_job.status,
-                            current_state=job.status,
-                        ))
+                        events.append(
+                            self._create_event(
+                                EventType.JOB_ABEND,
+                                AlertSeverity.ERROR,
+                                job.job_name,
+                                f"Job {job.job_name} falhou com erro: {job.error_message or 'N/A'}",
+                                {"job": job.to_dict(), "return_code": job.return_code},
+                                previous_state=prev_job.status,
+                                current_state=job.status,
+                            )
+                        )
 
             # Detecta job stuck (rodando há muito tempo)
             if (
@@ -549,20 +542,20 @@ class TWSBackgroundPoller:
                 # Só gera evento se não foi gerado antes
                 stuck_key = f"stuck_{job.job_id}"
                 if stuck_key not in self._previous_jobs:
-                    events.append(self._create_event(
-                        EventType.JOB_STUCK,
-                        AlertSeverity.WARNING,
-                        job.job_name,
-                        f"Job {job.job_name} em execução há {job.duration_seconds/60:.1f} minutos",
-                        {"job": job.to_dict()},
-                        current_state=job.status,
-                    ))
+                    events.append(
+                        self._create_event(
+                            EventType.JOB_STUCK,
+                            AlertSeverity.WARNING,
+                            job.job_name,
+                            f"Job {job.job_name} em execução há {job.duration_seconds / 60:.1f} minutos",
+                            {"job": job.to_dict()},
+                            current_state=job.status,
+                        )
+                    )
 
         return events
 
-    def _detect_workstation_changes(
-        self, workstations: list[WorkstationStatus]
-    ) -> list[TWSEvent]:
+    def _detect_workstation_changes(self, workstations: list[WorkstationStatus]) -> list[TWSEvent]:
         """Detecta mudanças em workstations."""
         events = []
         current_ws = {ws.name: ws for ws in workstations}
@@ -572,35 +565,41 @@ class TWSBackgroundPoller:
 
             if prev_ws and prev_ws.status != ws.status:
                 if ws.status == "LINKED":
-                    events.append(self._create_event(
-                        EventType.WS_LINKED,
-                        AlertSeverity.INFO,
-                        ws_name,
-                        f"Workstation {ws_name} reconectada",
-                        {"workstation": ws.to_dict()},
-                        previous_state=prev_ws.status,
-                        current_state=ws.status,
-                    ))
+                    events.append(
+                        self._create_event(
+                            EventType.WS_LINKED,
+                            AlertSeverity.INFO,
+                            ws_name,
+                            f"Workstation {ws_name} reconectada",
+                            {"workstation": ws.to_dict()},
+                            previous_state=prev_ws.status,
+                            current_state=ws.status,
+                        )
+                    )
                 elif ws.status == "UNLINKED":
-                    events.append(self._create_event(
-                        EventType.WS_UNLINKED,
-                        AlertSeverity.WARNING,
-                        ws_name,
-                        f"Workstation {ws_name} desconectada",
-                        {"workstation": ws.to_dict()},
-                        previous_state=prev_ws.status,
-                        current_state=ws.status,
-                    ))
+                    events.append(
+                        self._create_event(
+                            EventType.WS_UNLINKED,
+                            AlertSeverity.WARNING,
+                            ws_name,
+                            f"Workstation {ws_name} desconectada",
+                            {"workstation": ws.to_dict()},
+                            previous_state=prev_ws.status,
+                            current_state=ws.status,
+                        )
+                    )
                 elif ws.status == "OFFLINE":
-                    events.append(self._create_event(
-                        EventType.WS_OFFLINE,
-                        AlertSeverity.ERROR,
-                        ws_name,
-                        f"Workstation {ws_name} offline!",
-                        {"workstation": ws.to_dict()},
-                        previous_state=prev_ws.status,
-                        current_state=ws.status,
-                    ))
+                    events.append(
+                        self._create_event(
+                            EventType.WS_OFFLINE,
+                            AlertSeverity.ERROR,
+                            ws_name,
+                            f"Workstation {ws_name} offline!",
+                            {"workstation": ws.to_dict()},
+                            previous_state=prev_ws.status,
+                            current_state=ws.status,
+                        )
+                    )
 
         return events
 
@@ -623,22 +622,23 @@ class TWSBackgroundPoller:
                     severity = AlertSeverity.CRITICAL
                     event_type = EventType.SYSTEM_CRITICAL
 
-                events.append(self._create_event(
-                    event_type,
-                    severity,
-                    "SYSTEM",
-                    f"Estado do sistema mudou de {prev_health} para {curr_health}",
-                    {
-                        "jobs_failed": snapshot.jobs_failed,
-                        "jobs_running": snapshot.jobs_running,
-                        "workstations_offline": sum(
-                            1 for ws in snapshot.workstations
-                            if ws.status != "LINKED"
-                        ),
-                    },
-                    previous_state=prev_health,
-                    current_state=curr_health,
-                ))
+                events.append(
+                    self._create_event(
+                        event_type,
+                        severity,
+                        "SYSTEM",
+                        f"Estado do sistema mudou de {prev_health} para {curr_health}",
+                        {
+                            "jobs_failed": snapshot.jobs_failed,
+                            "jobs_running": snapshot.jobs_running,
+                            "workstations_offline": sum(
+                                1 for ws in snapshot.workstations if ws.status != "LINKED"
+                            ),
+                        },
+                        previous_state=prev_health,
+                        current_state=curr_health,
+                    )
+                )
 
         return events
 
@@ -650,17 +650,19 @@ class TWSBackgroundPoller:
         if snapshot.total_jobs_today > 0:
             failure_rate = snapshot.jobs_failed / snapshot.total_jobs_today
             if failure_rate > 0.1:  # Mais de 10% de falha
-                events.append(self._create_event(
-                    EventType.ANOMALY_DETECTED,
-                    AlertSeverity.WARNING,
-                    "SYSTEM",
-                    f"Taxa de falha alta detectada: {failure_rate:.1%}",
-                    {
-                        "failure_rate": failure_rate,
-                        "jobs_failed": snapshot.jobs_failed,
-                        "total_jobs": snapshot.total_jobs_today,
-                    },
-                ))
+                events.append(
+                    self._create_event(
+                        EventType.ANOMALY_DETECTED,
+                        AlertSeverity.WARNING,
+                        "SYSTEM",
+                        f"Taxa de falha alta detectada: {failure_rate:.1%}",
+                        {
+                            "failure_rate": failure_rate,
+                            "jobs_failed": snapshot.jobs_failed,
+                            "total_jobs": snapshot.total_jobs_today,
+                        },
+                    )
+                )
 
         return events
 

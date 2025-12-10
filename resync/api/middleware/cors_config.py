@@ -1,4 +1,3 @@
-
 import logging
 import re
 import socket
@@ -37,9 +36,7 @@ class CORSPolicy(BaseModel):
     """
 
     # Environment-specific settings
-    environment: Environment = Field(
-        description="Environment type (development, production, test)"
-    )
+    environment: Environment = Field(description="Environment type (development, production, test)")
 
     # Allowed origins configuration
     allowed_origins: list[str] = Field(
@@ -144,8 +141,7 @@ class CORSPolicy(BaseModel):
         for method in v:
             if method not in allowed_methods:
                 raise ValueError(
-                    f"Invalid HTTP method: {method}. "
-                    f"Allowed methods: {', '.join(allowed_methods)}"
+                    f"Invalid HTTP method: {method}. Allowed methods: {', '.join(allowed_methods)}"
                 )
             validated_methods.append(method)
 
@@ -253,9 +249,7 @@ class CORSPolicy(BaseModel):
                     # Not IPv4, check if it's a valid domain name
                     # Simple domain validation using regex
                     domain_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$"
-                    if re.match(domain_pattern, host):
-                        return True
-                    return False
+                    return bool(re.match(domain_pattern, host))
         return False
 
     def is_origin_allowed(self, origin: str) -> bool:
@@ -295,9 +289,7 @@ class CORSPolicy(BaseModel):
             Dictionary with CORS configuration parameters
         """
         return {
-            "allow_origins": (
-                self.allowed_origins if not self.allow_all_origins else ["*"]
-            ),
+            "allow_origins": (self.allowed_origins if not self.allow_all_origins else ["*"]),
             "allow_methods": self.allowed_methods,
             "allow_headers": self.allowed_headers,
             "allow_credentials": self.allow_credentials,
@@ -371,9 +363,7 @@ class CORSConfig(BaseModel):
             return self.test
         raise ValueError(f"Unknown environment: {environment}")
 
-    def update_policy(
-        self, environment: str | Environment, policy: CORSPolicy
-    ) -> None:
+    def update_policy(self, environment: str | Environment, policy: CORSPolicy) -> None:
         """
         Update CORS policy for a specific environment.
 

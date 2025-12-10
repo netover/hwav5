@@ -14,8 +14,8 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-
 import asyncio
+import contextlib
 from datetime import datetime
 from typing import Any
 
@@ -138,14 +138,10 @@ class ProactiveMonitoringManager:
 
         # Inicia detecção de padrões periódica
         if self._config.pattern_detection_enabled:
-            self._pattern_detection_task = asyncio.create_task(
-                self._pattern_detection_loop()
-            )
+            self._pattern_detection_task = asyncio.create_task(self._pattern_detection_loop())
 
         # Inicia limpeza periódica
-        self._cleanup_task = asyncio.create_task(
-            self._cleanup_loop()
-        )
+        self._cleanup_task = asyncio.create_task(self._cleanup_loop())
 
         self._running = True
         logger.info("proactive_monitoring_started")
@@ -168,17 +164,13 @@ class ProactiveMonitoringManager:
         # Cancela tasks
         if self._pattern_detection_task:
             self._pattern_detection_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._pattern_detection_task
-            except asyncio.CancelledError:
-                pass
 
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         # Fecha store
         if self._status_store:
@@ -196,7 +188,7 @@ class ProactiveMonitoringManager:
                 logger.error("failed_to_save_event", error=str(e))
 
         # Se for um ABEND, tenta encontrar solução
-        if hasattr(event, 'event_type') and event.event_type.value == "job_abend":
+        if hasattr(event, "event_type") and event.event_type.value == "job_abend":
             await self._suggest_solution(event)
 
     async def _suggest_solution(self, event: Any) -> None:
@@ -214,7 +206,10 @@ class ProactiveMonitoringManager:
                 error_message=error_msg,
             )
 
-            if solution and solution.get("success_rate", 0) >= self._config.solution_min_success_rate:
+            if (
+                solution
+                and solution.get("success_rate", 0) >= self._config.solution_min_success_rate
+            ):
                 # Publica sugestão de solução
                 import time
 
@@ -229,7 +224,9 @@ class ProactiveMonitoringManager:
                     message=f"Solução sugerida: {solution['solution']}",
                     details={
                         "solution": solution,
-                        "original_event": event.to_dict() if hasattr(event, 'to_dict') else str(event),
+                        "original_event": event.to_dict()
+                        if hasattr(event, "to_dict")
+                        else str(event),
                     },
                 )
 
@@ -289,7 +286,7 @@ class ProactiveMonitoringManager:
             timestamp=datetime.now(),
             source="PatternDetector",
             message=pattern.description,
-            details=pattern.to_dict() if hasattr(pattern, 'to_dict') else {"pattern": str(pattern)},
+            details=pattern.to_dict() if hasattr(pattern, "to_dict") else {"pattern": str(pattern)},
         )
 
         await self._event_bus.publish(event)
@@ -399,6 +396,7 @@ def init_monitoring_manager() -> ProactiveMonitoringManager:
 # =============================================================================
 # CONVENIENCE FUNCTIONS
 # =============================================================================
+
 
 async def setup_proactive_monitoring(
     tws_client: Any,

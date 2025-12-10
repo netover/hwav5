@@ -26,6 +26,7 @@ Usage:
 """
 
 import asyncio
+import contextlib
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -39,6 +40,7 @@ logger = get_logger(__name__)
 @dataclass
 class CacheStats:
     """Statistics for cache operations."""
+
     last_load: datetime | None = None
     last_invalidation: datetime | None = None
     load_count: int = 0
@@ -67,7 +69,9 @@ class CacheStats:
         """Convert to dictionary."""
         return {
             "last_load": self.last_load.isoformat() if self.last_load else None,
-            "last_invalidation": self.last_invalidation.isoformat() if self.last_invalidation else None,
+            "last_invalidation": self.last_invalidation.isoformat()
+            if self.last_invalidation
+            else None,
             "load_count": self.load_count,
             "invalidation_count": self.invalidation_count,
             "hit_count": self.hit_count,
@@ -93,7 +97,7 @@ class KGCacheManager:
 
     def __init__(self):
         """Initialize cache manager."""
-        if hasattr(self, '_initialized'):
+        if hasattr(self, "_initialized"):
             return
 
         self._initialized = True
@@ -122,10 +126,7 @@ class KGCacheManager:
         """Get current TTL in seconds."""
         return self._ttl_seconds
 
-    def register_refresh_callback(
-        self,
-        callback: Callable[[], Awaitable[None]]
-    ) -> None:
+    def register_refresh_callback(self, callback: Callable[[], Awaitable[None]]) -> None:
         """
         Register a callback to be called on cache refresh.
 
@@ -165,8 +166,7 @@ class KGCacheManager:
             return timedelta(seconds=0)
 
         age = datetime.utcnow() - self._last_refresh
-        remaining = timedelta(seconds=self._ttl_seconds) - age
-        return remaining
+        return timedelta(seconds=self._ttl_seconds) - age
 
     async def refresh(self, force: bool = False) -> bool:
         """
@@ -204,7 +204,7 @@ class KGCacheManager:
                 logger.info(
                     "cache_refreshed",
                     duration_ms=round(duration_ms, 2),
-                    callbacks_executed=len(self._on_refresh_callbacks)
+                    callbacks_executed=len(self._on_refresh_callbacks),
                 )
 
                 return True
@@ -249,10 +249,8 @@ class KGCacheManager:
         """Stop background refresh task."""
         if self._refresh_task is not None:
             self._refresh_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._refresh_task
-            except asyncio.CancelledError:
-                pass
             self._refresh_task = None
             logger.info("background_refresh_stopped")
 
@@ -290,8 +288,7 @@ def get_cache_manager() -> KGCacheManager:
 
 
 async def start_cache_refresh_task(
-    ttl_seconds: int = 300,
-    auto_register_kg: bool = True
+    ttl_seconds: int = 300, auto_register_kg: bool = True
 ) -> KGCacheManager:
     """
     Start the cache refresh background task.

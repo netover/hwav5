@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import sys
+import traceback
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -51,9 +52,7 @@ def test_environment_parameter_handling() -> None:
     cors_middleware = LoggingCORSMiddleware(
         app=app,
         policy=dev_policy,
-        allow_origins=(
-            dev_policy.allowed_origins if not dev_policy.allow_all_origins else ["*"]
-        ),
+        allow_origins=(dev_policy.allowed_origins if not dev_policy.allow_all_origins else ["*"]),
         allow_methods=dev_policy.allowed_methods,
         allow_headers=dev_policy.allowed_headers,
         allow_credentials=dev_policy.allow_credentials,
@@ -111,9 +110,7 @@ def test_cors_header_validation() -> None:
     cors_middleware = LoggingCORSMiddleware(
         app=app,
         policy=dev_config,
-        allow_origins=(
-            dev_config.allowed_origins if not dev_config.allow_all_origins else ["*"]
-        ),
+        allow_origins=(dev_config.allowed_origins if not dev_config.allow_all_origins else ["*"]),
         allow_methods=dev_config.allowed_methods,
         allow_headers=dev_config.allowed_headers,
         allow_credentials=dev_config.allow_credentials,
@@ -167,14 +164,9 @@ def test_cors_header_validation() -> None:
 
     # Note: OPTIONS requests return 405 when method not explicitly handled by FastAPI,
     # but CORS headers should still be present
-    assert (
-        response.status_code == 405
-    )  # FastAPI returns 405 for OPTIONS on GET-only endpoints
+    assert response.status_code == 405  # FastAPI returns 405 for OPTIONS on GET-only endpoints
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
-    assert (
-        response.headers["access-control-allow-methods"]
-        == "GET, POST, PUT, DELETE, OPTIONS"
-    )
+    assert response.headers["access-control-allow-methods"] == "GET, POST, PUT, DELETE, OPTIONS"
     assert (
         response.headers["access-control-allow-headers"]
         == "Content-Type, Authorization, X-Requested-With"
@@ -191,13 +183,8 @@ def test_cors_header_validation() -> None:
     )
     # Note: OPTIONS requests return 405 when method not explicitly handled by FastAPI,
     # but CORS headers should still be present
-    assert (
-        response.status_code == 405
-    )  # FastAPI returns 405 for OPTIONS on GET-only endpoints
-    assert (
-        response.headers["access-control-allow-methods"]
-        == "GET, POST, PUT, DELETE, OPTIONS"
-    )
+    assert response.status_code == 405  # FastAPI returns 405 for OPTIONS on GET-only endpoints
+    assert response.headers["access-control-allow-methods"] == "GET, POST, PUT, DELETE, OPTIONS"
 
     print("[PASS] CORS header validation works correctly")
 
@@ -222,9 +209,7 @@ def test_cors_test_environment() -> None:
     cors_middleware = LoggingCORSMiddleware(
         app=app,
         policy=test_config,
-        allow_origins=(
-            test_config.allowed_origins if not test_config.allow_all_origins else ["*"]
-        ),
+        allow_origins=(test_config.allowed_origins if not test_config.allow_all_origins else ["*"]),
         allow_methods=test_config.allowed_methods,
         allow_headers=test_config.allowed_headers,
         allow_credentials=test_config.allow_credentials,
@@ -257,9 +242,7 @@ def test_cors_edge_cases() -> None:
     cors_middleware = LoggingCORSMiddleware(
         app=app,
         policy=prod_config,
-        allow_origins=(
-            prod_config.allowed_origins if not prod_config.allow_all_origins else ["*"]
-        ),
+        allow_origins=(prod_config.allowed_origins if not prod_config.allow_all_origins else ["*"]),
         allow_methods=prod_config.allowed_methods,
         allow_headers=prod_config.allowed_headers,
         allow_credentials=prod_config.allow_credentials,
@@ -320,9 +303,7 @@ def test_cors_edge_cases() -> None:
     cors_middleware2 = LoggingCORSMiddleware(
         app=app2,
         policy=dev_config,
-        allow_origins=(
-            dev_config.allowed_origins if not dev_config.allow_all_origins else ["*"]
-        ),
+        allow_origins=(dev_config.allowed_origins if not dev_config.allow_all_origins else ["*"]),
         allow_methods=dev_config.allowed_methods,
         allow_headers=dev_config.allowed_headers,
         allow_credentials=dev_config.allow_credentials,
@@ -382,9 +363,7 @@ def test_configurable_origins() -> None:
         app=app,
         policy=custom_policy,
         allow_origins=(
-            custom_policy.allowed_origins
-            if not custom_policy.allow_all_origins
-            else ["*"]
+            custom_policy.allowed_origins if not custom_policy.allow_all_origins else ["*"]
         ),
         allow_methods=custom_policy.allowed_methods,
         allow_headers=custom_policy.allowed_headers,
@@ -447,9 +426,7 @@ def test_cors_violation_logging() -> None:
     cors_middleware = LoggingCORSMiddleware(
         app=app,
         policy=prod_config,
-        allow_origins=(
-            prod_config.allowed_origins if not prod_config.allow_all_origins else ["*"]
-        ),
+        allow_origins=(prod_config.allowed_origins if not prod_config.allow_all_origins else ["*"]),
         allow_methods=prod_config.allowed_methods,
         allow_headers=prod_config.allowed_headers,
         allow_credentials=prod_config.allow_credentials,

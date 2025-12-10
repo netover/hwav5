@@ -10,6 +10,7 @@ from .monitoring import query_seconds
 
 class RagRetriever(Retriever):
     """Rag retriever."""
+
     def __init__(self, embedder: Embedder, store: VectorStore):
         self.embedder = embedder
         self.store = store
@@ -28,7 +29,7 @@ class RagRetriever(Retriever):
                 collection=CFG.collection_read,
                 filters=filters,
                 ef_search=ef,
-                with_vectors=False if not CFG.enable_rerank else True,
+                with_vectors=bool(CFG.enable_rerank),
             )
         if not CFG.enable_rerank:
             return hits
@@ -43,7 +44,7 @@ class RagRetriever(Retriever):
                 db = math.sqrt(sum(x * x for x in b))
                 if da == 0 or db == 0:
                     return 0.0
-                return sum(x * y for x, y in zip(a, b)) / (da * db)
+                return sum(x * y for x, y in zip(a, b, strict=False)) / (da * db)
 
             q = vec
             hits.sort(key=lambda h: cos(q, h.get("vector") or []), reverse=True)

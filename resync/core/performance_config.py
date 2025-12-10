@@ -5,7 +5,6 @@ This module provides centralized configuration for performance optimizations
 including connection pooling, caching strategies, and resource limits.
 """
 
-
 import logging
 from typing import Any
 

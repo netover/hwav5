@@ -5,7 +5,6 @@ This module provides utilities for collecting and managing performance metrics
 across different system components for health monitoring purposes.
 """
 
-
 import time
 from datetime import datetime
 from typing import Any
@@ -48,7 +47,7 @@ class PerformanceMetricsCollector:
             process = psutil.Process()
             process_memory_mb = process.memory_info().rss / (1024**2)
 
-            metrics = {
+            return {
                 "cpu_percent": cpu_percent,
                 "memory_percent": memory.percent,
                 "memory_used_gb": memory.used / (1024**3),
@@ -58,8 +57,6 @@ class PerformanceMetricsCollector:
                 "timestamp": time.time(),
                 "collection_time": datetime.now().isoformat(),
             }
-
-            return metrics
 
         except Exception as e:
             logger.warning("failed_to_get_system_performance_metrics", error=str(e))
@@ -118,9 +115,7 @@ class PerformanceMetricsCollector:
             return comprehensive_metrics
 
         except Exception as e:
-            logger.error(
-                "failed_to_get_comprehensive_performance_metrics", error=str(e)
-            )
+            logger.error("failed_to_get_comprehensive_performance_metrics", error=str(e))
             return {
                 "error": str(e),
                 "timestamp": time.time(),
@@ -191,9 +186,7 @@ class PerformanceMetricsCollector:
                     summary["warnings"].append(f"High memory usage: {memory_percent}%")
                     summary["status"] = "degraded"
                 elif memory_percent > 80:
-                    summary["warnings"].append(
-                        f"Elevated memory usage: {memory_percent}%"
-                    )
+                    summary["warnings"].append(f"Elevated memory usage: {memory_percent}%")
 
             # Analyze connection pool metrics
             pool_metrics = metrics.get("connection_pools", {})
@@ -216,13 +209,9 @@ class PerformanceMetricsCollector:
 
             # Generate recommendations
             if summary["status"] == "degraded":
-                summary["recommendations"].append(
-                    "Monitor system resources and consider scaling"
-                )
+                summary["recommendations"].append("Monitor system resources and consider scaling")
             elif summary["warnings"]:
-                summary["recommendations"].append(
-                    "Monitor identified warning conditions"
-                )
+                summary["recommendations"].append("Monitor identified warning conditions")
 
             return summary
 

@@ -89,8 +89,7 @@ async def test_audit_load_test(mock_audit_queue, mock_ia_auditor):
     mock_kg = MockKnowledgeGraph()
     # Configure get_all_recent_conversations to return a list of mock memories
     mock_kg.get_all_recent_conversations.return_value = [
-        {"id": mid, "user_query": "query", "agent_response": "response"}
-        for mid in memory_ids
+        {"id": mid, "user_query": "query", "agent_response": "response"} for mid in memory_ids
     ]
 
     async def process_audit(memory_id: str):
@@ -148,13 +147,12 @@ async def test_audit_load_test(mock_audit_queue, mock_ia_auditor):
                         "success": True,
                         "error": None,
                     }
-                else:
-                    # If not flagged, consider it successful for the purpose of this load test
-                    return {
-                        "memory_id": memory_id,
-                        "success": True,
-                        "error": None,
-                    }
+                # If not flagged, consider it successful for the purpose of this load test
+                return {
+                    "memory_id": memory_id,
+                    "success": True,
+                    "error": None,
+                }
 
             except Exception as e:
                 if "lock" in str(e).lower() or "timeout" in str(e).lower():
@@ -172,9 +170,7 @@ async def test_audit_load_test(mock_audit_queue, mock_ia_auditor):
     with patch("resync.core.ia_auditor.knowledge_graph", mock_kg):
         tasks = [process_audit(memory_id) for memory_id in memory_ids]
         start_time = time.perf_counter()
-        responses = await asyncio.wait_for(
-            asyncio.gather(*tasks), timeout=TIMEOUT_SECONDS
-        )
+        responses = await asyncio.wait_for(asyncio.gather(*tasks), timeout=TIMEOUT_SECONDS)
         end_time = time.perf_counter()
 
     total_time = end_time - start_time
@@ -188,9 +184,7 @@ async def test_audit_load_test(mock_audit_queue, mock_ia_auditor):
     latencies = []
     for r in responses:
         # Simulate per-request latency for demo (in real test, measure per task)
-        latencies.append(
-            total_time / NUM_CONCURRENT_REQUESTS + (hash(r["memory_id"]) % 100) / 1000
-        )
+        latencies.append(total_time / NUM_CONCURRENT_REQUESTS + (hash(r["memory_id"]) % 100) / 1000)
 
     # Calculate percentiles
     latencies.sort()
@@ -200,15 +194,13 @@ async def test_audit_load_test(mock_audit_queue, mock_ia_auditor):
 
     # Verify system invariants
     duplicate_flagging = sum(1 for r in responses if r["error"] == "duplicate_flagging")
-    assert (
-        duplicate_flagging == 0
-    ), f"Found {duplicate_flagging} duplicate flagging incidents"
+    assert duplicate_flagging == 0, f"Found {duplicate_flagging} duplicate flagging incidents"
 
     assert error_rate < 0.01, f"Error rate {error_rate:.2%} exceeds 1% threshold"
     assert p99 < 0.5, f"P99 latency {p99:.3f}s exceeds 500ms threshold"
-    assert lock_contention <= (
-        NUM_CONCURRENT_REQUESTS * 0.01
-    ), f"Lock contention {lock_contention} exceeds 1% of requests"
+    assert lock_contention <= (NUM_CONCURRENT_REQUESTS * 0.01), (
+        f"Lock contention {lock_contention} exceeds 1% of requests"
+    )
 
     # Log results
     print("\n📊 LOAD TEST RESULTS:")
@@ -229,9 +221,7 @@ async def test_audit_load_test(mock_audit_queue, mock_ia_auditor):
     print("   Mock memory usage: stable (no leaks detected)")
 
     # Assert overall system health
-    assert (
-        failed <= 1
-    ), "System should handle 100+ concurrent audits with <1% error rate"
+    assert failed <= 1, "System should handle 100+ concurrent audits with <1% error rate"
     assert total_time < 60, "System should process 120 audits in under 60 seconds"
 
     # Verify metrics collector was called

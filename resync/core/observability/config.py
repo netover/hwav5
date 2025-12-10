@@ -34,17 +34,24 @@ logger = get_logger(__name__)
 # CONFIGURATION
 # =============================================================================
 
+
 @dataclass
 class LangFuseConfig:
     """LangFuse configuration."""
 
-    enabled: bool = field(default_factory=lambda: os.getenv("LANGFUSE_ENABLED", "false").lower() == "true")
+    enabled: bool = field(
+        default_factory=lambda: os.getenv("LANGFUSE_ENABLED", "false").lower() == "true"
+    )
     public_key: str = field(default_factory=lambda: os.getenv("LANGFUSE_PUBLIC_KEY", ""))
     secret_key: str = field(default_factory=lambda: os.getenv("LANGFUSE_SECRET_KEY", ""))
-    host: str = field(default_factory=lambda: os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"))
+    host: str = field(
+        default_factory=lambda: os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+    )
 
     # Sampling
-    sample_rate: float = field(default_factory=lambda: float(os.getenv("LANGFUSE_SAMPLE_RATE", "1.0")))
+    sample_rate: float = field(
+        default_factory=lambda: float(os.getenv("LANGFUSE_SAMPLE_RATE", "1.0"))
+    )
 
     # Flush settings
     flush_interval_seconds: int = 5
@@ -59,7 +66,9 @@ class LangFuseConfig:
 class EvidentlyConfig:
     """Evidently configuration."""
 
-    enabled: bool = field(default_factory=lambda: os.getenv("EVIDENTLY_ENABLED", "false").lower() == "true")
+    enabled: bool = field(
+        default_factory=lambda: os.getenv("EVIDENTLY_ENABLED", "false").lower() == "true"
+    )
 
     # Reference data settings
     reference_window_days: int = 7
@@ -75,7 +84,9 @@ class EvidentlyConfig:
     report_retention_days: int = 30
 
     # Storage
-    reports_dir: str = field(default_factory=lambda: os.getenv("EVIDENTLY_REPORTS_DIR", "/var/log/resync/evidently"))
+    reports_dir: str = field(
+        default_factory=lambda: os.getenv("EVIDENTLY_REPORTS_DIR", "/var/log/resync/evidently")
+    )
 
 
 @dataclass
@@ -88,7 +99,7 @@ class ObservabilityConfig:
     # General settings
     environment: str = field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))
     service_name: str = "resync"
-    service_version: str = "5.3.7"
+    service_version: str = "5.3.8"
 
 
 # Singleton config
@@ -228,8 +239,7 @@ class EvidentlyMonitor:
         # Trim old data
         cutoff = datetime.utcnow() - timedelta(days=self.config.reference_window_days)
         self._reference_data = [
-            d for d in self._reference_data
-            if datetime.fromisoformat(d["_timestamp"]) > cutoff
+            d for d in self._reference_data if datetime.fromisoformat(d["_timestamp"]) > cutoff
         ]
 
     def add_current_data(self, data: dict[str, Any]) -> None:
@@ -240,8 +250,7 @@ class EvidentlyMonitor:
         # Trim old data
         cutoff = datetime.utcnow() - timedelta(hours=self.config.current_window_hours)
         self._current_data = [
-            d for d in self._current_data
-            if datetime.fromisoformat(d["_timestamp"]) > cutoff
+            d for d in self._current_data if datetime.fromisoformat(d["_timestamp"]) > cutoff
         ]
 
     def track_llm_call(
@@ -370,11 +379,13 @@ class EvidentlyMonitor:
             with open(filepath, "w") as f:
                 json.dump(report, f, indent=2, default=str)
 
-            self._reports.append({
-                "filename": filename,
-                "timestamp": timestamp,
-                "drift_detected": report.get("drift_detected", False),
-            })
+            self._reports.append(
+                {
+                    "filename": filename,
+                    "timestamp": timestamp,
+                    "drift_detected": report.get("drift_detected", False),
+                }
+            )
 
             # Cleanup old reports
             self._cleanup_old_reports()
@@ -387,6 +398,7 @@ class EvidentlyMonitor:
         cutoff = datetime.utcnow() - timedelta(days=self.config.report_retention_days)
 
         import os
+
         for filename in os.listdir(self.config.reports_dir):
             if not filename.startswith("drift_report_"):
                 continue
@@ -448,6 +460,7 @@ def get_evidently_monitor() -> EvidentlyMonitor | None:
 # =============================================================================
 # UNIFIED OBSERVABILITY
 # =============================================================================
+
 
 async def setup_observability() -> dict[str, bool]:
     """

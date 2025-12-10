@@ -46,6 +46,7 @@ GRAPH_NAME = "tws_graph"
 # AGE GRAPH SERVICE
 # =============================================================================
 
+
 class AGEGraphService:
     """
     Apache AGE Graph Service for TWS Knowledge Graph.
@@ -77,7 +78,7 @@ class AGEGraphService:
 
     def __init__(self):
         """Initialize the service (singleton, runs once)."""
-        if hasattr(self, '_init_done') and self._init_done:
+        if hasattr(self, "_init_done") and self._init_done:
             return
 
         self._init_lock = asyncio.Lock()
@@ -134,7 +135,7 @@ class AGEGraphService:
                     logger.warning(
                         "age_extension_not_available",
                         error=str(e),
-                        hint="Install Apache AGE extension or use fallback"
+                        hint="Install Apache AGE extension or use fallback",
                     )
 
     async def _ensure_graph(self) -> None:
@@ -168,9 +169,7 @@ class AGEGraphService:
     # =========================================================================
 
     async def _execute_cypher(
-        self,
-        cypher_query: str,
-        params: dict[str, Any] | None = None
+        self, cypher_query: str, params: dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
         """
         Execute a Cypher query using AGE.
@@ -204,7 +203,9 @@ class AGEGraphService:
                     # AGE returns agtype, parse as JSON
                     if row[0]:
                         try:
-                            parsed = json.loads(str(row[0]).replace("::vertex", "").replace("::edge", ""))
+                            parsed = json.loads(
+                                str(row[0]).replace("::vertex", "").replace("::edge", "")
+                            )
                             results.append(parsed)
                         except json.JSONDecodeError:
                             results.append({"raw": str(row[0])})
@@ -407,9 +408,7 @@ class AGEGraphService:
     # =========================================================================
 
     async def get_dependency_chain(
-        self,
-        job_name: str,
-        max_depth: int = 10
+        self, job_name: str, max_depth: int = 10
     ) -> list[dict[str, Any]]:
         """
         Get the dependency chain for a job.
@@ -479,13 +478,19 @@ class AGEGraphService:
         critical = []
         for r in results:
             if isinstance(r, dict):
-                critical.append({
-                    "name": r.get("name"),
-                    "workstation": r.get("workstation"),
-                    "status": r.get("status"),
-                    "impact_score": r.get("impact_score", 0),
-                    "criticality": "critical" if r.get("impact_score", 0) > 10 else "high" if r.get("impact_score", 0) > 5 else "medium",
-                })
+                critical.append(
+                    {
+                        "name": r.get("name"),
+                        "workstation": r.get("workstation"),
+                        "status": r.get("status"),
+                        "impact_score": r.get("impact_score", 0),
+                        "criticality": "critical"
+                        if r.get("impact_score", 0) > 10
+                        else "high"
+                        if r.get("impact_score", 0) > 5
+                        else "medium",
+                    }
+                )
 
         logger.debug("critical_jobs_retrieved", count=len(critical))
 
@@ -555,11 +560,7 @@ class AGEGraphService:
 
         return await self._execute_cypher(cypher)
 
-    async def get_jobs_by_status(
-        self,
-        status: str,
-        limit: int = 100
-    ) -> list[dict[str, Any]]:
+    async def get_jobs_by_status(self, status: str, limit: int = 100) -> list[dict[str, Any]]:
         """Get jobs by status (SUCC, ABEND, EXEC, etc.)."""
         cypher = f"""
             MATCH (j:Job {{status: '{status}'}})
@@ -569,10 +570,7 @@ class AGEGraphService:
 
         return await self._execute_cypher(cypher)
 
-    async def find_common_dependencies(
-        self,
-        job_names: list[str]
-    ) -> list[dict[str, Any]]:
+    async def find_common_dependencies(self, job_names: list[str]) -> list[dict[str, Any]]:
         """Find dependencies shared by multiple jobs."""
         jobs_list = ", ".join([f"'{j}'" for j in job_names])
 
@@ -588,10 +586,7 @@ class AGEGraphService:
         return await self._execute_cypher(cypher)
 
     async def get_event_chain(
-        self,
-        event_id: str,
-        direction: str = "backward",
-        max_events: int = 20
+        self, event_id: str, direction: str = "backward", max_events: int = 20
     ) -> list[dict[str, Any]]:
         """Get temporal chain of events."""
         if direction == "backward":

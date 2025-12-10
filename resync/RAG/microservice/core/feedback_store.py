@@ -33,9 +33,14 @@ class RAGFeedbackStore:
         """Close the store."""
         self._initialized = False
 
-    async def add_feedback(self, query: str, response: str, rating: int,
-                          session_id: str | None = None,
-                          metadata: dict | None = None) -> Feedback:
+    async def add_feedback(
+        self,
+        query: str,
+        response: str,
+        rating: int,
+        session_id: str | None = None,
+        metadata: dict | None = None,
+    ) -> Feedback:
         """Add RAG feedback."""
         return await self._store.feedback.add_feedback(
             session_id=session_id or "rag_default",
@@ -44,7 +49,7 @@ class RAGFeedbackStore:
             rating=rating,
             feedback_type="rag",
             is_positive=rating >= 4,
-            metadata=metadata
+            metadata=metadata,
         )
 
     async def get_feedback(self, limit: int = 100) -> list[Feedback]:
@@ -67,6 +72,7 @@ class RAGFeedbackStore:
 FeedbackStore = RAGFeedbackStore
 
 _instance: RAGFeedbackStore | None = None
+
 
 def get_rag_feedback_store() -> RAGFeedbackStore:
     """Get the singleton RAGFeedbackStore instance."""

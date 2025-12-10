@@ -6,7 +6,6 @@ that have been extracted from the main AsyncTTLCache class to improve modularity
 and maintainability.
 """
 
-
 import asyncio
 import logging
 from abc import ABC, abstractmethod
@@ -171,7 +170,7 @@ class StandardCacheSetStrategy(CacheSetStrategy):
         exclude_key: str,
     ) -> str | None:
         """Find the best LRU key to evict across all shards."""
-        for i, shard in enumerate(shards):
+        for _i, shard in enumerate(shards):
             if not shard:
                 continue
 
@@ -264,9 +263,7 @@ class StandardCacheRollbackStrategy(CacheRollbackStrategy):
                 return False
 
             # Group operations by shard
-            shard_operations = self._group_operations_by_shard(
-                operations, shards, shard_locks
-            )
+            shard_operations = self._group_operations_by_shard(operations, shards, shard_locks)
 
             # Execute rollback per shard
             for shard_idx, ops in shard_operations.items():
@@ -306,7 +303,7 @@ class StandardCacheRollbackStrategy(CacheRollbackStrategy):
         if len(operations) > 10000:
             return False
 
-        for i, op in enumerate(operations):
+        for _i, op in enumerate(operations):
             if not isinstance(op, dict):
                 return False
 
@@ -474,9 +471,7 @@ class StandardCacheRestoreStrategy(CacheRestoreStrategy):
             {
                 "component": "cache_restore_strategy",
                 "operation": "execute",
-                "snapshot_entries": snapshot.get("_metadata", {}).get(
-                    "total_entries", 0
-                ),
+                "snapshot_entries": snapshot.get("_metadata", {}).get("total_entries", 0),
             }
         )
 
@@ -486,7 +481,7 @@ class StandardCacheRestoreStrategy(CacheRestoreStrategy):
                 return False
 
             metadata = snapshot["_metadata"]
-            total_entries = metadata.get("total_entries", 0)
+            metadata.get("total_entries", 0)
 
             # Clear current cache
             await self._clear_cache(shards, shard_locks)
@@ -541,10 +536,7 @@ class StandardCacheRestoreStrategy(CacheRestoreStrategy):
 
         # Check snapshot age (max 1 hour)
         snapshot_age = time() - created_at
-        if snapshot_age < 0 or snapshot_age > 3600:
-            return False
-
-        return True
+        return not (snapshot_age < 0 or snapshot_age > 3600)
 
     async def _clear_cache(
         self, shards: list[dict[str, CacheEntry]], shard_locks: list[asyncio.Lock]
@@ -552,7 +544,7 @@ class StandardCacheRestoreStrategy(CacheRestoreStrategy):
         """Clear all cache shards."""
         tasks = []
         for i in range(len(shards)):
-            lock = shard_locks[i]
+            shard_locks[i]
 
             async def clear_shard(shard_idx: int):
                 async with shard_locks[shard_idx]:

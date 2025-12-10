@@ -39,10 +39,7 @@ class ProactiveMonitor:
     async def check_status(self) -> dict[str, Any]:
         """Check TWS status."""
         summary = await self._store.get_status_summary()
-        return {
-            "status": "ok",
-            "summary": summary
-        }
+        return {"status": "ok", "summary": summary}
 
     async def get_alerts(self, limit: int = 100) -> list:
         """Get active alerts."""
@@ -53,7 +50,7 @@ class ProactiveMonitor:
                 "type": e.event_type,
                 "severity": e.severity,
                 "message": e.message,
-                "timestamp": e.timestamp.isoformat()
+                "timestamp": e.timestamp.isoformat(),
             }
             for e in events
         ]

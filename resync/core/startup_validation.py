@@ -34,6 +34,7 @@ RECOMMENDED_ENV_VARS = {
     "server": ["SERVER_HOST", "SERVER_PORT"],
 }
 
+
 class ConfigurationValidationError(Exception):
     """Raised when configuration validation fails."""
 
@@ -41,6 +42,7 @@ class ConfigurationValidationError(Exception):
         self.message = message
         self.details = details or {}
         super().__init__(self.message)
+
 
 class DependencyUnavailableError(Exception):
     """Raised when required dependencies are unavailable."""
@@ -51,6 +53,7 @@ class DependencyUnavailableError(Exception):
         self.details = details or {}
         super().__init__(self.message)
 
+
 class StartupError(Exception):
     """Raised for general startup errors."""
 
@@ -58,6 +61,7 @@ class StartupError(Exception):
         self.message = message
         self.details = details or {}
         super().__init__(self.message)
+
 
 def validate_environment_variables() -> dict[str, str]:
     """
@@ -76,7 +80,7 @@ def validate_environment_variables() -> dict[str, str]:
     validated_vars: dict[str, str] = {}
 
     # Check required variables
-    for component, vars_list in REQUIRED_ENV_VARS.items():
+    for _component, vars_list in REQUIRED_ENV_VARS.items():
         for var_name in vars_list:
             value = os.getenv(var_name)
             if not value:
@@ -93,7 +97,7 @@ def validate_environment_variables() -> dict[str, str]:
                     except ValueError:
                         invalid_vars.append(f"{var_name}={value} (must be integer)")
                 elif var_name in ["REDIS_URL", "LLM_ENDPOINT"]:
-                    if not value.startswith(('redis://', 'rediss://', 'http://', 'https://')):
+                    if not value.startswith(("redis://", "rediss://", "http://", "https://")):
                         invalid_vars.append(f"{var_name}={value} (must be valid URL)")
                     else:
                         validated_vars[var_name] = value
@@ -113,35 +117,30 @@ def validate_environment_variables() -> dict[str, str]:
                     "recommended_env_var_missing",
                     component=component,
                     variable=var_name,
-                    default_behavior="using default values"
+                    default_behavior="using default values",
                 )
 
     # Report errors
     if missing_vars:
         error_msg = f"Missing required environment variables: {', '.join(missing_vars)}"
         startup_logger.error(
-            "required_env_vars_missing",
-            missing_vars=missing_vars,
-            error_message=error_msg
+            "required_env_vars_missing", missing_vars=missing_vars, error_message=error_msg
         )
         raise ConfigurationValidationError(error_msg, {"missing_vars": missing_vars})
 
     if invalid_vars:
         error_msg = f"Invalid environment variables: {', '.join(invalid_vars)}"
-        startup_logger.error(
-            "invalid_env_vars",
-            invalid_vars=invalid_vars,
-            error_message=error_msg
-        )
+        startup_logger.error("invalid_env_vars", invalid_vars=invalid_vars, error_message=error_msg)
         raise ConfigurationValidationError(error_msg, {"invalid_vars": invalid_vars})
 
     startup_logger.info(
         "environment_variables_validated",
         validated_count=len(validated_vars),
-        total_required=sum(len(vars_list) for vars_list in REQUIRED_ENV_VARS.values())
+        total_required=sum(len(vars_list) for vars_list in REQUIRED_ENV_VARS.values()),
     )
 
     return validated_vars
+
 
 async def validate_redis_connection(max_retries: int = 3, timeout: float = 5.0) -> bool:
     """
@@ -157,7 +156,9 @@ async def validate_redis_connection(max_retries: int = 3, timeout: float = 5.0) 
     Raises:
         DependencyUnavailableError: If Redis is unavailable after retries
     """
-    startup_logger.info("validating_redis_connection_started", max_retries=max_retries, timeout=timeout)
+    startup_logger.info(
+        "validating_redis_connection_started", max_retries=max_retries, timeout=timeout
+    )
 
     redis_url = os.getenv("REDIS_URL")
     if not redis_url:
@@ -172,7 +173,9 @@ async def validate_redis_connection(max_retries: int = 3, timeout: float = 5.0) 
             from redis.asyncio import Redis
             from redis.asyncio import TimeoutError as RedisTimeoutError
 
-            client = Redis.from_url(redis_url, socket_connect_timeout=timeout, socket_timeout=timeout)
+            client = Redis.from_url(
+                redis_url, socket_connect_timeout=timeout, socket_timeout=timeout
+            )
 
             # Test connection
             await client.ping()
@@ -186,7 +189,7 @@ async def validate_redis_connection(max_retries: int = 3, timeout: float = 5.0) 
                 "redis_connection_validated",
                 attempt=attempt + 1,
                 duration_ms=int(duration * 1000),
-                redis_host=redis_url.split("@")[-1] if "@" in redis_url else redis_url
+                redis_host=redis_url.split("@")[-1] if "@" in redis_url else redis_url,
             )
             return True
 
@@ -198,12 +201,12 @@ async def validate_redis_connection(max_retries: int = 3, timeout: float = 5.0) 
                 max_retries=max_retries,
                 duration_ms=int(duration * 1000),
                 error_type=type(e).__name__,
-                error_message=str(e)
+                error_message=str(e),
             )
 
             if attempt < max_retries - 1:
                 # Exponential backoff
-                backoff = min(10.0, 0.1 * (2 ** attempt))
+                backoff = min(10.0, 0.1 * (2**attempt))
                 await asyncio.sleep(backoff)
             else:
                 # Final failure
@@ -213,20 +216,23 @@ async def validate_redis_connection(max_retries: int = 3, timeout: float = 5.0) 
                     {
                         "attempts": max_retries,
                         "last_error": str(e),
-                        "redis_url": redis_url.split("@")[-1] if "@" in redis_url else redis_url
-                    }
-                )
+                        "redis_url": redis_url.split("@")[-1] if "@" in redis_url else redis_url,
+                    },
+                ) from e
 
         except Exception as e:
             # Unexpected error
             startup_logger.error(
                 "redis_unexpected_error",
                 error_type=type(e).__name__,
-                error_message=str(e) if os.getenv("ENVIRONMENT") != "production" else None
+                error_message=str(e) if os.getenv("ENVIRONMENT") != "production" else None,
             )
-            raise StartupError(f"Unexpected Redis validation error: {type(e).__name__}", {"error": str(e)})
+            raise StartupError(
+                f"Unexpected Redis validation error: {type(e).__name__}", {"error": str(e)}
+            ) from e
 
     return False
+
 
 def validate_tws_configuration() -> dict[str, str]:
     """
@@ -283,17 +289,16 @@ def validate_tws_configuration() -> dict[str, str]:
         startup_logger.error(
             "tws_configuration_invalid",
             validation_errors=validation_errors,
-            error_message=error_msg
+            error_message=error_msg,
         )
         raise ConfigurationValidationError(error_msg, {"validation_errors": validation_errors})
 
     startup_logger.info(
-        "tws_configuration_validated",
-        tws_host=tws_config["host"],
-        tws_port=tws_config["port"]
+        "tws_configuration_validated", tws_host=tws_config["host"], tws_port=tws_config["port"]
     )
 
     return tws_config
+
 
 def validate_security_settings() -> dict[str, str]:
     """
@@ -336,13 +341,14 @@ def validate_security_settings() -> dict[str, str]:
         startup_logger.error(
             "security_settings_invalid",
             validation_errors=validation_errors,
-            error_message=error_msg
+            error_message=error_msg,
         )
         raise ConfigurationValidationError(error_msg, {"validation_errors": validation_errors})
 
     startup_logger.info("security_settings_validated")
 
     return security_config
+
 
 async def validate_all_settings() -> "Settings":
     """
@@ -382,6 +388,7 @@ async def validate_all_settings() -> "Settings":
 
         # Step 5: Load and return settings
         from resync.settings import load_settings
+
         settings = load_settings()
 
         total_duration = time.time() - start_time
@@ -389,7 +396,7 @@ async def validate_all_settings() -> "Settings":
             "comprehensive_validation_completed",
             total_duration_ms=int(total_duration * 1000),
             components_validated=list(validation_results.keys()),
-            settings_loaded=True
+            settings_loaded=True,
         )
 
         return settings
@@ -404,6 +411,8 @@ async def validate_all_settings() -> "Settings":
             "validation_unexpected_error",
             error_type=type(e).__name__,
             error_message=str(e) if os.getenv("ENVIRONMENT") != "production" else None,
-            partial_results=list(validation_results.keys())
+            partial_results=list(validation_results.keys()),
         )
-        raise StartupError(error_msg, {"error": str(e), "partial_results": validation_results})
+        raise StartupError(
+            error_msg, {"error": str(e), "partial_results": validation_results}
+        ) from e

@@ -5,15 +5,73 @@ Provides metrics storage using PostgreSQL.
 """
 
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from enum import Enum
 from typing import Any
 
 from resync.core.database.models import MetricDataPoint
 from resync.core.database.repositories import MetricsStore
+from resync.core.shared_types import MetricType
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["LightweightMetricsStore", "get_metrics_store"]
+__all__ = [
+    "LightweightMetricsStore",
+    "MetricType",
+    "MetricPoint",
+    "AggregatedMetric",
+    "AggregationPeriod",
+    "get_metrics_store",
+    "record_metric",
+    "increment_counter",
+    "record_timing",
+]
+
+
+# =============================================================================
+# Data Types
+# =============================================================================
+
+
+class AggregationPeriod(str, Enum):
+    """Time period for metric aggregation."""
+
+    MINUTE = "minute"
+    HOUR = "hour"
+    DAY = "day"
+    WEEK = "week"
+
+
+@dataclass
+class MetricPoint:
+    """A single metric data point."""
+
+    name: str
+    value: float
+    timestamp: datetime = field(default_factory=datetime.utcnow)
+    tags: dict[str, str] = field(default_factory=dict)
+    unit: str | None = None
+
+
+@dataclass
+class AggregatedMetric:
+    """Aggregated metric statistics."""
+
+    name: str
+    period: AggregationPeriod
+    count: int = 0
+    sum: float = 0.0
+    min: float = 0.0
+    max: float = 0.0
+    avg: float = 0.0
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+
+
+# =============================================================================
+# Lightweight Metrics Store
+# =============================================================================
 
 
 class LightweightMetricsStore:
@@ -35,9 +93,13 @@ class LightweightMetricsStore:
         """Close the store."""
         self._initialized = False
 
-    async def record(self, metric_name: str, value: float,
-                    unit: str | None = None,
-                    tags: dict[str, str] | None = None) -> MetricDataPoint:
+    async def record(
+        self,
+        metric_name: str,
+        value: float,
+        unit: str | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> MetricDataPoint:
         """Record a metric data point."""
         return await self._store.record(metric_name, value, unit=unit, tags=tags)
 
@@ -81,9 +143,33 @@ class LightweightMetricsStore:
 
 _instance: LightweightMetricsStore | None = None
 
+
 def get_metrics_store() -> LightweightMetricsStore:
     """Get the singleton LightweightMetricsStore instance."""
     global _instance
     if _instance is None:
         _instance = LightweightMetricsStore()
     return _instance
+
+
+# =============================================================================
+# Convenience Functions
+# =============================================================================
+
+
+async def record_metric(name: str, value: float, **kwargs) -> MetricDataPoint:
+    """Record a metric using the global store."""
+    store = get_metrics_store()
+    return await store.record(name, value, **kwargs)
+
+
+async def increment_counter(name: str, count: int = 1) -> MetricDataPoint:
+    """Increment a counter metric."""
+    store = get_metrics_store()
+    return await store.record_count(name, count)
+
+
+async def record_timing(name: str, duration_ms: float) -> MetricDataPoint:
+    """Record a timing/latency metric."""
+    store = get_metrics_store()
+    return await store.record_latency(name, duration_ms)

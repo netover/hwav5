@@ -1,9 +1,10 @@
-import pytest
 import os
 import warnings
 from unittest.mock import patch
 
-from resync.settings import Settings, Environment
+import pytest
+
+from resync.settings import Environment, Settings
 
 
 def test_settings_validation_success():
@@ -11,7 +12,7 @@ def test_settings_validation_success():
     Tests that validation passes when all required settings are present.
     """
     # This should not raise any exception
-    settings = Settings()
+    Settings()
     # Validation happens automatically in Pydantic v2
 
 
@@ -20,15 +21,17 @@ def test_settings_validation_fails_on_missing_required_fields():
     Tests that validation fails with a ValueError if required fields are missing.
     """
     # Temporarily unset required environment variables
-    with patch.dict(
-        os.environ,
-        {
-            "APP_REDIS_URL": "",
-        },
-        clear=True,
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "APP_REDIS_URL": "",
+            },
+            clear=True,
+        ),
+        pytest.raises(ValueError) as excinfo,
     ):
-        with pytest.raises(ValueError) as excinfo:
-            Settings()
+        Settings()
 
     # Should mention the missing fields
     error_str = str(excinfo.value).lower()
@@ -39,19 +42,21 @@ def test_settings_validation_requires_tws_keys_when_not_mocked():
     """
     Tests that TWS-specific keys are required when TWS_MOCK_MODE is False.
     """
-    with patch.dict(
-        os.environ,
-        {
-            "APP_TWS_MOCK_MODE": "False",
-            "APP_TWS_HOST": "",
-            "APP_TWS_PORT": "",
-            "APP_TWS_USER": "",
-            "APP_TWS_PASSWORD": "",
-        },
-        clear=True,
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "APP_TWS_MOCK_MODE": "False",
+                "APP_TWS_HOST": "",
+                "APP_TWS_PORT": "",
+                "APP_TWS_USER": "",
+                "APP_TWS_PASSWORD": "",
+            },
+            clear=True,
+        ),
+        pytest.raises(ValueError) as excinfo,
     ):
-        with pytest.raises(ValueError) as excinfo:
-            Settings()
+        Settings()
 
     # Check that TWS-related fields are mentioned
     error_str = str(excinfo.value).lower()
@@ -102,84 +107,76 @@ def test_settings_backward_compatibility_properties():
     settings = Settings()
 
     # Test that uppercase properties work
-    assert settings.BASE_DIR == settings.base_dir
-    assert settings.PROJECT_NAME == settings.project_name
-    assert settings.PROJECT_VERSION == settings.project_version
-    assert settings.DESCRIPTION == settings.description
-    assert settings.LOG_LEVEL == settings.log_level
-    assert settings.ENVIRONMENT == settings.environment.value
-    assert settings.DEBUG == (settings.environment == Environment.DEVELOPMENT)
+    assert settings.base_dir == settings.BASE_DIR
+    assert settings.project_name == settings.PROJECT_NAME
+    assert settings.project_version == settings.PROJECT_VERSION
+    assert settings.description == settings.DESCRIPTION
+    assert settings.log_level == settings.LOG_LEVEL
+    assert settings.environment.value == settings.ENVIRONMENT
+    assert (settings.environment == Environment.DEVELOPMENT) == settings.DEBUG
 
     # Test Redis properties
-    assert settings.REDIS_URL == settings.redis_url
+    assert settings.redis_url == settings.REDIS_URL
 
     # Test LLM properties
-    assert settings.LLM_ENDPOINT == settings.llm_endpoint
-    assert settings.LLM_API_KEY == settings.llm_api_key
+    assert settings.llm_endpoint == settings.LLM_ENDPOINT
+    assert settings.llm_api_key == settings.LLM_API_KEY
 
     # Test admin properties
-    assert settings.ADMIN_USERNAME == settings.admin_username
-    assert settings.ADMIN_PASSWORD == settings.admin_password
+    assert settings.admin_username == settings.ADMIN_USERNAME
+    assert settings.admin_password == settings.ADMIN_PASSWORD
 
     # Test TWS properties
-    assert settings.TWS_MOCK_MODE == settings.tws_mock_mode
-    assert settings.TWS_HOST == settings.tws_host
-    assert settings.TWS_PORT == settings.tws_port
-    assert settings.TWS_USER == settings.tws_user
-    assert settings.TWS_PASSWORD == settings.tws_password
+    assert settings.tws_mock_mode == settings.TWS_MOCK_MODE
+    assert settings.tws_host == settings.TWS_HOST
+    assert settings.tws_port == settings.TWS_PORT
+    assert settings.tws_user == settings.TWS_USER
+    assert settings.tws_password == settings.TWS_PASSWORD
 
     # Test server properties
-    assert settings.SERVER_HOST == settings.server_host
-    assert settings.SERVER_PORT == settings.server_port
+    assert settings.server_host == settings.SERVER_HOST
+    assert settings.server_port == settings.SERVER_PORT
 
     # Test CORS properties
-    assert settings.CORS_ALLOWED_ORIGINS == settings.cors_allowed_origins
-    assert settings.CORS_ALLOW_CREDENTIALS == settings.cors_allow_credentials
-    assert settings.CORS_ALLOW_METHODS == settings.cors_allow_methods
-    assert settings.CORS_ALLOW_HEADERS == settings.cors_allow_headers
+    assert settings.cors_allowed_origins == settings.CORS_ALLOWED_ORIGINS
+    assert settings.cors_allow_credentials == settings.CORS_ALLOW_CREDENTIALS
+    assert settings.cors_allow_methods == settings.CORS_ALLOW_METHODS
+    assert settings.cors_allow_headers == settings.CORS_ALLOW_HEADERS
 
     # Test static files properties
-    assert settings.STATIC_CACHE_MAX_AGE == settings.static_cache_max_age
+    assert settings.static_cache_max_age == settings.STATIC_CACHE_MAX_AGE
 
     # Test model name properties
-    assert settings.AUDITOR_MODEL_NAME == settings.auditor_model_name
-    assert settings.AGENT_MODEL_NAME == settings.agent_model_name
+    assert settings.auditor_model_name == settings.AUDITOR_MODEL_NAME
+    assert settings.agent_model_name == settings.AGENT_MODEL_NAME
 
     # Test connection pool properties
-    assert settings.DB_POOL_MIN_SIZE == settings.db_pool_min_size
-    assert settings.DB_POOL_MAX_SIZE == settings.db_pool_max_size
-    assert settings.DB_POOL_IDLE_TIMEOUT == settings.db_pool_idle_timeout
-    assert settings.DB_POOL_CONNECT_TIMEOUT == settings.db_pool_connect_timeout
-    assert (
-        settings.DB_POOL_HEALTH_CHECK_INTERVAL == settings.db_pool_health_check_interval
-    )
-    assert settings.DB_POOL_MAX_LIFETIME == settings.db_pool_max_lifetime
+    assert settings.db_pool_min_size == settings.DB_POOL_MIN_SIZE
+    assert settings.db_pool_max_size == settings.DB_POOL_MAX_SIZE
+    assert settings.db_pool_idle_timeout == settings.DB_POOL_IDLE_TIMEOUT
+    assert settings.db_pool_connect_timeout == settings.DB_POOL_CONNECT_TIMEOUT
+    assert settings.db_pool_health_check_interval == settings.DB_POOL_HEALTH_CHECK_INTERVAL
+    assert settings.db_pool_max_lifetime == settings.DB_POOL_MAX_LIFETIME
 
-    assert settings.REDIS_POOL_MIN_SIZE == settings.redis_pool_min_size
-    assert settings.REDIS_POOL_MAX_SIZE == settings.redis_pool_max_size
-    assert settings.REDIS_POOL_IDLE_TIMEOUT == settings.redis_pool_idle_timeout
-    assert settings.REDIS_POOL_CONNECT_TIMEOUT == settings.redis_pool_connect_timeout
-    assert (
-        settings.REDIS_POOL_HEALTH_CHECK_INTERVAL
-        == settings.redis_pool_health_check_interval
-    )
-    assert settings.REDIS_POOL_MAX_LIFETIME == settings.redis_pool_max_lifetime
+    assert settings.redis_pool_min_size == settings.REDIS_POOL_MIN_SIZE
+    assert settings.redis_pool_max_size == settings.REDIS_POOL_MAX_SIZE
+    assert settings.redis_pool_idle_timeout == settings.REDIS_POOL_IDLE_TIMEOUT
+    assert settings.redis_pool_connect_timeout == settings.REDIS_POOL_CONNECT_TIMEOUT
+    assert settings.redis_pool_health_check_interval == settings.REDIS_POOL_HEALTH_CHECK_INTERVAL
+    assert settings.redis_pool_max_lifetime == settings.REDIS_POOL_MAX_LIFETIME
 
-    assert settings.HTTP_POOL_MIN_SIZE == settings.http_pool_min_size
-    assert settings.HTTP_POOL_MAX_SIZE == settings.http_pool_max_size
-    assert settings.HTTP_POOL_IDLE_TIMEOUT == settings.http_pool_idle_timeout
-    assert settings.HTTP_POOL_CONNECT_TIMEOUT == settings.http_pool_connect_timeout
-    assert (
-        settings.HTTP_POOL_HEALTH_CHECK_INTERVAL
-        == settings.http_pool_health_check_interval
-    )
-    assert settings.HTTP_POOL_MAX_LIFETIME == settings.http_pool_max_lifetime
+    assert settings.http_pool_min_size == settings.HTTP_POOL_MIN_SIZE
+    assert settings.http_pool_max_size == settings.HTTP_POOL_MAX_SIZE
+    assert settings.http_pool_idle_timeout == settings.HTTP_POOL_IDLE_TIMEOUT
+    assert settings.http_pool_connect_timeout == settings.HTTP_POOL_CONNECT_TIMEOUT
+    assert settings.http_pool_health_check_interval == settings.HTTP_POOL_HEALTH_CHECK_INTERVAL
+    assert settings.http_pool_max_lifetime == settings.HTTP_POOL_MAX_LIFETIME
 
     # Test additional properties
-    assert settings.JINJA2_TEMPLATE_CACHE_SIZE == (
+    assert (
         400 if settings.environment == Environment.PRODUCTION else 0
-    )
-    assert settings.AGENT_CONFIG_PATH == settings.base_dir / "config" / "agents.json"
+    ) == settings.JINJA2_TEMPLATE_CACHE_SIZE
+    assert settings.base_dir / "config" / "agents.json" == settings.AGENT_CONFIG_PATH
     assert settings.MAX_CONCURRENT_AGENT_CREATIONS == 5
     assert settings.TWS_ENGINE_NAME == "TWS"
     assert settings.TWS_ENGINE_OWNER == "twsuser"
@@ -187,21 +184,23 @@ def test_settings_backward_compatibility_properties():
 
 def test_tws_verify_warning_in_production():
     """Test that TWS verification emits warning in production when disabled."""
-    with patch.dict(
-        os.environ,
-        {
-            "APP_ENVIRONMENT": "production",
-            "APP_TWS_VERIFY": "False",
-        },
-        clear=True,
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "APP_ENVIRONMENT": "production",
+                "APP_TWS_VERIFY": "False",
+            },
+            clear=True,
+        ),
+        warnings.catch_warnings(record=True) as w,
     ):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            Settings()
-            # Check that a warning was issued
-            assert len(w) >= 1
-            warning_found = any("TWS verification is disabled" in str(warning.message) for warning in w)
-            assert warning_found, "Expected warning about TWS verification being disabled in production"
+        warnings.simplefilter("always")
+        Settings()
+        # Check that a warning was issued
+        assert len(w) >= 1
+        warning_found = any("TWS verification is disabled" in str(warning.message) for warning in w)
+        assert warning_found, "Expected warning about TWS verification being disabled in production"
 
 
 def test_redis_url_accepts_both_schemes():
@@ -216,7 +215,7 @@ def test_redis_url_accepts_both_schemes():
     ):
         settings = Settings()
         assert settings.redis_url == "redis://localhost:6379"
-    
+
     # Test rediss://
     with patch.dict(
         os.environ,
@@ -240,21 +239,23 @@ def test_secret_fields_exclusion():
 
 def test_cors_credentials_with_wildcard_warning():
     """Test that CORS with credentials and wildcard origins emits warning."""
-    with patch.dict(
-        os.environ,
-        {
-            "APP_CORS_ALLOWED_ORIGINS": '["*"]',
-            "APP_CORS_ALLOW_CREDENTIALS": "True",
-        },
-        clear=True,
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "APP_CORS_ALLOWED_ORIGINS": '["*"]',
+                "APP_CORS_ALLOW_CREDENTIALS": "True",
+            },
+            clear=True,
+        ),
+        warnings.catch_warnings(record=True) as w,
     ):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            Settings()
-            # Check that a warning was issued
-            assert len(w) >= 1
-            warning_found = any("insecure" in str(warning.message).lower() for warning in w)
-            assert warning_found, "Expected warning about insecure CORS configuration"
+        warnings.simplefilter("always")
+        Settings()
+        # Check that a warning was issued
+        assert len(w) >= 1
+        warning_found = any("insecure" in str(warning.message).lower() for warning in w)
+        assert warning_found, "Expected warning about insecure CORS configuration"
 
 
 def test_redis_pool_fallback_deprecation_warning():
@@ -265,7 +266,7 @@ def test_redis_pool_fallback_deprecation_warning():
             "APP_REDIS_MIN_CONNECTIONS": "5",
             "APP_REDIS_MAX_CONNECTIONS": "25",
             "APP_REDIS_POOL_MIN_SIZE": "5",  # Default value to trigger fallback
-            "APP_REDIS_POOL_MAX_SIZE": "20", # Default value to trigger fallback
+            "APP_REDIS_POOL_MAX_SIZE": "20",  # Default value to trigger fallback
         },
         clear=True,
     ):
@@ -326,9 +327,9 @@ def test_base_dir_validation():
 def test_cache_settings_exposed():
     """Test that new cache settings are exposed."""
     settings = Settings()
-    assert hasattr(settings, 'enable_cache_swr')
-    assert hasattr(settings, 'cache_ttl_jitter_ratio')
-    assert hasattr(settings, 'enable_cache_mutex')
+    assert hasattr(settings, "enable_cache_swr")
+    assert hasattr(settings, "cache_ttl_jitter_ratio")
+    assert hasattr(settings, "enable_cache_mutex")
     assert settings.enable_cache_swr is True
     assert settings.cache_ttl_jitter_ratio == 0.1
     assert settings.enable_cache_mutex is True
@@ -337,5 +338,5 @@ def test_cache_settings_exposed():
 def test_logging_settings_redaction():
     """Test that logging redaction setting is available."""
     settings = Settings()
-    assert hasattr(settings, 'log_sensitive_data_redaction')
+    assert hasattr(settings, "log_sensitive_data_redaction")
     assert settings.log_sensitive_data_redaction is True

@@ -7,7 +7,6 @@ across multiple modules in the application.
 
 import asyncio
 import logging
-import time
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar, cast
@@ -170,7 +169,7 @@ def retry_on_exception(
                             f"Attempt {attempt + 1} failed: {e}. "
                             f"Retrying in {current_delay:.2f} seconds..."
                         )
-                        time.sleep(current_delay)
+                        await asyncio.sleep(current_delay)
                         current_delay *= backoff
                     else:
                         logger_instance.error(

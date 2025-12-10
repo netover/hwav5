@@ -37,18 +37,20 @@ class IncidentResponder:
         actions = self._get_response_actions(incident)
         results = []
 
-        for action in actions[:self.config.max_auto_actions]:
+        for action in actions[: self.config.max_auto_actions]:
             try:
                 result = await action.execute()
                 results.append(result)
                 incident.actions_taken.append(action.name)
             except Exception as e:
                 logger.error(f"Action {action.name} failed: {e}")
-                results.append({
-                    "action": action.name,
-                    "status": "failed",
-                    "error": str(e),
-                })
+                results.append(
+                    {
+                        "action": action.name,
+                        "status": "failed",
+                        "error": str(e),
+                    }
+                )
 
         # Update incident status
         if results:
@@ -64,25 +66,31 @@ class IncidentResponder:
         # Performance incidents
         if incident.category.value == "performance":
             if "cpu" in incident.affected_components:
-                actions.append(ResponseAction(
-                    name="scale_up",
-                    description="Scale up resources",
-                    action_type="infrastructure",
-                ))
+                actions.append(
+                    ResponseAction(
+                        name="scale_up",
+                        description="Scale up resources",
+                        action_type="infrastructure",
+                    )
+                )
             if "memory" in incident.affected_components:
-                actions.append(ResponseAction(
-                    name="clear_cache",
-                    description="Clear application caches",
-                    action_type="application",
-                ))
+                actions.append(
+                    ResponseAction(
+                        name="clear_cache",
+                        description="Clear application caches",
+                        action_type="application",
+                    )
+                )
 
         # Availability incidents
         if incident.category.value == "availability":
-            actions.append(ResponseAction(
-                name="restart_service",
-                description="Restart affected service",
-                action_type="infrastructure",
-            ))
+            actions.append(
+                ResponseAction(
+                    name="restart_service",
+                    description="Restart affected service",
+                    action_type="infrastructure",
+                )
+            )
 
         return actions
 

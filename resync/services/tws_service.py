@@ -8,7 +8,6 @@ and counted using Prometheus metrics for observability. HTTPX is instrumented
 with OpenTelemetry if the instrumentation library is available.
 """
 
-
 import time
 from typing import Any
 
@@ -121,9 +120,7 @@ class OptimizedTWSClient:
             elapsed = time.perf_counter() - start
             # Record error in metrics
             self._request_latency.labels(endpoint=endpoint_label).observe(elapsed)
-            self._request_count.labels(
-                endpoint=endpoint_label, status="error"
-            ).inc()
+            self._request_count.labels(endpoint=endpoint_label, status="error").inc()
             raise
 
     # ---------------------------------------------------------------------
@@ -244,9 +241,7 @@ class OptimizedTWSClient:
         params: dict[str, Any] = {}
         if depth is not None:
             params["depth"] = depth
-        return await self._get(
-            f"/twsd/api/v2/plan/job/{job_id}/predecessors", params=params
-        )
+        return await self._get(f"/twsd/api/v2/plan/job/{job_id}/predecessors", params=params)
 
     async def get_current_plan_job_successors(
         self,
@@ -257,9 +252,7 @@ class OptimizedTWSClient:
         params: dict[str, Any] = {}
         if depth is not None:
             params["depth"] = depth
-        return await self._get(
-            f"/twsd/api/v2/plan/job/{job_id}/successors", params=params
-        )
+        return await self._get(f"/twsd/api/v2/plan/job/{job_id}/successors", params=params)
 
     async def get_current_plan_job_model(self, job_id: str) -> Any:
         """Retrieve the underlying model of a job in the current plan."""
@@ -267,9 +260,7 @@ class OptimizedTWSClient:
 
     async def get_current_plan_job_model_description(self, job_id: str) -> Any:
         """Retrieve the model description of a job in the current plan."""
-        return await self._get(
-            f"/twsd/api/v2/plan/job/{job_id}/model/description"
-        )
+        return await self._get(f"/twsd/api/v2/plan/job/{job_id}/model/description")
 
     async def get_current_plan_job_count(self) -> Any:
         """Return the total number of jobs in the current plan."""
@@ -334,13 +325,9 @@ class OptimizedTWSClient:
             params=params,
         )
 
-    async def get_current_plan_jobstream_model_description(
-        self, jobstream_id: str
-    ) -> Any:
+    async def get_current_plan_jobstream_model_description(self, jobstream_id: str) -> Any:
         """Retrieve the model description of a job stream in the current plan."""
-        return await self._get(
-            f"/twsd/api/v2/plan/jobstream/{jobstream_id}/model/description"
-        )
+        return await self._get(f"/twsd/api/v2/plan/jobstream/{jobstream_id}/model/description")
 
     async def get_current_plan_jobstream_count(self) -> Any:
         """Return the total number of job streams in the current plan."""
@@ -364,9 +351,7 @@ class OptimizedTWSClient:
         """Retrieve a specific resource from the current plan."""
         return await self._get(f"/twsd/api/v2/plan/resource/{resource_id}")
 
-    async def get_current_plan_folder_objects_count(
-        self, folder: str | None = None
-    ) -> Any:
+    async def get_current_plan_folder_objects_count(self, folder: str | None = None) -> Any:
         """Return the number of plan objects within a folder."""
         params: dict[str, Any] = {}
         if folder:

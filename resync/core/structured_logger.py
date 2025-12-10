@@ -30,7 +30,9 @@ from .encoding_utils import can_encode
 def _get_settings():
     """Lazy import of settings to avoid circular dependencies."""
     from resync.settings import settings
+
     return settings
+
 
 # ============================================================================
 # CONTEXT VARIABLES
@@ -47,9 +49,7 @@ _current_request_ctx: ContextVar[dict[str, Any] | None] = ContextVar(
 # ============================================================================
 
 
-def add_correlation_id(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
-) -> EventDict:
+def add_correlation_id(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
     """Adiciona Correlation ID ao log.
 
     Args:
@@ -68,9 +68,7 @@ def add_correlation_id(
     return event_dict
 
 
-def add_user_context(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
-) -> EventDict:
+def add_user_context(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
     """Adiciona contexto do usuário ao log.
 
     Args:
@@ -131,9 +129,7 @@ def add_service_context(
     return event_dict
 
 
-def add_timestamp(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
-) -> EventDict:
+def add_timestamp(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
     """Adiciona timestamp ISO 8601 ao log.
 
     Args:
@@ -148,9 +144,7 @@ def add_timestamp(
     return event_dict
 
 
-def add_log_level(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
-) -> EventDict:
+def add_log_level(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
     """Adiciona nível de log padronizado.
 
     Args:
@@ -227,8 +221,7 @@ def censor_sensitive_data(
                 result[key] = censor_dict(value)
             elif isinstance(value, list):
                 result[key] = [
-                    censor_dict(item) if isinstance(item, dict) else item
-                    for item in value
+                    censor_dict(item) if isinstance(item, dict) else item for item in value
                 ]
             elif isinstance(value, str):
                 # Apply value pattern censoring
@@ -313,9 +306,7 @@ def configure_structured_logging(
     # Configurar structlog
     structlog.configure(
         processors=processors,
-        wrapper_class=structlog.make_filtering_bound_logger(
-            getattr(logging, log_level.upper())
-        ),
+        wrapper_class=structlog.make_filtering_bound_logger(getattr(logging, log_level.upper())),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,

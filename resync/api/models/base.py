@@ -26,25 +26,3 @@ class PaginationResponse(BaseModel):
     total_pages: int
     current_page: int
     page_size: int
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

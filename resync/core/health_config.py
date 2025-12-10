@@ -59,19 +59,12 @@ class HealthCheckSecurityConfig(BaseModel):
 
         return cls(
             error_detail_level=mapping.get(detail_level, ErrorDetailLevel.SECURE),
-            include_stack_traces=os.getenv(
-                "HEALTH_INCLUDE_STACK_TRACES", "false"
-            ).lower()
+            include_stack_traces=os.getenv("HEALTH_INCLUDE_STACK_TRACES", "false").lower()
             == "true",
-            log_full_errors=os.getenv("HEALTH_LOG_FULL_ERRORS", "true").lower()
+            log_full_errors=os.getenv("HEALTH_LOG_FULL_ERRORS", "true").lower() == "true",
+            sanitize_file_paths=os.getenv("HEALTH_SANITIZE_PATHS", "true").lower() == "true",
+            sanitize_connection_strings=os.getenv("HEALTH_SANITIZE_CONNECTIONS", "true").lower()
             == "true",
-            sanitize_file_paths=os.getenv("HEALTH_SANITIZE_PATHS", "true").lower()
-            == "true",
-            sanitize_connection_strings=os.getenv(
-                "HEALTH_SANITIZE_CONNECTIONS", "true"
-            ).lower()
-            == "true",
-            sanitize_sql_queries=os.getenv("HEALTH_SANITIZE_SQL", "true").lower()
-            == "true",
+            sanitize_sql_queries=os.getenv("HEALTH_SANITIZE_SQL", "true").lower() == "true",
             error_id_length=int(os.getenv("HEALTH_ERROR_ID_LENGTH", "8")),
         )

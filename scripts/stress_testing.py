@@ -114,12 +114,9 @@ class StressTester:
 
             # Calculate overall metrics
             total_duration = time.time() - start_time
-            total_operations = sum(
-                r.operations_per_second * r.duration for r in test_results
-            )
+            total_operations = sum(r.operations_per_second * r.duration for r in test_results)
             total_errors = sum(
-                r.error_rate * r.operations_per_second * r.duration
-                for r in test_results
+                r.error_rate * r.operations_per_second * r.duration for r in test_results
             )
             avg_memory = (
                 sum(r.peak_memory_mb for r in test_results) / len(test_results)
@@ -213,7 +210,9 @@ class StressTester:
                         key = f"stress_key_{user_id}_{op_num}_{random.randint(0, 100)}"
 
                         if op_type == "set":
-                            value = f"stress_value_{user_id}_{op_num}_{'x' * random.randint(10, 100)}"
+                            value = (
+                                f"stress_value_{user_id}_{op_num}_{'x' * random.randint(10, 100)}"
+                            )
                             await cache.set(key, value, random.randint(60, 300))
                         elif op_type == "get":
                             await cache.get(key)
@@ -239,9 +238,7 @@ class StressTester:
             # Calculate metrics
             duration = time.time() - start_time
             ops_per_second = operations_completed / duration if duration > 0 else 0
-            error_rate = (
-                errors / operations_completed if operations_completed > 0 else 0
-            )
+            error_rate = errors / operations_completed if operations_completed > 0 else 0
             avg_latency = sum(latencies) / len(latencies) if latencies else 0
             peak_memory = self._get_memory_usage()
             memory_used = peak_memory - initial_memory
@@ -262,9 +259,7 @@ class StressTester:
                 error_rate=error_rate,
                 cpu_usage_percent=self._get_cpu_usage(),
                 memory_leaks_detected=memory_leaks,
-                anomalies=(
-                    [] if error_rate < 0.1 else [f"High error rate: {error_rate:.2%}"]
-                ),
+                anomalies=([] if error_rate < 0.1 else [f"High error rate: {error_rate:.2%}"]),
             )
 
         finally:
@@ -308,9 +303,7 @@ class StressTester:
                         manager = AgentManager()
 
                         # Mix of operations
-                        op_type = random.choice(
-                            ["get_metrics", "get_agent", "list_agents"]
-                        )
+                        op_type = random.choice(["get_metrics", "get_agent", "list_agents"])
 
                         if op_type == "get_metrics":
                             metrics = manager.get_detailed_metrics()
@@ -319,9 +312,7 @@ class StressTester:
                         elif op_type == "get_agent":
                             # Try to get non-existent agent (expected to fail gracefully)
                             try:
-                                await manager.get_agent(
-                                    f"non_existent_{worker_id}_{op_num}"
-                                )
+                                await manager.get_agent(f"non_existent_{worker_id}_{op_num}")
                             except ValueError:
                                 pass  # Expected
                         elif op_type == "list_agents":
@@ -341,17 +332,13 @@ class StressTester:
                     await asyncio.sleep(random.uniform(*profile.think_time_range))
 
             # Run concurrent operations
-            tasks = [
-                agent_operations_worker(i) for i in range(profile.concurrent_users)
-            ]
+            tasks = [agent_operations_worker(i) for i in range(profile.concurrent_users)]
             await asyncio.gather(*tasks, return_exceptions=True)
 
             # Calculate metrics
             duration = time.time() - start_time
             ops_per_second = operations_completed / duration if duration > 0 else 0
-            error_rate = (
-                errors / operations_completed if operations_completed > 0 else 0
-            )
+            error_rate = errors / operations_completed if operations_completed > 0 else 0
             avg_latency = sum(latencies) / len(latencies) if latencies else 0
             peak_memory = self._get_memory_usage()
             memory_used = peak_memory - initial_memory
@@ -411,9 +398,7 @@ class StressTester:
 
                     try:
                         # Mix of audit operations
-                        op_type = random.choice(
-                            ["batch_insert", "get_metrics", "sweep"]
-                        )
+                        op_type = random.choice(["batch_insert", "get_metrics", "sweep"])
 
                         if op_type == "batch_insert":
                             memories = [
@@ -456,17 +441,13 @@ class StressTester:
                     await asyncio.sleep(random.uniform(*profile.think_time_range))
 
             # Run concurrent operations
-            tasks = [
-                audit_operations_worker(i) for i in range(profile.concurrent_users)
-            ]
+            tasks = [audit_operations_worker(i) for i in range(profile.concurrent_users)]
             await asyncio.gather(*tasks, return_exceptions=True)
 
             # Calculate metrics
             duration = time.time() - start_time
             ops_per_second = operations_completed / duration if duration > 0 else 0
-            error_rate = (
-                errors / operations_completed if operations_completed > 0 else 0
-            )
+            error_rate = errors / operations_completed if operations_completed > 0 else 0
             avg_latency = sum(latencies) / len(latencies) if latencies else 0
             peak_memory = self._get_memory_usage()
             memory_used = peak_memory - initial_memory
@@ -524,9 +505,7 @@ class StressTester:
             tracemalloc.stop()
 
             memory_growth = final_memory - initial_memory
-            memory_leaks = (
-                1 if memory_growth > 10 * 1024 * 1024 else 0
-            )  # 10MB growth threshold
+            memory_leaks = 1 if memory_growth > 10 * 1024 * 1024 else 0  # 10MB growth threshold
 
             duration = time.time() - start_time
 
@@ -541,7 +520,7 @@ class StressTester:
                     cpu_usage_percent=self._get_cpu_usage(),
                     memory_leaks_detected=memory_leaks,
                     anomalies=(
-                        [f"Memory growth: {memory_growth / (1024*1024):.1f}MB"]
+                        [f"Memory growth: {memory_growth / (1024 * 1024):.1f}MB"]
                         if memory_leaks
                         else []
                     ),
@@ -562,17 +541,13 @@ class StressTester:
 
         try:
             # Measure baseline performance
-            baseline_latencies = await self._measure_cache_performance(
-                cache, "baseline"
-            )
+            baseline_latencies = await self._measure_cache_performance(cache, "baseline")
 
             # Stress the system
             await self._stress_cache_system(cache, duration_seconds=30)
 
             # Measure performance after stress
-            stressed_latencies = await self._measure_cache_performance(
-                cache, "stressed"
-            )
+            stressed_latencies = await self._measure_cache_performance(cache, "stressed")
 
             # Calculate degradation
             baseline_avg = sum(baseline_latencies) / len(baseline_latencies)
@@ -592,9 +567,7 @@ class StressTester:
                     cpu_usage_percent=self._get_cpu_usage(),
                     performance_degradation=degradation,
                     anomalies=(
-                        [f"Performance degraded by {degradation:.1f}%"]
-                        if degradation > 50
-                        else []
+                        [f"Performance degraded by {degradation:.1f}%"] if degradation > 50 else []
                     ),
                 )
             ]
@@ -603,9 +576,7 @@ class StressTester:
             await cache.stop()
             runtime_metrics.close_correlation_id(correlation_id)
 
-    async def _measure_cache_performance(
-        self, cache: AsyncTTLCache, phase: str
-    ) -> list[float]:
+    async def _measure_cache_performance(self, cache: AsyncTTLCache, phase: str) -> list[float]:
         """Measure cache operation latencies."""
         latencies = []
 

@@ -32,9 +32,7 @@ class SettingsValidators:
         """Valida que max_size >= min_size."""
         min_size = info.data.get("db_pool_min_size", 0)
         if v < min_size:
-            raise ValueError(
-                f"db_pool_max_size ({v}) must be >= db_pool_min_size ({min_size})"
-            )
+            raise ValueError(f"db_pool_max_size ({v}) must be >= db_pool_min_size ({min_size})")
         return v
 
     @field_validator("redis_pool_max_size")
@@ -44,8 +42,7 @@ class SettingsValidators:
         min_size = info.data.get("redis_pool_min_size", 0)
         if v < min_size:
             raise ValueError(
-                "redis_pool_max_size ({v}) must be >= "
-                f"redis_pool_min_size ({min_size})"
+                f"redis_pool_max_size ({{v}}) must be >= redis_pool_min_size ({min_size})"
             )
 
         # Aplicar fallback de legado com warning
@@ -65,8 +62,7 @@ class SettingsValidators:
                 v = legacy_max_size
                 if v < min_size:
                     raise ValueError(
-                        "redis_pool_max_size ({v}) must be >= "
-                        f"redis_pool_min_size ({min_size})"
+                        f"redis_pool_max_size ({{v}}) must be >= redis_pool_min_size ({min_size})"
                     )
         return v
 
@@ -74,7 +70,7 @@ class SettingsValidators:
     @classmethod
     def validate_redis_url(cls, v: str) -> str:
         """Valida formato da URL Redis."""
-        if not (v.startswith("redis://") or v.startswith("rediss://")):
+        if not (v.startswith(("redis://", "rediss://"))):
             raise ValueError(
                 "REDIS_URL deve começar com 'redis://' ou 'rediss://'. "
                 "Exemplo: redis://localhost:6379 ou rediss://localhost:6379"
@@ -92,9 +88,7 @@ class SettingsValidators:
         # Em produção: senha obrigatória com 8+ caracteres
         if env == Environment.PRODUCTION:
             if v is None or len(v.get_secret_value()) < 8:
-                raise ValueError(
-                    "Senha do admin deve ter no mínimo 8 caracteres (produção)"
-                )
+                raise ValueError("Senha do admin deve ter no mínimo 8 caracteres (produção)")
         # Em desenvolvimento: permitir None, mas se definida, exigir 8+ caracteres
         else:
             if v is not None and len(v.get_secret_value()) < 8:
@@ -122,9 +116,7 @@ class SettingsValidators:
 
     @field_validator("cors_allowed_origins")
     @classmethod
-    def validate_production_cors(
-        cls, v: list[str], info: ValidationInfo
-    ) -> list[str]:
+    def validate_production_cors(cls, v: list[str], info: ValidationInfo) -> list[str]:
         """Valida CORS em produção."""
         env = info.data.get("environment")
         if env == Environment.PRODUCTION and "*" in v:
@@ -133,9 +125,7 @@ class SettingsValidators:
 
     @field_validator("cors_allow_credentials")
     @classmethod
-    def validate_credentials_with_wildcard(
-        cls, v: bool, info: ValidationInfo
-    ) -> bool:
+    def validate_credentials_with_wildcard(cls, v: bool, info: ValidationInfo) -> bool:
         """Valida credenciais com wildcard origins."""
         origins = info.data.get("cors_allowed_origins", [])
         if v and "*" in origins:
@@ -153,17 +143,13 @@ class SettingsValidators:
         """Valida chave da API em produção."""
         env = info.data.get("environment")
         if env == Environment.PRODUCTION:
-            if not v.get_secret_value() or v.get_secret_value() == (
-                "dummy_key_for_development"
-            ):
+            if not v.get_secret_value() or v.get_secret_value() == ("dummy_key_for_development"):
                 raise ValueError("LLM_API_KEY must be set to a valid key in production")
         return v
 
     @field_validator("tws_verify")
     @classmethod
-    def validate_tws_verify_warning(
-        cls, v: bool | str, info: ValidationInfo
-    ) -> bool | str:
+    def validate_tws_verify_warning(cls, v: bool | str, info: ValidationInfo) -> bool | str:
         """Emite warning para TWS verification em produção."""
         env = info.data.get("environment")
         is_disabled = (v is False) or (isinstance(v, str) and v.lower() == "false")
@@ -177,9 +163,7 @@ class SettingsValidators:
 
     @field_validator("tws_user", "tws_password")
     @classmethod
-    def validate_tws_credentials(
-        cls, v: str | None, info: ValidationInfo
-    ) -> str | None:
+    def validate_tws_credentials(cls, v: str | None, info: ValidationInfo) -> str | None:
         """Valida credenciais TWS quando não está em mock mode."""
         if info.field_name == "tws_password" and v:
             env = info.data.get("environment")
@@ -187,13 +171,9 @@ class SettingsValidators:
             if env == Environment.PRODUCTION and not mock_mode:
                 # SecretStr esperado; valida conteúdo
                 if not v.get_secret_value():
-                    raise ValueError(
-                        "TWS_PASSWORD is required when not in mock mode"
-                    )
+                    raise ValueError("TWS_PASSWORD is required when not in mock mode")
                 if len(v.get_secret_value()) < 12:
-                    raise ValueError(
-                        "TWS_PASSWORD must be at least 12 characters in production"
-                    )
+                    raise ValueError("TWS_PASSWORD must be at least 12 characters in production")
                 common_passwords = {
                     "password",
                     "twsuser",
@@ -201,7 +181,5 @@ class SettingsValidators:
                     "change_me",
                 }
                 if v.get_secret_value().lower() in common_passwords:
-                    raise ValueError(
-                        "TWS_PASSWORD cannot be a common/default password"
-                    )
+                    raise ValueError("TWS_PASSWORD cannot be a common/default password")
         return v

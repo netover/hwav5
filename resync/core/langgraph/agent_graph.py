@@ -59,6 +59,7 @@ try:
     from langgraph.checkpoint.base import BaseCheckpointSaver
     from langgraph.graph import END, StateGraph
     from langgraph.prebuilt import ToolNode as LGToolNode  # noqa: F401 - reserved for future use
+
     LANGGRAPH_AVAILABLE = True
 except ImportError:
     LANGGRAPH_AVAILABLE = False
@@ -71,8 +72,10 @@ except ImportError:
 # STATE DEFINITION
 # =============================================================================
 
+
 class Intent(str, Enum):
     """User intent categories."""
+
     STATUS = "status"
     TROUBLESHOOT = "troubleshoot"
     QUERY = "query"
@@ -88,6 +91,7 @@ class AgentState(TypedDict, total=False):
     This is the central data structure that flows through the graph.
     Each node reads from and writes to this state.
     """
+
     # Input
     message: str
     user_id: str | None
@@ -160,6 +164,7 @@ class AgentGraphConfig:
 # NODE FUNCTIONS
 # =============================================================================
 
+
 async def router_node(state: AgentState) -> AgentState:
     """
     Classify user intent and route to appropriate handler.
@@ -183,7 +188,9 @@ async def router_node(state: AgentState) -> AgentState:
         from resync.core.utils.llm import call_llm
 
         tracer = get_tracer()
-        async with tracer.trace("intent_classification", model=router_prompt.model_hint or "default") as trace:
+        async with tracer.trace(
+            "intent_classification", model=router_prompt.model_hint or "default"
+        ) as trace:
             compiled = router_prompt.compile(user_message=message)
 
             # Use call_llm with resilience built-in
@@ -231,7 +238,9 @@ async def _fallback_router(state: AgentState) -> AgentState:
     if any(kw in message for kw in ["status", "estado", "workstation", "online", "offline"]):
         intent = Intent.STATUS
         confidence = 0.7
-    elif any(kw in message for kw in ["erro", "error", "falha", "abend", "problema", "troubleshoot"]):
+    elif any(
+        kw in message for kw in ["erro", "error", "falha", "abend", "problema", "troubleshoot"]
+    ):
         intent = Intent.TROUBLESHOOT
         confidence = 0.7
     elif any(kw in message for kw in ["cancelar", "reiniciar", "executar", "parar", "submit"]):
@@ -326,10 +335,12 @@ async def query_handler_node(state: AgentState) -> AgentState:
         search_results = await rag_client.search(query=message, limit=5)
 
         # Build context
-        context = "\n\n".join([
-            f"[{r.get('source', 'Unknown')}]: {r.get('content', '')}"
-            for r in search_results.get("results", [])
-        ])
+        context = "\n\n".join(
+            [
+                f"[{r.get('source', 'Unknown')}]: {r.get('content', '')}"
+                for r in search_results.get("results", [])
+            ]
+        )
 
         # Get RAG prompt and generate response
         prompt_manager = get_prompt_manager()
@@ -419,9 +430,7 @@ async def general_handler_node(state: AgentState) -> AgentState:
         messages.append({"role": "user", "content": message})
 
         # Build full prompt for call_llm
-        full_prompt = "\n".join([
-            f"{m['role'].upper()}: {m['content']}" for m in messages
-        ])
+        full_prompt = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
 
         # Use call_llm with project standard (LiteLLM + resilience)
         response = await call_llm(
@@ -517,6 +526,7 @@ async def _generate_response_from_tool(state: AgentState, response_type: str) ->
 # GRAPH CONSTRUCTION
 # =============================================================================
 
+
 def _get_next_node(state: AgentState) -> str:
     """Determine the next node based on intent."""
     intent = state.get("intent", Intent.GENERAL)
@@ -590,7 +600,7 @@ async def create_tws_agent_graph(
             "query_handler": "query_handler",
             "action_handler": "action_handler",
             "general_handler": "general_handler",
-        }
+        },
     )
 
     # Add edges from handlers to validation
@@ -607,7 +617,7 @@ async def create_tws_agent_graph(
         {
             "retry": "router",  # Back to start for retry
             "output": "response_formatter",
-        }
+        },
     )
 
     # Response formatter to end
@@ -637,6 +647,7 @@ async def create_router_graph() -> Any:
 # =============================================================================
 # FALLBACK IMPLEMENTATION
 # =============================================================================
+
 
 class FallbackGraph:
     """

@@ -171,9 +171,7 @@ class IdempotencyManager:
 
             record = IdempotencyRecord(
                 idempotency_key=idempotency_key,
-                request_hash=(
-                    self._hash_request_data(request_data) if request_data else ""
-                ),
+                request_hash=(self._hash_request_data(request_data) if request_data else ""),
                 response_data=response_data,
                 status_code=status_code,
                 created_at=now,
@@ -194,9 +192,7 @@ class IdempotencyManager:
                     size_kb=response_size / 1024,
                 )
                 return True
-            logger.error(
-                "Failed to cache response", idempotency_key=idempotency_key
-            )
+            logger.error("Failed to cache response", idempotency_key=idempotency_key)
             return False
 
         except IdempotencyKeyError as e:
@@ -261,9 +257,7 @@ class IdempotencyManager:
             )
             return False
 
-    async def mark_processing(
-        self, idempotency_key: str, ttl_seconds: int = 300
-    ) -> bool:
+    async def mark_processing(self, idempotency_key: str, ttl_seconds: int = 300) -> bool:
         """
         Marca operação como em processamento
 
@@ -281,14 +275,18 @@ class IdempotencyManager:
                 "started_at": self._now().isoformat(),
                 "ttl_seconds": ttl_seconds,
             }
-            success = await self.storage.set(processing_key, IdempotencyRecord(
-                idempotency_key=idempotency_key,
-                request_hash="",
-                response_data=data,
-                status_code=200,
-                created_at=self._now(),
-                expires_at=self._now() + timedelta(seconds=ttl_seconds),
-            ), ttl_seconds)
+            success = await self.storage.set(
+                processing_key,
+                IdempotencyRecord(
+                    idempotency_key=idempotency_key,
+                    request_hash="",
+                    response_data=data,
+                    status_code=200,
+                    created_at=self._now(),
+                    expires_at=self._now() + timedelta(seconds=ttl_seconds),
+                ),
+                ttl_seconds,
+            )
 
             if success:
                 logger.debug(
@@ -345,9 +343,7 @@ class IdempotencyManager:
             if deleted:
                 logger.debug("Processing mark cleared", idempotency_key=idempotency_key)
             else:
-                logger.debug(
-                    "No processing mark to clear", idempotency_key=idempotency_key
-                )
+                logger.debug("No processing mark to clear", idempotency_key=idempotency_key)
 
             return True
 
@@ -458,13 +454,16 @@ class IdempotencyManager:
         """
         # Normalizar dados para hash consistente
         import json
+
         normalized = json.dumps(request_data, sort_keys=True)
         import hashlib
+
         return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
     def _now(self) -> datetime:
         """Obtém data/hora atual"""
         from datetime import datetime
+
         return datetime.utcnow()
 
     def _is_expired(self, record: IdempotencyRecord) -> bool:

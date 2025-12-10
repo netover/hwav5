@@ -40,6 +40,7 @@ class AuthService:
         # Password hashing
         try:
             from passlib.context import CryptContext
+
             self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         except ImportError:
             self.pwd_context = None
@@ -51,6 +52,7 @@ class AuthService:
             return self.pwd_context.hash(password)
         # Fallback to simple hash (NOT for production!)
         import hashlib
+
         return hashlib.sha256(password.encode()).hexdigest()
 
     def _verify_password(self, plain_password: str, hashed_password: str) -> bool:
@@ -59,6 +61,7 @@ class AuthService:
             return self.pwd_context.verify(plain_password, hashed_password)
         # Fallback verification
         import hashlib
+
         return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
 
     async def create_user(self, user_data: UserCreate) -> User:
@@ -121,9 +124,7 @@ class AuthService:
             return None
 
         # Update last login
-        await self.repository.update(user_data["id"], {
-            "last_login": datetime.now().isoformat()
-        })
+        await self.repository.update(user_data["id"], {"last_login": datetime.now().isoformat()})
 
         logger.info(f"User '{username}' authenticated successfully")
 
@@ -137,7 +138,9 @@ class AuthService:
             is_active=user_data["is_active"],
             created_at=datetime.fromisoformat(user_data["created_at"]),
             updated_at=datetime.fromisoformat(user_data["updated_at"]),
-            last_login=datetime.fromisoformat(user_data["last_login"]) if user_data.get("last_login") else None,
+            last_login=datetime.fromisoformat(user_data["last_login"])
+            if user_data.get("last_login")
+            else None,
             permissions=user_data["permissions"],
         )
 
@@ -184,9 +187,7 @@ class AuthService:
         try:
             from jose import JWTError, jwt
 
-            payload = jwt.decode(
-                token, self.secret_key, algorithms=[self.algorithm]
-            )
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
 
             return TokenPayload(
                 sub=payload["sub"],
@@ -240,9 +241,7 @@ class AuthService:
 
         # Hash password if provided
         if "password" in update_dict:
-            update_dict["hashed_password"] = self._hash_password(
-                update_dict.pop("password")
-            )
+            update_dict["hashed_password"] = self._hash_password(update_dict.pop("password"))
 
         updated = await self.repository.update(user_id, update_dict)
         if not updated:

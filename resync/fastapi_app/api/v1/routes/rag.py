@@ -45,21 +45,16 @@ def validate_file(file: UploadFile) -> None:
     """Validate uploaded file using Pydantic model"""
     try:
         validation_model = FileUploadValidation(
-            filename=file.filename or "",
-            content_type=file.content_type or "",
-            size=file.size or 0
+            filename=file.filename or "", content_type=file.content_type or "", size=file.size or 0
         )
         validation_model.validate_file()
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"File validation failed: {str(e)}"
-        )
+            detail=f"File validation failed: {str(e)}",
+        ) from e
 
 
 async def save_upload_file(upload_file: UploadFile, destination: Path) -> str:
@@ -72,8 +67,8 @@ async def save_upload_file(upload_file: UploadFile, destination: Path) -> str:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to save file: {str(e)}"
-        )
+            detail=f"Failed to save file: {str(e)}",
+        ) from e
 
 
 async def process_rag_document(
@@ -94,6 +89,7 @@ async def process_rag_document(
     except Exception as e:
         # Log error but don't raise - background task
         import logging
+
         logging.error(f"RAG processing failed for {file_id}: {e}")
 
 
@@ -103,7 +99,7 @@ async def upload_rag_file(
     file: UploadFile = File(...),
     tags: str = Query(default="", description="Comma-separated tags"),
     current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger),
+    logger_instance=Depends(get_logger),
     rag_service: RAGIntegrationService = Depends(get_rag),
 ):
     """
@@ -119,8 +115,8 @@ async def upload_rag_file(
         validate_file(file)
 
         import uuid
+
         file_id = str(uuid.uuid4())
-        file_ext = Path(file.filename).suffix
         unique_filename = f"{file_id}_{file.filename}"
         file_path = UPLOAD_DIR / unique_filename
 
@@ -144,7 +140,7 @@ async def upload_rag_file(
             filename=file.filename,
             status="processing",
             file_id=file_id,
-            upload_time=datetime.now().isoformat()
+            upload_time=datetime.now().isoformat(),
         )
 
         logger_instance.info(
@@ -165,12 +161,12 @@ async def upload_rag_file(
             "rag_upload_error",
             error=str(e),
             filename=file.filename,
-            user_id=current_user.get("user_id")
+            user_id=current_user.get("user_id"),
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process file upload"
-        )
+            detail="Failed to process file upload",
+        ) from e
 
 
 @router.get("/rag/search")
@@ -178,7 +174,7 @@ async def search_rag(
     query: str = Query(..., description="Search query", min_length=1),
     top_k: int = Query(default=10, ge=1, le=100, description="Number of results"),
     current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger),
+    logger_instance=Depends(get_logger),
     rag_service: RAGIntegrationService = Depends(get_rag),
 ):
     """
@@ -213,9 +209,8 @@ async def search_rag(
     except Exception as e:
         logger_instance.error("rag_search_error", error=str(e), query=query)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Search failed"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Search failed"
+        ) from e
 
 
 @router.get("/rag/files")
@@ -223,7 +218,7 @@ async def list_rag_files(
     status_filter: str | None = Query(default=None, description="Filter by status"),
     limit: int = Query(default=100, ge=1, le=1000),
     current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger),
+    logger_instance=Depends(get_logger),
     rag_service: RAGIntegrationService = Depends(get_rag),
 ):
     """List uploaded RAG files with optional filtering."""
@@ -243,9 +238,7 @@ async def list_rag_files(
         ]
 
         logger_instance.info(
-            "rag_files_listed",
-            user_id=current_user.get("user_id"),
-            file_count=len(files)
+            "rag_files_listed", user_id=current_user.get("user_id"), file_count=len(files)
         )
 
         return {"files": files, "total": len(files)}
@@ -253,16 +246,15 @@ async def list_rag_files(
     except Exception as e:
         logger_instance.error("rag_files_listing_error", error=str(e))
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list RAG files"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to list RAG files"
+        ) from e
 
 
 @router.get("/rag/files/{file_id}")
 async def get_rag_file(
     file_id: str,
     current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger),
+    logger_instance=Depends(get_logger),
     rag_service: RAGIntegrationService = Depends(get_rag),
 ):
     """Get details of a specific RAG file."""
@@ -270,8 +262,7 @@ async def get_rag_file(
 
     if not doc:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document {file_id} not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Document {file_id} not found"
         )
 
     return {
@@ -289,7 +280,7 @@ async def get_rag_file(
 async def delete_rag_file(
     file_id: str,
     current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger),
+    logger_instance=Depends(get_logger),
     rag_service: RAGIntegrationService = Depends(get_rag),
 ):
     """Delete RAG file and its associated chunks."""
@@ -298,14 +289,11 @@ async def delete_rag_file(
 
         if not deleted:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Document {file_id} not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Document {file_id} not found"
             )
 
         logger_instance.info(
-            "rag_file_deleted",
-            user_id=current_user.get("user_id"),
-            file_id=file_id
+            "rag_file_deleted", user_id=current_user.get("user_id"), file_id=file_id
         )
 
         return {"message": "File deleted successfully", "file_id": file_id}
@@ -313,15 +301,10 @@ async def delete_rag_file(
     except HTTPException:
         raise
     except Exception as e:
-        logger_instance.error(
-            "rag_file_deletion_error",
-            error=str(e),
-            file_id=file_id
-        )
+        logger_instance.error("rag_file_deletion_error", error=str(e), file_id=file_id)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete RAG file"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete RAG file"
+        ) from e
 
 
 @router.get("/rag/stats")
@@ -331,4 +314,3 @@ async def get_rag_stats(
 ):
     """Get RAG system statistics."""
     return rag_service.get_stats()
-

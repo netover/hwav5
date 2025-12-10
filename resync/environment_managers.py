@@ -21,9 +21,7 @@ class EnvironmentManager(ABC):
 
     def __init__(self, settings: Settings):  # type: ignore[reportMissingSuperCall]
         self.settings = settings
-        self.logger = logging.getLogger(
-            f"{self.__class__.__name__}.{settings.environment.value}"
-        )
+        self.logger = logging.getLogger(f"{self.__class__.__name__}.{settings.environment.value}")
 
     @abstractmethod
     def setup_logging(self) -> None:
@@ -70,9 +68,7 @@ class DevelopmentManager(EnvironmentManager):
         # Add console handler for development
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         console_handler.setFormatter(formatter)
 
         # Add to root logger
@@ -111,7 +107,9 @@ class DevelopmentManager(EnvironmentManager):
     @override
     def validate_environment_specific_settings(self) -> None:
         """Validate development-specific settings."""
-        if not self.settings.tws_mock_mode:  # In development, we can be more lenient but still validate basics
+        if (
+            not self.settings.tws_mock_mode
+        ):  # In development, we can be more lenient but still validate basics
             self.logger.warning(
                 "TWS mock mode is disabled in development. Ensure TWS credentials are properly configured."
             )
@@ -149,9 +147,7 @@ class ProductionManager(EnvironmentManager):
         file_handler = logging.FileHandler(log_file)
         file_handler.setLevel(getattr(logging, self.settings.log_level))
 
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         file_handler.setFormatter(formatter)
 
         # Add to root logger
@@ -167,9 +163,7 @@ class ProductionManager(EnvironmentManager):
     def get_cache_config(self) -> dict[str, Any]:
         """Get production-optimized cache configuration."""
         return {
-            "hierarchy_l1_max_size": min(
-                self.settings.cache_hierarchy_l1_max_size, 20000
-            ),
+            "hierarchy_l1_max_size": min(self.settings.cache_hierarchy_l1_max_size, 20000),
             "hierarchy_l2_ttl": self.settings.cache_hierarchy_l2_ttl,
             "hierarchy_l2_cleanup_interval": self.settings.cache_hierarchy_l2_cleanup_interval,
             "hierarchy_num_shards": max(self.settings.cache_hierarchy_num_shards, 8),
@@ -222,10 +216,7 @@ class ProductionManager(EnvironmentManager):
 
     def _validate_connection_settings(self) -> None:
         """Validate database connection settings for production."""
-        if (
-            not self.settings.redis_url
-            or self.settings.redis_url == "redis://localhost:6379/0"
-        ):
+        if not self.settings.redis_url or self.settings.redis_url == "redis://localhost:6379/0":
             raise ValueError("Production Redis URL must be properly configured")
 
     @override
@@ -322,18 +313,14 @@ class EnvironmentManagerFactory:
         return manager_class(settings)
 
     @classmethod
-    def create_development_manager(
-        cls, settings: Settings | None = None
-    ) -> DevelopmentManager:
+    def create_development_manager(cls, settings: Settings | None = None) -> DevelopmentManager:
         """Create development manager with optional settings."""
         if settings is None:
             settings = SettingsFactory.create_development()
         return DevelopmentManager(settings)
 
     @classmethod
-    def create_production_manager(
-        cls, settings: Settings | None = None
-    ) -> ProductionManager:
+    def create_production_manager(cls, settings: Settings | None = None) -> ProductionManager:
         """Create production manager with optional settings."""
         if settings is None:
             settings = SettingsFactory.create_production()

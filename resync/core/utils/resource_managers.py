@@ -170,16 +170,18 @@ async def managed_http_session(
         try:
             import aiohttp
 
-            session_factory = lambda: aiohttp.ClientSession()
+            def session_factory():
+                return aiohttp.ClientSession()
         except ImportError:
             try:
                 import httpx
 
-                session_factory = lambda: httpx.AsyncClient()
+                def session_factory():
+                    return httpx.AsyncClient()
             except ImportError:
                 raise ImportError(
                     "No HTTP client library available. Install aiohttp or httpx."
-                )
+                ) from None
 
     session = None
     try:
@@ -303,6 +305,7 @@ def create_database_pool_manager(
 
     class DatabaseResourceManager(ResourceManager):
         """Manager class for handling database resource operations."""
+
         def __init__(self, factory):
             self.factory = factory
 

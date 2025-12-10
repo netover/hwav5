@@ -15,6 +15,7 @@ Version: 5.2.3.29
 """
 
 import asyncio
+import contextlib
 import json
 import os
 import resource
@@ -55,13 +56,14 @@ except ImportError:
 # CONFIGURATION MODELS
 # ============================================================================
 
+
 class DriftType(str, Enum):
     """Types of drift that can be monitored."""
 
-    DATA = "data"           # Input query patterns
+    DATA = "data"  # Input query patterns
     PREDICTION = "prediction"  # Model output patterns
-    TARGET = "target"       # User feedback/outcomes
-    CONCEPT = "concept"     # Input-output relationship
+    TARGET = "target"  # User feedback/outcomes
+    CONCEPT = "concept"  # Input-output relationship
 
 
 class MonitoringSchedule(str, Enum):
@@ -115,108 +117,66 @@ class ResourceLimits(BaseModel):
     """Resource limits for monitoring jobs."""
 
     max_cpu_percent: float = Field(
-        default=25.0,
-        ge=5.0,
-        le=100.0,
-        description="Maximum CPU usage percentage"
+        default=25.0, ge=5.0, le=100.0, description="Maximum CPU usage percentage"
     )
     max_memory_mb: int = Field(
-        default=512,
-        ge=128,
-        le=4096,
-        description="Maximum memory usage in MB"
+        default=512, ge=128, le=4096, description="Maximum memory usage in MB"
     )
     max_execution_time_seconds: int = Field(
-        default=300,
-        ge=30,
-        le=3600,
-        description="Maximum execution time"
+        default=300, ge=30, le=3600, description="Maximum execution time"
     )
     nice_level: int = Field(
-        default=10,
-        ge=0,
-        le=19,
-        description="Process nice level (higher = lower priority)"
+        default=10, ge=0, le=19, description="Process nice level (higher = lower priority)"
     )
 
 
 class MonitoringConfig(BaseModel):
     """Configuration for AI monitoring."""
 
-    enabled: bool = Field(
-        default=True,
-        description="Enable/disable monitoring"
-    )
+    enabled: bool = Field(default=True, description="Enable/disable monitoring")
 
     # Drift detection settings
-    data_drift_enabled: bool = Field(
-        default=True,
-        description="Monitor data/query drift"
-    )
+    data_drift_enabled: bool = Field(default=True, description="Monitor data/query drift")
     prediction_drift_enabled: bool = Field(
-        default=True,
-        description="Monitor prediction/response drift"
+        default=True, description="Monitor prediction/response drift"
     )
-    target_drift_enabled: bool = Field(
-        default=True,
-        description="Monitor target/feedback drift"
-    )
+    target_drift_enabled: bool = Field(default=True, description="Monitor target/feedback drift")
 
     # Thresholds
     drift_threshold: float = Field(
-        default=0.15,
-        ge=0.01,
-        le=0.5,
-        description="Drift detection threshold (0-1)"
+        default=0.15, ge=0.01, le=0.5, description="Drift detection threshold (0-1)"
     )
     alert_threshold: float = Field(
-        default=0.25,
-        ge=0.05,
-        le=0.5,
-        description="Alert trigger threshold"
+        default=0.25, ge=0.05, le=0.5, description="Alert trigger threshold"
     )
 
     # Scheduling
     schedule: MonitoringSchedule = Field(
-        default=MonitoringSchedule.DAILY,
-        description="Monitoring schedule"
+        default=MonitoringSchedule.DAILY, description="Monitoring schedule"
     )
     schedule_time: str = Field(
         default="03:00",
         pattern=r"^\d{2}:\d{2}$",
-        description="Time to run scheduled monitoring (HH:MM)"
+        description="Time to run scheduled monitoring (HH:MM)",
     )
 
     # Resource limits
     resource_limits: ResourceLimits = Field(
-        default_factory=ResourceLimits,
-        description="Resource usage limits"
+        default_factory=ResourceLimits, description="Resource usage limits"
     )
 
     # Data retention
     reference_window_days: int = Field(
-        default=7,
-        ge=1,
-        le=90,
-        description="Days of reference data to use"
+        default=7, ge=1, le=90, description="Days of reference data to use"
     )
     current_window_hours: int = Field(
-        default=24,
-        ge=1,
-        le=168,
-        description="Hours of current data to compare"
+        default=24, ge=1, le=168, description="Hours of current data to compare"
     )
 
     # Storage
-    reports_path: str = Field(
-        default="data/evidently_reports",
-        description="Path to store reports"
-    )
+    reports_path: str = Field(default="data/evidently_reports", description="Path to store reports")
     max_reports_stored: int = Field(
-        default=30,
-        ge=1,
-        le=365,
-        description="Maximum reports to retain"
+        default=30, ge=1, le=365, description="Maximum reports to retain"
     )
 
     class Config:
@@ -230,6 +190,7 @@ DEFAULT_MONITORING_CONFIG = MonitoringConfig()
 # ============================================================================
 # DATA COLLECTOR
 # ============================================================================
+
 
 class MonitoringDataCollector:
     """
@@ -436,6 +397,7 @@ class MonitoringDataCollector:
 # DRIFT DETECTOR
 # ============================================================================
 
+
 class DriftDetector:
     """
     Detects drift in AI system data using Evidently.
@@ -467,7 +429,9 @@ class DriftDetector:
             return False, 0.0, None
 
         if len(reference_data) < 50 or len(current_data) < 20:
-            logger.info("insufficient_data_for_drift", ref=len(reference_data), cur=len(current_data))
+            logger.info(
+                "insufficient_data_for_drift", ref=len(reference_data), cur=len(current_data)
+            )
             return False, 0.0, None
 
         try:
@@ -477,16 +441,20 @@ class DriftDetector:
 
             # Select numeric columns for drift detection
             numeric_cols = ["query_length", "word_count", "entity_count"]
-            available_cols = [c for c in numeric_cols if c in ref_df.columns and c in cur_df.columns]
+            available_cols = [
+                c for c in numeric_cols if c in ref_df.columns and c in cur_df.columns
+            ]
 
             if not available_cols:
                 return False, 0.0, None
 
             # Create drift report
-            report = Report(metrics=[
-                DatasetDriftMetric(),
-                DataDriftTable(),
-            ])
+            report = Report(
+                metrics=[
+                    DatasetDriftMetric(),
+                    DataDriftTable(),
+                ]
+            )
 
             report.run(
                 reference_data=ref_df[available_cols],
@@ -499,7 +467,9 @@ class DriftDetector:
             drift_detected = drift_score >= self.config.drift_threshold
 
             # Save report
-            report_path = self.reports_path / f"data_drift_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            report_path = (
+                self.reports_path / f"data_drift_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            )
             report.save_html(str(report_path))
 
             return drift_detected, drift_score, report
@@ -528,14 +498,18 @@ class DriftDetector:
 
             # Response metrics
             response_cols = ["response_length", "confidence", "latency_ms", "specialists_count"]
-            available_cols = [c for c in response_cols if c in ref_df.columns and c in cur_df.columns]
+            available_cols = [
+                c for c in response_cols if c in ref_df.columns and c in cur_df.columns
+            ]
 
             if not available_cols:
                 return False, 0.0, None
 
-            report = Report(metrics=[
-                DatasetDriftMetric(),
-            ])
+            report = Report(
+                metrics=[
+                    DatasetDriftMetric(),
+                ]
+            )
 
             report.run(
                 reference_data=ref_df[available_cols],
@@ -546,7 +520,10 @@ class DriftDetector:
             drift_score = result.get("metrics", [{}])[0].get("result", {}).get("drift_share", 0.0)
             drift_detected = drift_score >= self.config.drift_threshold
 
-            report_path = self.reports_path / f"prediction_drift_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            report_path = (
+                self.reports_path
+                / f"prediction_drift_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            )
             report.save_html(str(report_path))
 
             return drift_detected, drift_score, report
@@ -579,7 +556,9 @@ class DriftDetector:
                     df["helpful_int"] = df["helpful"].map({True: 1, False: 0, None: -1})
 
             feedback_cols = ["rating", "helpful_int"]
-            available_cols = [c for c in feedback_cols if c in ref_df.columns and c in cur_df.columns]
+            available_cols = [
+                c for c in feedback_cols if c in ref_df.columns and c in cur_df.columns
+            ]
 
             if not available_cols:
                 return False, 0.0, None
@@ -591,9 +570,11 @@ class DriftDetector:
             if len(ref_df) < 10 or len(cur_df) < 5:
                 return False, 0.0, None
 
-            report = Report(metrics=[
-                DatasetDriftMetric(),
-            ])
+            report = Report(
+                metrics=[
+                    DatasetDriftMetric(),
+                ]
+            )
 
             report.run(
                 reference_data=ref_df[available_cols],
@@ -604,7 +585,9 @@ class DriftDetector:
             drift_score = result.get("metrics", [{}])[0].get("result", {}).get("drift_share", 0.0)
             drift_detected = drift_score >= self.config.drift_threshold
 
-            report_path = self.reports_path / f"target_drift_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            report_path = (
+                self.reports_path / f"target_drift_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            )
             report.save_html(str(report_path))
 
             return drift_detected, drift_score, report
@@ -617,6 +600,7 @@ class DriftDetector:
 # ============================================================================
 # MONITORING SERVICE
 # ============================================================================
+
 
 class AIMonitoringService:
     """
@@ -672,10 +656,8 @@ class AIMonitoringService:
 
         if self._scheduler_task:
             self._scheduler_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._scheduler_task
-            except asyncio.CancelledError:
-                pass
 
         # Flush any remaining data
         self.data_collector.flush_all()
@@ -740,7 +722,9 @@ class AIMonitoringService:
 
             # Data drift
             if self.config.data_drift_enabled:
-                ref_queries = self.data_collector.get_data("queries", reference_start, reference_end)
+                ref_queries = self.data_collector.get_data(
+                    "queries", reference_start, reference_end
+                )
                 cur_queries = self.data_collector.get_data("queries", current_start, current_end)
 
                 detected, score, _ = self.drift_detector.detect_data_drift(ref_queries, cur_queries)
@@ -756,10 +740,16 @@ class AIMonitoringService:
 
             # Prediction drift
             if self.config.prediction_drift_enabled:
-                ref_responses = self.data_collector.get_data("responses", reference_start, reference_end)
-                cur_responses = self.data_collector.get_data("responses", current_start, current_end)
+                ref_responses = self.data_collector.get_data(
+                    "responses", reference_start, reference_end
+                )
+                cur_responses = self.data_collector.get_data(
+                    "responses", current_start, current_end
+                )
 
-                detected, score, _ = self.drift_detector.detect_prediction_drift(ref_responses, cur_responses)
+                detected, score, _ = self.drift_detector.detect_prediction_drift(
+                    ref_responses, cur_responses
+                )
                 results["prediction_drift"] = {
                     "detected": detected,
                     "score": score,
@@ -772,10 +762,14 @@ class AIMonitoringService:
 
             # Target drift
             if self.config.target_drift_enabled:
-                ref_feedback = self.data_collector.get_data("feedback", reference_start, reference_end)
+                ref_feedback = self.data_collector.get_data(
+                    "feedback", reference_start, reference_end
+                )
                 cur_feedback = self.data_collector.get_data("feedback", current_start, current_end)
 
-                detected, score, _ = self.drift_detector.detect_target_drift(ref_feedback, cur_feedback)
+                detected, score, _ = self.drift_detector.detect_target_drift(
+                    ref_feedback, cur_feedback
+                )
                 results["target_drift"] = {
                     "detected": detected,
                     "score": score,
@@ -828,8 +822,10 @@ class AIMonitoringService:
     ) -> DriftAlert:
         """Create and store a drift alert."""
         severity = (
-            AlertSeverity.CRITICAL if value >= 0.5
-            else AlertSeverity.ERROR if value >= 0.35
+            AlertSeverity.CRITICAL
+            if value >= 0.5
+            else AlertSeverity.ERROR
+            if value >= 0.35
             else AlertSeverity.WARNING
         )
 
@@ -881,7 +877,9 @@ class AIMonitoringService:
             "schedule": self.config.schedule.value,
             "last_run": self._last_run.isoformat() if self._last_run else None,
             "total_alerts": len(self._alerts),
-            "recent_alerts": len([a for a in self._alerts if a.timestamp > datetime.utcnow() - timedelta(hours=24)]),
+            "recent_alerts": len(
+                [a for a in self._alerts if a.timestamp > datetime.utcnow() - timedelta(hours=24)]
+            ),
             "evidently_available": EVIDENTLY_AVAILABLE,
         }
 

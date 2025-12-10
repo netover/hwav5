@@ -20,7 +20,6 @@ Security:
 - Some changes require restart (marked in response)
 """
 
-
 import os
 from datetime import datetime
 from typing import Any
@@ -45,8 +44,10 @@ router = APIRouter(
 # PYDANTIC MODELS - Request/Response
 # =============================================================================
 
+
 class ConfigField(BaseModel):
     """Metadata about a configuration field."""
+
     name: str
     value: Any
     type: str  # string, int, float, bool, list
@@ -62,6 +63,7 @@ class ConfigField(BaseModel):
 
 class ConfigCategory(BaseModel):
     """A category of configuration fields."""
+
     name: str
     display_name: str
     description: str
@@ -71,9 +73,10 @@ class ConfigCategory(BaseModel):
 
 class ConfigUpdateRequest(BaseModel):
     """Request to update configuration values."""
+
     updates: dict[str, Any] = Field(..., description="Field name -> new value pairs")
 
-    @field_validator('updates')
+    @field_validator("updates")
     @classmethod
     def validate_updates(cls, v):
         if not v:
@@ -83,6 +86,7 @@ class ConfigUpdateRequest(BaseModel):
 
 class ConfigUpdateResponse(BaseModel):
     """Response after updating configuration."""
+
     success: bool
     updated_fields: list[str]
     requires_restart: bool
@@ -92,6 +96,7 @@ class ConfigUpdateResponse(BaseModel):
 
 class SystemResourcesResponse(BaseModel):
     """Current system resource usage."""
+
     memory_used_mb: float
     memory_percent: float
     cpu_percent: float
@@ -105,6 +110,7 @@ class SystemResourcesResponse(BaseModel):
 # =============================================================================
 # CONFIGURATION DEFINITIONS
 # =============================================================================
+
 
 def get_config_definitions() -> list[ConfigCategory]:
     """
@@ -221,7 +227,6 @@ def get_config_definitions() -> list[ConfigCategory]:
                 ),
             ],
         ),
-
         # =====================================================================
         # TWS MONITORING
         # =====================================================================
@@ -358,7 +363,6 @@ def get_config_definitions() -> list[ConfigCategory]:
                 ),
             ],
         ),
-
         # =====================================================================
         # DATA RETENTION
         # =====================================================================
@@ -406,7 +410,6 @@ def get_config_definitions() -> list[ConfigCategory]:
                 ),
             ],
         ),
-
         # =====================================================================
         # RATE LIMITING
         # =====================================================================
@@ -476,7 +479,6 @@ def get_config_definitions() -> list[ConfigCategory]:
                 ),
             ],
         ),
-
         # =====================================================================
         # RAG SERVICE
         # =====================================================================
@@ -534,7 +536,6 @@ def get_config_definitions() -> list[ConfigCategory]:
                 ),
             ],
         ),
-
         # =====================================================================
         # LITELLM CONFIGURATION
         # =====================================================================
@@ -575,11 +576,20 @@ def get_config_definitions() -> list[ConfigCategory]:
                     description="Model for simple/auditor tasks (lower cost)",
                     default="gpt-3.5-turbo",
                     options=[
-                        "gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
-                        "claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229",
+                        "gpt-3.5-turbo",
+                        "gpt-4",
+                        "gpt-4-turbo",
+                        "gpt-4o",
+                        "gpt-4o-mini",
+                        "claude-3-haiku-20240307",
+                        "claude-3-sonnet-20240229",
+                        "claude-3-opus-20240229",
                         "claude-3-5-sonnet-20240620",
-                        "ollama/llama3", "ollama/mistral", "ollama/codellama",
-                        "together_ai/llama-3-70b", "together_ai/mixtral-8x7b",
+                        "ollama/llama3",
+                        "ollama/mistral",
+                        "ollama/codellama",
+                        "together_ai/llama-3-70b",
+                        "together_ai/mixtral-8x7b",
                     ],
                     requires_restart=False,
                     category="litellm",
@@ -592,11 +602,20 @@ def get_config_definitions() -> list[ConfigCategory]:
                     description="Model for complex/agent tasks (higher capability)",
                     default="gpt-4o",
                     options=[
-                        "gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
-                        "claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229",
+                        "gpt-3.5-turbo",
+                        "gpt-4",
+                        "gpt-4-turbo",
+                        "gpt-4o",
+                        "gpt-4o-mini",
+                        "claude-3-haiku-20240307",
+                        "claude-3-sonnet-20240229",
+                        "claude-3-opus-20240229",
                         "claude-3-5-sonnet-20240620",
-                        "ollama/llama3", "ollama/mistral", "ollama/codellama",
-                        "together_ai/llama-3-70b", "together_ai/mixtral-8x7b",
+                        "ollama/llama3",
+                        "ollama/mistral",
+                        "ollama/codellama",
+                        "together_ai/llama-3-70b",
+                        "together_ai/mixtral-8x7b",
                     ],
                     requires_restart=False,
                     category="litellm",
@@ -649,7 +668,6 @@ def get_config_definitions() -> list[ConfigCategory]:
                 ),
             ],
         ),
-
         # =====================================================================
         # LLM COST & BUDGET
         # =====================================================================
@@ -729,7 +747,6 @@ def get_config_definitions() -> list[ConfigCategory]:
                 ),
             ],
         ),
-
         # =====================================================================
         # MODEL ROUTING
         # =====================================================================
@@ -756,8 +773,11 @@ def get_config_definitions() -> list[ConfigCategory]:
                     description="Model for simple queries (status checks, basic info)",
                     default="gpt-3.5-turbo",
                     options=[
-                        "gpt-3.5-turbo", "gpt-4o-mini", "claude-3-haiku-20240307",
-                        "ollama/llama3", "ollama/mistral",
+                        "gpt-3.5-turbo",
+                        "gpt-4o-mini",
+                        "claude-3-haiku-20240307",
+                        "ollama/llama3",
+                        "ollama/mistral",
                     ],
                     requires_restart=False,
                     category="model_routing",
@@ -770,8 +790,11 @@ def get_config_definitions() -> list[ConfigCategory]:
                     description="Model for complex queries (analysis, troubleshooting)",
                     default="gpt-4o",
                     options=[
-                        "gpt-4", "gpt-4-turbo", "gpt-4o",
-                        "claude-3-sonnet-20240229", "claude-3-opus-20240229",
+                        "gpt-4",
+                        "gpt-4-turbo",
+                        "gpt-4o",
+                        "claude-3-sonnet-20240229",
+                        "claude-3-opus-20240229",
                         "together_ai/llama-3-70b",
                     ],
                     requires_restart=False,
@@ -785,8 +808,11 @@ def get_config_definitions() -> list[ConfigCategory]:
                     description="Fallback model when primary is unavailable",
                     default="gpt-3.5-turbo",
                     options=[
-                        "gpt-3.5-turbo", "gpt-4o-mini", "claude-3-haiku-20240307",
-                        "ollama/llama3", "ollama/mistral",
+                        "gpt-3.5-turbo",
+                        "gpt-4o-mini",
+                        "claude-3-haiku-20240307",
+                        "ollama/llama3",
+                        "ollama/mistral",
                     ],
                     requires_restart=False,
                     category="model_routing",
@@ -804,7 +830,6 @@ def get_config_definitions() -> list[ConfigCategory]:
                 ),
             ],
         ),
-
         # =====================================================================
         # LOGGING
         # =====================================================================
@@ -848,7 +873,6 @@ def get_config_definitions() -> list[ConfigCategory]:
                 ),
             ],
         ),
-
         # =====================================================================
         # NOTIFICATIONS
         # =====================================================================
@@ -903,7 +927,6 @@ def get_config_definitions() -> list[ConfigCategory]:
                 ),
             ],
         ),
-
         # =====================================================================
         # FEATURE FLAGS
         # =====================================================================
@@ -962,6 +985,7 @@ def get_config_definitions() -> list[ConfigCategory]:
 # API ENDPOINTS
 # =============================================================================
 
+
 @router.get("/categories", response_model=list[ConfigCategory])
 async def get_config_categories():
     """
@@ -971,14 +995,13 @@ async def get_config_categories():
     including current values, types, constraints, and metadata.
     """
     try:
-        categories = get_config_definitions()
-        return categories
+        return get_config_definitions()
     except Exception as e:
         logger.error("get_config_categories_error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get configuration: {str(e)}"
-        )
+            detail=f"Failed to get configuration: {str(e)}",
+        ) from e
 
 
 @router.get("/category/{category_name}", response_model=ConfigCategory)
@@ -993,8 +1016,7 @@ async def get_config_category(category_name: str):
             return category
 
     raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Category '{category_name}' not found"
+        status_code=status.HTTP_404_NOT_FOUND, detail=f"Category '{category_name}' not found"
     )
 
 
@@ -1083,8 +1105,8 @@ async def update_config(request: ConfigUpdateRequest):
         logger.error("update_config_error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update configuration: {str(e)}"
-        )
+            detail=f"Failed to update configuration: {str(e)}",
+        ) from e
 
 
 @router.get("/resources", response_model=SystemResourcesResponse)
@@ -1096,12 +1118,12 @@ async def get_system_resources():
         import psutil
 
         process = psutil.Process()
-        disk = psutil.disk_usage('/')
+        disk = psutil.disk_usage("/")
 
         # Get worker count (approximate)
         parent = psutil.Process(os.getppid())
         try:
-            workers = len([c for c in parent.children() if 'python' in c.name().lower()])
+            workers = len([c for c in parent.children() if "python" in c.name().lower()])
         except Exception:
             workers = 1
 
@@ -1134,8 +1156,8 @@ async def get_system_resources():
         logger.error("get_resources_error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get resources: {str(e)}"
-        )
+            detail=f"Failed to get resources: {str(e)}",
+        ) from e
 
 
 @router.post("/gc")
@@ -1148,6 +1170,7 @@ async def trigger_garbage_collection():
     before = 0
     try:
         import psutil
+
         before = psutil.Process().memory_info().rss / 1024 / 1024
     except ImportError:
         pass
@@ -1157,6 +1180,7 @@ async def trigger_garbage_collection():
     after = 0
     try:
         import psutil
+
         after = psutil.Process().memory_info().rss / 1024 / 1024
     except ImportError:
         pass
@@ -1182,11 +1206,13 @@ async def clear_cache():
     try:
         # Clear settings cache
         from resync.settings import clear_settings_cache
+
         clear_settings_cache()
 
         # Clear metrics store cache if available
         try:
             from resync.core.metrics import get_metrics_store
+
             store = get_metrics_store()
             # Don't actually clear metrics, just flush
             await store._flush_buffer()
@@ -1201,13 +1227,14 @@ async def clear_cache():
         logger.error("clear_cache_error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to clear cache: {str(e)}"
-        )
+            detail=f"Failed to clear cache: {str(e)}",
+        ) from e
 
 
 # =============================================================================
 # VALIDATION HELPERS
 # =============================================================================
+
 
 def validate_field_value(field: ConfigField, value: Any) -> Any:
     """
@@ -1228,13 +1255,13 @@ def validate_field_value(field: ConfigField, value: Any) -> Any:
         try:
             value = int(value)
         except (TypeError, ValueError):
-            raise ValueError("Must be an integer")
+            raise ValueError("Must be an integer") from None
 
     elif field.type == "float":
         try:
             value = float(value)
         except (TypeError, ValueError):
-            raise ValueError("Must be a number")
+            raise ValueError("Must be a number") from None
 
     elif field.type == "bool":
         if isinstance(value, str):

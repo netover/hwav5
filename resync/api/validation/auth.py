@@ -46,13 +46,11 @@ class LoginRequest(BaseValidatedModel):
         examples=["john.doe"],
     )
 
-    password: Annotated[str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)] = Field(
-        ..., description="Password for authentication", examples=["SecureP@ssw0rd123"]
-    )
+    password: Annotated[
+        str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)
+    ] = Field(..., description="Password for authentication", examples=["SecureP@ssw0rd123"])
 
-    remember_me: bool = Field(
-        default=False, description="Whether to create a persistent session"
-    )
+    remember_me: bool = Field(default=False, description="Whether to create a persistent session")
 
     provider: AuthProvider = Field(
         default=AuthProvider.LOCAL, description="Authentication provider"
@@ -102,9 +100,7 @@ class LoginRequest(BaseValidatedModel):
             "test",
         }
         if v.lower() in weak_passwords:
-            raise ValueError(
-                "Password is too common, please choose a stronger password"
-            )
+            raise ValueError("Password is too common, please choose a stronger password")
         # Check for sequential characters
         if any(seq in v.lower() for seq in ["123", "abc", "qwe", "asd"]):
             raise ValueError("Password contains sequential characters")
@@ -127,9 +123,12 @@ class TokenRequest(BaseValidatedModel):
         description="Username (required for password grant)",
     )
 
-    password: Annotated[str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)] | None = (
-        Field(None, description="Password (required for password grant)")
-    )
+    password: (
+        Annotated[
+            str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)
+        ]
+        | None
+    ) = Field(None, description="Password (required for password grant)")
 
     refresh_token: str | None = Field(
         None, description="Refresh token (required for refresh_token grant)"
@@ -150,6 +149,7 @@ class TokenRequest(BaseValidatedModel):
     model_config = ConfigDict(
         extra="forbid",
     )
+
     @field_validator("username", "password")
     @classmethod
     def validate_credentials_fields(cls, v, info):
@@ -159,6 +159,7 @@ class TokenRequest(BaseValidatedModel):
             field_name = "username" if "username" in str(v) else "password"
             raise ValueError(f"{field_name} is required for password grant type")
         return v
+
     @field_validator("refresh_token")
     @classmethod
     def validate_refresh_token(cls, v, info):
@@ -167,6 +168,7 @@ class TokenRequest(BaseValidatedModel):
         if grant_type == "refresh_token" and not v:
             raise ValueError("refresh_token is required for refresh_token grant type")
         return v
+
     @field_validator("client_id", "client_secret")
     @classmethod
     def validate_client_credentials(cls, v, info):
@@ -174,26 +176,24 @@ class TokenRequest(BaseValidatedModel):
         grant_type = info.data.get("grant_type")
         if grant_type == "client_credentials" and not v:
             field_name = "client_id" if "client_id" in str(v) else "client_secret"
-            raise ValueError(
-                f"{field_name} is required for client_credentials grant type"
-            )
+            raise ValueError(f"{field_name} is required for client_credentials grant type")
         return v
 
 
 class PasswordChangeRequest(BaseValidatedModel):
     """Password change request validation model."""
 
-    current_password: Annotated[str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)] = (
-        Field(..., description="Current password")
-    )
+    current_password: Annotated[
+        str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)
+    ] = Field(..., description="Current password")
 
-    new_password: Annotated[str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)] = Field(
-        ..., description="New password"
-    )
+    new_password: Annotated[
+        str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)
+    ] = Field(..., description="New password")
 
-    confirm_password: Annotated[str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)] = (
-        Field(..., description="Confirm new password")
-    )
+    confirm_password: Annotated[
+        str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)
+    ] = Field(..., description="Confirm new password")
 
     model_config = ConfigDict(
         extra="forbid",
@@ -217,6 +217,7 @@ class PasswordChangeRequest(BaseValidatedModel):
                 "one lowercase letter, and one digit"
             )
         return v
+
     @field_validator("confirm_password")
     @classmethod
     def validate_password_match(cls, v, info):
@@ -230,23 +231,27 @@ class PasswordChangeRequest(BaseValidatedModel):
 class UserRegistrationRequest(BaseValidatedModel):
     """User registration request validation model."""
 
-    username: str = Field(
-        ..., min_length=3, max_length=50, description="Desired username"
-    )
+    username: str = Field(..., min_length=3, max_length=50, description="Desired username")
 
     email: EmailStr = Field(..., description="Email address")
 
-    password: Annotated[str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)] = Field(
-        ..., description="Password"
-    )
+    password: Annotated[
+        str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)
+    ] = Field(..., description="Password")
 
-    first_name: Annotated[str, PydanticStringConstraints(min_length=1, max_length=50, strip_whitespace=True)] | None = (
-        Field(None, description="First name")
-    )
+    first_name: (
+        Annotated[
+            str, PydanticStringConstraints(min_length=1, max_length=50, strip_whitespace=True)
+        ]
+        | None
+    ) = Field(None, description="First name")
 
-    last_name: Annotated[str, PydanticStringConstraints(min_length=1, max_length=50, strip_whitespace=True)] | None = (
-        Field(None, description="Last name")
-    )
+    last_name: (
+        Annotated[
+            str, PydanticStringConstraints(min_length=1, max_length=50, strip_whitespace=True)
+        ]
+        | None
+    ) = Field(None, description="Last name")
 
     role: UserRole = Field(default=UserRole.USER, description="User role")
 
@@ -326,9 +331,7 @@ class UserRegistrationRequest(BaseValidatedModel):
             "test",
         }
         if v.lower() in weak_passwords:
-            raise ValueError(
-                "Password is too common, please choose a stronger password"
-            )
+            raise ValueError("Password is too common, please choose a stronger password")
         # Check for sequential characters - be less strict for test passwords
         if any(seq in v.lower() for seq in ["1234", "abcd", "qwer", "asdf"]):
             # Only raise error if it's a long sequence (4+ chars)
@@ -357,9 +360,7 @@ class LogoutRequest(BaseValidatedModel):
 
     access_token: str | None = Field(None, description="Access token to invalidate")
 
-    refresh_token: str | None = Field(
-        None, description="Refresh token to invalidate"
-    )
+    refresh_token: str | None = Field(None, description="Refresh token to invalidate")
 
     logout_all_sessions: bool = Field(
         default=False, description="Whether to logout all active sessions"
@@ -373,15 +374,18 @@ class LogoutRequest(BaseValidatedModel):
 class APIKeyRequest(BaseValidatedModel):
     """API key request validation model."""
 
-    name: Annotated[str, PydanticStringConstraints(min_length=3, max_length=50, strip_whitespace=True)] = Field(
-        ..., description="API key name"
-    )
+    name: Annotated[
+        str, PydanticStringConstraints(min_length=3, max_length=50, strip_whitespace=True)
+    ] = Field(..., description="API key name")
 
-    description: Annotated[str, PydanticStringConstraints(min_length=5, max_length=200, strip_whitespace=True)] | None = Field(None, description="API key description")
+    description: (
+        Annotated[
+            str, PydanticStringConstraints(min_length=5, max_length=200, strip_whitespace=True)
+        ]
+        | None
+    ) = Field(None, description="API key description")
 
-    scopes: list[str] = Field(
-        default_factory=list, description="API key scopes", max_length=10
-    )
+    scopes: list[str] = Field(default_factory=list, description="API key scopes", max_length=10)
 
     expires_in_days: int | None = Field(
         None, ge=1, le=365, description="Number of days until expiration"

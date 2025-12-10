@@ -236,8 +236,10 @@ class AgentManager:
         if config_file is None or not config_file.exists():
             logger.warning(
                 "agent_config_not_found",
-                searched_paths=[str(p) for p in search_paths] if config_path is None else [config_path],
-                using="hardcoded defaults"
+                searched_paths=[str(p) for p in search_paths]
+                if config_path is None
+                else [config_path],
+                using="hardcoded defaults",
             )
             return  # Keep hardcoded defaults
 
@@ -247,7 +249,9 @@ class AgentManager:
                 config_data = yaml.safe_load(f)
 
             if not config_data or "agents" not in config_data:
-                logger.error("agent_config_invalid", file=str(config_file), reason="missing 'agents' key")
+                logger.error(
+                    "agent_config_invalid", file=str(config_file), reason="missing 'agents' key"
+                )
                 return
 
             # Get defaults
@@ -292,9 +296,17 @@ class AgentManager:
                     logger.debug("agent_config_loaded", agent_id=config.id, model=config.model_name)
 
                 except KeyError as e:
-                    logger.error("agent_config_missing_field", agent=agent_data.get("id", "unknown"), field=str(e))
+                    logger.error(
+                        "agent_config_missing_field",
+                        agent=agent_data.get("id", "unknown"),
+                        field=str(e),
+                    )
                 except Exception as e:
-                    logger.error("agent_config_parse_error", agent=agent_data.get("id", "unknown"), error=str(e))
+                    logger.error(
+                        "agent_config_parse_error",
+                        agent=agent_data.get("id", "unknown"),
+                        error=str(e),
+                    )
 
             if loaded_configs:
                 self.agent_configs = loaded_configs
@@ -302,10 +314,12 @@ class AgentManager:
                     "agents_loaded_from_config",
                     file=str(config_file),
                     count=len(loaded_configs),
-                    agents=[c.id for c in loaded_configs]
+                    agents=[c.id for c in loaded_configs],
                 )
             else:
-                logger.warning("no_valid_agents_loaded", file=str(config_file), using="hardcoded defaults")
+                logger.warning(
+                    "no_valid_agents_loaded", file=str(config_file), using="hardcoded defaults"
+                )
 
         except yaml.YAMLError as e:
             logger.error("agent_config_yaml_error", file=str(config_file), error=str(e))
@@ -370,9 +384,7 @@ class AgentManager:
                 name=agent_config.name,
                 description=agent_config.backstory,  # ✅ PASSAR DESCRIPTION
             )
-            logger.info(
-                f"Created mock agent: {agent}, has arun: {hasattr(agent, 'arun')}"
-            )
+            logger.info(f"Created mock agent: {agent}, has arun: {hasattr(agent, 'arun')}")
             return agent
 
         except Exception as e:
@@ -394,6 +406,7 @@ class AgentManager:
         """Creates a TWS client instance."""
         try:
             from resync.core.fastapi_di import get_service
+
             return get_service(ITWSClient)()
         except Exception as e:
             logger.warning(f"Failed to get TWS client: {e}")
@@ -446,9 +459,7 @@ class AgentManager:
                     if not AGNO_AVAILABLE:
                         runtime_metrics.agent_mock_fallbacks.increment()
                         is_production = (
-                            getattr(
-                                settings_module, "ENVIRONMENT", "development"
-                            ).lower()
+                            getattr(settings_module, "ENVIRONMENT", "development").lower()
                             == "production"
                         )
                         if is_production:
@@ -544,6 +555,7 @@ agent_manager = AgentManager()
 # UNIFIED AGENT INTERFACE
 # =============================================================================
 
+
 class UnifiedAgent:
     """
     Unified agent interface that provides automatic routing.
@@ -582,10 +594,7 @@ class UnifiedAgent:
         logger.info("unified_agent_initialized")
 
     async def chat(
-        self,
-        message: str,
-        include_history: bool = True,
-        use_llm_classification: bool = False
+        self, message: str, include_history: bool = True, use_llm_classification: bool = False
     ) -> str:
         """
         Send a message and get a response.
@@ -605,9 +614,7 @@ class UnifiedAgent:
 
         # Route the message
         result = await self._router.route(
-            message,
-            context=context,
-            use_llm_classification=use_llm_classification
+            message, context=context, use_llm_classification=use_llm_classification
         )
 
         # Update history
@@ -629,10 +636,7 @@ class UnifiedAgent:
         return result.response
 
     async def chat_with_metadata(
-        self,
-        message: str,
-        include_history: bool = True,
-        tws_instance_id: str | None = None
+        self, message: str, include_history: bool = True, tws_instance_id: str | None = None
     ) -> dict[str, Any]:
         """
         Send a message and get response with full metadata.

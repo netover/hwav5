@@ -10,6 +10,7 @@ from typing import Any
 
 class IncidentSeverity(str, Enum):
     """Incident severity levels."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -18,6 +19,7 @@ class IncidentSeverity(str, Enum):
 
 class IncidentStatus(str, Enum):
     """Incident status states."""
+
     DETECTED = "detected"
     INVESTIGATING = "investigating"
     MITIGATING = "mitigating"
@@ -27,6 +29,7 @@ class IncidentStatus(str, Enum):
 
 class IncidentCategory(str, Enum):
     """Incident categories."""
+
     PERFORMANCE = "performance"
     AVAILABILITY = "availability"
     SECURITY = "security"

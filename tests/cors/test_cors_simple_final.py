@@ -24,7 +24,9 @@ def test_cors_development() -> None:
     os.environ["APP_ENV"] = "development"
     os.environ["CORS_ENVIRONMENT"] = "development"
 
-    from resync.api.middleware.cors_config import get_development_cors_config  # type: ignore[attr-defined]
+    from resync.api.middleware.cors_config import (
+        get_development_cors_config,  # type: ignore[attr-defined]
+    )
     from resync.api.middleware.cors_middleware import create_cors_middleware
 
     app = FastAPI()
@@ -68,7 +70,9 @@ def test_cors_production() -> None:
     os.environ["APP_ENV"] = "production"
     os.environ["CORS_ENVIRONMENT"] = "production"
 
-    from resync.api.middleware.cors_config import get_production_cors_config  # type: ignore[attr-defined]
+    from resync.api.middleware.cors_config import (
+        get_production_cors_config,  # type: ignore[attr-defined]
+    )
     from resync.api.middleware.cors_middleware import create_cors_middleware
 
     app = FastAPI()
@@ -173,7 +177,9 @@ def test_cors_violation_detection() -> None:
     """Test CORS violation detection."""
     print("🧪 Testing CORS Violation Detection...")
 
-    from resync.api.middleware.cors_config import get_production_cors_config  # type: ignore[attr-defined]
+    from resync.api.middleware.cors_config import (
+        get_production_cors_config,  # type: ignore[attr-defined]
+    )
     from resync.api.middleware.cors_middleware import (
         create_cors_middleware,
     )
@@ -240,7 +246,9 @@ def test_preflight_request_handling() -> None:
     """Test preflight request handling."""
     print("🧪 Testing Preflight Request Handling...")
 
-    from resync.api.middleware.cors_config import get_development_cors_config  # type: ignore[attr-defined]
+    from resync.api.middleware.cors_config import (
+        get_development_cors_config,  # type: ignore[attr-defined]
+    )
     from resync.api.middleware.cors_middleware import create_cors_middleware
 
     app = FastAPI()

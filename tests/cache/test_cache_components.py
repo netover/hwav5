@@ -4,17 +4,18 @@ Simple test for refactored cache components without full application dependencie
 """
 
 import asyncio
-import sys
 import os
+import sys
 import traceback
 
 # Add project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import components at module level
-from resync.core.cache.memory_manager import CacheMemoryManager, CacheEntry
+from resync.core.cache.memory_manager import CacheEntry, CacheMemoryManager
 from resync.core.cache.persistence_manager import CachePersistenceManager
 from resync.core.cache.transaction_manager import CacheTransactionManager
+
 
 async def test_cache_components():
     """Test the cache components directly."""
@@ -24,15 +25,15 @@ async def test_cache_components():
         print("✓ All cache components imported successfully")
 
         # Test CacheMemoryManager
-        memory_manager = CacheMemoryManager(max_entries=100, max_memory_mb=10)
+        CacheMemoryManager(max_entries=100, max_memory_mb=10)
         print("✓ CacheMemoryManager created")
 
         # Test CachePersistenceManager
-        persistence_manager = CachePersistenceManager(snapshot_dir="./test_snapshots")
+        CachePersistenceManager(snapshot_dir="./test_snapshots")
         print("✓ CachePersistenceManager created")
 
         # Test CacheTransactionManager
-        transaction_manager = CacheTransactionManager()
+        CacheTransactionManager()
         print("✓ CacheTransactionManager created")
 
         # Test CacheEntry
@@ -47,7 +48,7 @@ async def test_cache_components():
             num_shards=2,
             max_entries=100,
             max_memory_mb=1,
-            enable_wal=False  # Disable WAL to avoid dependencies
+            enable_wal=False,  # Disable WAL to avoid dependencies
         )
 
         print("✓ Refactored AsyncTTLCache created")
@@ -79,6 +80,7 @@ async def test_cache_components():
         print(f"✗ Cache component test failed: {e}")
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     success = asyncio.run(test_cache_components())

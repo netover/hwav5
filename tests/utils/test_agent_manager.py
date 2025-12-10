@@ -27,9 +27,7 @@ async def test_load_agents_raises_missing_config_error(agent_manager):
         await agent_manager.load_agents_from_config(config_path=non_existent_path)
 
 
-async def test_load_agents_raises_parsing_error_for_malformed_json(
-    agent_manager, tmp_path
-):
+async def test_load_agents_raises_parsing_error_for_malformed_json(agent_manager, tmp_path):
     """
     Ensures ParsingError is raised for a config file with invalid JSON.
     """
@@ -40,9 +38,7 @@ async def test_load_agents_raises_parsing_error_for_malformed_json(
         await agent_manager.load_agents_from_config(config_path=config_path)
 
 
-async def test_load_agents_raises_invalid_config_error_for_bad_data(
-    agent_manager, tmp_path
-):
+async def test_load_agents_raises_invalid_config_error_for_bad_data(agent_manager, tmp_path):
     """
     Ensures InvalidConfigError is raised when JSON is valid but data
     does not match the Pydantic model.
@@ -56,13 +52,9 @@ async def test_load_agents_raises_invalid_config_error_for_bad_data(
         await agent_manager.load_agents_from_config(config_path=config_path)
 
 
-async def test_load_agents_returns_when_path_does_not_exist_and_no_raise(
-    agent_manager, mocker
-):
+async def test_load_agents_returns_when_path_does_not_exist_and_no_raise(agent_manager, mocker):
     """Tests that the method returns gracefully if the default path doesn't exist."""
-    mocker.patch(
-        "resync.settings.AGENT_CONFIG_PATH", Path("/tmp/non_existent_path.json")
-    )
+    mocker.patch("resync.settings.AGENT_CONFIG_PATH", Path("/tmp/non_existent_path.json"))
     # Should not raise an exception, just log an error and return
     await agent_manager.load_agents_from_config()
     assert agent_manager.agents == {}

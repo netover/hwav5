@@ -44,9 +44,7 @@ class DistributedAuditLock:
         self._lock_prefix: str = "audit_lock"
         self.release_script_sha: str | None = None
 
-        logger.info(
-            "DistributedAuditLock initialized with Redis", redis_url=self.redis_url
-        )
+        logger.info("DistributedAuditLock initialized with Redis", redis_url=self.redis_url)
 
     async def connect(self) -> None:
         """Initialize Redis connection."""
@@ -143,9 +141,7 @@ class DistributedAuditLock:
         lock_key = self._get_lock_key(memory_id)
         result = await self.client.delete(lock_key)
         if result:
-            logger.warning(
-                "forcefully_released_audit_lock_for_memory", memory_id=memory_id
-            )
+            logger.warning("forcefully_released_audit_lock_for_memory", memory_id=memory_id)
         return bool(result)
 
     async def cleanup_expired_locks(self, max_age: int = 60) -> int:
@@ -199,9 +195,7 @@ class DistributedAuditLock:
                 "Unexpected critical error cleaning up expired audit locks.",
                 exc_info=True,
             )
-            raise AuditError(
-                "Unexpected critical error during audit lock cleanup"
-            ) from e
+            raise AuditError("Unexpected critical error during audit lock cleanup") from e
 
 
 class AuditLockContext:
@@ -293,9 +287,7 @@ class AuditLockContext:
                     return 0
                 end
                 """
-                result = await self.client.eval(
-                    lua_script, 1, self.lock_key, self.lock_value
-                )
+                result = await self.client.eval(lua_script, 1, self.lock_key, self.lock_value)
 
             if result == 1:
                 logger.debug("successfully_released_audit_lock", lock_key=self.lock_key)
@@ -307,9 +299,7 @@ class AuditLockContext:
                         f"Failed to release audit lock: {self.lock_key} (not owned by this instance)"
                     )
                 else:
-                    logger.debug(
-                        f"Audit lock {self.lock_key} was already expired/removed"
-                    )
+                    logger.debug(f"Audit lock {self.lock_key} was already expired/removed")
 
         except RedisError as e:
             logger.error("Redis error during lock release: %s", e)
@@ -332,9 +322,7 @@ class AuditLockContext:
 
 
 @asynccontextmanager
-async def distributed_audit_lock(
-    memory_id: str, timeout: int = 5
-) -> AsyncIterator[None]:
+async def distributed_audit_lock(memory_id: str, timeout: int = 5) -> AsyncIterator[None]:
     """
     Convenience context manager for distributed audit locking.
 

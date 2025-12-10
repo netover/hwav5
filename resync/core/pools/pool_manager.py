@@ -11,7 +11,7 @@ from .db_pool import DatabasePool, get_db_pool
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["PoolManager", "get_pool_manager"]
+__all__ = ["PoolManager", "ConnectionPoolManager", "get_pool_manager", "get_connection_pool_manager"]
 
 
 class PoolManager:
@@ -49,12 +49,15 @@ class PoolManager:
     def get_status(self) -> dict[str, Any]:
         """Get status of all pools."""
         return {
-            "database": self._db_pool.get_pool_status() if self._db_pool else {"status": "not_initialized"},
-            "initialized": self._initialized
+            "database": self._db_pool.get_pool_status()
+            if self._db_pool
+            else {"status": "not_initialized"},
+            "initialized": self._initialized,
         }
 
 
 _instance: PoolManager | None = None
+
 
 def get_pool_manager() -> PoolManager:
     """Get the singleton PoolManager instance."""
@@ -63,8 +66,14 @@ def get_pool_manager() -> PoolManager:
         _instance = PoolManager()
     return _instance
 
+
 async def initialize_pool_manager() -> PoolManager:
     """Initialize and return the PoolManager."""
     manager = get_pool_manager()
     await manager.initialize()
     return manager
+
+
+# Aliases for backward compatibility
+ConnectionPoolManager = PoolManager
+get_connection_pool_manager = get_pool_manager

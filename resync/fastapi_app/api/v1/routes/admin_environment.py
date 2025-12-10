@@ -27,12 +27,19 @@ router = APIRouter()
 
 
 # Configuration
-ENV_FILE_PATH = Path(__file__).resolve().parent.parent.parent.parent.parent.parent / "config" / ".env"
-ENV_EXAMPLE_PATH = Path(__file__).resolve().parent.parent.parent.parent.parent.parent / "config" / "database.env.example"
+ENV_FILE_PATH = (
+    Path(__file__).resolve().parent.parent.parent.parent.parent.parent / "config" / ".env"
+)
+ENV_EXAMPLE_PATH = (
+    Path(__file__).resolve().parent.parent.parent.parent.parent.parent
+    / "config"
+    / "database.env.example"
+)
 
 
 class VariableCategory(str, Enum):
     """Categories of environment variables."""
+
     DATABASE = "database"
     SECURITY = "security"
     API = "api"
@@ -46,6 +53,7 @@ class VariableCategory(str, Enum):
 
 class EnvironmentVariable(BaseModel):
     """Model for an environment variable."""
+
     name: str
     value: str | None = None
     category: VariableCategory
@@ -58,11 +66,13 @@ class EnvironmentVariable(BaseModel):
 
 class EnvironmentVariableUpdate(BaseModel):
     """Model for updating an environment variable."""
+
     value: str
 
 
 class EnvironmentConfig(BaseModel):
     """Complete environment configuration."""
+
     variables: dict[str, EnvironmentVariable]
     last_modified: str | None = None
     env_file_exists: bool = False
@@ -133,7 +143,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         description="SSL mode (disable, prefer, require)",
         default_value="prefer",
     ),
-
     # Security
     "SECRET_KEY": EnvironmentVariable(
         name="SECRET_KEY",
@@ -155,7 +164,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         description="JWT algorithm",
         default_value="HS256",
     ),
-
     # API
     "API_HOST": EnvironmentVariable(
         name="API_HOST",
@@ -189,7 +197,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         description="Allowed CORS origins (comma-separated)",
         default_value="*",
     ),
-
     # Cache (Redis)
     "REDIS_HOST": EnvironmentVariable(
         name="REDIS_HOST",
@@ -217,7 +224,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         default_value="0",
         validation_pattern=r"^\d+$",
     ),
-
     # TWS/HWA
     "TWS_HOST": EnvironmentVariable(
         name="TWS_HOST",
@@ -256,7 +262,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         default_value="30",
         validation_pattern=r"^\d+$",
     ),
-
     # RAG/pgvector (uses DATABASE_URL for PostgreSQL connection)
     "RAG_COLLECTION": EnvironmentVariable(
         name="RAG_COLLECTION",
@@ -276,7 +281,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         description="Embedding model name",
         default_value="text-embedding-3-small",
     ),
-
     # LLM
     "OPENAI_API_KEY": EnvironmentVariable(
         name="OPENAI_API_KEY",
@@ -302,7 +306,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         description="LLM temperature (0.0-2.0)",
         default_value="0.7",
     ),
-
     # Notifications
     "SMTP_HOST": EnvironmentVariable(
         name="SMTP_HOST",
@@ -339,7 +342,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         description="Microsoft Teams webhook URL",
         is_sensitive=True,
     ),
-
     # System
     "LOG_LEVEL": EnvironmentVariable(
         name="LOG_LEVEL",
@@ -353,7 +355,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         description="Environment name (development, staging, production)",
         default_value="production",
     ),
-
     # LangFuse - AI Observability
     "LANGFUSE_ENABLED": EnvironmentVariable(
         name="LANGFUSE_ENABLED",
@@ -384,7 +385,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         description="LangFuse trace sampling rate (0.0-1.0)",
         default_value="1.0",
     ),
-
     # Evidently - ML Monitoring
     "EVIDENTLY_ENABLED": EnvironmentVariable(
         name="EVIDENTLY_ENABLED",
@@ -398,7 +398,6 @@ ENVIRONMENT_SCHEMA: dict[str, EnvironmentVariable] = {
         description="Directory for Evidently drift reports",
         default_value="/var/log/resync/evidently",
     ),
-
     # Backup
     "BACKUP_DIR": EnvironmentVariable(
         name="BACKUP_DIR",
@@ -426,10 +425,10 @@ def _load_env_file() -> dict[str, str]:
         with open(ENV_FILE_PATH) as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
                     # Remove quotes if present
-                    value = value.strip('"\'')
+                    value = value.strip("\"'")
                     env_vars[key.strip()] = value
 
     return env_vars
@@ -442,12 +441,14 @@ def _save_env_file(env_vars: dict[str, str]) -> None:
 
     # Create backup if file exists
     if ENV_FILE_PATH.exists():
-        backup_path = ENV_FILE_PATH.with_suffix(f'.env.backup.{datetime.now().strftime("%Y%m%d_%H%M%S")}')
+        backup_path = ENV_FILE_PATH.with_suffix(
+            f".env.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
         ENV_FILE_PATH.rename(backup_path)
         logger.info(f"Created backup: {backup_path}")
 
     # Write new file
-    with open(ENV_FILE_PATH, 'w') as f:
+    with open(ENV_FILE_PATH, "w") as f:
         f.write("# Resync Environment Configuration\n")
         f.write(f"# Generated: {datetime.now().isoformat()}\n")
         f.write("# WARNING: This file contains sensitive information\n\n")
@@ -465,7 +466,7 @@ def _save_env_file(env_vars: dict[str, str]) -> None:
             f.write(f"\n# {category.upper()}\n")
             for key, value in sorted(vars.items()):
                 # Quote values with spaces
-                if ' ' in value or '"' in value:
+                if " " in value or '"' in value:
                     value = f'"{value}"'
                 f.write(f"{key}={value}\n")
 
@@ -496,14 +497,18 @@ async def get_environment_config():
             "is_required": schema.is_required,
             "default_value": schema.default_value,
             "is_set": bool(os.getenv(name) or file_vars.get(name)),
-            "source": "environment" if os.getenv(name) else ("file" if file_vars.get(name) else "default"),
+            "source": "environment"
+            if os.getenv(name)
+            else ("file" if file_vars.get(name) else "default"),
         }
 
     return {
         "variables": result,
         "env_file_path": str(ENV_FILE_PATH),
         "env_file_exists": ENV_FILE_PATH.exists(),
-        "last_modified": datetime.fromtimestamp(ENV_FILE_PATH.stat().st_mtime).isoformat() if ENV_FILE_PATH.exists() else None,
+        "last_modified": datetime.fromtimestamp(ENV_FILE_PATH.stat().st_mtime).isoformat()
+        if ENV_FILE_PATH.exists()
+        else None,
         "categories": [c.value for c in VariableCategory],
     }
 
@@ -555,7 +560,9 @@ async def get_environment_variable(variable_name: str):
         "is_required": schema.is_required,
         "default_value": schema.default_value,
         "is_set": bool(os.getenv(variable_name) or file_vars.get(variable_name)),
-        "source": "environment" if os.getenv(variable_name) else ("file" if file_vars.get(variable_name) else "default"),
+        "source": "environment"
+        if os.getenv(variable_name)
+        else ("file" if file_vars.get(variable_name) else "default"),
     }
 
 
@@ -579,12 +586,11 @@ async def update_environment_variable(
     schema = ENVIRONMENT_SCHEMA[variable_name]
 
     # Validate pattern if specified
-    if schema.validation_pattern:
-        if not re.match(schema.validation_pattern, update.value):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid value format for {variable_name}",
-            )
+    if schema.validation_pattern and not re.match(schema.validation_pattern, update.value):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid value format for {variable_name}",
+        )
 
     # Load current vars
     file_vars = _load_env_file()
@@ -605,14 +611,19 @@ async def update_environment_variable(
             "variable": variable_name,
             "category": schema.category.value,
             "had_previous_value": old_value is not None,
-        }
+        },
     )
 
     # Determine if restart is needed
     restart_required = variable_name in [
-        "DATABASE_DRIVER", "DATABASE_HOST", "DATABASE_PORT",
-        "DATABASE_NAME", "DATABASE_USER", "DATABASE_PASSWORD",
-        "API_PORT", "API_WORKERS",
+        "DATABASE_DRIVER",
+        "DATABASE_HOST",
+        "DATABASE_PORT",
+        "DATABASE_NAME",
+        "DATABASE_USER",
+        "DATABASE_PASSWORD",
+        "API_PORT",
+        "API_WORKERS",
     ]
 
     return {
@@ -620,7 +631,9 @@ async def update_environment_variable(
         "variable": variable_name,
         "message": f"Variable {variable_name} updated successfully",
         "restart_required": restart_required,
-        "restart_message": "Please restart the application for this change to take effect" if restart_required else None,
+        "restart_message": "Please restart the application for this change to take effect"
+        if restart_required
+        else None,
     }
 
 
@@ -659,10 +672,17 @@ async def bulk_update_environment(updates: dict[str, str]):
         "success": len(errors) == 0,
         "updated": updated,
         "errors": errors,
-        "restart_required": any(v in updated for v in [
-            "DATABASE_DRIVER", "DATABASE_HOST", "DATABASE_PORT",
-            "DATABASE_NAME", "DATABASE_USER", "DATABASE_PASSWORD",
-        ]),
+        "restart_required": any(
+            v in updated
+            for v in [
+                "DATABASE_DRIVER",
+                "DATABASE_HOST",
+                "DATABASE_PORT",
+                "DATABASE_NAME",
+                "DATABASE_USER",
+                "DATABASE_PASSWORD",
+            ]
+        ),
     }
 
 
@@ -741,11 +761,13 @@ async def save_raw_env_file(content: dict[str, str]):
 
     # Create backup
     if ENV_FILE_PATH.exists():
-        backup_path = ENV_FILE_PATH.with_suffix(f'.env.backup.{datetime.now().strftime("%Y%m%d_%H%M%S")}')
+        backup_path = ENV_FILE_PATH.with_suffix(
+            f".env.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
         ENV_FILE_PATH.rename(backup_path)
 
     # Write new content
-    with open(ENV_FILE_PATH, 'w') as f:
+    with open(ENV_FILE_PATH, "w") as f:
         f.write(content.get("content", ""))
 
     logger.info("Raw .env file saved")
@@ -774,14 +796,15 @@ async def export_environment():
 
     for category in VariableCategory:
         category_vars = {
-            k: v for k, v in file_vars.items()
+            k: v
+            for k, v in file_vars.items()
             if k in ENVIRONMENT_SCHEMA and ENVIRONMENT_SCHEMA[k].category == category
         }
 
         if category_vars:
             lines.append(f"\n# {category.value.upper()}")
             for key, value in sorted(category_vars.items()):
-                if ' ' in value:
+                if " " in value:
                     value = f'"{value}"'
                 lines.append(f"{key}={value}")
 
@@ -807,31 +830,37 @@ async def validate_environment():
 
         # Check required
         if schema.is_required and not value:
-            issues.append({
-                "variable": name,
-                "category": schema.category.value,
-                "issue": "Required variable not set",
-                "severity": "error",
-            })
+            issues.append(
+                {
+                    "variable": name,
+                    "category": schema.category.value,
+                    "issue": "Required variable not set",
+                    "severity": "error",
+                }
+            )
 
         # Check pattern
         if value and schema.validation_pattern:
             if not re.match(schema.validation_pattern, value):
-                issues.append({
-                    "variable": name,
-                    "category": schema.category.value,
-                    "issue": "Invalid value format",
-                    "severity": "error",
-                })
+                issues.append(
+                    {
+                        "variable": name,
+                        "category": schema.category.value,
+                        "issue": "Invalid value format",
+                        "severity": "error",
+                    }
+                )
 
         # Check sensitive with default
         if schema.is_sensitive and value == schema.default_value:
-            warnings.append({
-                "variable": name,
-                "category": schema.category.value,
-                "issue": "Sensitive variable using default value",
-                "severity": "warning",
-            })
+            warnings.append(
+                {
+                    "variable": name,
+                    "category": schema.category.value,
+                    "issue": "Sensitive variable using default value",
+                    "severity": "warning",
+                }
+            )
 
     return {
         "valid": len(issues) == 0,
@@ -839,7 +868,6 @@ async def validate_environment():
         "warnings": warnings,
         "total_variables": len(ENVIRONMENT_SCHEMA),
         "configured_variables": sum(
-            1 for name in ENVIRONMENT_SCHEMA
-            if os.getenv(name) or file_vars.get(name)
+            1 for name in ENVIRONMENT_SCHEMA if os.getenv(name) or file_vars.get(name)
         ),
     }

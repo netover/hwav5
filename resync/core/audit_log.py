@@ -58,6 +58,7 @@ class AuditLog:
 
 _instance: AuditLog | None = None
 
+
 def get_audit_log() -> AuditLog:
     """Get the singleton AuditLog instance."""
     global _instance

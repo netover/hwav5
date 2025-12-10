@@ -14,7 +14,7 @@ from resync.core.database.repositories import AuditQueueRepository
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["AuditQueue", "get_audit_queue"]
+__all__ = ["AuditQueue", "AsyncAuditQueue", "IAuditQueue", "get_audit_queue"]
 
 
 class AuditQueue:
@@ -36,8 +36,9 @@ class AuditQueue:
         """Close the queue."""
         self._initialized = False
 
-    async def enqueue(self, action: str, payload: dict[str, Any],
-                     priority: int = 0) -> AuditQueueItem:
+    async def enqueue(
+        self, action: str, payload: dict[str, Any], priority: int = 0
+    ) -> AuditQueueItem:
         """Add item to queue."""
         return await self._repo.enqueue(action, payload, priority)
 
@@ -68,7 +69,8 @@ class AuditQueue:
     async def cleanup_processed_audits(self, days: int = 7) -> int:
         """Clean up old processed items."""
         from datetime import timedelta
-        cutoff = datetime.utcnow() - timedelta(days=days)
+
+        datetime.utcnow() - timedelta(days=days)
         return await self._repo.delete_many({"status": "completed"})
 
     async def process_next(self, processor_fn) -> bool:
@@ -91,6 +93,7 @@ class AuditQueue:
 
 _instance: AuditQueue | None = None
 
+
 def get_audit_queue() -> AuditQueue:
     """Get the singleton AuditQueue instance."""
     global _instance
@@ -98,8 +101,14 @@ def get_audit_queue() -> AuditQueue:
         _instance = AuditQueue()
     return _instance
 
+
 async def initialize_audit_queue() -> AuditQueue:
     """Initialize and return the AuditQueue."""
     queue = get_audit_queue()
     await queue.initialize()
     return queue
+
+
+# Aliases for backward compatibility
+AsyncAuditQueue = AuditQueue
+IAuditQueue = AuditQueue  # Interface alias

@@ -16,7 +16,6 @@ Key Features:
 - Human review integration for complex cases
 """
 
-
 import asyncio
 import json
 import re
@@ -32,6 +31,7 @@ logger = get_logger(__name__)
 
 class ErrorType(str, Enum):
     """Types of errors identified by audit."""
+
     TECHNICAL_INACCURACY = "technical_inaccuracy"
     IRRELEVANT_RESPONSE = "irrelevant_response"
     CONTRADICTORY_INFO = "contradictory_info"
@@ -44,6 +44,7 @@ class ErrorType(str, Enum):
 @dataclass
 class AuditFinding:
     """Represents an audit finding to be processed."""
+
     memory_id: str
     user_query: str
     agent_response: str
@@ -57,6 +58,7 @@ class AuditFinding:
 @dataclass
 class ErrorTriplet:
     """A triplet representing an error pattern."""
+
     subject: str
     subject_type: str
     predicate: str  # Usually "INCORRECT_FOR", "SHOULD_NOT", etc.
@@ -146,6 +148,7 @@ class AuditToKGPipeline:
         """Get Knowledge Graph instance."""
         if self._kg is None:
             from resync.core.knowledge_graph.graph import get_kg_instance
+
             self._kg = await get_kg_instance()
         return self._kg
 
@@ -153,6 +156,7 @@ class AuditToKGPipeline:
         """Get RAG feedback store."""
         if self._rag_feedback is None:
             from resync.RAG.microservice.core.feedback_store import get_feedback_store
+
             self._rag_feedback = get_feedback_store()
             await self._rag_feedback.initialize()
         return self._rag_feedback
@@ -161,6 +165,7 @@ class AuditToKGPipeline:
         """Get LLM client."""
         if self._llm is None:
             from resync.services.llm_service import get_llm_service
+
             self._llm = get_llm_service()
         return self._llm
 
@@ -278,10 +283,7 @@ class AuditToKGPipeline:
     # TRIPLET GENERATION
     # =========================================================================
 
-    async def _generate_error_triplets(
-        self,
-        finding: AuditFinding
-    ) -> list[ErrorTriplet]:
+    async def _generate_error_triplets(self, finding: AuditFinding) -> list[ErrorTriplet]:
         """Generate error triplets from audit finding."""
         triplets: list[ErrorTriplet] = []
 
@@ -302,10 +304,7 @@ class AuditToKGPipeline:
 
         return triplets
 
-    def _generate_recommendation_triplets(
-        self,
-        finding: AuditFinding
-    ) -> list[ErrorTriplet]:
+    def _generate_recommendation_triplets(self, finding: AuditFinding) -> list[ErrorTriplet]:
         """Generate triplets for wrong recommendation errors."""
         triplets = []
 
@@ -316,37 +315,38 @@ class AuditToKGPipeline:
         # Job + Error Code = Wrong recommendation
         for job in jobs:
             for error_code in error_codes:
-                triplets.append(ErrorTriplet(
-                    subject=job,
-                    subject_type="job",
-                    predicate="INCORRECT_SOLUTION_FOR",
-                    object=error_code,
-                    object_type="error_code",
-                    error_reason=finding.reason,
-                    confidence=finding.confidence,
-                    source_memory_id=finding.memory_id,
-                ))
+                triplets.append(
+                    ErrorTriplet(
+                        subject=job,
+                        subject_type="job",
+                        predicate="INCORRECT_SOLUTION_FOR",
+                        object=error_code,
+                        object_type="error_code",
+                        error_reason=finding.reason,
+                        confidence=finding.confidence,
+                        source_memory_id=finding.memory_id,
+                    )
+                )
 
         # Command + Error = Wrong approach
         for command in commands:
             for error_code in error_codes:
-                triplets.append(ErrorTriplet(
-                    subject=command,
-                    subject_type="command",
-                    predicate="SHOULD_NOT_USE_FOR",
-                    object=error_code,
-                    object_type="error_code",
-                    error_reason=finding.reason,
-                    confidence=finding.confidence,
-                    source_memory_id=finding.memory_id,
-                ))
+                triplets.append(
+                    ErrorTriplet(
+                        subject=command,
+                        subject_type="command",
+                        predicate="SHOULD_NOT_USE_FOR",
+                        object=error_code,
+                        object_type="error_code",
+                        error_reason=finding.reason,
+                        confidence=finding.confidence,
+                        source_memory_id=finding.memory_id,
+                    )
+                )
 
         return triplets
 
-    def _generate_technical_triplets(
-        self,
-        finding: AuditFinding
-    ) -> list[ErrorTriplet]:
+    def _generate_technical_triplets(self, finding: AuditFinding) -> list[ErrorTriplet]:
         """Generate triplets for technical inaccuracy errors."""
         triplets = []
 
@@ -357,65 +357,65 @@ class AuditToKGPipeline:
         # Job + Workstation = Incorrect association
         for job in jobs:
             for ws in workstations:
-                triplets.append(ErrorTriplet(
-                    subject=job,
-                    subject_type="job",
-                    predicate="INCORRECT_ASSOCIATION",
-                    object=ws,
-                    object_type="workstation",
-                    error_reason=finding.reason,
-                    confidence=finding.confidence,
-                    source_memory_id=finding.memory_id,
-                ))
+                triplets.append(
+                    ErrorTriplet(
+                        subject=job,
+                        subject_type="job",
+                        predicate="INCORRECT_ASSOCIATION",
+                        object=ws,
+                        object_type="workstation",
+                        error_reason=finding.reason,
+                        confidence=finding.confidence,
+                        source_memory_id=finding.memory_id,
+                    )
+                )
 
         # Command + Job = Incorrect usage
         for command in commands:
             for job in jobs:
-                triplets.append(ErrorTriplet(
-                    subject=command,
-                    subject_type="command",
-                    predicate="INCORRECTLY_APPLIED_TO",
-                    object=job,
-                    object_type="job",
-                    error_reason=finding.reason,
-                    confidence=finding.confidence,
-                    source_memory_id=finding.memory_id,
-                ))
+                triplets.append(
+                    ErrorTriplet(
+                        subject=command,
+                        subject_type="command",
+                        predicate="INCORRECTLY_APPLIED_TO",
+                        object=job,
+                        object_type="job",
+                        error_reason=finding.reason,
+                        confidence=finding.confidence,
+                        source_memory_id=finding.memory_id,
+                    )
+                )
 
         return triplets
 
-    def _generate_relevance_triplets(
-        self,
-        finding: AuditFinding
-    ) -> list[ErrorTriplet]:
+    def _generate_relevance_triplets(self, finding: AuditFinding) -> list[ErrorTriplet]:
         """Generate triplets for irrelevant response errors."""
         triplets = []
 
         # Extract query intent keywords
-        query_words = set(finding.user_query.lower().split())
-        response_words = set(finding.agent_response.lower().split())
+        set(finding.user_query.lower().split())
+        set(finding.agent_response.lower().split())
 
         # Find entities mentioned in response but not query
         for entity_type, entities in finding.extracted_entities.items():
             for entity in entities:
                 if entity.lower() not in finding.user_query.lower():
-                    triplets.append(ErrorTriplet(
-                        subject=entity,
-                        subject_type=entity_type,
-                        predicate="NOT_RELEVANT_TO",
-                        object=finding.user_query[:100],  # Truncate query
-                        object_type="query",
-                        error_reason=finding.reason,
-                        confidence=finding.confidence,
-                        source_memory_id=finding.memory_id,
-                    ))
+                    triplets.append(
+                        ErrorTriplet(
+                            subject=entity,
+                            subject_type=entity_type,
+                            predicate="NOT_RELEVANT_TO",
+                            object=finding.user_query[:100],  # Truncate query
+                            object_type="query",
+                            error_reason=finding.reason,
+                            confidence=finding.confidence,
+                            source_memory_id=finding.memory_id,
+                        )
+                    )
 
         return triplets
 
-    async def _generate_triplets_with_llm(
-        self,
-        finding: AuditFinding
-    ) -> list[ErrorTriplet]:
+    async def _generate_triplets_with_llm(self, finding: AuditFinding) -> list[ErrorTriplet]:
         """Use LLM to extract additional triplets."""
         try:
             llm = await self._get_llm()
@@ -453,16 +453,18 @@ Return only valid JSON, no markdown."""
 
             triplets = []
             for t in triplet_data[:3]:  # Max 3
-                triplets.append(ErrorTriplet(
-                    subject=t["subject"],
-                    subject_type=t.get("subject_type", "concept"),
-                    predicate=t["predicate"],
-                    object=t["object"],
-                    object_type=t.get("object_type", "concept"),
-                    error_reason=finding.reason,
-                    confidence=finding.confidence * 0.9,  # Slight discount for LLM
-                    source_memory_id=finding.memory_id,
-                ))
+                triplets.append(
+                    ErrorTriplet(
+                        subject=t["subject"],
+                        subject_type=t.get("subject_type", "concept"),
+                        predicate=t["predicate"],
+                        object=t["object"],
+                        object_type=t.get("object_type", "concept"),
+                        error_reason=finding.reason,
+                        confidence=finding.confidence * 0.9,  # Slight discount for LLM
+                        source_memory_id=finding.memory_id,
+                    )
+                )
 
             return triplets
 
@@ -474,10 +476,7 @@ Return only valid JSON, no markdown."""
     # KG INTEGRATION
     # =========================================================================
 
-    async def _add_triplets_to_kg(
-        self,
-        triplets: list[ErrorTriplet]
-    ) -> dict[str, Any]:
+    async def _add_triplets_to_kg(self, triplets: list[ErrorTriplet]) -> dict[str, Any]:
         """Add error triplets to Knowledge Graph."""
         kg = await self._get_kg()
 
@@ -490,13 +489,13 @@ Return only valid JSON, no markdown."""
                 await kg.add_node(
                     node_id=triplet.subject,
                     node_type=triplet.subject_type,
-                    properties={"source": "audit_pipeline"}
+                    properties={"source": "audit_pipeline"},
                 )
 
                 await kg.add_node(
                     node_id=triplet.object,
                     node_type=triplet.object_type,
-                    properties={"source": "audit_pipeline"}
+                    properties={"source": "audit_pipeline"},
                 )
 
                 # Add error edge with metadata
@@ -510,7 +509,7 @@ Return only valid JSON, no markdown."""
                         "confidence": triplet.confidence,
                         "source_memory_id": triplet.source_memory_id,
                         "created_at": datetime.utcnow().isoformat(),
-                    }
+                    },
                 )
 
                 added += 1
@@ -521,7 +520,7 @@ Return only valid JSON, no markdown."""
                     subject=triplet.subject,
                     predicate=triplet.predicate,
                     object=triplet.object,
-                    error=str(e)
+                    error=str(e),
                 )
                 failed += 1
 
@@ -531,10 +530,7 @@ Return only valid JSON, no markdown."""
     # RAG INTEGRATION
     # =========================================================================
 
-    async def _penalize_rag_documents(
-        self,
-        finding: AuditFinding
-    ) -> dict[str, Any]:
+    async def _penalize_rag_documents(self, finding: AuditFinding) -> dict[str, Any]:
         """Penalize RAG documents related to the error."""
         try:
             rag_feedback = await self._get_rag_feedback()
@@ -599,12 +595,9 @@ Return only valid JSON, no markdown."""
         return {
             "findings_processed": self._processed_count,
             "triplets_created": self._triplets_created,
-            "errors_by_type": {
-                k.value: v for k, v in self._errors_by_type.items()
-            },
+            "errors_by_type": {k.value: v for k, v in self._errors_by_type.items()},
             "avg_triplets_per_finding": (
-                self._triplets_created / self._processed_count
-                if self._processed_count > 0 else 0.0
+                self._triplets_created / self._processed_count if self._processed_count > 0 else 0.0
             ),
         }
 
@@ -624,6 +617,7 @@ def get_audit_kg_pipeline() -> AuditToKGPipeline:
 # =========================================================================
 # INTEGRATION WITH IA_AUDITOR
 # =========================================================================
+
 
 async def process_audit_result_to_kg(
     memory_id: str,

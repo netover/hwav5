@@ -7,7 +7,6 @@ across the Resync application, eliminating duplicate class definitions.
 All modules should import these types from here rather than defining their own.
 """
 
-
 import logging
 import time
 from collections.abc import Callable
@@ -25,6 +24,7 @@ T = TypeVar("T")
 # CACHE TYPES
 # =============================================================================
 
+
 @dataclass
 class CacheEntry(Generic[T]):
     """
@@ -40,6 +40,7 @@ class CacheEntry(Generic[T]):
         last_access: Timestamp of last access (also accessible via .last_accessed)
         size_bytes: Estimated size in bytes (for memory management)
     """
+
     data: T
     timestamp: float = field(default_factory=time.time)
     ttl: float = 300.0  # Default 5 minutes
@@ -74,7 +75,7 @@ class CacheEntry(Generic[T]):
     def remaining_ttl(self) -> float:
         """Get remaining TTL in seconds."""
         if self.ttl is None:
-            return float('inf')
+            return float("inf")
         remaining = (self.timestamp + self.ttl) - time.time()
         return max(0.0, remaining)
 
@@ -97,6 +98,7 @@ class CacheStats:
         avg_ttl: Average TTL of entries
         memory_bytes: Estimated memory usage
     """
+
     hits: int = 0
     misses: int = 0
     size: int = 0
@@ -115,6 +117,7 @@ class CacheStats:
 # CIRCUIT BREAKER TYPES
 # =============================================================================
 
+
 class CircuitBreakerState(str, Enum):
     """
     States for circuit breaker pattern.
@@ -123,6 +126,7 @@ class CircuitBreakerState(str, Enum):
     OPEN: Circuit is open, requests fail fast
     HALF_OPEN: Testing if service has recovered
     """
+
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half_open"
@@ -139,6 +143,7 @@ class CircuitBreakerConfig:
         timeout: Seconds to wait before attempting recovery
         half_open_max_calls: Max calls allowed in half-open state
     """
+
     failure_threshold: int = 5
     success_threshold: int = 2
     timeout: float = 30.0
@@ -149,8 +154,10 @@ class CircuitBreakerConfig:
 # ALERT TYPES
 # =============================================================================
 
+
 class AlertSeverity(str, Enum):
     """Severity levels for alerts."""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -170,6 +177,7 @@ class AlertRule:
         cooldown_seconds: Minimum time between alerts
         enabled: Whether this rule is active
     """
+
     name: str
     condition: Callable[..., bool]
     severity: AlertSeverity = AlertSeverity.WARNING
@@ -192,6 +200,7 @@ class Alert:
         context: Additional context data
         acknowledged: Whether alert has been acknowledged
     """
+
     rule_name: str
     severity: AlertSeverity
     message: str
@@ -204,8 +213,10 @@ class Alert:
 # METRIC TYPES
 # =============================================================================
 
+
 class MetricType(str, Enum):
     """Types of metrics that can be collected."""
+
     COUNTER = "counter"
     GAUGE = "gauge"
     HISTOGRAM = "histogram"
@@ -227,6 +238,7 @@ class PerformanceMetrics:
         active_connections: Number of active connections
         timestamp: When metrics were collected
     """
+
     cpu_percent: float = 0.0
     memory_percent: float = 0.0
     disk_percent: float = 0.0
@@ -241,6 +253,7 @@ class PerformanceMetrics:
 # REQUEST/RESPONSE TYPES
 # =============================================================================
 
+
 @dataclass
 class LoginRequest:
     """
@@ -252,6 +265,7 @@ class LoginRequest:
         remember_me: Whether to create a persistent session
         mfa_code: Optional MFA code if enabled
     """
+
     username: str
     password: str
     remember_me: bool = False
@@ -268,6 +282,7 @@ class APIKeyRequest:
         scopes: List of permission scopes
         expires_in_days: Number of days until expiration (None = never)
     """
+
     name: str
     scopes: list[str] = field(default_factory=list)
     expires_in_days: int | None = None
@@ -284,6 +299,7 @@ class FileUploadRequest:
         size_bytes: Size of the file in bytes
         checksum: Optional checksum for verification
     """
+
     filename: str
     content_type: str
     size_bytes: int
@@ -294,8 +310,10 @@ class FileUploadRequest:
 # HEALTH CHECK TYPES
 # =============================================================================
 
+
 class HealthStatus(str, Enum):
     """Health status values."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -315,6 +333,7 @@ class ComponentHealth:
         last_check: Timestamp of last health check
         metadata: Additional health metadata
     """
+
     name: str
     status: HealthStatus
     message: str = ""

@@ -5,7 +5,6 @@ This module provides comprehensive configuration management for health checks,
 including thresholds, intervals, and component-specific settings.
 """
 
-
 import os
 from datetime import datetime
 from typing import Any
@@ -73,9 +72,7 @@ class HealthCheckConfigurationManager:
         # Store in history
         self._add_to_config_history(old_config, kwargs)
 
-        logger.info(
-            "health_check_config_updated", updated_parameters=list(kwargs.keys())
-        )
+        logger.info("health_check_config_updated", updated_parameters=list(kwargs.keys()))
 
     def get_config(self) -> HealthCheckConfig:
         """Get current configuration."""
@@ -175,13 +172,13 @@ class HealthCheckConfigurationManager:
         }
 
         updates = {}
-        for config_key, (env_var, converter, default) in env_mappings.items():
+        for config_key, (env_var, converter, _default) in env_mappings.items():
             env_value = os.getenv(env_var)
             if env_value is not None:
                 try:
-                    if converter == int:
+                    if converter is int:
                         updates[config_key] = int(env_value)
-                    elif converter == float:
+                    elif converter is float:
                         updates[config_key] = float(env_value)
                     elif callable(converter):
                         updates[config_key] = converter(env_value)
@@ -215,15 +212,11 @@ class HealthCheckConfigurationManager:
             errors.append("timeout_seconds must be positive")
 
         if self.config.timeout_seconds > self.config.check_interval_seconds:
-            errors.append(
-                "timeout_seconds cannot be greater than check_interval_seconds"
-            )
+            errors.append("timeout_seconds cannot be greater than check_interval_seconds")
 
         # Validate thresholds
         if not (0 < self.config.database_connection_threshold_percent <= 100):
-            errors.append(
-                "database_connection_threshold_percent must be between 0 and 100"
-            )
+            errors.append("database_connection_threshold_percent must be between 0 and 100")
 
         if self.config.memory_usage_threshold_mb < 0:
             errors.append("memory_usage_threshold_mb cannot be negative")
@@ -250,9 +243,7 @@ class HealthCheckConfigurationManager:
                 "database_connection_threshold_percent", 80
             ),
             "alert_enabled": config_dict.get("alert_enabled", True),
-            "memory_monitoring_enabled": config_dict.get(
-                "enable_memory_monitoring", True
-            ),
+            "memory_monitoring_enabled": config_dict.get("enable_memory_monitoring", True),
             "max_history_entries": config_dict.get("max_history_entries", 10000),
             "history_retention_days": config_dict.get("history_retention_days", 30),
             "memory_threshold_mb": config_dict.get("memory_usage_threshold_mb", 100.0),
@@ -269,9 +260,7 @@ class HealthCheckConfigurationManager:
 
         logger.info("health_check_config_reset_to_defaults")
 
-    def _add_to_config_history(
-        self, old_config: dict[str, Any], changes: dict[str, Any]
-    ) -> None:
+    def _add_to_config_history(self, old_config: dict[str, Any], changes: dict[str, Any]) -> None:
         """Add configuration change to history."""
         self._config_history.append(
             {
@@ -375,9 +364,7 @@ class HealthCheckConfigurationManager:
             },
         )
 
-    def set_component_thresholds(
-        self, component_name: str, thresholds: dict[str, float]
-    ) -> None:
+    def set_component_thresholds(self, component_name: str, thresholds: dict[str, float]) -> None:
         """
         Set threshold values for a specific component.
 
@@ -385,13 +372,10 @@ class HealthCheckConfigurationManager:
             component_name: Name of the component
             thresholds: Dictionary with threshold values
         """
-        if component_name == "database":
-            if "connection_usage_warning" in thresholds:
-                self.update_config(
-                    database_connection_threshold_percent=int(
-                        thresholds["connection_usage_warning"]
-                    )
-                )
+        if component_name == "database" and "connection_usage_warning" in thresholds:
+            self.update_config(
+                database_connection_threshold_percent=int(thresholds["connection_usage_warning"])
+            )
 
         logger.info(
             "component_thresholds_updated",
@@ -455,6 +439,4 @@ class HealthCheckConfigurationManager:
             "websocket_pool": {"max_retries": 2, "backoff_multiplier": 2},
         }
 
-        return component_configs.get(
-            component_name, {"max_retries": 2, "backoff_multiplier": 2}
-        )
+        return component_configs.get(component_name, {"max_retries": 2, "backoff_multiplier": 2})

@@ -1,5 +1,6 @@
-from resync.core.async_cache import AsyncTTLCache
 import asyncio
+
+from resync.core.async_cache import AsyncTTLCache
 
 
 async def test():

@@ -58,9 +58,7 @@ class GetSystemStatusQueryHandler(IQueryHandler[GetSystemStatusQuery, QueryResul
             return QueryResult(success=False, error=str(e))
 
 
-class GetWorkstationsStatusQueryHandler(
-    IQueryHandler[GetWorkstationsStatusQuery, QueryResult]
-):
+class GetWorkstationsStatusQueryHandler(IQueryHandler[GetWorkstationsStatusQuery, QueryResult]):
     """Handler for getting workstation statuses."""
 
     def __init__(self, tws_client: ITWSClient):
@@ -116,9 +114,7 @@ class GetJobsStatusQueryHandler(IQueryHandler[GetJobsStatusQuery, QueryResult]):
             return QueryResult(success=False, error=str(e))
 
 
-class GetCriticalPathStatusQueryHandler(
-    IQueryHandler[GetCriticalPathStatusQuery, QueryResult]
-):
+class GetCriticalPathStatusQueryHandler(IQueryHandler[GetCriticalPathStatusQuery, QueryResult]):
     """Handler for getting critical path statuses."""
 
     def __init__(self, tws_client: ITWSClient):
@@ -200,17 +196,13 @@ class GetJobStatusBatchQueryHandler(IQueryHandler[GetJobStatusBatchQuery, QueryR
 
             # Fetch uncached jobs from TWS
             if uncached_job_ids:
-                uncached_results = await self.tws_client.get_job_status_batch(
-                    uncached_job_ids
-                )
+                uncached_results = await self.tws_client.get_job_status_batch(uncached_job_ids)
                 for job_id, job_status in uncached_results.items():
                     if job_status:
                         result = job_status.dict()
                         results[job_id] = result
                         # Cache the individual result
-                        await self.cache.set(
-                            f"query_job_status_{job_id}", result, ttl=30
-                        )
+                        await self.cache.set(f"query_job_status_{job_id}", result, ttl=30)
                     else:
                         results[job_id] = None
 
@@ -254,9 +246,7 @@ class SearchJobsQueryHandler(IQueryHandler[SearchJobsQuery, QueryResult]):
                 if query.search_term.lower() in job.name.lower()
                 or query.search_term.lower() in job.workstation.lower()
                 or query.search_term.lower() in job.status.lower()
-            ][
-                : query.limit
-            ]  # Limit the results
+            ][: query.limit]  # Limit the results
 
             result = [job.dict() for job in filtered_jobs]
 
@@ -266,9 +256,7 @@ class SearchJobsQueryHandler(IQueryHandler[SearchJobsQuery, QueryResult]):
             return QueryResult(success=False, error=str(e))
 
 
-class GetPerformanceMetricsQueryHandler(
-    IQueryHandler[GetPerformanceMetricsQuery, QueryResult]
-):
+class GetPerformanceMetricsQueryHandler(IQueryHandler[GetPerformanceMetricsQuery, QueryResult]):
     """Handler for getting performance metrics."""
 
     def __init__(self, tws_monitor: any):
@@ -283,9 +271,7 @@ class GetPerformanceMetricsQueryHandler(
             return QueryResult(success=False, error=str(e))
 
 
-class CheckTWSConnectionQueryHandler(
-    IQueryHandler[CheckTWSConnectionQuery, QueryResult]
-):
+class CheckTWSConnectionQueryHandler(IQueryHandler[CheckTWSConnectionQuery, QueryResult]):
     """Handler for checking TWS connection."""
 
     def __init__(self, tws_client: ITWSClient):
@@ -411,9 +397,7 @@ class GetPlanDetailsQueryHandler(IQueryHandler[GetPlanDetailsQuery, QueryResult]
             return QueryResult(success=False, error=str(e))
 
 
-class GetJobDependenciesQueryHandler(
-    IQueryHandler[GetJobDependenciesQuery, QueryResult]
-):
+class GetJobDependenciesQueryHandler(IQueryHandler[GetJobDependenciesQuery, QueryResult]):
     """Handler for getting job dependencies."""
 
     def __init__(self, tws_client: ITWSClient):

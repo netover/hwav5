@@ -5,8 +5,8 @@ This module provides comprehensive memory usage tracking and monitoring
 functionality for health checks and system monitoring.
 """
 
-
 import asyncio
+import contextlib
 import gc
 from datetime import datetime, timedelta
 from typing import Any
@@ -69,10 +69,8 @@ class MemoryUsageTracker:
         self._monitoring_active = False
         if self._monitoring_task:
             self._monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitoring_task
-            except asyncio.CancelledError:
-                pass
             self._monitoring_task = None
         logger.info("memory_usage_monitoring_stopped")
 
@@ -163,9 +161,7 @@ class MemoryUsageTracker:
 
             # Check system memory thresholds
             if system_memory_percent > 95:
-                logger.warning(
-                    "system_memory_critical", memory_percent=system_memory_percent
-                )
+                logger.warning("system_memory_critical", memory_percent=system_memory_percent)
             elif system_memory_percent > 85:
                 logger.info("system_memory_high", memory_percent=system_memory_percent)
 
@@ -229,12 +225,8 @@ class MemoryUsageTracker:
         recent_data = self.memory_history[-recent_count:]
 
         # Calculate trends
-        process_memory_values = [
-            entry.get("process_memory_rss_mb", 0) for entry in recent_data
-        ]
-        system_memory_values = [
-            entry.get("system_memory_percent", 0) for entry in recent_data
-        ]
+        process_memory_values = [entry.get("process_memory_rss_mb", 0) for entry in recent_data]
+        system_memory_values = [entry.get("system_memory_percent", 0) for entry in recent_data]
 
         if len(process_memory_values) < 2:
             return {
@@ -289,9 +281,7 @@ class MemoryUsageTracker:
         recent_count = min(50, len(self.memory_history))
         recent_data = self.memory_history[-recent_count:]
 
-        process_memory_values = [
-            entry.get("process_memory_rss_mb", 0) for entry in recent_data
-        ]
+        process_memory_values = [entry.get("process_memory_rss_mb", 0) for entry in recent_data]
 
         if len(process_memory_values) < 10:
             return {
@@ -357,9 +347,9 @@ class MemoryUsageTracker:
             after_memory = self.get_current_memory_usage()
 
             # Calculate memory freed
-            memory_freed_mb = before_memory.get(
+            memory_freed_mb = before_memory.get("process_memory_rss_mb", 0) - after_memory.get(
                 "process_memory_rss_mb", 0
-            ) - after_memory.get("process_memory_rss_mb", 0)
+            )
 
             result = {
                 "gc_performed": True,
@@ -369,9 +359,7 @@ class MemoryUsageTracker:
                 "timestamp": datetime.now().isoformat(),
             }
 
-            logger.info(
-                "forced_garbage_collection", memory_freed_mb=round(memory_freed_mb, 2)
-            )
+            logger.info("forced_garbage_collection", memory_freed_mb=round(memory_freed_mb, 2))
 
             return result
 
@@ -423,9 +411,7 @@ class MemoryUsageTracker:
                     "Memory usage is critically high - consider scaling or optimization"
                 )
             elif process_mb > self.warning_threshold_mb:
-                summary["recommendations"].append(
-                    "Memory usage is elevated - monitor closely"
-                )
+                summary["recommendations"].append("Memory usage is elevated - monitor closely")
 
             if trends.get("process_memory_trend") == "increasing":
                 summary["recommendations"].append(

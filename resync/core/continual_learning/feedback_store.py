@@ -34,15 +34,27 @@ class FeedbackStore:
         """Close the store."""
         self._initialized = False
 
-    async def add_feedback(self, session_id: str, rating: int | None = None,
-                          feedback_type: str = "general", feedback_text: str | None = None,
-                          query_text: str | None = None, response_text: str | None = None,
-                          is_positive: bool | None = None, metadata: dict | None = None) -> Feedback:
+    async def add_feedback(
+        self,
+        session_id: str,
+        rating: int | None = None,
+        feedback_type: str = "general",
+        feedback_text: str | None = None,
+        query_text: str | None = None,
+        response_text: str | None = None,
+        is_positive: bool | None = None,
+        metadata: dict | None = None,
+    ) -> Feedback:
         """Add feedback."""
         return await self._store.feedback.add_feedback(
-            session_id=session_id, rating=rating, feedback_type=feedback_type,
-            feedback_text=feedback_text, query_text=query_text, response_text=response_text,
-            is_positive=is_positive, metadata=metadata
+            session_id=session_id,
+            rating=rating,
+            feedback_type=feedback_type,
+            feedback_text=feedback_text,
+            query_text=query_text,
+            response_text=response_text,
+            is_positive=is_positive,
+            metadata=metadata,
         )
 
     async def get_feedback(self, limit: int = 100) -> list[Feedback]:
@@ -61,16 +73,19 @@ class FeedbackStore:
         """Get feedback statistics."""
         all_feedback = await self.get_feedback(limit=1000)
         positive = sum(1 for f in all_feedback if f.is_positive or (f.rating and f.rating >= 4))
-        negative = sum(1 for f in all_feedback if f.is_positive is False or (f.rating and f.rating <= 2))
+        negative = sum(
+            1 for f in all_feedback if f.is_positive is False or (f.rating and f.rating <= 2)
+        )
         return {
             "total": len(all_feedback),
             "positive": positive,
             "negative": negative,
-            "positive_rate": positive / len(all_feedback) if all_feedback else 0
+            "positive_rate": positive / len(all_feedback) if all_feedback else 0,
         }
 
 
 _instance: FeedbackStore | None = None
+
 
 def get_feedback_store() -> FeedbackStore:
     """Get the singleton FeedbackStore instance."""

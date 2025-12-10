@@ -47,6 +47,7 @@ try:
         get_prompt_manager,
         get_tracer,
     )
+
     LANGFUSE_INTEGRATION = True
 except ImportError:
     LANGFUSE_INTEGRATION = False
@@ -63,6 +64,7 @@ try:
         BadRequestError,
         RateLimitError,
     )
+
     OPENAI_AVAILABLE = True
 except ImportError:  # pragma: no cover
     OPENAI_AVAILABLE = False
@@ -484,7 +486,9 @@ class LLMService:
         # Use tracer if available
         if LANGFUSE_INTEGRATION:
             tracer = get_tracer()
-            async with tracer.trace("generate_rag_response", model=self.model, prompt_id="rag") as trace:
+            async with tracer.trace(
+                "generate_rag_response", model=self.model, prompt_id="rag"
+            ) as trace:
                 response = await self.generate_response(messages, max_tokens=1000)
                 trace.output = response
                 trace.input_tokens = sum(len(m.get("content", "").split()) * 2 for m in messages)

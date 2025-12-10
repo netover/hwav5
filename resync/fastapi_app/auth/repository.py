@@ -40,10 +40,7 @@ class UserRepository:
 
     async def create_user(self, user_id: str, preferences: dict | None = None) -> UserProfile:
         """Create a new user."""
-        return await self._repo.create(
-            user_id=user_id,
-            preferences=preferences or {}
-        )
+        return await self._repo.create(user_id=user_id, preferences=preferences or {})
 
     async def get_user(self, user_id: str) -> UserProfile | None:
         """Get user by ID."""
@@ -98,6 +95,7 @@ class UserRepository:
 
 
 _instance: UserRepository | None = None
+
 
 def get_user_repository() -> UserRepository:
     """Get the singleton UserRepository instance."""

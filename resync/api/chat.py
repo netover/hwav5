@@ -51,7 +51,7 @@ class SupportsAgentMeta(Protocol):
     description: str | None
     # Some agents expose 'llm_model', others 'model'
     llm_model: Any | None  # type: ignore[assignment]
-    model: Any | None      # type: ignore[assignment]
+    model: Any | None  # type: ignore[assignment]
 
 
 async def send_error_message(websocket: WebSocket, message: str) -> None:
@@ -76,9 +76,7 @@ async def send_error_message(websocket: WebSocket, message: str) -> None:
         logger.debug("Failed to send error message, connection error: %s", exc)
     except Exception as _e:  # pylint: disable=broad-exception-caught
         # Last resort to prevent the application from crashing if sending fails.
-        logger.warning(
-            "Failed to send error message due to an unexpected error.", exc_info=True
-        )
+        logger.warning("Failed to send error message due to an unexpected error.", exc_info=True)
 
 
 async def run_auditor_safely() -> None:
@@ -136,10 +134,9 @@ async def _get_optimized_response(
     optimizations like template matching, caching, and model selection.
     """
     try:
-        response = await optimized_llm.get_response(
+        return await optimized_llm.get_response(
             query=query, context=context or {}, use_cache=use_cache, stream=stream
         )
-        return response
     except (LLMError, asyncio.TimeoutError) as exc:
         logger.error("LLM optimization failed (expected): %s", exc)
         return query
@@ -205,9 +202,7 @@ async def _handle_agent_interaction(
     """Handles the core logic of agent interaction, RAG, and auditing."""
     sanitized_data = sanitize_input(data)
     # Send the user's message back to the UI for display
-    await websocket.send_json(
-        {"type": "message", "sender": "user", "message": sanitized_data}
-    )
+    await websocket.send_json({"type": "message", "sender": "user", "message": sanitized_data})
 
     # Check if query would benefit from LLM optimization
     # For certain TWS-specific queries, we can use the optimized approach
@@ -241,9 +236,7 @@ async def _handle_agent_interaction(
         )
     else:
         # 1. Get context and create's enhanced query for the agent
-        enhanced_query = await _get_enhanced_query(
-            knowledge_graph, sanitized_data, data
-        )
+        enhanced_query = await _get_enhanced_query(knowledge_graph, sanitized_data, data)
 
         # 2. Stream agent's response to client and get's full response
         streamer = AgentResponseStreamer(websocket)
@@ -334,9 +327,7 @@ async def _message_processing_loop(
         if not validation["is_valid"]:
             continue
 
-        await _handle_agent_interaction(
-            websocket, agent, agent_id, knowledge_graph, raw_data
-        )
+        await _handle_agent_interaction(websocket, agent, agent_id, knowledge_graph, raw_data)
 
 
 @chat_router.websocket("/ws/{agent_id}")
@@ -362,16 +353,10 @@ async def websocket_endpoint(
         logger.error(
             "Agent-related error in WebSocket for agent '%s': %s", agent_id, exc, exc_info=True
         )
-        await send_error_message(
-            websocket, f"Ocorreu um erro com o agente: {str(exc)}"
-        )
+        await send_error_message(websocket, f"Ocorreu um erro com o agente: {str(exc)}")
     except Exception as _e:  # pylint: disable=broad-exception-caught
-        logger.critical(
-            "Unhandled exception in WebSocket for agent '%s'", agent_id, exc_info=True
-        )
-        await send_error_message(
-            websocket, "Ocorreu um erro inesperado no servidor."
-        )
+        logger.critical("Unhandled exception in WebSocket for agent '%s'", agent_id, exc_info=True)
+        await send_error_message(websocket, "Ocorreu um erro inesperado no servidor.")
 
 
 async def _validate_input(
@@ -381,8 +366,7 @@ async def _validate_input(
     # Input validation and size check
     if len(raw_data) > 10000:  # Limit message size to 10KB
         await send_error_message(
-            websocket,
-            "Mensagem muito longa. Máximo de 10.000 caracteres permitido."
+            websocket, "Mensagem muito longa. Máximo de 10.000 caracteres permitido."
         )
         return {"is_valid": False}
 

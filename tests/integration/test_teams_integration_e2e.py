@@ -29,9 +29,7 @@ def test_app():
         )
         return TeamsIntegration(config)
 
-    test_container.register_factory(
-        TeamsIntegration, teams_factory, ServiceScope.SINGLETON
-    )
+    test_container.register_factory(TeamsIntegration, teams_factory, ServiceScope.SINGLETON)
 
     # Inject container into app
     inject_container(app, test_container)
@@ -52,14 +50,10 @@ def test_teams_integration_fixture():
 
     # Configure with Teams integration
     async def teams_factory():
-        config = TeamsConfig(
-            enabled=True, webhook_url="https://test.webhook.office.com/webhook"
-        )
+        config = TeamsConfig(enabled=True, webhook_url="https://test.webhook.office.com/webhook")
         return TeamsIntegration(config)
 
-    test_container.register_factory(
-        TeamsIntegration, teams_factory, ServiceScope.SINGLETON
-    )
+    test_container.register_factory(TeamsIntegration, teams_factory, ServiceScope.SINGLETON)
 
     # Verify Teams integration can be resolved
     async def test_resolution():
@@ -87,14 +81,10 @@ def test_teams_integration_http_endpoints(mock_session_class):
 
     # Configure container with Teams integration
     async def teams_factory():
-        config = TeamsConfig(
-            enabled=True, webhook_url="https://test.webhook.office.com/webhook"
-        )
+        config = TeamsConfig(enabled=True, webhook_url="https://test.webhook.office.com/webhook")
         return TeamsIntegration(config)
 
-    test_container.register_factory(
-        TeamsIntegration, teams_factory, ServiceScope.SINGLETON
-    )
+    test_container.register_factory(TeamsIntegration, teams_factory, ServiceScope.SINGLETON)
 
     # Inject container
     inject_container(app, test_container)
@@ -114,23 +104,16 @@ def test_teams_integration_dependency_injection():
 
     # Configure with Teams integration
     async def teams_factory():
-        config = TeamsConfig(
-            enabled=True, webhook_url="https://test.webhook.office.com/webhook"
-        )
+        config = TeamsConfig(enabled=True, webhook_url="https://test.webhook.office.com/webhook")
         return TeamsIntegration(config)
 
-    test_container.register_factory(
-        TeamsIntegration, teams_factory, ServiceScope.SINGLETON
-    )
+    test_container.register_factory(TeamsIntegration, teams_factory, ServiceScope.SINGLETON)
 
     # Test async resolution
     async def test_async_resolution():
         teams_service = await test_container.get(TeamsIntegration)
         assert isinstance(teams_service, TeamsIntegration)
-        assert (
-            teams_service.config.webhook_url
-            == "https://test.webhook.office.com/webhook"
-        )
+        assert teams_service.config.webhook_url == "https://test.webhook.office.com/webhook"
 
     # Run the async test
     asyncio.run(test_async_resolution())

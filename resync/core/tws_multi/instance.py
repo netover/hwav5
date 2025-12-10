@@ -13,6 +13,7 @@ from typing import Any
 
 class TWSInstanceStatus(str, Enum):
     """Status of a TWS instance."""
+
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -22,6 +23,7 @@ class TWSInstanceStatus(str, Enum):
 
 class TWSEnvironment(str, Enum):
     """TWS environment type."""
+
     PRODUCTION = "production"
     STAGING = "staging"
     DEVELOPMENT = "development"
@@ -151,20 +153,24 @@ class TWSInstance:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary with runtime state."""
         result = self.config.to_dict()
-        result.update({
-            "status": self.status.value,
-            "last_connected": self.last_connected.isoformat() if self.last_connected else None,
-            "last_error": self.last_error,
-            "error_count": self.error_count,
-            "metrics": {
-                "total_requests": self.total_requests,
-                "successful_requests": self.successful_requests,
-                "failed_requests": self.failed_requests,
-                "success_rate": (self.successful_requests / self.total_requests * 100) if self.total_requests > 0 else 0,
-                "avg_response_time_ms": self.avg_response_time_ms,
-            },
-            "active_sessions": self.active_sessions,
-        })
+        result.update(
+            {
+                "status": self.status.value,
+                "last_connected": self.last_connected.isoformat() if self.last_connected else None,
+                "last_error": self.last_error,
+                "error_count": self.error_count,
+                "metrics": {
+                    "total_requests": self.total_requests,
+                    "successful_requests": self.successful_requests,
+                    "failed_requests": self.failed_requests,
+                    "success_rate": (self.successful_requests / self.total_requests * 100)
+                    if self.total_requests > 0
+                    else 0,
+                    "avg_response_time_ms": self.avg_response_time_ms,
+                },
+                "active_sessions": self.active_sessions,
+            }
+        )
         return result
 
     @property

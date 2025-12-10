@@ -38,9 +38,7 @@ class TeamsConfigUpdate(BaseModel):
     enabled: bool | None = Field(None, description="Enable Teams integration")
     webhook_url: str | None = Field(None, description="Teams webhook URL")
     channel_name: str | None = Field(None, description="Teams channel name")
-    bot_name: str | None = Field(
-        None, min_length=1, max_length=50, description="Bot display name"
-    )
+    bot_name: str | None = Field(None, min_length=1, max_length=50, description="Bot display name")
     avatar_url: str | None = Field(None, description="Bot avatar URL")
     enable_conversation_learning: bool | None = Field(
         None, description="Enable conversation learning"
@@ -54,9 +52,7 @@ class TeamsConfigUpdate(BaseModel):
     job_status_filters: list[str] | None = Field(
         None, description="Job status filters for notifications"
     )
-    notification_types: list[str] | None = Field(
-        None, description="Types of notifications to send"
-    )
+    notification_types: list[str] | None = Field(None, description="Types of notifications to send")
 
 
 class AdminConfigResponse(BaseModel):
@@ -66,9 +62,7 @@ class AdminConfigResponse(BaseModel):
         default_factory=dict, description="Teams integration configuration"
     )
     tws: dict[str, Any] = Field(default_factory=dict, description="TWS configuration")
-    system: dict[str, Any] = Field(
-        default_factory=dict, description="System configuration"
-    )
+    system: dict[str, Any] = Field(default_factory=dict, description="System configuration")
     last_updated: str = Field(
         default_factory=lambda: datetime.now().isoformat(),
         description="Last update timestamp",
@@ -78,9 +72,7 @@ class AdminConfigResponse(BaseModel):
 class TeamsHealthResponse(BaseModel):
     """Teams integration health check response."""
 
-    status: dict[str, Any] = Field(
-        default_factory=dict, description="Teams integration status"
-    )
+    status: dict[str, Any] = Field(default_factory=dict, description="Teams integration status")
     timestamp: str = Field(
         default_factory=lambda: datetime.now().isoformat(),
         description="Health check timestamp",
@@ -203,6 +195,7 @@ async def update_teams_config(
 
         # Persist configuration to file
         from resync.core.config_persistence import ConfigPersistenceManager
+
         config_file = settings.BASE_DIR / "settings.production.toml"
         persistence = ConfigPersistenceManager(config_file)
         persistence.save_config("teams", update_fields)
@@ -271,9 +264,7 @@ async def get_teams_health(
     """
     try:
         health_status = await teams_integration.health_check()
-        return TeamsHealthResponse(
-            status=health_status, timestamp=datetime.now().isoformat()
-        )
+        return TeamsHealthResponse(status=health_status, timestamp=datetime.now().isoformat())
     except Exception as e:
         logger.error(f"Failed to get Teams health status: {e}", exc_info=True)
         raise HTTPException(
@@ -419,9 +410,7 @@ class SystemConfigUpdate(BaseModel):
     cors_enabled: bool | None = Field(None, description="Enable CORS")
     cors_origins: list[str] | None = Field(None, description="Allowed CORS origins")
     rate_limit_enabled: bool | None = Field(None, description="Enable rate limiting")
-    rate_limit_requests: int | None = Field(
-        None, ge=1, description="Max requests per period"
-    )
+    rate_limit_requests: int | None = Field(None, ge=1, description="Max requests per period")
 
 
 @admin_router.put(
@@ -459,6 +448,7 @@ async def update_tws_config(
 
         # Return updated configuration
         from resync.core.fastapi_di import get_teams_integration
+
         teams = await anext(get_teams_integration())
         return await get_admin_config(request, teams)
 
@@ -507,6 +497,7 @@ async def update_system_config(
 
         # Return updated configuration
         from resync.core.fastapi_di import get_teams_integration
+
         teams = await anext(get_teams_integration())
         return await get_admin_config(request, teams)
 
@@ -540,7 +531,6 @@ async def get_system_logs(
         Dictionary containing log entries and metadata
     """
     try:
-
         # Limit maximum lines
         lines = min(lines, 1000)
 
@@ -1009,12 +999,8 @@ async def get_system_health(request: Request) -> SystemHealthResponse:
 
     # Determine overall status
     if overall_healthy:
-        unhealthy_count = sum(
-            1 for c in components.values() if c.status == "unhealthy"
-        )
-        degraded_count = sum(
-            1 for c in components.values() if c.status == "degraded"
-        )
+        unhealthy_count = sum(1 for c in components.values() if c.status == "unhealthy")
+        degraded_count = sum(1 for c in components.values() if c.status == "degraded")
 
         if unhealthy_count > 0:
             overall_status = "unhealthy"
@@ -1072,7 +1058,9 @@ async def get_admin_audit_logs(
             records = [r for r in records if r.get("action") == action]
 
         # Get total count for pagination
-        total_count = audit_db.get_record_count() if hasattr(audit_db, "get_record_count") else len(records)
+        total_count = (
+            audit_db.get_record_count() if hasattr(audit_db, "get_record_count") else len(records)
+        )
 
         return {
             "records": records,

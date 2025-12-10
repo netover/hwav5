@@ -4,8 +4,6 @@ Health Checker Factory
 This module provides a factory for creating and managing health checker instances.
 """
 
-
-
 from resync.core.health_models import ComponentType, HealthCheckConfig
 
 from .base_health_checker import BaseHealthChecker
@@ -128,9 +126,7 @@ class HealthCheckerFactory:
         Returns:
             List of enabled component names
         """
-        return [
-            name for name in self._checkers.keys() if self._is_component_enabled(name)
-        ]
+        return [name for name in self._checkers if self._is_component_enabled(name)]
 
     def register_health_checker(
         self, component_name: str, checker_class: type[BaseHealthChecker]

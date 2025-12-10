@@ -30,9 +30,7 @@ async def test_sqlite_dialect_detection():
     ]
 
     for url in test_cases:
-        config = ConnectionPoolConfig(
-            pool_name=f"test_{url.split('://', maxsplit=1)[0]}"
-        )
+        config = ConnectionPoolConfig(pool_name=f"test_{url.split('://', maxsplit=1)[0]}")
         pool = DatabaseConnectionPool(config, url)
 
         try:
@@ -63,9 +61,7 @@ async def test_sqlite_pragmas():
         # Verificar se o pool está configurado corretamente
         stats = pool.get_stats_copy()
         print("✅ Pool SQLite inicializado com PRAGMAs")
-        print(
-            f"   Stats: acquisition_attempts={stats['acquisition_attempts']}"
-        )
+        print(f"   Stats: acquisition_attempts={stats['acquisition_attempts']}")
 
         await pool.close()
     finally:

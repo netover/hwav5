@@ -4,7 +4,6 @@ Cache Health Check Mixin.
 Provides health check functionality for cache implementations.
 """
 
-
 import asyncio
 import logging
 import time
@@ -33,10 +32,12 @@ class CacheHealthMixin:
         """
         from resync.core.metrics import runtime_metrics
 
-        correlation_id = runtime_metrics.create_correlation_id({
-            "component": "async_cache",
-            "operation": "health_check",
-        })
+        correlation_id = runtime_metrics.create_correlation_id(
+            {
+                "component": "async_cache",
+                "operation": "health_check",
+            }
+        )
 
         try:
             checks = await asyncio.gather(
@@ -52,11 +53,14 @@ class CacheHealthMixin:
             check_results = {}
 
             check_names = [
-                "functionality", "integrity", "background_tasks",
-                "performance", "config"
+                "functionality",
+                "integrity",
+                "background_tasks",
+                "performance",
+                "config",
             ]
 
-            for name, result in zip(check_names, checks):
+            for name, result in zip(check_names, checks, strict=False):
                 if isinstance(result, Exception):
                     check_results[name] = {
                         "status": "error",
@@ -122,7 +126,7 @@ class CacheHealthMixin:
 
             for i, shard in enumerate(self.shards):
                 async with self.shard_locks[i]:
-                    for key, entry in shard.items():
+                    for _key, entry in shard.items():
                         total_entries += 1
                         if current_time > entry.timestamp + entry.ttl:
                             expired_entries += 1
@@ -143,10 +147,7 @@ class CacheHealthMixin:
     async def _health_check_background_tasks(self, correlation_id: str) -> dict[str, Any]:
         """Check background task status."""
         try:
-            cleanup_running = (
-                self.cleanup_task is not None
-                and not self.cleanup_task.done()
-            )
+            cleanup_running = self.cleanup_task is not None and not self.cleanup_task.done()
 
             status = "healthy" if cleanup_running or not self.is_running else "warning"
 
@@ -184,10 +185,10 @@ class CacheHealthMixin:
         try:
             issues = []
 
-            if hasattr(self, 'ttl_seconds') and self.ttl_seconds < 1:
+            if hasattr(self, "ttl_seconds") and self.ttl_seconds < 1:
                 issues.append("TTL too low")
 
-            if hasattr(self, 'max_entries') and self.max_entries < 100:
+            if hasattr(self, "max_entries") and self.max_entries < 100:
                 issues.append("Max entries too low")
 
             status = "healthy" if not issues else "warning"

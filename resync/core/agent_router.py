@@ -34,6 +34,7 @@ logger = structlog.get_logger(__name__)
 # INTENT CLASSIFICATION
 # =============================================================================
 
+
 class Intent(str, Enum):
     """
     Classified intents for user messages.
@@ -41,21 +42,21 @@ class Intent(str, Enum):
     """
 
     # TWS Operations
-    STATUS = "status"                    # Check system/job/workstation status
+    STATUS = "status"  # Check system/job/workstation status
     TROUBLESHOOTING = "troubleshooting"  # Diagnose and fix issues
-    JOB_MANAGEMENT = "job_management"    # Run, stop, rerun jobs
-    MONITORING = "monitoring"            # Real-time monitoring queries
+    JOB_MANAGEMENT = "job_management"  # Run, stop, rerun jobs
+    MONITORING = "monitoring"  # Real-time monitoring queries
 
     # Analysis & Reporting
-    ANALYSIS = "analysis"                # Deep analysis of patterns/trends
-    REPORTING = "reporting"              # Generate reports
+    ANALYSIS = "analysis"  # Deep analysis of patterns/trends
+    REPORTING = "reporting"  # Generate reports
 
     # General
-    GENERAL = "general"                  # General questions, help
-    GREETING = "greeting"                # Hello, hi, etc.
+    GENERAL = "general"  # General questions, help
+    GREETING = "greeting"  # Hello, hi, etc.
 
     # System
-    UNKNOWN = "unknown"                  # Cannot classify
+    UNKNOWN = "unknown"  # Cannot classify
 
 
 @dataclass
@@ -88,47 +89,93 @@ class IntentClassifier:
     # Keyword patterns for each intent (Portuguese and English)
     INTENT_PATTERNS: dict[Intent, list[str]] = {
         Intent.STATUS: [
-            r"\bstatus\b", r"\bsituação\b", r"\bestado\b",
-            r"\bcomo\s+est[áa]\b", r"\bqual\s+o\s+status\b",
-            r"\bworkstation[s]?\b", r"\bjob[s]?\b.*\b(rodando|executando|running)\b",
-            r"\bonline\b", r"\boffline\b", r"\blinked\b", r"\bunlinked\b",
-            r"\bativo[s]?\b", r"\binativo[s]?\b",
+            r"\bstatus\b",
+            r"\bsituação\b",
+            r"\bestado\b",
+            r"\bcomo\s+est[áa]\b",
+            r"\bqual\s+o\s+status\b",
+            r"\bworkstation[s]?\b",
+            r"\bjob[s]?\b.*\b(rodando|executando|running)\b",
+            r"\bonline\b",
+            r"\boffline\b",
+            r"\blinked\b",
+            r"\bunlinked\b",
+            r"\bativo[s]?\b",
+            r"\binativo[s]?\b",
         ],
         Intent.TROUBLESHOOTING: [
-            r"\babend\b", r"\berro[s]?\b", r"\bfalha[s]?\b", r"\bfailed\b",
-            r"\bproblema[s]?\b", r"\bissue[s]?\b", r"\bbug[s]?\b",
+            r"\babend\b",
+            r"\berro[s]?\b",
+            r"\bfalha[s]?\b",
+            r"\bfailed\b",
+            r"\bproblema[s]?\b",
+            r"\bissue[s]?\b",
+            r"\bbug[s]?\b",
             r"\bpor\s*que\b.*\b(falhou|erro|abend)\b",
-            r"\bcausa\b", r"\broot\s*cause\b", r"\bdiagn[oó]stic\b",
-            r"\bresolver\b", r"\bfix\b", r"\bcorrigir\b", r"\bsolução\b",
-            r"\binvestigar\b", r"\banalisar\s+(erro|falha|problema)\b",
-            r"\brc\s*=\s*\d+\b", r"\breturn\s*code\b",
+            r"\bcausa\b",
+            r"\broot\s*cause\b",
+            r"\bdiagn[oó]stic\b",
+            r"\bresolver\b",
+            r"\bfix\b",
+            r"\bcorrigir\b",
+            r"\bsolução\b",
+            r"\binvestigar\b",
+            r"\banalisar\s+(erro|falha|problema)\b",
+            r"\brc\s*=\s*\d+\b",
+            r"\breturn\s*code\b",
         ],
         Intent.JOB_MANAGEMENT: [
-            r"\bexecutar\b", r"\brodar\b", r"\brun\b", r"\bstart\b",
-            r"\bparar\b", r"\bstop\b", r"\bcancel\b", r"\bkill\b",
-            r"\brerun\b", r"\breexecutar\b", r"\breiniciar\b",
-            r"\bsubmit\b", r"\brelease\b", r"\bhold\b",
-            r"\bagendar\b", r"\bschedule\b",
+            r"\bexecutar\b",
+            r"\brodar\b",
+            r"\brun\b",
+            r"\bstart\b",
+            r"\bparar\b",
+            r"\bstop\b",
+            r"\bcancel\b",
+            r"\bkill\b",
+            r"\brerun\b",
+            r"\breexecutar\b",
+            r"\breiniciar\b",
+            r"\bsubmit\b",
+            r"\brelease\b",
+            r"\bhold\b",
+            r"\bagendar\b",
+            r"\bschedule\b",
         ],
         Intent.MONITORING: [
-            r"\bmonitor\w*\b", r"\bacompanhar\b", r"\bwatch\b",
-            r"\balert[as]?\b", r"\bnotifica\w*\b",
-            r"\btempo\s+real\b", r"\breal[\s-]*time\b",
-            r"\bdashboard\b", r"\bmétricas?\b", r"\bmetrics?\b",
+            r"\bmonitor\w*\b",
+            r"\bacompanhar\b",
+            r"\bwatch\b",
+            r"\balert[as]?\b",
+            r"\bnotifica\w*\b",
+            r"\btempo\s+real\b",
+            r"\breal[\s-]*time\b",
+            r"\bdashboard\b",
+            r"\bmétricas?\b",
+            r"\bmetrics?\b",
         ],
         Intent.ANALYSIS: [
-            r"\banalis[ae]\w*\b", r"\banalyz[e]?\w*\b",
-            r"\btendênci\w*\b", r"\btrend[s]?\b",
-            r"\bpadr[ãa]o\b", r"\bpattern[s]?\b",
-            r"\bhistóric\w*\b", r"\bhistor\w*\b",
-            r"\bcompar\w*\b", r"\bcorrelação\b",
-            r"\bperformance\b", r"\bdesempenho\b",
+            r"\banalis[ae]\w*\b",
+            r"\banalyz[e]?\w*\b",
+            r"\btendênci\w*\b",
+            r"\btrend[s]?\b",
+            r"\bpadr[ãa]o\b",
+            r"\bpattern[s]?\b",
+            r"\bhistóric\w*\b",
+            r"\bhistor\w*\b",
+            r"\bcompar\w*\b",
+            r"\bcorrelação\b",
+            r"\bperformance\b",
+            r"\bdesempenho\b",
         ],
         Intent.REPORTING: [
-            r"\brelatório\w*\b", r"\breport\w*\b",
+            r"\brelatório\w*\b",
+            r"\breport\w*\b",
             r"\bgerar\b.*\b(relatório|report)\b",
-            r"\bexport\w*\b", r"\bextrair\b",
-            r"\bressum\w*\b", r"\bsummar\w*\b",
+            r"\bexport\w*\b",
+            r"\bextrair\b",
+            r"\bressum\w*\b",
+            r"\bsummar\w*\b",
             r"\bdocument\w*\b",
         ],
         Intent.GREETING: [
@@ -136,10 +183,14 @@ class IntentClassifier:
             r"^(tudo\s*bem|como\s*vai)[\s!?.,]*$",
         ],
         Intent.GENERAL: [
-            r"\bajud[ae]\b", r"\bhelp\b",
-            r"\bo\s*que\s*(é|são|significa)\b", r"\bwhat\s*is\b",
-            r"\bcomo\s+(funciona|usar|faz)\b", r"\bhow\s+(to|do|does)\b",
-            r"\bexplica\w*\b", r"\bexplain\b",
+            r"\bajud[ae]\b",
+            r"\bhelp\b",
+            r"\bo\s*que\s*(é|são|significa)\b",
+            r"\bwhat\s*is\b",
+            r"\bcomo\s+(funciona|usar|faz)\b",
+            r"\bhow\s+(to|do|does)\b",
+            r"\bexplica\w*\b",
+            r"\bexplain\b",
         ],
     }
 
@@ -167,8 +218,7 @@ class IntentClassifier:
         """Pre-compile regex patterns for performance."""
         for intent, patterns in self.INTENT_PATTERNS.items():
             self._compiled_patterns[intent] = [
-                re.compile(p, re.IGNORECASE | re.UNICODE)
-                for p in patterns
+                re.compile(p, re.IGNORECASE | re.UNICODE) for p in patterns
             ]
 
     def classify(self, message: str) -> IntentClassification:
@@ -184,19 +234,13 @@ class IntentClassifier:
         message = message.strip()
 
         if not message:
-            return IntentClassification(
-                primary_intent=Intent.UNKNOWN,
-                confidence=0.0
-            )
+            return IntentClassification(primary_intent=Intent.UNKNOWN, confidence=0.0)
 
         # Score each intent based on pattern matches
         scores: dict[Intent, float] = {}
 
         for intent, patterns in self._compiled_patterns.items():
-            match_count = sum(
-                1 for pattern in patterns
-                if pattern.search(message)
-            )
+            match_count = sum(1 for pattern in patterns if pattern.search(message))
             if match_count > 0:
                 # Score based on matches relative to total patterns
                 scores[intent] = min(1.0, match_count / max(2, len(patterns) * 0.3))
@@ -210,7 +254,7 @@ class IntentClassifier:
                 primary_intent=Intent.GENERAL,
                 confidence=0.5,
                 entities=entities,
-                requires_tools=False
+                requires_tools=False,
             )
 
         # Sort by score
@@ -218,10 +262,7 @@ class IntentClassifier:
         primary_intent, confidence = sorted_intents[0]
 
         # Get secondary intents
-        secondary = [
-            intent for intent, score in sorted_intents[1:3]
-            if score >= 0.3
-        ]
+        secondary = [intent for intent, score in sorted_intents[1:3] if score >= 0.3]
 
         # Determine if tools are needed
         requires_tools = primary_intent in {
@@ -246,7 +287,7 @@ class IntentClassifier:
             confidence=confidence,
             secondary_intents=secondary,
             entities=entities,
-            requires_tools=requires_tools
+            requires_tools=requires_tools,
         )
 
     def _extract_entities(self, message: str) -> dict[str, Any]:
@@ -258,8 +299,7 @@ class IntentClassifier:
             if matches:
                 # Flatten tuple matches and filter empty strings
                 values = [
-                    m if isinstance(m, str) else next((v for v in m if v), None)
-                    for m in matches
+                    m if isinstance(m, str) else next((v for v in m if v), None) for m in matches
                 ]
                 values = [v for v in values if v]
                 if values:
@@ -289,11 +329,14 @@ class IntentClassifier:
                         confidence=0.85,  # LLM classifications get moderate-high confidence
                         secondary_intents=classification.secondary_intents,
                         entities=classification.entities,
-                        requires_tools=llm_intent in {
-                            Intent.STATUS, Intent.TROUBLESHOOTING,
-                            Intent.JOB_MANAGEMENT, Intent.MONITORING,
-                            Intent.ANALYSIS
-                        }
+                        requires_tools=llm_intent
+                        in {
+                            Intent.STATUS,
+                            Intent.TROUBLESHOOTING,
+                            Intent.JOB_MANAGEMENT,
+                            Intent.MONITORING,
+                            Intent.ANALYSIS,
+                        },
                     )
             except Exception as e:
                 logger.warning("llm_classification_failed", error=str(e))
@@ -305,14 +348,12 @@ class IntentClassifier:
 # AGENT ROUTER
 # =============================================================================
 
+
 class MessageHandler(Protocol):
     """Protocol for message handlers."""
 
     async def handle(
-        self,
-        message: str,
-        context: dict[str, Any],
-        classification: IntentClassification
+        self, message: str, context: dict[str, Any], classification: IntentClassification
     ) -> str:
         """Handle a message and return response."""
         ...
@@ -342,11 +383,7 @@ class AgentRouter:
         response = await router.route("Quais jobs estão em ABEND?")
     """
 
-    def __init__(
-        self,
-        agent_manager: Any,
-        classifier: IntentClassifier | None = None
-    ):
+    def __init__(self, agent_manager: Any, classifier: IntentClassifier | None = None):
         """
         Initialize the router.
 
@@ -383,7 +420,7 @@ class AgentRouter:
         self,
         message: str,
         context: dict[str, Any] | None = None,
-        use_llm_classification: bool = False
+        use_llm_classification: bool = False,
     ) -> RoutingResult:
         """
         Route a message to the appropriate handler.
@@ -397,6 +434,7 @@ class AgentRouter:
             RoutingResult with handler name, classification, and response
         """
         import time
+
         start_time = time.perf_counter()
 
         context = context or {}
@@ -408,10 +446,7 @@ class AgentRouter:
             classification = self.classifier.classify(message)
 
         # Get the appropriate handler
-        handler = self._handlers.get(
-            classification.primary_intent,
-            self._handlers[Intent.GENERAL]
-        )
+        handler = self._handlers.get(classification.primary_intent, self._handlers[Intent.GENERAL])
 
         logger.info(
             "routing_message",
@@ -424,7 +459,7 @@ class AgentRouter:
         # Handle the message
         try:
             response = await handler.handle(message, context, classification)
-            tools_used = getattr(handler, 'last_tools_used', [])
+            tools_used = getattr(handler, "last_tools_used", [])
         except Exception as e:
             logger.error("handler_error", error=str(e), handler=type(handler).__name__)
             response = (
@@ -440,14 +475,10 @@ class AgentRouter:
             classification=classification,
             response=response,
             tools_used=tools_used,
-            processing_time_ms=elapsed_ms
+            processing_time_ms=elapsed_ms,
         )
 
-    async def route_with_streaming(
-        self,
-        message: str,
-        context: dict[str, Any] | None = None
-    ):
+    async def route_with_streaming(self, message: str, context: dict[str, Any] | None = None):
         """
         Route a message and stream the response.
         Yields response chunks as they become available.
@@ -462,6 +493,7 @@ class AgentRouter:
 # INTENT HANDLERS
 # =============================================================================
 
+
 class BaseHandler(ABC):
     """Base class for all intent handlers."""
 
@@ -471,16 +503,13 @@ class BaseHandler(ABC):
 
     @abstractmethod
     async def handle(
-        self,
-        message: str,
-        context: dict[str, Any],
-        classification: IntentClassification
+        self, message: str, context: dict[str, Any], classification: IntentClassification
     ) -> str:
         """Handle the message and return a response."""
 
     async def _get_tws_tools(self) -> dict[str, Any]:
         """Get available TWS tools from agent manager."""
-        return getattr(self.agent_manager, 'tools', {})
+        return getattr(self.agent_manager, "tools", {})
 
     async def _call_tool(self, tool_name: str, *args, **kwargs) -> Any:
         """Call a tool and track usage."""
@@ -495,7 +524,7 @@ class BaseHandler(ABC):
     async def _get_agent_response(self, agent_id: str, message: str) -> str:
         """Get response from a specific agent."""
         agent = await self.agent_manager.get_agent(agent_id)
-        if agent and hasattr(agent, 'arun'):
+        if agent and hasattr(agent, "arun"):
             return await agent.arun(message)
         return ""
 
@@ -504,10 +533,7 @@ class StatusHandler(BaseHandler):
     """Handler for status-related queries."""
 
     async def handle(
-        self,
-        message: str,
-        context: dict[str, Any],
-        classification: IntentClassification
+        self, message: str, context: dict[str, Any], classification: IntentClassification
     ) -> str:
         self.last_tools_used = []
 
@@ -533,10 +559,7 @@ class TroubleshootingHandler(BaseHandler):
     """Handler for troubleshooting and diagnostic queries."""
 
     async def handle(
-        self,
-        message: str,
-        context: dict[str, Any],
-        classification: IntentClassification
+        self, message: str, context: dict[str, Any], classification: IntentClassification
     ) -> str:
         self.last_tools_used = []
 
@@ -554,7 +577,7 @@ class TroubleshootingHandler(BaseHandler):
                 # Enhance with troubleshooting agent for recommendations
                 agent_response = await self._get_agent_response(
                     "tws-troubleshooting",
-                    f"Com base nesta análise, sugira soluções:\n{analysis_result}\n\nPergunta original: {message}"
+                    f"Com base nesta análise, sugira soluções:\n{analysis_result}\n\nPergunta original: {message}",
                 )
 
                 if agent_response and agent_response != analysis_result:
@@ -575,10 +598,7 @@ class JobManagementHandler(BaseHandler):
     """Handler for job management operations."""
 
     async def handle(
-        self,
-        message: str,
-        context: dict[str, Any],
-        classification: IntentClassification
+        self, message: str, context: dict[str, Any], classification: IntentClassification
     ) -> str:
         self.last_tools_used = []
 
@@ -610,10 +630,7 @@ class MonitoringHandler(BaseHandler):
     """Handler for monitoring-related queries."""
 
     async def handle(
-        self,
-        message: str,
-        context: dict[str, Any],
-        classification: IntentClassification
+        self, message: str, context: dict[str, Any], classification: IntentClassification
     ) -> str:
         self.last_tools_used = []
 
@@ -637,17 +654,13 @@ class AnalysisHandler(BaseHandler):
     """Handler for analysis and trend queries."""
 
     async def handle(
-        self,
-        message: str,
-        context: dict[str, Any],
-        classification: IntentClassification
+        self, message: str, context: dict[str, Any], classification: IntentClassification
     ) -> str:
         self.last_tools_used = []
 
         # For deep analysis, use the troubleshooting agent with analysis focus
         return await self._get_agent_response(
-            "tws-troubleshooting",
-            f"Realize uma análise detalhada: {message}"
+            "tws-troubleshooting", f"Realize uma análise detalhada: {message}"
         )
 
 
@@ -655,10 +668,7 @@ class ReportingHandler(BaseHandler):
     """Handler for report generation requests."""
 
     async def handle(
-        self,
-        message: str,
-        context: dict[str, Any],
-        classification: IntentClassification
+        self, message: str, context: dict[str, Any], classification: IntentClassification
     ) -> str:
         self.last_tools_used = []
 
@@ -683,12 +693,10 @@ class GreetingHandler(BaseHandler):
     ]
 
     async def handle(
-        self,
-        message: str,
-        context: dict[str, Any],
-        classification: IntentClassification
+        self, message: str, context: dict[str, Any], classification: IntentClassification
     ) -> str:
         import random
+
         return random.choice(self.GREETINGS)
 
 
@@ -696,10 +704,7 @@ class GeneralHandler(BaseHandler):
     """Handler for general queries and fallback."""
 
     async def handle(
-        self,
-        message: str,
-        context: dict[str, Any],
-        classification: IntentClassification
+        self, message: str, context: dict[str, Any], classification: IntentClassification
     ) -> str:
         self.last_tools_used = []
 
@@ -723,6 +728,7 @@ class GeneralHandler(BaseHandler):
 # =============================================================================
 # FACTORY FUNCTION
 # =============================================================================
+
 
 def create_router(agent_manager: Any) -> AgentRouter:
     """

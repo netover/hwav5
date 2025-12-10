@@ -1,4 +1,3 @@
-
 """
 Chat routes for FastAPI with RAG integration and Unified Agent routing.
 
@@ -6,6 +5,7 @@ This module provides the chat API endpoints using the UnifiedAgent system
 which automatically routes messages to the appropriate handler based on
 intent classification. Users no longer need to select a specific agent.
 """
+
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -34,9 +34,15 @@ _rag_vector_store = None
 _rag_retriever = None
 _rag_ingest_service = None
 
+
 async def _get_rag_components():
     """Lazy initialization of RAG components within async context"""
-    global _rag_initialized, _rag_embedding_service, _rag_vector_store, _rag_retriever, _rag_ingest_service
+    global \
+        _rag_initialized, \
+        _rag_embedding_service, \
+        _rag_vector_store, \
+        _rag_retriever, \
+        _rag_ingest_service
 
     if not _rag_initialized:
         try:
@@ -64,7 +70,7 @@ async def chat_message(
     background_tasks: BackgroundTasks,
     # Temporarily disabled authentication for testing
     # current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger)
+    logger_instance=Depends(get_logger),
 ):
     """
     Send chat message to Resync AI Assistant.
@@ -87,9 +93,7 @@ async def chat_message(
     try:
         # Use the Unified Agent for automatic routing
         result = await unified_agent.chat_with_metadata(
-            message=request.message,
-            include_history=True,
-            tws_instance_id=request.tws_instance_id
+            message=request.message, include_history=True, tws_instance_id=request.tws_instance_id
         )
 
         response_message = result["response"]
@@ -104,7 +108,7 @@ async def chat_message(
             tws_instance_id=request.tws_instance_id,
             message_length=len(request.message),
             response_length=len(response_message),
-            processing_time_ms=result["processing_time_ms"]
+            processing_time_ms=result["processing_time_ms"],
         )
 
         return ChatMessageResponse(
@@ -118,22 +122,19 @@ async def chat_message(
                 "tools_used": result["tools_used"],
                 "entities": result["entities"],
                 "tws_instance_id": request.tws_instance_id,
-            }
+            },
         )
 
     except Exception as e:
         logger_instance.error("chat_message_error", error=str(e), user_id="test_user")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process chat message"
-        )
+            detail="Failed to process chat message",
+        ) from e
 
 
 @router.post("/chat/analyze", response_model=dict)
-async def analyze_message(
-    request: ChatMessageRequest,
-    logger_instance = Depends(get_logger)
-):
+async def analyze_message(request: ChatMessageRequest, logger_instance=Depends(get_logger)):
     """
     Analyze a message without processing it.
 
@@ -164,9 +165,8 @@ async def analyze_message(
     except Exception as e:
         logger_instance.error("analyze_message_error", error=str(e))
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to analyze message"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to analyze message"
+        ) from e
 
 
 @router.get("/chat/history")
@@ -181,7 +181,7 @@ async def chat_history(
     return {
         "history": history,
         "agent_id": "unified",  # Always unified now
-        "total_messages": len(history)
+        "total_messages": len(history),
     }
 
 
@@ -190,15 +190,12 @@ async def clear_chat_history(
     query_params: ChatHistoryQuery = Depends(),
     # Temporarily disabled authentication for testing
     # current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger)
+    logger_instance=Depends(get_logger),
 ):
     """Clear chat history for the current session."""
     unified_agent.clear_history()
 
-    logger_instance.info(
-        "chat_history_cleared",
-        user_id="test_user"
-    )
+    logger_instance.info("chat_history_cleared", user_id="test_user")
     return {"message": "Chat history cleared successfully"}
 
 
@@ -222,7 +219,4 @@ async def list_supported_intents():
         Intent.GENERAL.value: "General questions and help",
     }
 
-    return {
-        "intents": intent_descriptions,
-        "total": len(intent_descriptions)
-    }
+    return {"intents": intent_descriptions, "total": len(intent_descriptions)}

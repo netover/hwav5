@@ -49,8 +49,10 @@ router = APIRouter(prefix="/admin/backup", tags=["Admin - Backup"])
 # REQUEST/RESPONSE MODELS
 # =============================================================================
 
+
 class CreateBackupRequest(BaseModel):
     """Request to create a backup."""
+
     description: str = Field(default="", description="Optional backup description")
     compress: bool = Field(default=True, description="Compress the backup (database only)")
     include_env: bool = Field(default=True, description="Include .env files (config only)")
@@ -58,6 +60,7 @@ class CreateBackupRequest(BaseModel):
 
 class BackupResponse(BaseModel):
     """Response with backup information."""
+
     id: str
     type: str
     status: str
@@ -91,24 +94,27 @@ class BackupResponse(BaseModel):
 
 class BackupListResponse(BaseModel):
     """Response with list of backups."""
+
     backups: list[BackupResponse]
     total: int
 
 
 class CreateScheduleRequest(BaseModel):
     """Request to create a backup schedule."""
+
     name: str = Field(..., description="Schedule name")
     backup_type: str = Field(..., description="Type: database, config, or full")
     cron_expression: str = Field(
         ...,
         description="Cron expression (e.g., '0 2 * * *' for 2 AM daily)",
-        examples=["0 2 * * *", "0 0 * * 0", "0 0 1 * *"]
+        examples=["0 2 * * *", "0 0 * * 0", "0 0 1 * *"],
     )
     retention_days: int = Field(default=30, ge=1, le=365, description="Days to retain backups")
 
 
 class UpdateScheduleRequest(BaseModel):
     """Request to update a backup schedule."""
+
     enabled: bool | None = None
     cron_expression: str | None = None
     retention_days: int | None = Field(default=None, ge=1, le=365)
@@ -116,6 +122,7 @@ class UpdateScheduleRequest(BaseModel):
 
 class ScheduleResponse(BaseModel):
     """Response with schedule information."""
+
     id: str
     name: str
     backup_type: str
@@ -143,11 +150,13 @@ class ScheduleResponse(BaseModel):
 
 class ScheduleListResponse(BaseModel):
     """Response with list of schedules."""
+
     schedules: list[ScheduleResponse]
 
 
 class BackupStatsResponse(BaseModel):
     """Response with backup statistics."""
+
     total_backups: int
     total_size_bytes: int
     total_size_human: str
@@ -158,11 +167,13 @@ class BackupStatsResponse(BaseModel):
 
 class CleanupRequest(BaseModel):
     """Request to cleanup old backups."""
+
     retention_days: int = Field(default=30, ge=1, le=365)
 
 
 class CleanupResponse(BaseModel):
     """Response with cleanup result."""
+
     deleted_count: int
     retention_days: int
 
@@ -170,6 +181,7 @@ class CleanupResponse(BaseModel):
 # =============================================================================
 # BACKUP ENDPOINTS
 # =============================================================================
+
 
 @router.post("/database", response_model=BackupResponse)
 async def create_database_backup(
@@ -191,7 +203,7 @@ async def create_database_backup(
         return BackupResponse.from_backup_info(backup)
     except Exception as e:
         logger.error("create_database_backup_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/config", response_model=BackupResponse)
@@ -211,7 +223,7 @@ async def create_config_backup(request: CreateBackupRequest):
         return BackupResponse.from_backup_info(backup)
     except Exception as e:
         logger.error("create_config_backup_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/full", response_model=BackupResponse)
@@ -228,7 +240,7 @@ async def create_full_backup(request: CreateBackupRequest):
         return BackupResponse.from_backup_info(backup)
     except Exception as e:
         logger.error("create_full_backup_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/list", response_model=BackupListResponse)
@@ -248,14 +260,16 @@ async def list_backups(
         try:
             type_filter = BackupType(backup_type)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid backup type: {backup_type}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid backup type: {backup_type}"
+            ) from None
 
     status_filter = None
     if status:
         try:
             status_filter = BackupStatus(status)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+            raise HTTPException(status_code=400, detail=f"Invalid status: {status}") from None
 
     backups = await service.list_backups(
         backup_type=type_filter,
@@ -331,6 +345,7 @@ async def delete_backup(backup_id: str):
 # SCHEDULE ENDPOINTS
 # =============================================================================
 
+
 @router.get("/schedules", response_model=ScheduleListResponse)
 async def list_schedules():
     """
@@ -339,9 +354,7 @@ async def list_schedules():
     service = get_backup_service()
     schedules = service.list_schedules()
 
-    return ScheduleListResponse(
-        schedules=[ScheduleResponse.from_schedule(s) for s in schedules]
-    )
+    return ScheduleListResponse(schedules=[ScheduleResponse.from_schedule(s) for s in schedules])
 
 
 @router.post("/schedules", response_model=ScheduleResponse)
@@ -362,8 +375,8 @@ async def create_schedule(request: CreateScheduleRequest):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid backup type: {request.backup_type}. Use: database, config, or full"
-        )
+            detail=f"Invalid backup type: {request.backup_type}. Use: database, config, or full",
+        ) from None
 
     schedule = service.create_schedule(
         name=request.name,
@@ -412,6 +425,7 @@ async def delete_schedule(schedule_id: str):
 # =============================================================================
 # UTILITY ENDPOINTS
 # =============================================================================
+
 
 @router.get("/stats", response_model=BackupStatsResponse)
 async def get_backup_stats():

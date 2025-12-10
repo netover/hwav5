@@ -1,13 +1,15 @@
 """Tests for CSP violation report validation utilities."""
 
 import json
+
 import pytest
+
 from resync.csp_validation import (
-    validate_csp_report,
-    _is_safe_uri,
-    _is_safe_directive_value,
-    sanitize_csp_report,
     CSPValidationError,
+    _is_safe_directive_value,
+    _is_safe_uri,
+    sanitize_csp_report,
+    validate_csp_report,
     validate_csp_report_legacy,
 )
 
@@ -67,9 +69,7 @@ class TestCSPValidation:
 
     def test_invalid_csp_report_malformed_json(self):
         """Test validation of malformed JSON."""
-        malformed_json = (
-            b'{ "csp-report": { "document-uri": "https://example.com/page", }'
-        )
+        malformed_json = b'{ "csp-report": { "document-uri": "https://example.com/page", }'
         assert validate_csp_report(malformed_json) is False
 
     @pytest.mark.parametrize(
@@ -83,7 +83,10 @@ class TestCSPValidation:
             ("unsafe-inline", True),
             ("unsafe-eval", True),
             # Data URIs
-            ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==", True),
+            (
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+                True,
+            ),
             # Invalid URIs
             ("data:text/plain;base64," + "A" * 2000, False),  # Too long
             ("http://192.168.1.1/page", False),  # Private IP
@@ -192,9 +195,9 @@ class TestCSPValidation:
 
         report_json = json.dumps(report_data)
         # Both functions should return the same result
-        assert validate_csp_report(
+        assert validate_csp_report(report_json.encode("utf-8")) == validate_csp_report_legacy(
             report_json.encode("utf-8")
-        ) == validate_csp_report_legacy(report_json.encode("utf-8"))
+        )
 
 
 class TestCSPProcessing:

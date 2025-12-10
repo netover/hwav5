@@ -12,8 +12,8 @@ This module provides intelligent service discovery capabilities including:
 - Metrics and observability
 """
 
-
 import asyncio
+import contextlib
 import random
 import socket
 import time
@@ -294,9 +294,7 @@ class ConsulBackend(DiscoveryBackendInterface):
         await self._ensure_session()
 
         try:
-            async with self.session.get(
-                f"{self.consul_url}/v1/status/leader"
-            ) as response:
+            async with self.session.get(f"{self.consul_url}/v1/status/leader") as response:
                 return response.status == 200
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
@@ -493,10 +491,8 @@ class ServiceDiscoveryManager:
         ]:
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         logger.info("Service discovery manager stopped")
 
@@ -550,9 +546,7 @@ class ServiceDiscoveryManager:
                 if service_name in self.local_instances:
                     del self.local_instances[service_name]
 
-                logger.info(
-                    f"Deregistered service {service_name} instance {instance_id}"
-                )
+                logger.info(f"Deregistered service {service_name} instance {instance_id}")
                 return True
 
         return False
@@ -589,10 +583,7 @@ class ServiceDiscoveryManager:
         if service_name in self.instances:
             cached_instances = self.instances[service_name]
             # Return cached instances if they're recent (< 30 seconds)
-            if (
-                cached_instances
-                and time.time() - cached_instances[0].last_health_check < 30
-            ):
+            if cached_instances and time.time() - cached_instances[0].last_health_check < 30:
                 return cached_instances
 
         # Discover from backend
@@ -648,9 +639,7 @@ class ServiceDiscoveryManager:
 
         elif strategy == LoadBalancingStrategy.LATENCY_BASED:
             # Select instance with lowest average response time
-            return min(
-                instances, key=lambda inst: inst.response_time_avg or float("inf")
-            )
+            return min(instances, key=lambda inst: inst.response_time_avg or float("inf"))
 
         # Default to round-robin
         return instances[0]
@@ -675,7 +664,7 @@ class ServiceDiscoveryManager:
                 await asyncio.sleep(60)  # Discover every minute
 
                 # Refresh service instances for all registered services
-                for service_name in self.services.keys():
+                for service_name in self.services:
                     await self.get_service_instances(service_name)
 
             except asyncio.CancelledError:
@@ -690,7 +679,7 @@ class ServiceDiscoveryManager:
                 await asyncio.sleep(30)  # Health check every 30 seconds
 
                 # Perform health checks on all known instances
-                for service_name, instances in self.instances.items():
+                for _service_name, instances in self.instances.items():
                     for instance in instances:
                         if (
                             time.time() - instance.last_health_check
@@ -707,9 +696,7 @@ class ServiceDiscoveryManager:
     async def _perform_health_check(self, instance: ServiceInstance) -> None:
         """Perform health check on service instance."""
         try:
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=5)
-            ) as session:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
                 health_url = f"{instance.url}/health"
 
                 start_time = time.time()
@@ -739,9 +726,7 @@ class ServiceDiscoveryManager:
             instance.last_health_check = time.time()
 
             if instance.consecutive_failures >= 3:
-                logger.warning(
-                    f"Service instance {instance.instance_id} is unhealthy: {e}"
-                )
+                logger.warning(f"Service instance {instance.instance_id} is unhealthy: {e}")
 
     async def _metrics_worker(self) -> None:
         """Background worker for metrics logging."""
@@ -756,9 +741,7 @@ class ServiceDiscoveryManager:
                     health_checks_performed=self.metrics["health_checks_performed"],
                     load_balancing_decisions=self.metrics["load_balancing_decisions"],
                     active_services=len(self.services),
-                    total_instances=sum(
-                        len(insts) for insts in self.instances.values()
-                    ),
+                    total_instances=sum(len(insts) for insts in self.instances.values()),
                 )
 
             except asyncio.CancelledError:
@@ -774,10 +757,7 @@ class ServiceDiscoveryManager:
                 "local_services": len(self.local_instances),
                 "total_instances": sum(len(insts) for insts in self.instances.values()),
                 "healthy_instances": sum(
-                    1
-                    for insts in self.instances.values()
-                    for inst in insts
-                    if inst.is_healthy
+                    1 for insts in self.instances.values() for inst in insts if inst.is_healthy
                 ),
             },
             "backends": {

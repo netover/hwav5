@@ -51,7 +51,6 @@ Architecture:
 └─────────────────────────────────────────────────────────────────┘
 """
 
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -113,6 +112,7 @@ class ProcessingResult:
 @dataclass
 class FeedbackResult:
     """Result of feedback processing."""
+
     success: bool
     feedback_stored: bool = False
     audit_triggered: bool = False
@@ -173,6 +173,7 @@ class ContinualLearningEngine:
         """Get context enricher."""
         if self._enricher is None:
             from resync.core.context_enrichment import get_context_enricher
+
             self._enricher = get_context_enricher()
         return self._enricher
 
@@ -198,6 +199,7 @@ class ContinualLearningEngine:
         """Get active learning manager."""
         if self._active_learning is None:
             from resync.core.active_learning import get_active_learning_manager
+
             self._active_learning = get_active_learning_manager()
         return self._active_learning
 
@@ -205,6 +207,7 @@ class ContinualLearningEngine:
         """Get audit-to-KG pipeline."""
         if self._audit_pipeline is None:
             from resync.core.audit_to_kg_pipeline import get_audit_kg_pipeline
+
             self._audit_pipeline = get_audit_kg_pipeline()
         return self._audit_pipeline
 
@@ -212,6 +215,7 @@ class ContinualLearningEngine:
         """Get embedder."""
         if self._embedder is None:
             from resync.RAG.microservice.core.embedding_service import get_embedder
+
             self._embedder = get_embedder()
         return self._embedder
 
@@ -260,9 +264,7 @@ class ContinualLearningEngine:
 
         # Step 2: Feedback-Aware RAG Retrieval
         if self.enable_feedback_rag:
-            rag_results = await self._retrieve_with_feedback(
-                result.enriched_query, top_k, user_id
-            )
+            rag_results = await self._retrieve_with_feedback(result.enriched_query, top_k, user_id)
             result.rag_results = rag_results
             result.feedback_applied = True
             if rag_results:
@@ -291,9 +293,7 @@ class ContinualLearningEngine:
                 self._reviews_triggered += 1
 
         # Calculate processing time
-        result.processing_time_ms = (
-            datetime.utcnow() - start_time
-        ).total_seconds() * 1000
+        result.processing_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
 
         self._queries_processed += 1
 
@@ -402,11 +402,7 @@ class ContinualLearningEngine:
                 logger.warning(f"Feedback storage failed: {e}")
 
         # Step 2: Trigger audit pipeline for negative feedback
-        if (
-            trigger_audit and
-            rating < 0 and
-            self.enable_audit_pipeline
-        ):
+        if trigger_audit and rating < 0 and self.enable_audit_pipeline:
             try:
                 pipeline = await self._get_audit_pipeline()
                 audit_result = await pipeline.process_audit_finding(
@@ -418,9 +414,9 @@ class ContinualLearningEngine:
                 )
                 result.audit_triggered = True
                 result.kg_updated = audit_result.get("triplets_created", 0) > 0
-                result.rag_updated = audit_result.get("rag_penalized", {}).get(
-                    "documents_penalized", 0
-                ) > 0
+                result.rag_updated = (
+                    audit_result.get("rag_penalized", {}).get("documents_penalized", 0) > 0
+                )
                 self._audit_processes += 1
             except Exception as e:
                 logger.warning(f"Audit pipeline failed: {e}")
@@ -672,6 +668,7 @@ def get_continual_learning_engine(
 # =========================================================================
 # CONVENIENCE FUNCTIONS
 # =========================================================================
+
 
 async def process_query_with_learning(
     query: str,

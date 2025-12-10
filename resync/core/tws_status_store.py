@@ -64,7 +64,9 @@ class TWSStatusStore:
         await self._store.close()
         self._initialized = False
 
-    async def update_job_status(self, job: JobStatus, snapshot_id: int | None = None) -> TWSJobStatus:
+    async def update_job_status(
+        self, job: JobStatus, snapshot_id: int | None = None
+    ) -> TWSJobStatus:
         """Update or insert job status."""
         return await self._store.update_job_status(job)
 
@@ -84,19 +86,33 @@ class TWSStatusStore:
         """Get job count by status."""
         return await self._store.get_status_summary()
 
-    async def get_jobs_by_workstation(self, workstation: str, limit: int = 100) -> list[TWSJobStatus]:
+    async def get_jobs_by_workstation(
+        self, workstation: str, limit: int = 100
+    ) -> list[TWSJobStatus]:
         """Get jobs for a workstation."""
         return await self._store.jobs.get_jobs_by_workstation(workstation, limit)
 
-    async def log_event(self, event_type: str, message: str, severity: str = "info",
-                       job_name: str | None = None, workstation: str | None = None,
-                       details: dict[str, Any] | None = None) -> TWSEvent:
+    async def log_event(
+        self,
+        event_type: str,
+        message: str,
+        severity: str = "info",
+        job_name: str | None = None,
+        workstation: str | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> TWSEvent:
         """Log an event."""
-        return await self._store.log_event(event_type=event_type, message=message,
-                                           severity=severity, job_name=job_name, details=details)
+        return await self._store.log_event(
+            event_type=event_type,
+            message=message,
+            severity=severity,
+            job_name=job_name,
+            details=details,
+        )
 
-    async def get_events(self, limit: int = 100, severity: str | None = None,
-                        job_name: str | None = None) -> list[TWSEvent]:
+    async def get_events(
+        self, limit: int = 100, severity: str | None = None, job_name: str | None = None
+    ) -> list[TWSEvent]:
         """Get events with optional filters."""
         if severity:
             return await self._store.events.get_events_by_severity(severity, limit=limit)
@@ -104,7 +120,9 @@ class TWSStatusStore:
             return await self._store.events.find({"job_name": job_name}, limit=limit)
         return await self._store.events.get_all(limit=limit)
 
-    async def get_events_in_range(self, start: datetime, end: datetime, limit: int = 1000) -> list[TWSEvent]:
+    async def get_events_in_range(
+        self, start: datetime, end: datetime, limit: int = 1000
+    ) -> list[TWSEvent]:
         """Get events in time range."""
         return await self._store.get_events_in_range(start, end, limit)
 
@@ -120,21 +138,37 @@ class TWSStatusStore:
         """Record a detected pattern."""
         return await self._store.detect_pattern(pattern)
 
-    async def get_patterns(self, job_name: str | None = None, min_confidence: float = 0.5) -> list[TWSPattern]:
+    async def get_patterns(
+        self, job_name: str | None = None, min_confidence: float = 0.5
+    ) -> list[TWSPattern]:
         """Get active patterns."""
         return await self._store.get_patterns(job_name, min_confidence)
 
-    async def add_solution(self, problem_type: str, problem_description: str, solution: str,
-                          job_name: str | None = None, metadata: dict[str, Any] | None = None) -> TWSProblemSolution:
+    async def add_solution(
+        self,
+        problem_type: str,
+        problem_description: str,
+        solution: str,
+        job_name: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> TWSProblemSolution:
         """Add a problem-solution pair."""
-        return await self._store.add_solution(problem_type=problem_type, problem_description=problem_description,
-                                              solution=solution, job_name=job_name)
+        return await self._store.add_solution(
+            problem_type=problem_type,
+            problem_description=problem_description,
+            solution=solution,
+            job_name=job_name,
+        )
 
-    async def find_solution(self, problem_type: str, job_name: str | None = None) -> TWSProblemSolution | None:
+    async def find_solution(
+        self, problem_type: str, job_name: str | None = None
+    ) -> TWSProblemSolution | None:
         """Find a solution for a problem."""
         return await self._store.find_solution(problem_type, job_name)
 
-    async def record_solution_outcome(self, solution_id: int, success: bool) -> TWSProblemSolution | None:
+    async def record_solution_outcome(
+        self, solution_id: int, success: bool
+    ) -> TWSProblemSolution | None:
         """Record whether a solution worked."""
         return await self._store.solutions.record_outcome(solution_id, success)
 
@@ -145,12 +179,14 @@ class TWSStatusStore:
 
 _instance: TWSStatusStore | None = None
 
+
 def get_tws_status_store() -> TWSStatusStore:
     """Get the singleton TWSStatusStore instance."""
     global _instance
     if _instance is None:
         _instance = TWSStatusStore()
     return _instance
+
 
 async def initialize_tws_status_store() -> TWSStatusStore:
     """Initialize and return the TWSStatusStore."""

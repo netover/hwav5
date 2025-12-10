@@ -16,7 +16,6 @@ Key Features:
 - Configurable enrichment strategies
 """
 
-
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -30,6 +29,7 @@ logger = get_logger(__name__)
 
 class EnrichmentType(str, Enum):
     """Types of context enrichment."""
+
     JOB_PATTERN = "job_pattern"
     FAILURE_HISTORY = "failure_history"
     DEPENDENCY_CONTEXT = "dependency_context"
@@ -41,6 +41,7 @@ class EnrichmentType(str, Enum):
 @dataclass
 class EnrichmentResult:
     """Result of context enrichment."""
+
     original_query: str
     enriched_query: str
     enrichments_applied: list[EnrichmentType]
@@ -145,6 +146,7 @@ class ContextEnricher:
         if instance_id not in self._learning_stores:
             try:
                 from resync.core.tws_multi.learning import TWSLearningStore
+
                 self._learning_stores[instance_id] = TWSLearningStore(instance_id)
             except Exception as e:
                 logger.warning(f"Could not load learning store: {e}")
@@ -156,6 +158,7 @@ class ContextEnricher:
         if self._kg is None:
             try:
                 from resync.core.knowledge_graph.graph import get_kg_instance
+
                 self._kg = await get_kg_instance()
             except Exception as e:
                 logger.warning(f"Could not load knowledge graph: {e}")
@@ -195,9 +198,7 @@ class ContextEnricher:
 
         # Enrich from Learning Store
         if self.enable_learning_store:
-            ls_context, ls_types = await self._enrich_from_learning_store(
-                entities, instance_id
-            )
+            ls_context, ls_types = await self._enrich_from_learning_store(entities, instance_id)
             context_snippets.extend(ls_context)
             enrichments_applied.extend(ls_types)
 
@@ -220,9 +221,7 @@ class ContextEnricher:
         if enrichments_applied:
             self._queries_enriched += 1
             for etype in enrichments_applied:
-                self._enrichment_counts[etype] = (
-                    self._enrichment_counts.get(etype, 0) + 1
-                )
+                self._enrichment_counts[etype] = self._enrichment_counts.get(etype, 0) + 1
 
         result = EnrichmentResult(
             original_query=query,
@@ -392,7 +391,8 @@ class ContextEnricher:
         # Check for time-related queries
         time_patterns = {
             r"\b(?:hoje|today)\b": "hoje, " + datetime.now().strftime("%d/%m/%Y"),
-            r"\b(?:ontem|yesterday)\b": "ontem, " + (datetime.now() - timedelta(days=1)).strftime("%d/%m/%Y"),
+            r"\b(?:ontem|yesterday)\b": "ontem, "
+            + (datetime.now() - timedelta(days=1)).strftime("%d/%m/%Y"),
             r"\b(?:esta semana|this week)\b": "semana atual",
             r"\b(?:manhã|morning)\b": "período matutino (06h-12h)",
             r"\b(?:tarde|afternoon)\b": "período vespertino (12h-18h)",
@@ -426,7 +426,7 @@ class ContextEnricher:
 
         # Truncate if too long
         if len(context_text) > self.max_context_length:
-            context_text = context_text[:self.max_context_length] + "..."
+            context_text = context_text[: self.max_context_length] + "..."
 
         # Append context to query
         return f"{original_query} {context_text}"
@@ -441,12 +441,9 @@ class ContextEnricher:
             "total_queries": self._total_queries,
             "queries_enriched": self._queries_enriched,
             "enrichment_rate": (
-                self._queries_enriched / self._total_queries
-                if self._total_queries > 0 else 0.0
+                self._queries_enriched / self._total_queries if self._total_queries > 0 else 0.0
             ),
-            "enrichment_counts": {
-                k.value: v for k, v in self._enrichment_counts.items()
-            },
+            "enrichment_counts": {k.value: v for k, v in self._enrichment_counts.items()},
             "config": {
                 "enable_learning_store": self.enable_learning_store,
                 "enable_knowledge_graph": self.enable_knowledge_graph,
@@ -470,6 +467,7 @@ def get_context_enricher() -> ContextEnricher:
 # =========================================================================
 # CONVENIENCE FUNCTIONS
 # =========================================================================
+
 
 async def enrich_query(
     query: str,

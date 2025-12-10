@@ -36,13 +36,13 @@ class InputSanitizer:
         raw_value = os.getenv(env_var_name, default_value)
 
         try:
-            if value_type == str:
+            if value_type is str:
                 return str(raw_value)
-            if value_type == int:
+            if value_type is int:
                 return int(raw_value)
-            if value_type == float:
+            if value_type is float:
                 return float(raw_value)
-            if value_type == bool:
+            if value_type is bool:
                 # Handle boolean conversion from string
                 if isinstance(raw_value, str):
                     return raw_value.lower() in ("true", "1", "yes", "on")
@@ -78,8 +78,7 @@ class InputSanitizer:
 
         # Exemplo simples: remove tudo que não corresponder ao padrão seguro.
         # Em um cenário real, pode-se usar bibliotecas como `bleach` para sanitizar HTML.
-        sanitized_text = "".join(SAFE_STRING_PATTERN.findall(text))
-        return sanitized_text
+        return "".join(SAFE_STRING_PATTERN.findall(text))
 
     @staticmethod
     def sanitize_dict(data: dict, max_depth: int = 3, current_depth: int = 0) -> dict:
@@ -142,13 +141,9 @@ class InputSanitizer:
             if isinstance(item, str):
                 sanitized.append(InputSanitizer.sanitize_string(item))
             elif isinstance(item, dict):
-                sanitized.append(
-                    InputSanitizer.sanitize_dict(item, max_depth, current_depth + 1)
-                )
+                sanitized.append(InputSanitizer.sanitize_dict(item, max_depth, current_depth + 1))
             elif isinstance(item, list):
-                sanitized.append(
-                    InputSanitizer.sanitize_list(item, max_depth, current_depth + 1)
-                )
+                sanitized.append(InputSanitizer.sanitize_list(item, max_depth, current_depth + 1))
             elif isinstance(item, (int, float, bool)):
                 sanitized.append(item)
             else:
@@ -171,11 +166,8 @@ def sanitize_input(text: str) -> str:
     """
     # Exemplo simples: remove tudo que não corresponder ao padrão seguro.
     # Em um cenário real, pode-se usar bibliotecas como `bleach` para sanitizar HTML.
-    sanitized_text = "".join(SAFE_STRING_PATTERN.findall(text))
-    return sanitized_text
+    return "".join(SAFE_STRING_PATTERN.findall(text))
 
 
 # Tipo anotado para IDs, garantindo que eles sigam um formato seguro.
-SafeAgentID = Annotated[
-    str, Path(min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
-]
+SafeAgentID = Annotated[str, Path(min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")]

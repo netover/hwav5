@@ -20,9 +20,7 @@ from resync.cqrs.commands import (
 logger = logging.getLogger(__name__)
 
 
-class GetSystemStatusCommandHandler(
-    ICommandHandler[GetSystemStatusCommand, CommandResult]
-):
+class GetSystemStatusCommandHandler(ICommandHandler[GetSystemStatusCommand, CommandResult]):
     """Handler for getting the overall system status."""
 
     def __init__(self, tws_client: ITWSClient):
@@ -114,9 +112,7 @@ class GetCriticalPathStatusCommandHandler(
             )
 
 
-class GetJobStatusBatchCommandHandler(
-    ICommandHandler[GetJobStatusBatchCommand, CommandResult]
-):
+class GetJobStatusBatchCommandHandler(ICommandHandler[GetJobStatusBatchCommand, CommandResult]):
     """Handler for getting batch job statuses."""
 
     def __init__(self, tws_client: ITWSClient):
@@ -139,9 +135,7 @@ class GetJobStatusBatchCommandHandler(
             )
 
 
-class UpdateJobStatusCommandHandler(
-    ICommandHandler[UpdateJobStatusCommand, CommandResult]
-):
+class UpdateJobStatusCommandHandler(ICommandHandler[UpdateJobStatusCommand, CommandResult]):
     """Handler for updating job status (placeholder implementation)."""
 
     def __init__(self, tws_client: ITWSClient):
@@ -190,9 +184,7 @@ class ExecuteJobCommandHandler(ICommandHandler[ExecuteJobCommand, CommandResult]
             )
 
 
-class GetSystemHealthCommandHandler(
-    ICommandHandler[GetSystemHealthCommand, CommandResult]
-):
+class GetSystemHealthCommandHandler(ICommandHandler[GetSystemHealthCommand, CommandResult]):
     """Handler for getting system health."""
 
     def __init__(self, tws_client: ITWSClient, tws_monitor: any):

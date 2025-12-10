@@ -54,9 +54,7 @@ def create_container() -> DIContainer:
                 password=settings.TWS_PASSWORD or "tws_password",
             )
 
-        container.register_factory(
-            ITWSClient, create_tws_client, ServiceLifetime.SINGLETON
-        )
+        container.register_factory(ITWSClient, create_tws_client, ServiceLifetime.SINGLETON)
 
     return container
 

@@ -20,9 +20,7 @@ class HealthCheckResponse(BaseModel):
     status: str = Field(..., json_schema_extra={"example": "UP"})
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     version: str | None = Field(None, json_schema_extra={"example": "1.0.0"})
-    environment: str | None = Field(
-        None, json_schema_extra={"example": "production"}
-    )
+    environment: str | None = Field(None, json_schema_extra={"example": "production"})
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -43,9 +41,7 @@ class ProblemDetail(BaseModel):
     type: str = Field(..., description="URI reference identifying the problem type")
     title: str = Field(..., description="Human-readable summary of the problem")
     detail: str | None = Field(None, description="Human-readable explanation")
-    instance: str | None = Field(
-        None, description="URI reference identifying specific occurrence"
-    )
+    instance: str | None = Field(None, description="URI reference identifying specific occurrence")
     status: int = Field(..., description="HTTP status code")
 
     model_config = ConfigDict(
@@ -179,9 +175,7 @@ def create_validation_problem_detail(
     )
 
 
-def create_success_response(
-    message: str, data: Any | None = None
-) -> SuccessResponse:
+def create_success_response(message: str, data: Any | None = None) -> SuccessResponse:
     """Create a SuccessResponse instance."""
     return SuccessResponse(success=True, message=message, data=data)
 
@@ -201,9 +195,7 @@ def create_paginated_response(
 
 
 # Response helpers
-def error_response(
-    status_code: int, message: str, details: Any | None = None
-) -> dict[str, Any]:
+def error_response(status_code: int, message: str, details: Any | None = None) -> dict[str, Any]:
     """Create a standardized error response."""
     return {
         "success": False,
@@ -222,9 +214,7 @@ def success_response(message: str, data: Any | None = None) -> dict[str, Any]:
     }
 
 
-def paginated_response(
-    items: list[Any], total: int, page: int, page_size: int
-) -> dict[str, Any]:
+def paginated_response(items: list[Any], total: int, page: int, page_size: int) -> dict[str, Any]:
     """Create a standardized paginated response."""
     total_pages = (total + page_size - 1) // page_size
     return {

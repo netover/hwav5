@@ -5,15 +5,16 @@ Test script for structured logging system.
 This script tests the structured logging implementation to ensure it's working correctly.
 """
 
-import sys
-import os
 import json
+import os
+import sys
 import time
 import uuid
 from io import StringIO
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 def test_structured_logging():
     """Test the structured logging system."""
@@ -22,8 +23,15 @@ def test_structured_logging():
     try:
         # Import structured logging components
         from config.structured_logging_basic import (
-            logger, LoggingContext, log_request_start, log_request_end,
-            log_error, log_debug, log_info, log_warning, log_critical
+            LoggingContext,
+            log_critical,
+            log_debug,
+            log_error,
+            log_info,
+            log_request_end,
+            log_request_start,
+            log_warning,
+            logger,
         )
 
         print("✓ Successfully imported structured logging components")
@@ -46,7 +54,7 @@ def test_structured_logging():
             print("✓ Basic logging levels work")
 
             # Check if output contains JSON-like structure
-            if '{' in output and '}' in output:
+            if "{" in output and "}" in output:
                 print("✓ JSON format detected in output")
             else:
                 print("⚠ Warning: JSON format not clearly detected")
@@ -96,8 +104,10 @@ def test_structured_logging():
     except Exception as e:
         print(f"❌ Test failed with error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 def test_log_file_creation():
     """Test that log files are created correctly."""
@@ -107,13 +117,13 @@ def test_log_file_creation():
     if os.path.exists(log_file):
         print(f"✓ Log file exists: {log_file}")
         # Check if file has content
-        with open(log_file, 'r') as f:
+        with open(log_file) as f:
             content = f.read().strip()
             if content:
                 print("✓ Log file has content")
                 # Try to parse as JSON to verify format
                 try:
-                    lines = content.split('\n')
+                    lines = content.split("\n")
                     for line in lines[-3:]:  # Check last 3 lines
                         if line.strip():
                             json.loads(line)
@@ -124,6 +134,7 @@ def test_log_file_creation():
                 print("⚠ Warning: Log file is empty")
     else:
         print(f"⚠ Warning: Log file not found: {log_file}")
+
 
 if __name__ == "__main__":
     print("=" * 60)

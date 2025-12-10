@@ -20,6 +20,7 @@ from typing import Any
 # BASE QUERY BUILDER
 # =============================================================================
 
+
 @dataclass
 class CypherQuery:
     """Represents a built Cypher query."""
@@ -112,6 +113,7 @@ class CypherQueryBuilder(ABC):
 # JOB QUERIES
 # =============================================================================
 
+
 class JobQueries:
     """Query builders for Job nodes."""
 
@@ -157,7 +159,11 @@ class JobQueryBuilder(CypherQueryBuilder):
     def match_all(self) -> JobQueryBuilder:
         """Match all jobs."""
         self._match_clauses.append("MATCH (j:Job)")
-        self._return_fields = ["j.name as name", "j.status as status", "j.workstation as workstation"]
+        self._return_fields = [
+            "j.name as name",
+            "j.status as status",
+            "j.workstation as workstation",
+        ]
         return self
 
     def match_by_name(self, name: str) -> JobQueryBuilder:
@@ -240,6 +246,7 @@ class JobQueryBuilder(CypherQueryBuilder):
 # WORKSTATION QUERIES
 # =============================================================================
 
+
 class WorkstationQueries:
     """Query builders for Workstation nodes."""
 
@@ -308,6 +315,7 @@ class WorkstationQueryBuilder(CypherQueryBuilder):
 # EVENT QUERIES
 # =============================================================================
 
+
 class EventQueries:
     """Query builders for Event nodes."""
 
@@ -332,7 +340,9 @@ class EventQueries:
         return EventQueryBuilder().match_all().filter_errors().filter_recent(hours)
 
     @staticmethod
-    def find_chain(event_id: str, direction: str = "backward", max_events: int = 20) -> EventQueryBuilder:
+    def find_chain(
+        event_id: str, direction: str = "backward", max_events: int = 20
+    ) -> EventQueryBuilder:
         """Find event chain."""
         return EventQueryBuilder().match_chain(event_id, direction, max_events)
 
@@ -354,9 +364,7 @@ class EventQueryBuilder(CypherQueryBuilder):
 
     def match_by_job(self, job_name: str) -> EventQueryBuilder:
         """Match events for a job."""
-        self._match_clauses.append(
-            f"MATCH (e:Event)-[:RELATES_TO]->(j:Job {{name: '{job_name}'}})"
-        )
+        self._match_clauses.append(f"MATCH (e:Event)-[:RELATES_TO]->(j:Job {{name: '{job_name}'}})")
         self._return_fields = [
             "e.event_id as event_id",
             "e.event_type as type",
@@ -367,10 +375,7 @@ class EventQueryBuilder(CypherQueryBuilder):
         return self
 
     def match_chain(
-        self,
-        event_id: str,
-        direction: str = "backward",
-        max_events: int = 20
+        self, event_id: str, direction: str = "backward", max_events: int = 20
     ) -> EventQueryBuilder:
         """Match event chain."""
         if direction == "backward":

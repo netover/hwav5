@@ -8,6 +8,7 @@ Resync v5.2 - AI Interface for HCL Workload Automation
 - Proactive TWS Monitoring (background polling)
 - Real-time Event Broadcasting
 """
+
 from contextlib import asynccontextmanager
 
 import structlog
@@ -88,6 +89,7 @@ async def lifespan(app: FastAPI):
     # Initialize proactive monitoring if TWS client is available
     try:
         from resync.services.tws_service import get_tws_client
+
         tws_client = get_tws_client()
 
         if tws_client:
@@ -162,8 +164,13 @@ async def lifespan(app: FastAPI):
     # Initialize Observability (LangFuse + Evidently)
     try:
         from resync.core.observability import setup_observability
+
         obs_results = await setup_observability()
-        logger.info("observability_initialized", langfuse=obs_results.get("langfuse"), evidently=obs_results.get("evidently"))
+        logger.info(
+            "observability_initialized",
+            langfuse=obs_results.get("langfuse"),
+            evidently=obs_results.get("evidently"),
+        )
     except ImportError as e:
         logger.warning(f"Could not initialize observability: {e}")
     except Exception as e:
@@ -172,6 +179,7 @@ async def lifespan(app: FastAPI):
     # Start Backup Scheduler
     try:
         from resync.core.backup import get_backup_service
+
         backup_service = get_backup_service()
         await backup_service.start_scheduler()
         logger.info("backup_scheduler_started")
@@ -187,6 +195,7 @@ async def lifespan(app: FastAPI):
 
     try:
         from resync.core.proactive_init import shutdown_monitoring_system
+
         await shutdown_monitoring_system()
         logger.info("Proactive monitoring stopped")
     except Exception as e:
@@ -195,6 +204,7 @@ async def lifespan(app: FastAPI):
     # Shutdown AI Monitoring Service
     try:
         from resync.core.monitoring import get_monitoring_service
+
         service = get_monitoring_service()
         if service:
             await service.stop()
@@ -205,6 +215,7 @@ async def lifespan(app: FastAPI):
     # Shutdown Backup Scheduler
     try:
         from resync.core.backup import get_backup_service
+
         backup_service = get_backup_service()
         await backup_service.stop_scheduler()
         logger.info("Backup scheduler stopped")
@@ -214,6 +225,7 @@ async def lifespan(app: FastAPI):
     # Shutdown Observability
     try:
         from resync.core.observability import shutdown_observability
+
         await shutdown_observability()
         logger.info("Observability services stopped")
     except Exception as e:
@@ -280,36 +292,43 @@ app.include_router(observability_router, prefix="/api/v1", tags=["Observability"
 # Include Teams integration router
 app.include_router(teams_router, prefix="/api/v1", tags=["Teams Integration"])
 
+
 # WebSocket endpoint
 @app.websocket("/api/v1/ws/{agent_id}")
 async def websocket_endpoint(websocket: WebSocket, agent_id: str):
     """WebSocket endpoint for real-time chat with agents"""
     await websocket_handler(websocket, agent_id)
 
+
 @app.get("/", response_class=HTMLResponse)
 async def index_page(request: Request):
     """Main dashboard page with all system functionalities"""
     return templates.TemplateResponse("index.html", {"request": request})
+
 
 @app.get("/health", response_class=HTMLResponse)
 async def health_page(request: Request):
     """Health check page with system status"""
     return templates.TemplateResponse("health.html", {"request": request})
 
+
 @app.get("/chat", response_class=HTMLResponse)
 async def chat_page(request: Request):
     """Web page for chat interface"""
     return templates.TemplateResponse("index.html", {"request": request})
+
 
 @app.get("/revisao", response_class=HTMLResponse)
 async def revisao_page(request: Request):
     """Web page for review interface"""
     return templates.TemplateResponse("revisao.html", {"request": request})
 
+
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
     """Web page for admin interface"""
     return templates.TemplateResponse("admin.html", {"request": request})
+
 
 @app.get("/monitoring", response_class=HTMLResponse)
 async def monitoring_page(request: Request):
@@ -329,6 +348,7 @@ async def monitoring_page(request: Request):
     """
     return templates.TemplateResponse("monitoring.html", {"request": request})
 
+
 @app.get("/tws-monitor", response_class=HTMLResponse)
 async def tws_monitor_page(request: Request):
     """
@@ -345,6 +365,7 @@ async def tws_monitor_page(request: Request):
     - Configurable polling interval
     """
     return templates.TemplateResponse("realtime_dashboard.html", {"request": request})
+
 
 # API routes are now handled by routers included above
 # Direct app routes removed to avoid conflicts

@@ -3,7 +3,9 @@ Unit and integration tests for RobustCacheManager.
 """
 
 import asyncio
+
 import pytest
+
 from resync.core.cache import RobustCacheManager
 from resync.settings import settings
 
@@ -43,7 +45,9 @@ async def test_robust_cache_memory_bounds():
     Test cache memory bounds and LRU eviction.
     """
     cache = RobustCacheManager(
-        max_items=5, max_memory_mb=1, eviction_batch_size=2  # Very small memory limit
+        max_items=5,
+        max_memory_mb=1,
+        eviction_batch_size=2,  # Very small memory limit
     )
 
     # Add multiple items to trigger eviction
@@ -92,7 +96,8 @@ async def test_robust_cache_weak_references():
     Test weak reference handling for large objects.
     """
     cache = RobustCacheManager(
-        max_memory_mb=1, enable_weak_refs=True  # Very small memory limit
+        max_memory_mb=1,
+        enable_weak_refs=True,  # Very small memory limit
     )
 
     # Create a large object that supports weak references

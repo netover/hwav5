@@ -28,9 +28,7 @@ async def test_thread_safe_cache():
                 message=f"Update {i} from writer {task_id}",
             )
 
-            await service._update_cached_component(
-                f"test_component_{task_id}", component
-            )
+            await service._update_cached_component(f"test_component_{task_id}", component)
             logger.info(f"Writer {task_id} updated test_component_{task_id}")
             await asyncio.sleep(0.01)
 

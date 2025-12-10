@@ -5,7 +5,6 @@ This module provides basic shard balancing functionality for distributed cache s
 """
 
 
-
 class ShardBalancer:
     """Basic shard balancer implementation."""
 

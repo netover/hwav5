@@ -115,9 +115,7 @@ class CircuitBreaker:
                         name=self.config.name,
                         calls_blocked=self.metrics.total_calls,
                     )
-                    raise CircuitBreakerError(
-                        f"Circuit breaker '{self.config.name}' is OPEN"
-                    )
+                    raise CircuitBreakerError(f"Circuit breaker '{self.config.name}' is OPEN")
                 self.state = CircuitBreakerState.HALF_OPEN
                 self.metrics.state_changes += 1
                 logger.info(
@@ -139,14 +137,14 @@ class CircuitBreaker:
                     "Circuit breaker failure caught",
                     name=self.config.name,
                     exception_type=type(e).__name__,
-                    consecutive_failures_before=self.metrics.consecutive_failures
+                    consecutive_failures_before=self.metrics.consecutive_failures,
                 )
                 await self._on_failure()
                 logger.debug(
                     "Circuit breaker failure processed",
                     name=self.config.name,
                     consecutive_failures_after=self.metrics.consecutive_failures,
-                    state=self.state.value
+                    state=self.state.value,
                 )
 
             raise e
@@ -375,9 +373,7 @@ class TimeoutManager:
         except asyncio.TimeoutError as exc:
             if timeout_exception:
                 raise timeout_exception from exc
-            raise TimeoutError(
-                f"Operation timed out after {timeout_seconds} seconds"
-            ) from exc
+            raise TimeoutError(f"Operation timed out after {timeout_seconds} seconds") from exc
 
 
 # Decoradores para facilitar uso dos padrões
@@ -531,6 +527,7 @@ class CircuitBreakerManager:
     """
     Registry-based Circuit Breaker manager (client-side), inspired by Resilience4j's registry.
     """
+
     def __init__(self) -> None:
         self._breakers: dict[str, CircuitBreaker] = {}
 
@@ -565,6 +562,7 @@ class CircuitBreakerManager:
     def state(self, name: str) -> str:
         state = self.get(name).state
         return state.value  # "closed" | "open" | "half-open"
+
 
 async def retry_with_backoff_async(
     op: Callable[[], Awaitable[T]],

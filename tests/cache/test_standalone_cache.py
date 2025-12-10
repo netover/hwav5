@@ -5,11 +5,12 @@ Tests the cache components without importing the full resync package.
 """
 
 import asyncio
-import sys
 import os
+import sys
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 # Mock the dependencies to avoid import issues
 class MockRuntimeMetrics:
@@ -33,12 +34,14 @@ class MockRuntimeMetrics:
     def get_health_status(self):
         return {}
 
+
 class MockCounter:
     def __init__(self):
         self.value = 0
 
     def increment(self, amount=1):
         self.value += amount
+
 
 class MockGauge:
     def __init__(self):
@@ -47,15 +50,16 @@ class MockGauge:
     def set(self, value):
         self.value = value
 
+
 class MockCorrelationID:
     def __init__(self):
         self.id = "test-correlation-id"
 
+
 # Mock the modules
-sys.modules['resync.core.metrics'] = MockRuntimeMetrics()
-sys.modules['resync.core.exceptions'] = type('MockExceptions', (), {
-    'CacheError': Exception
-})()
+sys.modules["resync.core.metrics"] = MockRuntimeMetrics()
+sys.modules["resync.core.exceptions"] = type("MockExceptions", (), {"CacheError": Exception})()
+
 
 # Now we can import and test the cache components
 async def test_cache_components():
@@ -95,7 +99,7 @@ async def test_cache_components():
             num_shards=2,
             max_entries=100,
             max_memory_mb=1,
-            enable_wal=False  # Disable WAL to avoid dependencies
+            enable_wal=False,  # Disable WAL to avoid dependencies
         )
 
         print("✓ Refactored AsyncTTLCache created")
@@ -144,6 +148,7 @@ async def test_cache_components():
             os.remove(snapshot_path)
         if os.path.exists("./test_snapshots"):
             import shutil
+
             shutil.rmtree("./test_snapshots")
 
         return True
@@ -151,8 +156,10 @@ async def test_cache_components():
     except Exception as e:
         print(f"✗ Cache component test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     success = asyncio.run(test_cache_components())

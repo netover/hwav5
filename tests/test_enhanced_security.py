@@ -10,11 +10,11 @@ from resync.api.validation.enhanced_security import (
     EnhancedSecurityValidator,
     InputValidationResult,
     SecurityContext,
+    SecurityEventLog,
+    SecurityEventSeverity,
+    SecurityEventType,
     SecurityLevel,
     ThreatType,
-    SecurityEventLog,
-    SecurityEventType,
-    SecurityEventSeverity,
 )
 
 
@@ -72,9 +72,7 @@ class TestEnhancedSecurityValidator:
     async def test_validate_password_strength_high_security(self, security_validator):
         """Test password validation with high security level."""
         # Invalid password for high security (too short)
-        result = await security_validator.validate_password_strength(
-            "Short1!", SecurityLevel.HIGH
-        )
+        result = await security_validator.validate_password_strength("Short1!", SecurityLevel.HIGH)
         assert isinstance(result, InputValidationResult)
         assert result.is_valid is False
 
@@ -89,9 +87,7 @@ class TestEnhancedSecurityValidator:
     async def test_validate_password_weak_passwords(self, security_validator):
         """Test validation of weak passwords."""
         # Test with a password that exactly matches "password" which is in the weak passwords list
-        test_password = (
-            "Password123!"  # Contains uppercase, lowercase, digit, and special char
-        )
+        test_password = "Password123!"  # Contains uppercase, lowercase, digit, and special char
         result = await security_validator.validate_password_strength(
             test_password, SecurityLevel.MEDIUM
         )
@@ -179,26 +175,20 @@ class TestEnhancedSecurityValidator:
         assert result.is_valid is True
 
         # Input with XSS attempt
-        result = await security_validator.validate_input_security(
-            "<script>alert('xss')</script>"
-        )
+        result = await security_validator.validate_input_security("<script>alert('xss')</script>")
         assert isinstance(result, InputValidationResult)
         assert result.is_valid is False
         assert result.threat_detected == ThreatType.XSS
 
         # Input with SQL injection attempt
-        result = await security_validator.validate_input_security(
-            "'; DROP TABLE users; --"
-        )
+        result = await security_validator.validate_input_security("'; DROP TABLE users; --")
         assert isinstance(result, InputValidationResult)
         assert result.is_valid is False
         assert result.threat_detected == ThreatType.SQL_INJECTION
 
         # Too long input for high security
         long_input = "a" * 300
-        result = await security_validator.validate_input_security(
-            long_input, SecurityLevel.HIGH
-        )
+        result = await security_validator.validate_input_security(long_input, SecurityLevel.HIGH)
         assert isinstance(result, InputValidationResult)
         assert result.is_valid is False
         assert "exceeds maximum length" in result.error_message
@@ -207,14 +197,8 @@ class TestEnhancedSecurityValidator:
     async def test_detect_threats(self, security_validator):
         """Test threat detection."""
         # XSS patterns
-        assert (
-            security_validator._detect_threats("<script>alert('xss')</script>")
-            == ThreatType.XSS
-        )
-        assert (
-            security_validator._detect_threats("javascript:alert('xss')")
-            == ThreatType.XSS
-        )
+        assert security_validator._detect_threats("<script>alert('xss')</script>") == ThreatType.XSS
+        assert security_validator._detect_threats("javascript:alert('xss')") == ThreatType.XSS
 
         # SQL injection patterns
         assert (
@@ -227,10 +211,7 @@ class TestEnhancedSecurityValidator:
         )
 
         # Path traversal
-        assert (
-            security_validator._detect_threats("../../etc/passwd")
-            == ThreatType.RECONNAISSANCE
-        )
+        assert security_validator._detect_threats("../../etc/passwd") == ThreatType.RECONNAISSANCE
 
         # No threats
         assert security_validator._detect_threats("normal input") is None
@@ -263,9 +244,7 @@ class TestEnhancedSecurityValidator:
         assert await security_validator.verify_password(password, hashed) is True
 
         # Verify incorrect password
-        assert (
-            await security_validator.verify_password("wrong_password", hashed) is False
-        )
+        assert await security_validator.verify_password("wrong_password", hashed) is False
 
     @pytest.mark.asyncio
     async def test_generate_session_id(self, security_validator):

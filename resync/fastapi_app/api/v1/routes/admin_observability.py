@@ -41,8 +41,10 @@ router = APIRouter(prefix="/admin/observability", tags=["Admin - Observability"]
 # RESPONSE MODELS
 # =============================================================================
 
+
 class LangFuseStatusResponse(BaseModel):
     """LangFuse status response."""
+
     enabled: bool
     configured: bool
     connected: bool
@@ -51,6 +53,7 @@ class LangFuseStatusResponse(BaseModel):
 
 class EvidentlyStatusResponse(BaseModel):
     """Evidently status response."""
+
     enabled: bool
     active: bool
     reference_data_size: int = 0
@@ -61,6 +64,7 @@ class EvidentlyStatusResponse(BaseModel):
 
 class ObservabilityStatusResponse(BaseModel):
     """Combined observability status."""
+
     langfuse: LangFuseStatusResponse
     evidently: EvidentlyStatusResponse
     environment: str
@@ -70,6 +74,7 @@ class ObservabilityStatusResponse(BaseModel):
 
 class SetupResponse(BaseModel):
     """Response from observability setup."""
+
     langfuse: bool
     evidently: bool
     message: str
@@ -77,6 +82,7 @@ class SetupResponse(BaseModel):
 
 class DriftCheckResponse(BaseModel):
     """Response from drift check."""
+
     timestamp: str
     drift_detected: bool
     drift_columns: list[str] = []
@@ -87,6 +93,7 @@ class DriftCheckResponse(BaseModel):
 
 class DriftReportSummary(BaseModel):
     """Summary of a drift report."""
+
     filename: str
     timestamp: str
     drift_detected: bool
@@ -94,12 +101,14 @@ class DriftReportSummary(BaseModel):
 
 class DriftReportsResponse(BaseModel):
     """Response with list of drift reports."""
+
     reports: list[DriftReportSummary]
     total: int
 
 
 class LangFuseStatsResponse(BaseModel):
     """LangFuse statistics response."""
+
     enabled: bool
     connected: bool
     total_traces: int = 0
@@ -111,6 +120,7 @@ class LangFuseStatsResponse(BaseModel):
 
 class EvidentlyStatsResponse(BaseModel):
     """Evidently statistics response."""
+
     enabled: bool
     reference_data_size: int
     current_data_size: int
@@ -122,6 +132,7 @@ class EvidentlyStatsResponse(BaseModel):
 # =============================================================================
 # STATUS ENDPOINTS
 # =============================================================================
+
 
 @router.get("/status", response_model=ObservabilityStatusResponse)
 async def get_status():
@@ -175,12 +186,13 @@ async def initialize_observability():
         )
     except Exception as e:
         logger.error("observability_setup_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
 # LANGFUSE ENDPOINTS
 # =============================================================================
+
 
 @router.get("/langfuse/stats", response_model=LangFuseStatsResponse)
 async def get_langfuse_stats():
@@ -198,16 +210,19 @@ async def get_langfuse_stats():
 
     try:
         from resync.core.langfuse import get_tracer
+
         tracer = get_tracer()
         tracer_stats = tracer.get_statistics()
 
-        stats.update({
-            "total_traces": tracer_stats.get("total_traces", 0),
-            "success_rate": tracer_stats.get("success_rate", 1.0),
-            "total_tokens": tracer_stats.get("total_tokens", 0),
-            "total_cost_usd": tracer_stats.get("total_cost_usd", 0.0),
-            "avg_latency_ms": tracer_stats.get("avg_duration_ms", 0.0),
-        })
+        stats.update(
+            {
+                "total_traces": tracer_stats.get("total_traces", 0),
+                "success_rate": tracer_stats.get("success_rate", 1.0),
+                "total_tokens": tracer_stats.get("total_tokens", 0),
+                "total_cost_usd": tracer_stats.get("total_cost_usd", 0.0),
+                "avg_latency_ms": tracer_stats.get("avg_duration_ms", 0.0),
+            }
+        )
     except Exception as e:
         logger.debug("langfuse_stats_error", error=str(e))
 
@@ -217,6 +232,7 @@ async def get_langfuse_stats():
 # =============================================================================
 # EVIDENTLY ENDPOINTS
 # =============================================================================
+
 
 @router.get("/evidently/stats", response_model=EvidentlyStatsResponse)
 async def get_evidently_stats():
@@ -258,8 +274,7 @@ async def run_drift_check():
 
     if not monitor:
         raise HTTPException(
-            status_code=503,
-            detail="Evidently monitor not initialized. Enable it in configuration."
+            status_code=503, detail="Evidently monitor not initialized. Enable it in configuration."
         )
 
     result = await monitor.check_drift()
@@ -314,6 +329,7 @@ async def list_drift_reports(
 # =============================================================================
 # CONFIGURATION ENDPOINTS
 # =============================================================================
+
 
 @router.get("/config")
 async def get_config():

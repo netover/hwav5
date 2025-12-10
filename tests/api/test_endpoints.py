@@ -76,9 +76,7 @@ class TestHealthEndpoint:
                 ),
             },
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/core")
@@ -110,9 +108,7 @@ class TestHealthEndpoint:
             alerts=[alert_dict],
             performance_metrics={"db_query_time": 50},
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/")
@@ -145,9 +141,7 @@ class TestHealthEndpoint:
                 ),
             },
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/detailed")
@@ -192,9 +186,7 @@ class TestHealthEndpoint:
                 )
             },
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/ready")
@@ -223,9 +215,7 @@ class TestHealthEndpoint:
                 )
             },
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/ready")
@@ -300,9 +290,7 @@ class TestHealthEndpoint:
                 )
             },
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/redis")
@@ -334,9 +322,7 @@ class TestHealthEndpoint:
                 )
             },
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/redis")
@@ -413,9 +399,7 @@ class TestHealthEndpoint:
             timestamp=datetime.now() - timedelta(hours=1),
             overall_status=HealthStatus.DEGRADED,
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
         mock_health_service.get_health_history.return_value = [history_entry]
 
         # Act
@@ -449,9 +433,7 @@ class TestHealthEndpoint:
                 )
             },
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/core")
@@ -484,9 +466,7 @@ class TestHealthEndpoint:
     def test_recover_component_exception(self, mock_get_health_service, client):
         """Test component recovery when an exception occurs."""
         mock_health_service = MagicMock()
-        mock_health_service.attempt_recovery = AsyncMock(
-            side_effect=Exception("boom")
-        )
+        mock_health_service.attempt_recovery = AsyncMock(side_effect=Exception("boom"))
         mock_get_health_service.return_value = mock_health_service
         response = client.post("/health/component/database/recover")
         assert response.status_code == 500
@@ -522,9 +502,7 @@ class TestHealthEndpoint:
 
     @patch("resync.api.health.get_health_check_service", new_callable=AsyncMock)
     @patch("resync.api.health.runtime_metrics")
-    def test_health_summary_with_auto_enable(
-        self, mock_metrics, mock_get_health_service, client
-    ):
+    def test_health_summary_with_auto_enable(self, mock_metrics, mock_get_health_service, client):
         """Test /health endpoint with auto_enable flag."""
         # Arrange
         mock_health_service = MagicMock()
@@ -537,9 +515,7 @@ class TestHealthEndpoint:
             alerts=[],
             performance_metrics={},
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/?auto_enable=true")
@@ -570,9 +546,7 @@ class TestHealthEndpoint:
                 )
             },
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/core")
@@ -594,9 +568,7 @@ class TestHealthEndpoint:
             timestamp=datetime.now(),
             components={},  # No redis component
         )
-        mock_health_service.perform_comprehensive_health_check.return_value = (
-            mock_result
-        )
+        mock_health_service.perform_comprehensive_health_check.return_value = mock_result
 
         # Act
         response = client.get("/health/redis")
@@ -633,9 +605,7 @@ class TestHealthEndpoint:
 
     @patch("resync.api.health.get_health_check_service", new_callable=AsyncMock)
     @patch("resync.api.health.runtime_metrics")
-    def test_health_check_metrics_failure(
-        self, mock_metrics, mock_get_health_service, client
-    ):
+    def test_health_check_metrics_failure(self, mock_metrics, mock_get_health_service, client):
         """Test that the health check handles metrics failures gracefully."""
         # Arrange
         mock_get_health_service.side_effect = Exception("Service not available")

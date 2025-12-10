@@ -77,13 +77,9 @@ class SecureAuthenticator:
         expected_password_hash = self._hash_credential(settings.admin_password)
 
         # Constant-time comparison using secrets.compare_digest
-        username_valid = secrets.compare_digest(
-            provided_username_hash, expected_username_hash
-        )
+        username_valid = secrets.compare_digest(provided_username_hash, expected_username_hash)
 
-        password_valid = secrets.compare_digest(
-            provided_password_hash, expected_password_hash
-        )
+        password_valid = secrets.compare_digest(provided_password_hash, expected_password_hash)
 
         # Combine results without short-circuiting
         credentials_valid = username_valid and password_valid
@@ -157,9 +153,7 @@ class SecureAuthenticator:
         cutoff = now - self._lockout_duration
 
         # Count recent attempts
-        recent_attempts = [
-            attempt for attempt in self._failed_attempts[ip] if attempt > cutoff
-        ]
+        recent_attempts = [attempt for attempt in self._failed_attempts[ip] if attempt > cutoff]
 
         return len(recent_attempts) >= self._max_attempts
 
@@ -188,11 +182,7 @@ def verify_admin_credentials(
     """
     try:
         # 1) Try Authorization header (Bearer)
-        token = (
-            credentials.credentials
-            if (credentials and credentials.credentials)
-            else None
-        )
+        token = credentials.credentials if (credentials and credentials.credentials) else None
 
         # 2) Fallback: HttpOnly cookie "access_token"
         if not token:
@@ -232,12 +222,10 @@ def verify_admin_credentials(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from None
 
 
-def create_access_token(
-    data: dict[str, Any], expires_delta: timedelta | None = None
-) -> str:
+def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
     """
     Create a new JWT access token.
     """
@@ -248,8 +236,7 @@ def create_access_token(
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
 async def authenticate_admin(username: str, password: str) -> bool:

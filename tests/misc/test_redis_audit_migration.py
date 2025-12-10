@@ -16,11 +16,11 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from resync.core.audit_db import (
+    USE_REDIS_STREAMS,
     add_audit_record,
     get_pending_audits,
-    update_audit_status,
     is_memory_approved,
-    USE_REDIS_STREAMS
+    update_audit_status,
 )
 
 
@@ -35,7 +35,7 @@ def test_audit_operations():
         "user_query": "What is the capital of France?",
         "agent_response": "The capital of France is Paris.",
         "ia_audit_reason": "Response contains factual information",
-        "ia_audit_confidence": 0.95
+        "ia_audit_confidence": 0.95,
     }
 
     print("\n1. Testing add_audit_record...")
@@ -73,7 +73,7 @@ def test_audit_operations():
     else:
         print("   [ERROR] Redis Streams audit migration has issues")
 
-    print(f"\n5. Final status check:")
+    print("\n5. Final status check:")
     final_audits = get_pending_audits()
     print(f"   Remaining pending audits: {len(final_audits)}")
 

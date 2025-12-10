@@ -53,11 +53,7 @@ def parse_cors_origins(cors_origins_setting: str | list[str] | None) -> list[str
 
     if isinstance(cors_origins_setting, str):
         # Parse comma-separated string
-        origins = [
-            origin.strip()
-            for origin in cors_origins_setting.split(",")
-            if origin.strip()
-        ]
+        origins = [origin.strip() for origin in cors_origins_setting.split(",") if origin.strip()]
     elif isinstance(cors_origins_setting, list):
         # Use as-is if it's already a list
         origins = cors_origins_setting
@@ -106,14 +102,10 @@ def configure_cors(app: FastAPI, settings_module: object | None = None) -> None:
                 environment=Environment(cors_environment),
                 allowed_origins=valid_origins,
                 allow_all_origins=False,
-                allow_credentials=getattr(
-                    settings_obj, "CORS_ALLOW_CREDENTIALS", False
-                ),
+                allow_credentials=getattr(settings_obj, "CORS_ALLOW_CREDENTIALS", False),
                 log_violations=getattr(settings_obj, "CORS_LOG_VIOLATIONS", True),
             )
-            add_cors_middleware(
-                app=app, environment=cors_environment, custom_policy=custom_policy
-            )
+            add_cors_middleware(app=app, environment=cors_environment, custom_policy=custom_policy)
         else:
             add_cors_middleware(app=app, environment=cors_environment)
 

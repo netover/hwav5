@@ -17,8 +17,8 @@ Note:
     observability or connect external tools to the Prometheus endpoint.
 """
 
-
 import asyncio
+import contextlib
 import json
 import time
 from collections import defaultdict, deque
@@ -72,9 +72,7 @@ class MetricDefinition:
         """Get Prometheus-compatible metric name."""
         return self.name.replace(".", "_").replace("-", "_")
 
-    def to_prometheus_format(
-        self, value: int | float, labels: dict[str, str] | None = None
-    ) -> str:
+    def to_prometheus_format(self, value: int | float, labels: dict[str, str] | None = None) -> str:
         """Convert metric to Prometheus format."""
         prom_name = self.get_prometheus_name()
         label_str = ""
@@ -330,10 +328,8 @@ class MetricsCollector:
         for task in [self._collection_task, self._http_task]:
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         logger.info("Metrics collector stopped")
 
@@ -342,9 +338,7 @@ class MetricsCollector:
         self.http_app = web.Application()
 
         # Add metrics endpoint
-        self.http_app.router.add_get(
-            self.config.prometheus_path, self._metrics_endpoint
-        )
+        self.http_app.router.add_get(self.config.prometheus_path, self._metrics_endpoint)
 
         # Add health endpoint
         self.http_app.router.add_get("/health", self._health_endpoint)
@@ -355,9 +349,7 @@ class MetricsCollector:
         site = web.TCPSite(self.http_runner, "0.0.0.0", self.config.prometheus_port)
         await site.start()
 
-        logger.info(
-            f"Metrics HTTP server started on port {self.config.prometheus_port}"
-        )
+        logger.info(f"Metrics HTTP server started on port {self.config.prometheus_port}")
 
     async def _load_alert_rules(self) -> None:
         """Load alerting rules."""
@@ -508,9 +500,7 @@ class MetricsCollector:
             output_lines.append("")
 
         response_text = "\n".join(output_lines)
-        return web.Response(
-            text=response_text, content_type="text/plain; charset=utf-8"
-        )
+        return web.Response(text=response_text, content_type="text/plain; charset=utf-8")
 
     async def _health_endpoint(self, request: web.Request) -> web.Response:
         """Health check endpoint."""
@@ -591,10 +581,7 @@ class MetricsCollector:
 
                 # Clean old metrics from buffer
                 cutoff_time = time.time() - (self.config.metrics_retention_hours * 3600)
-                while (
-                    self.metrics_buffer
-                    and self.metrics_buffer[0].timestamp < cutoff_time
-                ):
+                while self.metrics_buffer and self.metrics_buffer[0].timestamp < cutoff_time:
                     self.metrics_buffer.popleft()
 
             except asyncio.CancelledError:

@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 @agents_router.get("/all")
-async def list_all_agents(request: Request, agent_manager=agent_manager_dependency) -> list[dict[str, Any]]:
+async def list_all_agents(
+    request: Request, agent_manager=agent_manager_dependency
+) -> list[dict[str, Any]]:
     """
     Lists the configuration of all available agents.
     """
@@ -69,4 +71,4 @@ async def get_agent_details(
         raise
     except Exception as e:
         logger.error(f"Error getting agent details for {agent_id}: {e}")
-        raise NotFoundError(f"Agent with ID '{agent_id}' not found.")
+        raise NotFoundError(f"Agent with ID '{agent_id}' not found.") from None

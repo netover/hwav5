@@ -35,13 +35,23 @@ class ContextStore:
         """Close the store."""
         self._initialized = False
 
-    async def add_conversation(self, session_id: str, role: str, content: str,
-                              user_id: str | None = None, metadata: dict | None = None,
-                              embedding_id: str | None = None) -> Conversation:
+    async def add_conversation(
+        self,
+        session_id: str,
+        role: str,
+        content: str,
+        user_id: str | None = None,
+        metadata: dict | None = None,
+        embedding_id: str | None = None,
+    ) -> Conversation:
         """Add a conversation message."""
         return await self._store.add_conversation(
-            session_id=session_id, role=role, content=content,
-            user_id=user_id, metadata=metadata, embedding_id=embedding_id
+            session_id=session_id,
+            role=role,
+            content=content,
+            user_id=user_id,
+            metadata=metadata,
+            embedding_id=embedding_id,
         )
 
     # Sync wrapper for backward compatibility
@@ -53,13 +63,25 @@ class ContextStore:
         """Get conversation history for a session."""
         return await self._store.conversations.get_session_history(session_id, limit)
 
-    async def add_content(self, content_type: str, content: str, title: str | None = None,
-                         source: str | None = None, summary: str | None = None,
-                         metadata: dict | None = None, embedding_id: str | None = None) -> ContextContent:
+    async def add_content(
+        self,
+        content_type: str,
+        content: str,
+        title: str | None = None,
+        source: str | None = None,
+        summary: str | None = None,
+        metadata: dict | None = None,
+        embedding_id: str | None = None,
+    ) -> ContextContent:
         """Add context content."""
         return await self._store.content.add_content(
-            content_type=content_type, content=content, title=title,
-            source=source, summary=summary, metadata=metadata, embedding_id=embedding_id
+            content_type=content_type,
+            content=content,
+            title=title,
+            source=source,
+            summary=summary,
+            metadata=metadata,
+            embedding_id=embedding_id,
         )
 
     def add_content_sync(self, *args, **kwargs) -> None:
@@ -116,19 +138,18 @@ class ContextStore:
         """Add observations to a session."""
         for obs in observations:
             await self.add_content(
-                content_type="observation",
-                content=obs,
-                metadata={"session_id": session_id}
+                content_type="observation", content=obs, metadata={"session_id": session_id}
             )
 
-    async def add_solution_feedback(self, session_id: str, problem: str,
-                                   solution: str, was_helpful: bool) -> None:
+    async def add_solution_feedback(
+        self, session_id: str, problem: str, solution: str, was_helpful: bool
+    ) -> None:
         """Add solution feedback."""
         await self.add_content(
             content_type="solution",
             content=solution,
             summary=problem,
-            metadata={"session_id": session_id, "was_helpful": was_helpful}
+            metadata={"session_id": session_id, "was_helpful": was_helpful},
         )
 
     def add_solution_feedback_sync(self, *args, **kwargs) -> None:
@@ -146,12 +167,14 @@ class ContextStore:
 
 _instance: ContextStore | None = None
 
+
 def get_context_store() -> ContextStore:
     """Get the singleton ContextStore instance."""
     global _instance
     if _instance is None:
         _instance = ContextStore()
     return _instance
+
 
 async def initialize_context_store() -> ContextStore:
     """Initialize and return the ContextStore."""

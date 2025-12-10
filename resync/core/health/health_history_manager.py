@@ -5,7 +5,6 @@ This module provides comprehensive health history management functionality
 including storage, cleanup, and retrieval of health check history data.
 """
 
-
 import asyncio
 from datetime import datetime, timedelta
 from typing import Any
@@ -114,16 +113,12 @@ class HealthHistoryManager:
         async with self._cleanup_lock:
             try:
                 current_size = len(self.health_history)
-                cleanup_threshold = int(
-                    self.max_history_entries * self.history_cleanup_threshold
-                )
+                int(self.max_history_entries * self.history_cleanup_threshold)
 
                 # Check if cleanup is needed based on size
                 if current_size > self.max_history_entries:
                     entries_to_remove = (
-                        current_size
-                        - self.max_history_entries
-                        + self.cleanup_batch_size
+                        current_size - self.max_history_entries + self.cleanup_batch_size
                     )
                     self.health_history = self.health_history[entries_to_remove:]
                     logger.debug(
@@ -133,14 +128,10 @@ class HealthHistoryManager:
                     )
 
                 # Check if cleanup is needed based on age
-                cutoff_date = datetime.now() - timedelta(
-                    days=self.history_retention_days
-                )
+                cutoff_date = datetime.now() - timedelta(days=self.history_retention_days)
                 original_size = len(self.health_history)
                 self.health_history = [
-                    entry
-                    for entry in self.health_history
-                    if entry.timestamp >= cutoff_date
+                    entry for entry in self.health_history if entry.timestamp >= cutoff_date
                 ]
                 removed_by_age = original_size - len(self.health_history)
                 if removed_by_age > 0:
@@ -152,10 +143,7 @@ class HealthHistoryManager:
 
                 # Ensure we don't go below minimum required entries
                 min_entries = max(10, self.cleanup_batch_size)
-                if (
-                    len(self.health_history) < min_entries
-                    and original_size >= min_entries
-                ):
+                if len(self.health_history) < min_entries and original_size >= min_entries:
                     # Keep at least some recent history
                     self.health_history = self.health_history[-min_entries:]
 
@@ -247,9 +235,7 @@ class HealthHistoryManager:
         # Filter by component if specified
         if component_filter:
             filtered_history = [
-                entry
-                for entry in filtered_history
-                if component_filter in entry.component_changes
+                entry for entry in filtered_history if component_filter in entry.component_changes
             ]
 
         # Apply entry limit if specified

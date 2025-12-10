@@ -229,9 +229,7 @@ class TestHealthServiceMemoryBounds:
         """Helper to create history entry."""
         from resync.core.health_models import HealthStatusHistory
 
-        return HealthStatusHistory(
-            timestamp=result.timestamp, overall_status=result.overall_status
-        )
+        return HealthStatusHistory(timestamp=result.timestamp, overall_status=result.overall_status)
 
     @pytest.mark.asyncio
     async def test_memory_usage_alert_threshold(self, service):

@@ -58,6 +58,7 @@ class ErrorCode(str, Enum):
 
 class ErrorSeverity(str, Enum):
     """Severity levels for errors."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"

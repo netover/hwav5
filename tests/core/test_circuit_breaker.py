@@ -17,7 +17,9 @@ class TestAdaptiveCircuitBreaker:
         # Create breaker synchronously for testing
         from resync.core.resilience import CircuitBreaker, CircuitBreakerConfig
 
-        config = CircuitBreakerConfig(name="test_operation", failure_threshold=1, recovery_timeout=1)
+        config = CircuitBreakerConfig(
+            name="test_operation", failure_threshold=1, recovery_timeout=1
+        )
         breaker = CircuitBreaker(config)
         manager._breakers["test_operation"] = breaker
 
@@ -98,8 +100,12 @@ class TestAdaptiveCircuitBreaker:
         # Create multiple breakers synchronously
         from resync.core.resilience import CircuitBreaker, CircuitBreakerConfig
 
-        op1_breaker = CircuitBreaker(CircuitBreakerConfig(name="op1", failure_threshold=1, recovery_timeout=1))
-        op2_breaker = CircuitBreaker(CircuitBreakerConfig(name="op2", failure_threshold=1, recovery_timeout=1))
+        op1_breaker = CircuitBreaker(
+            CircuitBreakerConfig(name="op1", failure_threshold=1, recovery_timeout=1)
+        )
+        op2_breaker = CircuitBreaker(
+            CircuitBreakerConfig(name="op2", failure_threshold=1, recovery_timeout=1)
+        )
 
         manager._breakers["op1"] = op1_breaker
         manager._breakers["op2"] = op2_breaker

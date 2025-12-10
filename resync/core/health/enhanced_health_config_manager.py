@@ -5,7 +5,6 @@ This module provides enhanced configuration management for health checks,
 integrating with the new health checker architecture.
 """
 
-
 from typing import Any
 
 import structlog
@@ -74,9 +73,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
 
         return self._checker_factory.validate_all_checkers()
 
-    def get_component_thresholds_enhanced(
-        self, component_name: str
-    ) -> dict[str, float]:
+    def get_component_thresholds_enhanced(self, component_name: str) -> dict[str, float]:
         """
         Get enhanced threshold values for a specific component.
 
@@ -174,9 +171,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
                 self._checker_factory.get_enabled_health_checker_names()
             )
             for name in enhanced_summary["enabled_checkers"]:
-                enhanced_summary["checker_configs"][name] = (
-                    self.get_checker_specific_config(name)
-                )
+                enhanced_summary["checker_configs"][name] = self.get_checker_specific_config(name)
 
         return enhanced_summary
 
@@ -202,14 +197,12 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
             for name in self._checker_factory.get_enabled_health_checker_names():
                 checker = self._checker_factory.get_health_checker(name)
                 if checker:
-                    config = checker.get_component_config()
+                    checker.get_component_config()
 
                     # Recommend interval adjustments based on component type
                     if name in ["memory", "cpu"]:
                         # System resources can be checked less frequently
-                        recommendations["interval_optimizations"][name] = (
-                            health_check_interval * 2
-                        )
+                        recommendations["interval_optimizations"][name] = health_check_interval * 2
                     elif name in ["database", "redis"]:
                         # Critical components should be checked more frequently
                         recommendations["interval_optimizations"][name] = max(
@@ -217,8 +210,6 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
                         )
                     else:
                         # Default interval
-                        recommendations["interval_optimizations"][
-                            name
-                        ] = health_check_interval
+                        recommendations["interval_optimizations"][name] = health_check_interval
 
         return recommendations

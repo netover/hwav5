@@ -5,13 +5,14 @@ This module tests the log_audit_event function and its integration with the audi
 """
 
 import json
-import tempfile
 import os
+import tempfile
 from unittest.mock import patch
+
 import pytest
 
-from resync.core.logger import log_audit_event, _sanitize_audit_details
 from resync.core.audit_log import AuditLogManager, get_audit_log_manager
+from resync.core.logger import _sanitize_audit_details, log_audit_event
 
 
 def test_log_audit_event_functionality():
@@ -25,7 +26,7 @@ def test_log_audit_event_functionality():
         manager = AuditLogManager(db_path=temp_db_path)
 
         # Replace the global instance with our test instance
-        original_manager = get_audit_log_manager()
+        get_audit_log_manager()
         with patch("resync.core.audit_log._audit_log_manager", manager):
             # Test the log_audit_event function
             log_audit_event(
@@ -139,9 +140,7 @@ def test_audit_log_manager_query_filters():
         assert warning_logs[0].severity == "WARNING"
 
         # Test multiple filters
-        action1_error_logs = manager.query_audit_logs(
-            action="action1", severity="ERROR"
-        )
+        action1_error_logs = manager.query_audit_logs(action="action1", severity="ERROR")
         assert len(action1_error_logs) == 1
         assert action1_error_logs[0].action == "action1"
         assert action1_error_logs[0].severity == "ERROR"
@@ -215,9 +214,7 @@ def test_sanitize_audit_details():
     assert sanitized["normal_field"] == "normal_value"
     assert sanitized["safe_field"] == "safe_value"
     assert sanitized["nested"]["safe_nested"] == "safe_value"
-    assert (
-        sanitized["partially_sensitive_field"] == "password_value"
-    )  # Should not be redacted
+    assert sanitized["partially_sensitive_field"] == "password_value"  # Should not be redacted
 
     # Verify sensitive fields are redacted
     assert sanitized["password"] == "REDACTED"

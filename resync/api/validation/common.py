@@ -86,46 +86,64 @@ class StringConstraints:
     """Common string validation constraints."""
 
     # Agent IDs: alphanumeric, underscore, hyphen (3-50 chars)
-    AGENT_ID = Annotated[str, PydanticStringConstraints(
-        pattern=r"^[a-zA-Z0-9_-]+$", min_length=3, max_length=50, strip_whitespace=True
-    )]
+    AGENT_ID = Annotated[
+        str,
+        PydanticStringConstraints(
+            pattern=r"^[a-zA-Z0-9_-]+$", min_length=3, max_length=50, strip_whitespace=True
+        ),
+    ]
 
     # Safe text: alphanumeric, spaces, common punctuation
-    SAFE_TEXT = Annotated[str, PydanticStringConstraints(
-        pattern=r"^[a-zA-Z0-9\s.,!?'\"()\-:;]*$",
-        min_length=1,
-        max_length=1000,
-        strip_whitespace=True,
-    )]
+    SAFE_TEXT = Annotated[
+        str,
+        PydanticStringConstraints(
+            pattern=r"^[a-zA-Z0-9\s.,!?'\"()\-:;]*$",
+            min_length=1,
+            max_length=1000,
+            strip_whitespace=True,
+        ),
+    ]
 
     # Role/Goal text: more permissive but still safe
-    ROLE_TEXT = Annotated[str, PydanticStringConstraints(
-        pattern=r"^[a-zA-Z0-9\s.,!?'\"()\-:;/]+$",
-        min_length=5,
-        max_length=500,
-        strip_whitespace=True,
-    )]
+    ROLE_TEXT = Annotated[
+        str,
+        PydanticStringConstraints(
+            pattern=r"^[a-zA-Z0-9\s.,!?'\"()\-:;/]+$",
+            min_length=5,
+            max_length=500,
+            strip_whitespace=True,
+        ),
+    ]
 
     # Model names: alphanumeric and common separators
-    MODEL_NAME = Annotated[str, PydanticStringConstraints(
-        pattern=r"^[a-zA-Z0-9\-:_/]+$",
-        min_length=3,
-        max_length=100,
-        strip_whitespace=True,
-    )]
+    MODEL_NAME = Annotated[
+        str,
+        PydanticStringConstraints(
+            pattern=r"^[a-zA-Z0-9\-:_/]+$",
+            min_length=3,
+            max_length=100,
+            strip_whitespace=True,
+        ),
+    ]
 
     # Tool names: alphanumeric and underscore
-    TOOL_NAME = Annotated[str, PydanticStringConstraints(
-        pattern=r"^[a-zA-Z0-9_]+$", min_length=3, max_length=50, strip_whitespace=True
-    )]
+    TOOL_NAME = Annotated[
+        str,
+        PydanticStringConstraints(
+            pattern=r"^[a-zA-Z0-9_]+$", min_length=3, max_length=50, strip_whitespace=True
+        ),
+    ]
 
     # File names: alphanumeric, underscore, hyphen, dot
-    FILENAME = Annotated[str, PydanticStringConstraints(
-        pattern=r"^[a-zA-Z0-9_.\-]+$",
-        min_length=1,
-        max_length=255,
-        strip_whitespace=True,
-    )]
+    FILENAME = Annotated[
+        str,
+        PydanticStringConstraints(
+            pattern=r"^[a-zA-Z0-9_.\-]+$",
+            min_length=1,
+            max_length=255,
+            strip_whitespace=True,
+        ),
+    ]
 
 
 class UUIDValidator:
@@ -138,7 +156,7 @@ class UUIDValidator:
             uuid.UUID(uuid_str)
             return uuid_str
         except ValueError:
-            raise ValueError(f"Invalid UUID format: {uuid_str}")
+            raise ValueError(f"Invalid UUID format: {uuid_str}") from None
 
     @staticmethod
     def validate_uuid_list(uuid_list: list[str]) -> list[str]:
@@ -149,7 +167,7 @@ class UUIDValidator:
                 uuid.UUID(uuid_str)
                 validated_uuids.append(uuid_str)
             except ValueError:
-                raise ValueError(f"Invalid UUID in list: {uuid_str}")
+                raise ValueError(f"Invalid UUID in list: {uuid_str}") from None
         return validated_uuids
 
 
@@ -189,9 +207,7 @@ class ValidationPatterns:
     EMAIL_PATTERN = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 
     # URL pattern for API endpoints
-    API_ENDPOINT_PATTERN = re.compile(
-        r"^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/[a-zA-Z0-9._-]*)*$"
-    )
+    API_ENDPOINT_PATTERN = re.compile(r"^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/[a-zA-Z0-9._-]*)*$")
 
     # File extension pattern
     FILE_EXTENSION_PATTERN = re.compile(r"^\.[a-zA-Z0-9]{1,10}$")
@@ -209,9 +225,7 @@ class ValidationPatterns:
     COMMAND_INJECTION_PATTERN = re.compile(r"(;|\||&&|`|\$|\(|\)|<|>|\\n|\\r|\\t)")
 
     # Path traversal pattern
-    PATH_TRAVERSAL_PATTERN = re.compile(
-        r"(\.\./|\.\.\\|%2e%2e%2f|%2e%2e%5c|%252e%252e%252f)"
-    )
+    PATH_TRAVERSAL_PATTERN = re.compile(r"(\.\./|\.\.\\|%2e%2e%2f|%2e%2e%5c|%252e%252e%252f)")
 
     # UUID pattern
     UUID_PATTERN = re.compile(
@@ -236,9 +250,7 @@ class ValidationSeverity(str, Enum):
     INFO = "info"
 
 
-def sanitize_input(
-    text: str, level: SanitizationLevel = SanitizationLevel.MODERATE
-) -> str:
+def sanitize_input(text: str, level: SanitizationLevel = SanitizationLevel.MODERATE) -> str:
     """
     Sanitize input text to prevent XSS and injection attacks.
 
@@ -279,9 +291,7 @@ def sanitize_input(
         text = ValidationPatterns.SCRIPT_PATTERN.sub("", text)
 
     # Remove excessive whitespace
-    text = re.sub(r"\s+", " ", text).strip()
-
-    return text
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def validate_string_length(text: str, min_length: int, max_length: int) -> str:
@@ -345,9 +355,7 @@ def validate_numeric_range(
     return value
 
 
-def validate_pattern(
-    text: str, pattern: str | Pattern, message: str | None = None
-) -> str:
+def validate_pattern(text: str, pattern: str | Pattern, message: str | None = None) -> str:
     """
     Validate text against a regex pattern.
 
@@ -373,9 +381,7 @@ def validate_pattern(
     return text
 
 
-def validate_enum_value(
-    value: str, enum_class: type, case_sensitive: bool = True
-) -> str:
+def validate_enum_value(value: str, enum_class: type, case_sensitive: bool = True) -> str:
     """
     Validate value against enum members.
 

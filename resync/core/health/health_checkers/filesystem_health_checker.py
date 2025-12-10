@@ -4,7 +4,6 @@ File System Health Checker
 This module provides health checking functionality for file system and disk space.
 """
 
-
 import time
 from datetime import datetime
 from typing import Any

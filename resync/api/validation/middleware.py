@@ -113,10 +113,7 @@ class ValidationMiddleware:
             return True
 
         # Skip for OPTIONS requests (CORS preflight)
-        if request.method == "OPTIONS":
-            return True
-
-        return False
+        return request.method == "OPTIONS"
 
     def _get_validation_model(self, request: Request) -> type[BaseModel] | None:
         """
@@ -236,12 +233,12 @@ class ValidationMiddleware:
             return validated_model.model_dump()
 
         except json.JSONDecodeError as e:
-            raise ValidationError.from_exception_data("body", [str(e)])
+            raise ValidationError.from_exception_data("body", [str(e)]) from e
         except ValidationError:
             raise
         except Exception as e:
             logger.error("body_validation_error", error=str(e), exc_info=True)
-            raise ValidationError.from_exception_data("body", [str(e)])
+            raise ValidationError.from_exception_data("body", [str(e)]) from e
 
     def _validate_query_params(
         self, request: Request, validation_model: type[BaseModel]
@@ -286,14 +283,10 @@ class ValidationMiddleware:
         except ValidationError:
             raise
         except Exception as e:
-            logger.error(
-                "query_parameter_validation_error", error=str(e), exc_info=True
-            )
-            raise ValidationError.from_exception_data("query_params", [str(e)])
+            logger.error("query_parameter_validation_error", error=str(e), exc_info=True)
+            raise ValidationError.from_exception_data("query_params", [str(e)]) from e
 
-    def _apply_custom_validators(
-        self, data: dict[str, Any], request: Request
-    ) -> dict[str, Any]:
+    def _apply_custom_validators(self, data: dict[str, Any], request: Request) -> dict[str, Any]:
         """
         Apply custom validators to the data.
 
@@ -388,9 +381,7 @@ class ValidationMiddleware:
         # Return standard error response
         return JSONResponse(status_code=422, content=error_response.dict())
 
-    async def _handle_internal_error(
-        self, request: Request, error: Exception
-    ) -> JSONResponse:
+    async def _handle_internal_error(self, request: Request, error: Exception) -> JSONResponse:
         """
         Handle internal validation errors.
 
@@ -406,9 +397,7 @@ class ValidationMiddleware:
         error_response = ValidationErrorResponse(
             error="Internal validation error",
             message="An internal error occurred during validation.",
-            details=[
-                {"message": str(error), "severity": ValidationSeverity.ERROR.value}
-            ],
+            details=[{"message": str(error), "severity": ValidationSeverity.ERROR.value}],
             severity=ValidationSeverity.ERROR,
             timestamp=datetime.utcnow(),
             path=request.url.path,
@@ -495,15 +484,12 @@ def validate_json_body(request: Request, model: type[BaseModel]) -> dict[str, An
     """
     try:
         body = request.body()
-        if isinstance(body, bytes):
-            data = json.loads(body.decode("utf-8"))
-        else:
-            data = json.loads(body)
+        data = json.loads(body.decode("utf-8")) if isinstance(body, bytes) else json.loads(body)
 
         validated_model = model(**data)
         return validated_model.model_dump()
     except json.JSONDecodeError as e:
-        raise ValidationError.from_exception_data("body", [str(e)])
+        raise ValidationError.from_exception_data("body", [str(e)]) from e
     except ValidationError:
         raise
 

@@ -4,7 +4,6 @@ Cache Transaction Mixin.
 Provides transaction and rollback functionality for cache implementations.
 """
 
-
 import logging
 from typing import Any
 
@@ -30,11 +29,13 @@ class CacheTransactionMixin:
     def _log_operation(self, operation: str, key: str, old_value: Any = None):
         """Log an operation for potential rollback."""
         if self._in_transaction:
-            self._transaction_log.append({
-                "operation": operation,
-                "key": key,
-                "old_value": old_value,
-            })
+            self._transaction_log.append(
+                {
+                    "operation": operation,
+                    "key": key,
+                    "old_value": old_value,
+                }
+            )
 
     async def commit_transaction(self):
         """Commit the current transaction."""
@@ -42,10 +43,7 @@ class CacheTransactionMixin:
         self._in_transaction = False
         logger.debug("Cache transaction committed")
 
-    async def rollback_transaction(
-        self,
-        operations: list[dict[str, Any]] | None = None
-    ) -> bool:
+    async def rollback_transaction(self, operations: list[dict[str, Any]] | None = None) -> bool:
         """
         Rollback operations from the transaction log.
 
@@ -72,9 +70,8 @@ class CacheTransactionMixin:
                         await self.delete(key)
                     else:
                         await self.set(key, old_value)
-                elif operation == "delete":
-                    if old_value is not None:
-                        await self.set(key, old_value)
+                elif operation == "delete" and old_value is not None:
+                    await self.set(key, old_value)
 
             logger.info(f"Rolled back {len(ops_to_rollback)} operations")
 

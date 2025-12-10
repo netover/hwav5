@@ -22,10 +22,11 @@ def get_system_metrics() -> dict:
     """Get basic system metrics."""
     try:
         import psutil
+
         return {
             "cpu_percent": psutil.cpu_percent(),
             "memory_percent": psutil.virtual_memory().percent,
-            "disk_percent": psutil.disk_usage('/').percent,
+            "disk_percent": psutil.disk_usage("/").percent,
         }
     except ImportError:
         return {
@@ -36,9 +37,7 @@ def get_system_metrics() -> dict:
 
 
 @router.get("/status", response_model=SystemStatusResponse)
-async def get_system_status(
-    logger_instance = Depends(get_logger)
-):
+async def get_system_status(logger_instance=Depends(get_logger)):
     """Get system status including workstations and jobs"""
     try:
         # Get status from store (production: use Redis/database)
@@ -46,7 +45,7 @@ async def get_system_status(
         jobs = _status_store.get("jobs", [])
 
         # Add system info
-        system_info = {
+        {
             "platform": platform.system(),
             "python_version": platform.python_version(),
             "hostname": platform.node(),
@@ -56,29 +55,21 @@ async def get_system_status(
             "system_status_retrieved",
             user_id="system",
             workstation_count=len(workstations),
-            job_count=len(jobs)
+            job_count=len(jobs),
         )
 
         return SystemStatusResponse(
-            workstations=workstations,
-            jobs=jobs,
-            timestamp=datetime.now().isoformat()
+            workstations=workstations, jobs=jobs, timestamp=datetime.now().isoformat()
         )
 
     except Exception as e:
         logger_instance.error("system_status_retrieval_error", error=str(e))
-        return SystemStatusResponse(
-            workstations=[],
-            jobs=[],
-            timestamp=datetime.now().isoformat()
-        )
+        return SystemStatusResponse(workstations=[], jobs=[], timestamp=datetime.now().isoformat())
 
 
 @router.post("/status/workstation")
 async def register_workstation(
-    name: str,
-    status: str = "online",
-    logger_instance = Depends(get_logger)
+    name: str, status: str = "online", logger_instance=Depends(get_logger)
 ):
     """Register or update a workstation status."""
     workstation = {
@@ -88,10 +79,7 @@ async def register_workstation(
     }
 
     # Update or add workstation
-    existing = next(
-        (w for w in _status_store["workstations"] if w["name"] == name),
-        None
-    )
+    existing = next((w for w in _status_store["workstations"] if w["name"] == name), None)
     if existing:
         existing.update(workstation)
     else:

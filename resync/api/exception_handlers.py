@@ -4,7 +4,6 @@ Este módulo implementa handlers para todas as exceções da aplicação,
 convertendo-as em respostas HTTP padronizadas seguindo RFC 7807.
 """
 
-
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -38,9 +37,7 @@ logger = get_logger(__name__)
 # ============================================================================
 
 
-async def base_app_exception_handler(
-    request: Request, exc: BaseAppException
-) -> JSONResponse:
+async def base_app_exception_handler(request: Request, exc: BaseAppException) -> JSONResponse:
     """Handler para exceções da aplicação (BaseAppException).
 
     Args:
@@ -64,10 +61,10 @@ async def base_app_exception_handler(
     # Criar problem detail
     problem = create_problem_detail(
         type_uri=f"https://api.example.com/errors/{exc.error_code.value.lower()}",
-        title=exc.error_code.name.replace('_', ' ').title(),
+        title=exc.error_code.name.replace("_", " ").title(),
         status=exc.status_code,
         detail=exc.message,
-        instance=str(request.url.path)
+        instance=str(request.url.path),
     )
 
     # Adicionar headers específicos
@@ -88,9 +85,7 @@ async def base_app_exception_handler(
     )
 
 
-async def resync_exception_handler(
-    request: Request, exc: ResyncException
-) -> JSONResponse:
+async def resync_exception_handler(request: Request, exc: ResyncException) -> JSONResponse:
     """Handler para exceções ResyncException.
 
     Args:
@@ -129,10 +124,10 @@ async def resync_exception_handler(
     # Criar problem detail
     problem = create_problem_detail(
         type_uri=f"https://api.example.com/errors/{exc.error_code.lower()}",
-        title=exc.error_code.replace('_', ' ').title(),
+        title=exc.error_code.replace("_", " ").title(),
         status=status_code,
         detail=exc.user_friendly_message or exc.message,
-        instance=str(request.url.path)
+        instance=str(request.url.path),
     )
 
     headers = {}
@@ -202,9 +197,7 @@ async def validation_exception_handler(
     )
 
 
-async def http_exception_handler(
-    request: Request, exc: StarletteHTTPException
-) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     """Handler para exceções HTTP do Starlette.
 
     Args:
@@ -227,29 +220,19 @@ async def http_exception_handler(
 
     # Mapear para nossa exceção
     if exc.status_code == 404:
-        app_exc = ResourceNotFoundError(
-            message=str(exc.detail), correlation_id=correlation_id
-        )
+        ResourceNotFoundError(message=str(exc.detail), correlation_id=correlation_id)
     elif exc.status_code == 401:
-        app_exc = AuthenticationError(
-            message=str(exc.detail), correlation_id=correlation_id
-        )
+        AuthenticationError(message=str(exc.detail), correlation_id=correlation_id)
     elif exc.status_code == 403:
-        app_exc = AuthorizationError(
-            message=str(exc.detail), correlation_id=correlation_id
-        )
+        AuthorizationError(message=str(exc.detail), correlation_id=correlation_id)
     elif exc.status_code == 409:
-        app_exc = ResourceConflictError(
-            message=str(exc.detail), correlation_id=correlation_id
-        )
+        ResourceConflictError(message=str(exc.detail), correlation_id=correlation_id)
     elif exc.status_code == 429:
-        app_exc = RateLimitError(message=str(exc.detail), correlation_id=correlation_id)
+        RateLimitError(message=str(exc.detail), correlation_id=correlation_id)
     elif exc.status_code >= 500:
-        app_exc = InternalError(message=str(exc.detail), correlation_id=correlation_id)
+        InternalError(message=str(exc.detail), correlation_id=correlation_id)
     else:
-        app_exc = ValidationError(
-            message=str(exc.detail), correlation_id=correlation_id
-        )
+        ValidationError(message=str(exc.detail), correlation_id=correlation_id)
 
     # Criar problem detail
     problem = create_problem_detail(
@@ -257,7 +240,7 @@ async def http_exception_handler(
         title="HTTP Exception",
         status=exc.status_code,
         detail=str(exc.detail),
-        instance=str(request.url.path)
+        instance=str(request.url.path),
     )
 
     headers = {}
@@ -271,9 +254,7 @@ async def http_exception_handler(
     )
 
 
-async def unhandled_exception_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handler para exceções não tratadas.
 
     Args:
@@ -296,7 +277,7 @@ async def unhandled_exception_handler(
     )
 
     # Criar exceção interna
-    app_exc = InternalError(
+    InternalError(
         message="An unexpected error occurred",
         details={"exception_type": type(exc).__name__, "exception_message": str(exc)},
         correlation_id=correlation_id,
@@ -309,7 +290,7 @@ async def unhandled_exception_handler(
         title="Internal Server Error",
         status=500,
         detail="An unexpected error occurred",
-        instance=str(request.url.path)
+        instance=str(request.url.path),
     )
 
     headers = {}

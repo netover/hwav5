@@ -1,4 +1,3 @@
-
 """
 FastAPI Application Package
 """

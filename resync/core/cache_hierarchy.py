@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 from dataclasses import dataclass
@@ -12,9 +11,7 @@ from resync.core.metrics_compat import Counter, Histogram
 from resync.settings import settings
 
 cache_hits = Counter("cache_hierarchy_hits_total", "Total cache hits", ["cache_level"])
-cache_misses = Counter(
-    "cache_hierarchy_misses_total", "Total cache misses", ["cache_level"]
-)
+cache_misses = Counter("cache_hierarchy_misses_total", "Total cache misses", ["cache_level"])
 cache_latency = Histogram(
     "cache_hierarchy_latency_seconds", "Cache operation latency", ["cache_level"]
 )
@@ -67,9 +64,7 @@ class L1Cache:
         Initialize L1 cache.
         """
         if max_size > 0 and num_shards > max_size:
-            num_shards = (
-                1  # Use a single shard for small caches to make eviction predictable
-            )
+            num_shards = 1  # Use a single shard for small caches to make eviction predictable
         if num_shards <= 0:
             raise ValueError("num_shards must be a positive integer")
 
@@ -189,6 +184,7 @@ class CacheHierarchy:
             try:
                 import base64
                 import json
+
                 # Simple encryption using base64 encoding
                 # For production, use cryptography.fernet or similar
                 value_str = json.dumps(value, default=str)
@@ -208,6 +204,7 @@ class CacheHierarchy:
             try:
                 import base64
                 import json
+
                 encoded = value.get("data", "")
                 decoded = base64.b64decode(encoded.encode()).decode()
                 return json.loads(decoded)
@@ -260,9 +257,7 @@ class CacheHierarchy:
         cache_misses.labels(cache_level="l2").inc()
         return None
 
-    async def set(
-        self, key: str, value: Any, ttl_seconds: int | None = None
-    ) -> None:
+    async def set(self, key: str, value: Any, ttl_seconds: int | None = None) -> None:
         """
         Set value in cache hierarchy with write-through pattern.
         Applies key prefix and encryption as needed.
@@ -275,9 +270,7 @@ class CacheHierarchy:
         await self.l1_cache.set(prefixed_key, encrypted_value)
         logger.debug("cache_hierarchy_set", key=prefixed_key)
 
-    async def set_from_source(
-        self, key: str, value: Any, ttl_seconds: int | None = None
-    ) -> None:
+    async def set_from_source(self, key: str, value: Any, ttl_seconds: int | None = None) -> None:
         """
         Set value after fetching from source.
         """
@@ -341,9 +334,7 @@ def get_cache_hierarchy() -> CacheHierarchy:
             l1_max_size=settings.CACHE_HIERARCHY.L1_MAX_SIZE,
             l2_ttl_seconds=settings.CACHE_HIERARCHY.L2_TTL_SECONDS,
             l2_cleanup_interval=settings.CACHE_HIERARCHY.L2_CLEANUP_INTERVAL,
-            enable_encryption=getattr(
-                settings.CACHE_HIERARCHY, "CACHE_ENCRYPTION_ENABLED", False
-            ),
+            enable_encryption=getattr(settings.CACHE_HIERARCHY, "CACHE_ENCRYPTION_ENABLED", False),
             key_prefix=getattr(settings.CACHE_HIERARCHY, "CACHE_KEY_PREFIX", "cache:"),
         )
     return cache_hierarchy

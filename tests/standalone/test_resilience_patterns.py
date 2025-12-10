@@ -6,13 +6,18 @@ to ensure they work correctly and don't break existing functionality.
 """
 
 import asyncio
+import contextlib
 import time
 from unittest.mock import AsyncMock, patch
 
 import aiohttp
 import pytest
 
-from resync.core.resilience import CircuitBreakerManager, CircuitBreakerError
+from resync.core.resilience import (
+    CircuitBreakerError,
+    CircuitBreakerManager,
+    retry_with_backoff_async,
+)
 from resync.core.siem_integrator import SIEMConfiguration, SIEMEvent, SIEMType, SplunkConnector
 from resync.core.teams_integration import TeamsConfig, TeamsIntegration, TeamsNotification
 
@@ -24,9 +29,7 @@ class TestTeamsIntegrationResilience:
     def teams_config(self):
         """Create a test Teams configuration."""
         return TeamsConfig(
-            enabled=True,
-            webhook_url="https://outlook.office.com/webhook/test",
-            bot_name="Test Bot"
+            enabled=True, webhook_url="https://outlook.office.com/webhook/test", bot_name="Test Bot"
         )
 
     @pytest.fixture
@@ -37,30 +40,28 @@ class TestTeamsIntegrationResilience:
     @pytest.mark.asyncio
     async def test_teams_circuit_breaker_initialization(self, teams_integration):
         """Test that circuit breakers are properly initialized."""
-        assert hasattr(teams_integration, 'circuit_breaker_manager')
+        assert hasattr(teams_integration, "circuit_breaker_manager")
         assert teams_integration.circuit_breaker_manager.state("teams_webhook") == "closed"
         assert teams_integration.circuit_breaker_manager.state("teams_health_check") == "closed"
 
     @pytest.mark.asyncio
     async def test_teams_backpressure_mechanism(self, teams_integration):
         """Test that backpressure mechanism is properly initialized."""
-        assert hasattr(teams_integration, '_notification_semaphore')
+        assert hasattr(teams_integration, "_notification_semaphore")
         assert teams_integration._notification_semaphore._value == 10  # Default limit
 
     @pytest.mark.asyncio
     async def test_teams_notification_with_resilience_success(self, teams_integration):
         """Test successful notification with resilience patterns."""
         notification = TeamsNotification(
-            title="Test Notification",
-            message="This is a test message",
-            severity="info"
+            title="Test Notification", message="This is a test message", severity="info"
         )
 
         # Mock successful HTTP response
         mock_response = AsyncMock()
         mock_response.status = 200
 
-        with patch.object(teams_integration, '_get_session') as mock_get_session:
+        with patch.object(teams_integration, "_get_session") as mock_get_session:
             mock_session = AsyncMock()
             mock_session.post.return_value.__aenter__.return_value = mock_response
             mock_get_session.return_value = mock_session
@@ -73,9 +74,7 @@ class TestTeamsIntegrationResilience:
     async def test_teams_notification_retry_on_failure(self, teams_integration):
         """Test retry mechanism on notification failure."""
         notification = TeamsNotification(
-            title="Test Notification",
-            message="This is a test message",
-            severity="info"
+            title="Test Notification", message="This is a test message", severity="info"
         )
 
         # Mock failing HTTP response that succeeds on retry
@@ -84,18 +83,18 @@ class TestTeamsIntegrationResilience:
         mock_response.text.return_value = "Internal Server Error"
 
         call_count = 0
+
         async def mock_post(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
                 # First call fails
                 raise aiohttp.ClientError("Connection failed")
-            else:
-                # Second call succeeds
-                mock_response.status = 200
-                return mock_response
+            # Second call succeeds
+            mock_response.status = 200
+            return mock_response
 
-        with patch.object(teams_integration, '_get_session') as mock_get_session:
+        with patch.object(teams_integration, "_get_session") as mock_get_session:
             mock_session = AsyncMock()
             mock_session.post.side_effect = mock_post
             mock_get_session.return_value = mock_session
@@ -109,13 +108,11 @@ class TestTeamsIntegrationResilience:
     async def test_teams_circuit_breaker_opens_on_failures(self, teams_integration):
         """Test that circuit breaker opens after consecutive failures."""
         notification = TeamsNotification(
-            title="Test Notification",
-            message="This is a test message",
-            severity="info"
+            title="Test Notification", message="This is a test message", severity="info"
         )
 
         # Mock consistently failing HTTP response
-        with patch.object(teams_integration, '_get_session') as mock_get_session:
+        with patch.object(teams_integration, "_get_session") as mock_get_session:
             mock_session = AsyncMock()
             mock_session.post.side_effect = aiohttp.ClientError("Connection failed")
             mock_get_session.return_value = mock_session
@@ -134,7 +131,7 @@ class TestTeamsIntegrationResilience:
         mock_response = AsyncMock()
         mock_response.status = 200
 
-        with patch.object(teams_integration, '_get_session') as mock_get_session:
+        with patch.object(teams_integration, "_get_session") as mock_get_session:
             mock_session = AsyncMock()
             mock_session.get.return_value.__aenter__.return_value = mock_response
             mock_get_session.return_value = mock_session
@@ -160,7 +157,7 @@ class TestSIEMIntegrationResilience:
             timeout_seconds=30,
             batch_size=10,
             retry_attempts=3,
-            retry_delay_seconds=1.0
+            retry_delay_seconds=1.0,
         )
 
     @pytest.fixture
@@ -171,14 +168,14 @@ class TestSIEMIntegrationResilience:
     @pytest.mark.asyncio
     async def test_splunk_circuit_breaker_initialization(self, splunk_connector):
         """Test that circuit breakers are properly initialized in Splunk connector."""
-        assert hasattr(splunk_connector, 'circuit_breaker_manager')
+        assert hasattr(splunk_connector, "circuit_breaker_manager")
         assert splunk_connector.circuit_breaker_manager.state("splunk_events") == "closed"
         assert splunk_connector.circuit_breaker_manager.state("splunk_health") == "closed"
 
     @pytest.mark.asyncio
     async def test_splunk_backpressure_mechanism(self, splunk_connector):
         """Test that backpressure mechanism is properly initialized in Splunk connector."""
-        assert hasattr(splunk_connector, '_send_semaphore')
+        assert hasattr(splunk_connector, "_send_semaphore")
         assert splunk_connector._send_semaphore._value == 5  # Default limit
 
     @pytest.mark.asyncio
@@ -203,7 +200,7 @@ class TestSIEMIntegrationResilience:
                 event_type="test_event",
                 severity="medium",
                 category="test_category",
-                message=f"Test message {i}"
+                message=f"Test message {i}",
             )
             for i in range(3)
         ]
@@ -229,15 +226,15 @@ class TestSIEMIntegrationResilience:
         mock_response_success.status = 200
 
         call_count = 0
+
         async def mock_post(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
                 # First call fails
                 raise aiohttp.ClientError("Connection failed")
-            else:
-                # Second call succeeds
-                return mock_response_success
+            # Second call succeeds
+            return mock_response_success
 
         splunk_connector.session.post.side_effect = mock_post
 
@@ -249,7 +246,7 @@ class TestSIEMIntegrationResilience:
             event_type="test_event",
             severity="medium",
             category="test_category",
-            message="Test message"
+            message="Test message",
         )
 
         # Test batch sending with retry
@@ -288,6 +285,7 @@ class TestResiliencePatternsIntegration:
 
         # Test calling with circuit breaker
         call_count = 0
+
         async def failing_function():
             nonlocal call_count
             call_count += 1
@@ -295,10 +293,8 @@ class TestResiliencePatternsIntegration:
 
         # Should fail and open circuit breaker after fail_max attempts
         for _ in range(3):
-            try:
+            with contextlib.suppress(aiohttp.ClientError, CircuitBreakerError):
                 await cbm.call("test_service", failing_function)
-            except (aiohttp.ClientError, CircuitBreakerError):
-                pass
 
         # Circuit should be open after failures
         assert cbm.state("test_service") == "open"
@@ -322,7 +318,7 @@ class TestResiliencePatternsIntegration:
             base_delay=0.1,
             cap=1.0,
             jitter=True,
-            retry_on=(aiohttp.ClientError,)
+            retry_on=(aiohttp.ClientError,),
         )
 
         assert result == "success"
@@ -333,8 +329,7 @@ class TestResiliencePatternsIntegration:
         """Test backpressure mechanisms across services."""
         # Test Teams integration backpressure
         teams_config = TeamsConfig(
-            enabled=True,
-            webhook_url="https://outlook.office.com/webhook/test"
+            enabled=True, webhook_url="https://outlook.office.com/webhook/test"
         )
         teams_integration = TeamsIntegration(teams_config)
 
@@ -346,7 +341,7 @@ class TestResiliencePatternsIntegration:
             siem_type=SIEMType.SPLUNK,
             name="test_splunk",
             endpoint_url="https://splunk.example.com:8088",
-            api_key="test_api_key"
+            api_key="test_api_key",
         )
         splunk_connector = SplunkConnector(siem_config)
 
@@ -361,23 +356,18 @@ class TestBackwardCompatibility:
     async def test_teams_integration_interface_unchanged(self):
         """Test that TeamsIntegration public interface remains unchanged."""
         teams_config = TeamsConfig(
-            enabled=True,
-            webhook_url="https://outlook.office.com/webhook/test"
+            enabled=True, webhook_url="https://outlook.office.com/webhook/test"
         )
         teams_integration = TeamsIntegration(teams_config)
 
         # Test that all expected methods exist
-        assert hasattr(teams_integration, 'send_notification')
-        assert hasattr(teams_integration, 'health_check')
-        assert hasattr(teams_integration, 'monitor_job_status')
-        assert hasattr(teams_integration, 'shutdown')
+        assert hasattr(teams_integration, "send_notification")
+        assert hasattr(teams_integration, "health_check")
+        assert hasattr(teams_integration, "monitor_job_status")
+        assert hasattr(teams_integration, "shutdown")
 
         # Test that method signatures are unchanged
-        notification = TeamsNotification(
-            title="Test",
-            message="Test message",
-            severity="info"
-        )
+        notification = TeamsNotification(title="Test", message="Test message", severity="info")
 
         # Should return bool as before
         assert isinstance(await teams_integration.send_notification(notification), bool)
@@ -393,16 +383,16 @@ class TestBackwardCompatibility:
             siem_type=SIEMType.SPLUNK,
             name="test_splunk",
             endpoint_url="https://splunk.example.com:8088",
-            api_key="test_api_key"
+            api_key="test_api_key",
         )
         splunk_connector = SplunkConnector(siem_config)
 
         # Test that all expected methods exist
-        assert hasattr(splunk_connector, 'connect')
-        assert hasattr(splunk_connector, 'disconnect')
-        assert hasattr(splunk_connector, 'send_event')
-        assert hasattr(splunk_connector, 'send_events_batch')
-        assert hasattr(splunk_connector, 'health_check')
+        assert hasattr(splunk_connector, "connect")
+        assert hasattr(splunk_connector, "disconnect")
+        assert hasattr(splunk_connector, "send_event")
+        assert hasattr(splunk_connector, "send_events_batch")
+        assert hasattr(splunk_connector, "health_check")
 
         # Test that method signatures are unchanged
         event = SIEMEvent(
@@ -412,7 +402,7 @@ class TestBackwardCompatibility:
             event_type="test_event",
             severity="medium",
             category="test_category",
-            message="Test message"
+            message="Test message",
         )
 
         # Should return bool for single event

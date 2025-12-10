@@ -23,6 +23,7 @@ router = APIRouter()
 
 class ConnectorType(str, Enum):
     """Types of connectors."""
+
     TWS = "tws"
     DATABASE = "database"
     REDIS = "redis"
@@ -36,6 +37,7 @@ class ConnectorType(str, Enum):
 
 class ConnectorStatus(str, Enum):
     """Connector status."""
+
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"
     ERROR = "error"
@@ -44,6 +46,7 @@ class ConnectorStatus(str, Enum):
 
 class ConnectorCreate(BaseModel):
     """Model for creating a connector."""
+
     name: str = Field(..., min_length=1, max_length=100)
     type: ConnectorType
     host: str | None = None
@@ -56,6 +59,7 @@ class ConnectorCreate(BaseModel):
 
 class ConnectorUpdate(BaseModel):
     """Model for updating a connector."""
+
     name: str | None = None
     host: str | None = None
     port: int | None = None
@@ -67,6 +71,7 @@ class ConnectorUpdate(BaseModel):
 
 class ConnectorResponse(BaseModel):
     """Model for connector response."""
+
     id: str
     name: str
     type: str
@@ -80,6 +85,7 @@ class ConnectorResponse(BaseModel):
 
 class ConnectorTest(BaseModel):
     """Model for connector test."""
+
     timeout_seconds: int = 10
 
 
@@ -135,7 +141,12 @@ async def list_connectors(
     return connectors
 
 
-@router.post("/connectors", response_model=ConnectorResponse, status_code=status.HTTP_201_CREATED, tags=["Admin Connectors"])
+@router.post(
+    "/connectors",
+    response_model=ConnectorResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Admin Connectors"],
+)
 async def create_connector(connector: ConnectorCreate):
     """Create a new connector."""
     import uuid
@@ -173,7 +184,9 @@ async def create_connector(connector: ConnectorCreate):
     return ConnectorResponse(**new_connector)
 
 
-@router.get("/connectors/{connector_id}", response_model=ConnectorResponse, tags=["Admin Connectors"])
+@router.get(
+    "/connectors/{connector_id}", response_model=ConnectorResponse, tags=["Admin Connectors"]
+)
 async def get_connector(connector_id: str):
     """Get connector by ID."""
     if connector_id not in _connectors:
@@ -185,7 +198,9 @@ async def get_connector(connector_id: str):
     return ConnectorResponse(**_connectors[connector_id])
 
 
-@router.put("/connectors/{connector_id}", response_model=ConnectorResponse, tags=["Admin Connectors"])
+@router.put(
+    "/connectors/{connector_id}", response_model=ConnectorResponse, tags=["Admin Connectors"]
+)
 async def update_connector(connector_id: str, update: ConnectorUpdate):
     """Update a connector."""
     if connector_id not in _connectors:
@@ -206,7 +221,9 @@ async def update_connector(connector_id: str, update: ConnectorUpdate):
     return ConnectorResponse(**connector)
 
 
-@router.delete("/connectors/{connector_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Connectors"])
+@router.delete(
+    "/connectors/{connector_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Connectors"]
+)
 async def delete_connector(connector_id: str):
     """Delete a connector."""
     if connector_id not in _connectors:
@@ -275,7 +292,11 @@ async def test_connector(connector_id: str, test: ConnectorTest):
         }
 
 
-@router.post("/connectors/{connector_id}/enable", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Connectors"])
+@router.post(
+    "/connectors/{connector_id}/enable",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["Admin Connectors"],
+)
 async def enable_connector(connector_id: str):
     """Enable a connector."""
     if connector_id not in _connectors:
@@ -288,7 +309,11 @@ async def enable_connector(connector_id: str):
     logger.info(f"Connector enabled: {_connectors[connector_id]['name']}")
 
 
-@router.post("/connectors/{connector_id}/disable", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Connectors"])
+@router.post(
+    "/connectors/{connector_id}/disable",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["Admin Connectors"],
+)
 async def disable_connector(connector_id: str):
     """Disable a connector."""
     if connector_id not in _connectors:

@@ -135,15 +135,12 @@ class TWSInstanceManager:
         data = {
             "instances": [
                 inst.config.to_dict()
-                for inst in sorted(
-                    self._instances.values(),
-                    key=lambda x: x.config.sort_order
-                )
+                for inst in sorted(self._instances.values(), key=lambda x: x.config.sort_order)
             ],
             "saved_at": datetime.utcnow().isoformat(),
         }
 
-        with open(self.config_path, 'w') as f:
+        with open(self.config_path, "w") as f:
             json.dump(data, f, indent=2)
 
         logger.info(f"Saved {len(self._instances)} TWS instances")
@@ -179,10 +176,7 @@ class TWSInstanceManager:
 
     def get_all_instances(self) -> list[TWSInstance]:
         """Get all instances sorted by sort_order."""
-        return sorted(
-            self._instances.values(),
-            key=lambda x: x.config.sort_order
-        )
+        return sorted(self._instances.values(), key=lambda x: x.config.sort_order)
 
     def update_instance(self, instance_id: str, updates: dict[str, Any]) -> TWSInstance | None:
         """Update instance configuration."""
@@ -295,9 +289,7 @@ class TWSInstanceManager:
                 timeout=httpx.Timeout(connect=10, read=10),
                 verify=config.ssl_verify,
             ) as client:
-                response = await client.get(
-                    f"{instance.connection_url}/twsd/health"
-                )
+                response = await client.get(f"{instance.connection_url}/twsd/health")
 
                 latency = (datetime.utcnow() - start_time).total_seconds() * 1000
 
@@ -367,7 +359,9 @@ class TWSInstanceManager:
         return {
             "total_instances": len(instances),
             "connected": len([i for i in instances if i.status == TWSInstanceStatus.CONNECTED]),
-            "disconnected": len([i for i in instances if i.status == TWSInstanceStatus.DISCONNECTED]),
+            "disconnected": len(
+                [i for i in instances if i.status == TWSInstanceStatus.DISCONNECTED]
+            ),
             "error": len([i for i in instances if i.status == TWSInstanceStatus.ERROR]),
             "total_sessions": sum(i.active_sessions for i in instances),
             "instances": [

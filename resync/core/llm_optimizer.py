@@ -2,7 +2,6 @@
 TWS-optimized LLM integration with prompt caching and model routing.
 """
 
-
 import hashlib
 import logging
 import time
@@ -18,7 +17,9 @@ from resync.settings import settings
 
 # Define the circuit breaker for LLM API calls
 llm_api_breaker = pybreaker.CircuitBreaker(
-    fail_max=5, reset_timeout=60, exclude=(ValueError,)  # Don't count validation errors
+    fail_max=5,
+    reset_timeout=60,
+    exclude=(ValueError,),  # Don't count validation errors
 )
 
 logger = logging.getLogger(__name__)
@@ -51,12 +52,8 @@ class TWS_LLMOptimizer:
 
         # Model routing based on complexity
         self.model_routing = {
-            "simple": getattr(
-                settings, "AUDITOR_MODEL_NAME", "gpt-3.5-turbo"
-            ),  # For basic queries
-            "complex": getattr(
-                settings, "AGENT_MODEL_NAME", "gpt-4o"
-            ),  # For complex analysis
+            "simple": getattr(settings, "AUDITOR_MODEL_NAME", "gpt-3.5-turbo"),  # For basic queries
+            "complex": getattr(settings, "AGENT_MODEL_NAME", "gpt-4o"),  # For complex analysis
             "troubleshooting": getattr(
                 settings, "AGENT_MODEL_NAME", "gpt-4o"
             ),  # For troubleshooting
@@ -110,9 +107,7 @@ class TWS_LLMOptimizer:
         ]
 
         query_lower = query.lower()
-        is_complex = any(
-            indicator in query_lower for indicator in complexity_indicators
-        )
+        is_complex = any(indicator in query_lower for indicator in complexity_indicators)
 
         # Check if we have a LiteLLM router available for advanced model selection
         router = get_litellm_router()
@@ -144,14 +139,10 @@ class TWS_LLMOptimizer:
                             f"{settings.LLM_ENDPOINT}/api/tags"
                         )  # Assuming Ollama endpoint
                         if response.status_code == 200:
-                            return (
-                                "ollama/mistral"  # Use local model for simple queries
-                            )
+                            return "ollama/mistral"  # Use local model for simple queries
                 except Exception as e:
                     # Log Ollama availability check error and continue with normal selection
-                    logger.debug(
-                        f"Ollama availability check failed, using fallback: {e}"
-                    )
+                    logger.debug(f"Ollama availability check failed, using fallback: {e}")
 
         if is_complex:
             return self.model_routing["complex"]

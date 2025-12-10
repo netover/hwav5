@@ -4,7 +4,6 @@ Cache Health Checker
 This module provides health checking functionality for cache hierarchy.
 """
 
-
 import time
 from datetime import datetime
 from typing import Any

@@ -28,9 +28,11 @@ logger = logging.getLogger(__name__)
 # DATA CLASSES (preserving interface from original tws_status_store.py)
 # =============================================================================
 
+
 @dataclass
 class JobStatus:
     """Job status data class."""
+
     job_name: str
     status: str
     job_stream: str | None = None
@@ -60,6 +62,7 @@ class JobStatus:
 @dataclass
 class PatternMatch:
     """Pattern match data class."""
+
     pattern_type: str
     job_name: str | None
     description: str
@@ -86,6 +89,7 @@ class PatternMatch:
 # REPOSITORIES
 # =============================================================================
 
+
 class TWSSnapshotRepository(TimestampedRepository[TWSSnapshot]):
     """Repository for TWS snapshots."""
 
@@ -93,16 +97,11 @@ class TWSSnapshotRepository(TimestampedRepository[TWSSnapshot]):
         super().__init__(TWSSnapshot, session_factory)
 
     async def create_snapshot(
-        self,
-        snapshot_data: dict[str, Any],
-        job_count: int = 0,
-        workstation_count: int = 0
+        self, snapshot_data: dict[str, Any], job_count: int = 0, workstation_count: int = 0
     ) -> TWSSnapshot:
         """Create a new snapshot."""
         return await self.create(
-            snapshot_data=snapshot_data,
-            job_count=job_count,
-            workstation_count=workstation_count
+            snapshot_data=snapshot_data, job_count=job_count, workstation_count=workstation_count
         )
 
 
@@ -117,12 +116,15 @@ class TWSJobStatusRepository(TimestampedRepository[TWSJobStatus]):
         async with self._get_session() as session:
             # Check if exists
             existing = await session.execute(
-                select(TWSJobStatus).where(
+                select(TWSJobStatus)
+                .where(
                     and_(
                         TWSJobStatus.job_name == job.job_name,
-                        TWSJobStatus.run_number == job.run_number
+                        TWSJobStatus.run_number == job.run_number,
                     )
-                ).order_by(TWSJobStatus.timestamp.desc()).limit(1)
+                )
+                .order_by(TWSJobStatus.timestamp.desc())
+                .limit(1)
             )
             record = existing.scalar_one_or_none()
 
@@ -146,7 +148,7 @@ class TWSJobStatusRepository(TimestampedRepository[TWSJobStatus]):
                     end_time=job.end_time,
                     return_code=job.return_code,
                     timestamp=job.timestamp,
-                    metadata_=job.metadata
+                    metadata_=job.metadata,
                 )
                 session.add(record)
 
@@ -154,23 +156,12 @@ class TWSJobStatusRepository(TimestampedRepository[TWSJobStatus]):
             await session.refresh(record)
             return record
 
-    async def get_job_history(
-        self,
-        job_name: str,
-        limit: int = 100
-    ) -> list[TWSJobStatus]:
+    async def get_job_history(self, job_name: str, limit: int = 100) -> list[TWSJobStatus]:
         """Get job status history."""
-        return await self.find(
-            {"job_name": job_name},
-            limit=limit,
-            order_by="timestamp",
-            desc=True
-        )
+        return await self.find({"job_name": job_name}, limit=limit, order_by="timestamp", desc=True)
 
     async def get_failed_jobs(
-        self,
-        since: datetime | None = None,
-        limit: int = 100
+        self, since: datetime | None = None, limit: int = 100
     ) -> list[TWSJobStatus]:
         """Get failed jobs."""
         async with self._get_session() as session:
@@ -186,26 +177,20 @@ class TWSJobStatusRepository(TimestampedRepository[TWSJobStatus]):
             return list(result.scalars().all())
 
     async def get_jobs_by_workstation(
-        self,
-        workstation: str,
-        limit: int = 100
+        self, workstation: str, limit: int = 100
     ) -> list[TWSJobStatus]:
         """Get jobs for a workstation."""
         return await self.find(
-            {"workstation": workstation},
-            limit=limit,
-            order_by="timestamp",
-            desc=True
+            {"workstation": workstation}, limit=limit, order_by="timestamp", desc=True
         )
 
     async def get_status_summary(self) -> dict[str, int]:
         """Get count by status."""
         async with self._get_session() as session:
             result = await session.execute(
-                select(
-                    TWSJobStatus.status,
-                    func.count(TWSJobStatus.id)
-                ).group_by(TWSJobStatus.status)
+                select(TWSJobStatus.status, func.count(TWSJobStatus.id)).group_by(
+                    TWSJobStatus.status
+                )
             )
             return {row[0]: row[1] for row in result.all()}
 
@@ -223,7 +208,7 @@ class TWSEventRepository(TimestampedRepository[TWSEvent]):
         severity: str = "info",
         job_name: str | None = None,
         workstation: str | None = None,
-        details: dict[str, Any] | None = None
+        details: dict[str, Any] | None = None,
     ) -> TWSEvent:
         """Log a new event."""
         return await self.create(
@@ -232,36 +217,26 @@ class TWSEventRepository(TimestampedRepository[TWSEvent]):
             severity=severity,
             job_name=job_name,
             workstation=workstation,
-            details=details or {}
+            details=details or {},
         )
 
     async def get_unacknowledged(self, limit: int = 100) -> list[TWSEvent]:
         """Get unacknowledged events."""
         return await self.find(
-            {"acknowledged": False},
-            limit=limit,
-            order_by="timestamp",
-            desc=True
+            {"acknowledged": False}, limit=limit, order_by="timestamp", desc=True
         )
 
-    async def acknowledge_event(
-        self,
-        event_id: int,
-        acknowledged_by: str
-    ) -> TWSEvent | None:
+    async def acknowledge_event(self, event_id: int, acknowledged_by: str) -> TWSEvent | None:
         """Acknowledge an event."""
         return await self.update(
             event_id,
             acknowledged=True,
             acknowledged_by=acknowledged_by,
-            acknowledged_at=datetime.utcnow()
+            acknowledged_at=datetime.utcnow(),
         )
 
     async def get_events_by_severity(
-        self,
-        severity: str,
-        since: datetime | None = None,
-        limit: int = 100
+        self, severity: str, since: datetime | None = None, limit: int = 100
     ) -> list[TWSEvent]:
         """Get events by severity level."""
         async with self._get_session() as session:
@@ -289,7 +264,7 @@ class TWSPatternRepository(BaseRepository[TWSPattern]):
                 select(TWSPattern).where(
                     and_(
                         TWSPattern.pattern_type == pattern.pattern_type,
-                        TWSPattern.job_name == pattern.job_name
+                        TWSPattern.job_name == pattern.job_name,
                     )
                 )
             )
@@ -312,7 +287,7 @@ class TWSPatternRepository(BaseRepository[TWSPattern]):
                     occurrences=pattern.occurrences,
                     first_seen=pattern.first_seen,
                     last_seen=pattern.last_seen,
-                    pattern_data=pattern.pattern_data
+                    pattern_data=pattern.pattern_data,
                 )
                 session.add(record)
 
@@ -321,17 +296,12 @@ class TWSPatternRepository(BaseRepository[TWSPattern]):
             return record
 
     async def get_active_patterns(
-        self,
-        job_name: str | None = None,
-        min_confidence: float = 0.5
+        self, job_name: str | None = None, min_confidence: float = 0.5
     ) -> list[TWSPattern]:
         """Get active patterns above confidence threshold."""
         async with self._get_session() as session:
             query = select(TWSPattern).where(
-                and_(
-                    TWSPattern.is_active == True,
-                    TWSPattern.confidence >= min_confidence
-                )
+                and_(TWSPattern.is_active, TWSPattern.confidence >= min_confidence)
             )
 
             if job_name:
@@ -354,7 +324,7 @@ class TWSProblemSolutionRepository(BaseRepository[TWSProblemSolution]):
         problem_description: str,
         solution: str,
         job_name: str | None = None,
-        metadata: dict[str, Any] | None = None
+        metadata: dict[str, Any] | None = None,
     ) -> TWSProblemSolution:
         """Add a new problem-solution pair."""
         return await self.create(
@@ -362,13 +332,11 @@ class TWSProblemSolutionRepository(BaseRepository[TWSProblemSolution]):
             job_name=job_name,
             problem_description=problem_description,
             solution=solution,
-            metadata_=metadata or {}
+            metadata_=metadata or {},
         )
 
     async def find_solution(
-        self,
-        problem_type: str,
-        job_name: str | None = None
+        self, problem_type: str, job_name: str | None = None
     ) -> TWSProblemSolution | None:
         """Find a solution for a problem."""
         async with self._get_session() as session:
@@ -380,7 +348,7 @@ class TWSProblemSolutionRepository(BaseRepository[TWSProblemSolution]):
                 query = query.where(
                     or_(
                         TWSProblemSolution.job_name == job_name,
-                        TWSProblemSolution.job_name.is_(None)
+                        TWSProblemSolution.job_name.is_(None),
                     )
                 )
 
@@ -388,11 +356,7 @@ class TWSProblemSolutionRepository(BaseRepository[TWSProblemSolution]):
             result = await session.execute(query)
             return result.scalar_one_or_none()
 
-    async def record_outcome(
-        self,
-        solution_id: int,
-        success: bool
-    ) -> TWSProblemSolution | None:
+    async def record_outcome(self, solution_id: int, success: bool) -> TWSProblemSolution | None:
         """Record whether a solution worked."""
         async with self._get_session() as session:
             solution = await session.get(TWSProblemSolution, solution_id)
@@ -410,6 +374,7 @@ class TWSProblemSolutionRepository(BaseRepository[TWSProblemSolution]):
 # =============================================================================
 # UNIFIED TWS STORE (facade for all repositories)
 # =============================================================================
+
 
 class TWSStore:
     """
@@ -446,19 +411,11 @@ class TWSStore:
         """Get latest status for a job."""
         return await self.jobs.get_latest({"job_name": job_name})
 
-    async def get_job_history(
-        self,
-        job_name: str,
-        limit: int = 100
-    ) -> list[TWSJobStatus]:
+    async def get_job_history(self, job_name: str, limit: int = 100) -> list[TWSJobStatus]:
         """Get job status history."""
         return await self.jobs.get_job_history(job_name, limit)
 
-    async def get_failed_jobs(
-        self,
-        hours: int = 24,
-        limit: int = 100
-    ) -> list[TWSJobStatus]:
+    async def get_failed_jobs(self, hours: int = 24, limit: int = 100) -> list[TWSJobStatus]:
         """Get recently failed jobs."""
         since = datetime.utcnow() - timedelta(hours=hours)
         return await self.jobs.get_failed_jobs(since, limit)
@@ -474,7 +431,7 @@ class TWSStore:
         message: str,
         severity: str = "info",
         job_name: str | None = None,
-        details: dict[str, Any] | None = None
+        details: dict[str, Any] | None = None,
     ) -> TWSEvent:
         """Log an event."""
         return await self.events.log_event(
@@ -482,14 +439,11 @@ class TWSStore:
             message=message,
             severity=severity,
             job_name=job_name,
-            details=details
+            details=details,
         )
 
     async def get_events_in_range(
-        self,
-        start: datetime,
-        end: datetime,
-        limit: int = 1000
+        self, start: datetime, end: datetime, limit: int = 1000
     ) -> list[TWSEvent]:
         """Get events in time range."""
         return await self.events.find_in_range(start, end, limit=limit)
@@ -500,9 +454,7 @@ class TWSStore:
         return await self.patterns.upsert_pattern(pattern)
 
     async def get_patterns(
-        self,
-        job_name: str | None = None,
-        min_confidence: float = 0.5
+        self, job_name: str | None = None, min_confidence: float = 0.5
     ) -> list[TWSPattern]:
         """Get active patterns."""
         return await self.patterns.get_active_patterns(job_name, min_confidence)
@@ -513,20 +465,18 @@ class TWSStore:
         problem_type: str,
         problem_description: str,
         solution: str,
-        job_name: str | None = None
+        job_name: str | None = None,
     ) -> TWSProblemSolution:
         """Add a problem-solution pair."""
         return await self.solutions.add_solution(
             problem_type=problem_type,
             problem_description=problem_description,
             solution=solution,
-            job_name=job_name
+            job_name=job_name,
         )
 
     async def find_solution(
-        self,
-        problem_type: str,
-        job_name: str | None = None
+        self, problem_type: str, job_name: str | None = None
     ) -> TWSProblemSolution | None:
         """Find a solution for a problem."""
         return await self.solutions.find_solution(problem_type, job_name)

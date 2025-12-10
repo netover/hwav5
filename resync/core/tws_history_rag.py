@@ -14,7 +14,6 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-
 import re
 from datetime import datetime, timedelta
 from typing import Any
@@ -39,46 +38,46 @@ class TWSHistoryRAG:
         r"hoje": lambda: (datetime.now(), datetime.now()),
         r"essa semana|esta semana|semana atual": lambda: (
             datetime.now() - timedelta(days=datetime.now().weekday()),
-            datetime.now()
+            datetime.now(),
         ),
         r"semana passada|última semana": lambda: (
             datetime.now() - timedelta(days=datetime.now().weekday() + 7),
-            datetime.now() - timedelta(days=datetime.now().weekday())
+            datetime.now() - timedelta(days=datetime.now().weekday()),
         ),
-        r"esse mês|este mês|mês atual": lambda: (
-            datetime.now().replace(day=1),
-            datetime.now()
-        ),
+        r"esse mês|este mês|mês atual": lambda: (datetime.now().replace(day=1), datetime.now()),
         r"mês passado|último mês": lambda: (
             (datetime.now().replace(day=1) - timedelta(days=1)).replace(day=1),
-            datetime.now().replace(day=1) - timedelta(days=1)
+            datetime.now().replace(day=1) - timedelta(days=1),
         ),
         r"últimos? (\d+) dias?": lambda m: (
             datetime.now() - timedelta(days=int(m.group(1))),
-            datetime.now()
+            datetime.now(),
         ),
         r"últimas? (\d+) horas?": lambda m: (
             datetime.now() - timedelta(hours=int(m.group(1))),
-            datetime.now()
+            datetime.now(),
         ),
         # English
-        r"yesterday": lambda: (datetime.now() - timedelta(days=1), datetime.now() - timedelta(days=1)),
+        r"yesterday": lambda: (
+            datetime.now() - timedelta(days=1),
+            datetime.now() - timedelta(days=1),
+        ),
         r"today": lambda: (datetime.now(), datetime.now()),
         r"this week": lambda: (
             datetime.now() - timedelta(days=datetime.now().weekday()),
-            datetime.now()
+            datetime.now(),
         ),
         r"last week": lambda: (
             datetime.now() - timedelta(days=datetime.now().weekday() + 7),
-            datetime.now() - timedelta(days=datetime.now().weekday())
+            datetime.now() - timedelta(days=datetime.now().weekday()),
         ),
         r"last (\d+) days?": lambda m: (
             datetime.now() - timedelta(days=int(m.group(1))),
-            datetime.now()
+            datetime.now(),
         ),
         r"last (\d+) hours?": lambda m: (
             datetime.now() - timedelta(hours=int(m.group(1))),
-            datetime.now()
+            datetime.now(),
         ),
     }
 
@@ -146,9 +145,7 @@ class TWSHistoryRAG:
         entities = self._extract_entities(question)
 
         # 4. Busca dados relevantes
-        context = await self._gather_context(
-            start_date, end_date, intent, entities
-        )
+        context = await self._gather_context(start_date, end_date, intent, entities)
 
         # 5. Gera resposta
         response = await self._generate_response(question, context)
@@ -176,10 +173,7 @@ class TWSHistoryRAG:
                 try:
                     if callable(resolver):
                         # Verifica se é um pattern com grupos
-                        if match.groups():
-                            result = resolver(match)
-                        else:
-                            result = resolver()
+                        result = resolver(match) if match.groups() else resolver()
 
                         start, end = result
 
@@ -333,8 +327,7 @@ PERGUNTA DO USUÁRIO:
 RESPOSTA:"""
 
             # Chama LLM
-            response = await self.llm_client.generate(prompt)
-            return response
+            return await self.llm_client.generate(prompt)
 
         except Exception as e:
             logger.error("llm_response_error", error=str(e))
@@ -386,7 +379,7 @@ RESPOSTA:"""
             for pattern in patterns[:5]:
                 parts.append(
                     f"- {pattern.get('description', 'N/A')} "
-                    f"(confiança: {pattern.get('confidence', 0)*100:.0f}%)"
+                    f"(confiança: {pattern.get('confidence', 0) * 100:.0f}%)"
                 )
             parts.append("")
 

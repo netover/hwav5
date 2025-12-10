@@ -1,6 +1,7 @@
 """Unit tests for CSP middleware functionality."""
 
 from unittest.mock import Mock, patch
+
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -43,14 +44,14 @@ def app_with_csp():
     async def csp_violation_report(request: Request):
         """Handle CSP violation reports with enhanced validation and security."""
         try:
-            from resync.csp_validation import process_csp_report, CSPValidationError
+            from resync.csp_validation import CSPValidationError, process_csp_report
 
             # Process the CSP report with enhanced validation
             result = await process_csp_report(request)
 
             # Log specific violation details from sanitized data
             report = result.get("report", {})
-            csp_report = (
+            (
                 report.get("csp-report", {})
                 if isinstance(report, dict) and "csp-report" in report
                 else report
@@ -86,14 +87,14 @@ def app_with_csp_report_only():
     async def csp_violation_report(request: Request):
         """Handle CSP violation reports with enhanced validation and security."""
         try:
-            from resync.csp_validation import process_csp_report, CSPValidationError
+            from resync.csp_validation import CSPValidationError, process_csp_report
 
             # Process the CSP report with enhanced validation
             result = await process_csp_report(request)
 
             # Log specific violation details from sanitized data
             report = result.get("report", {})
-            csp_report = (
+            (
                 report.get("csp-report", {})
                 if isinstance(report, dict) and "csp-report" in report
                 else report
@@ -341,9 +342,7 @@ class TestCSPValidationErrorHandling:
     """Test error handling in CSP validation."""
 
     @patch("resync.csp_validation.process_csp_report")
-    def test_csp_violation_report_processing_error(
-        self, mock_process_csp_report, app_with_csp
-    ):
+    def test_csp_violation_report_processing_error(self, mock_process_csp_report, app_with_csp):
         """Test CSP violation report endpoint when processing fails."""
         # Mock the process_csp_report function to raise an exception
         mock_process_csp_report.side_effect = Exception("Processing failed")
@@ -365,14 +364,10 @@ class TestCSPValidationErrorHandling:
         assert response.json() == {"status": "received"}
 
     @patch("resync.csp_validation.process_csp_report")
-    def test_csp_violation_report_validation_error(
-        self, mock_process_csp_report, app_with_csp
-    ):
+    def test_csp_violation_report_validation_error(self, mock_process_csp_report, app_with_csp):
         """Test CSP violation report endpoint when validation fails."""
         # Mock the process_csp_report function to raise a validation error
-        mock_process_csp_report.side_effect = CSPValidationError(
-            "Invalid report format"
-        )
+        mock_process_csp_report.side_effect = CSPValidationError("Invalid report format")
 
         client = TestClient(app_with_csp)
 

@@ -20,9 +20,7 @@ def _get_encoding(stream: TextIO | None) -> str | None:
         return None
 
 
-def can_encode(
-    text: str, stream: TextIO | None = None, encoding: str | None = None
-) -> bool:
+def can_encode(text: str, stream: TextIO | None = None, encoding: str | None = None) -> bool:
     """
     Check if text can be encoded with the given encoding/stream.
 
@@ -37,9 +35,7 @@ def can_encode(
         return False
 
 
-def symbol(
-    ok: bool, stream: TextIO | None = None, encoding: str | None = None
-) -> str:
+def symbol(ok: bool, stream: TextIO | None = None, encoding: str | None = None) -> str:
     """
     Return appropriate status symbol based on stream encoding support.
 

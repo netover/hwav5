@@ -24,9 +24,11 @@ except Exception as _e:
     # cache memory manager to operate even when instrumentation is disabled.
     class _DummyRuntimeMetrics:
         """_ dummy runtime metrics."""
+
         def __getattr__(self, name):
             class _Metric:
                 """_ metric."""
+
                 def increment(self, *args, **kwargs):  # noqa: D401
                     """No‑op increment for missing metrics."""
 
@@ -119,9 +121,7 @@ class CacheMemoryManager:
             self.max_entries = min(self.max_entries, 10000)  # Max 10K entries
             self.max_memory_mb = min(self.max_memory_mb, 10)  # Max 10MB
 
-    def check_memory_bounds(
-        self, shards: list[dict[str, CacheEntry]], current_size: int
-    ) -> bool:
+    def check_memory_bounds(self, shards: list[dict[str, CacheEntry]], current_size: int) -> bool:
         """
         Check if cache size and memory usage are within safe bounds.
 
@@ -197,14 +197,10 @@ class CacheMemoryManager:
             # Extrapolate to full cache size
             if sample_count > 0:
                 avg_memory_per_item = sample_memory / sample_count
-                estimated_memory_mb = (avg_memory_per_item * current_size) / (
-                    1024 * 1024
-                )
+                estimated_memory_mb = (avg_memory_per_item * current_size) / (1024 * 1024)
             else:
                 # Fallback to rough calculation if no items sampled
-                estimated_memory_mb = (
-                    current_size * 0.5
-                )  # ~500KB per 1000 entries
+                estimated_memory_mb = current_size * 0.5  # ~500KB per 1000 entries
 
             # Check if we're approaching the memory limit (80% threshold)
             memory_threshold = self.max_memory_mb * 0.8
@@ -221,9 +217,7 @@ class CacheMemoryManager:
                                 "current_size": current_size,
                                 "sample_count": sample_count,
                                 "avg_memory_per_item": (
-                                    avg_memory_per_item
-                                    if sample_count > 0
-                                    else 0
+                                    avg_memory_per_item if sample_count > 0 else 0
                                 ),
                                 "max_memory_mb": self.max_memory_mb,
                                 "threshold_reached": "80%",
@@ -245,9 +239,7 @@ class CacheMemoryManager:
                                     "current_size": current_size,
                                     "sample_count": sample_count,
                                     "avg_memory_per_item": (
-                                        avg_memory_per_item
-                                        if sample_count > 0
-                                        else 0
+                                        avg_memory_per_item if sample_count > 0 else 0
                                     ),
                                     "max_memory_mb": self.max_memory_mb,
                                 }
@@ -348,7 +340,8 @@ class CacheMemoryManager:
                     lock = shard_locks[lru_shard_idx]
 
                     # Use asyncio since this is called from async context
-                    async def do_eviction():
+                    # Bind loop variables as default arguments to avoid closure issues
+                    async def do_eviction(lock=lock, lru_key=lru_key, shard=shard):
                         nonlocal bytes_freed
                         async with lock:
                             if lru_key in shard:
@@ -424,9 +417,7 @@ class CacheMemoryManager:
 
         return lru_key
 
-    def estimate_cache_memory_usage(
-        self, shards: list[dict[str, CacheEntry]]
-    ) -> float:
+    def estimate_cache_memory_usage(self, shards: list[dict[str, CacheEntry]]) -> float:
         """
         Estimate current memory usage of cache in MB.
 
@@ -458,9 +449,7 @@ class CacheMemoryManager:
             logger.warning(f"Failed to estimate cache memory usage: {e}")
             return 0.0
 
-    def get_memory_info(
-        self, shards: list[dict[str, CacheEntry]]
-    ) -> dict[str, Any]:
+    def get_memory_info(self, shards: list[dict[str, CacheEntry]]) -> dict[str, Any]:
         """
         Get comprehensive memory information for the cache.
 
@@ -481,9 +470,7 @@ class CacheMemoryManager:
             "paranoia_mode": self.paranoia_mode,
             "within_bounds": self.check_memory_bounds(shards, current_size),
             "memory_utilization_percent": (
-                (estimated_memory_mb / self.max_memory_mb * 100)
-                if self.max_memory_mb > 0
-                else 0
+                (estimated_memory_mb / self.max_memory_mb * 100) if self.max_memory_mb > 0 else 0
             ),
         }
 
@@ -497,7 +484,10 @@ try:
     from resync.core.metrics import log_with_correlation  # type: ignore[attr-defined]
 except Exception as e:
     logger.error("exception_caught", error=str(e), exc_info=True)
+
     # Fallback: basic logger when metrics is unavailable
-    def log_with_correlation(level: int, message: str, correlation_id: str | None = None, **kwargs: Any) -> None:
+    def log_with_correlation(
+        level: int, message: str, correlation_id: str | None = None, **kwargs: Any
+    ) -> None:
         """Log a message at the given level without correlation context."""
         logger.log(level, message, **kwargs)

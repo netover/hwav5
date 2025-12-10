@@ -1,41 +1,58 @@
-import sys, os, tempfile, zipfile, asyncio
-sys.path.insert(0, os.path.join('.', 'resync', 'core'))
+import asyncio
+import os
+import sys
+import tempfile
+import zipfile
 
-print('=== TESTING XLSX/DOCX FALLBACKS ===')
+sys.path.insert(0, os.path.join(".", "resync", "core"))
+
+print("=== TESTING XLSX/DOCX FALLBACKS ===")
 
 # Import required modules using proper Python imports
+from resync.core.file_ingestor import FileIngestor, read_docx_sync, read_excel_sync
 from resync.core.utils.executors import OptimizedExecutors
-from resync.core.file_ingestor import FileIngestor, read_excel_sync, read_docx_sync
+
 
 # Create test XLSX file (similar to benchmark)
 def create_test_xlsx():
-    temp_file = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False)
+    temp_file = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
 
-    with zipfile.ZipFile(temp_file.name, 'w', zipfile.ZIP_DEFLATED) as xlsx_zip:
-        xlsx_zip.writestr('[Content_Types].xml', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    with zipfile.ZipFile(temp_file.name, "w", zipfile.ZIP_DEFLATED) as xlsx_zip:
+        xlsx_zip.writestr(
+            "[Content_Types].xml",
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="xml" ContentType="application/xml"/>
 <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
 <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-</Types>''')
+</Types>""",
+        )
 
-        xlsx_zip.writestr('_rels/.rels', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        xlsx_zip.writestr(
+            "_rels/.rels",
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/package/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>''')
+</Relationships>""",
+        )
 
-        xlsx_zip.writestr('xl/workbook.xml', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        xlsx_zip.writestr(
+            "xl/workbook.xml",
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 <fileVersion appName="xl" lastEdited="5" lowestEdited="5" rupBuild="9302"/>
 <workbookPr defaultThemeVersion="124226"/>
 <bookViews><workbookView xWindow="240" yWindow="15" windowWidth="16095" windowHeight="8100"/></bookViews>
 <sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>
 <calcPr calcId="124519"/>
-</workbook>''')
+</workbook>""",
+        )
 
-        xlsx_zip.writestr('xl/worksheets/sheet1.xml', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        xlsx_zip.writestr(
+            "xl/worksheets/sheet1.xml",
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 <sheetPr><outlinePr summaryBelow="1" summaryRight="1"/><pageSetUpPr/></sheetPr>
 <dimension ref="A1:A1"/>
@@ -47,9 +64,12 @@ def create_test_xlsx():
 </row>
 </sheetData>
 <pageMargins left="0.75" right="0.75" top="1" bottom="1" header="0.5" footer="0.5"/>
-</worksheet>''')
+</worksheet>""",
+        )
 
-        xlsx_zip.writestr('xl/styles.xml', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        xlsx_zip.writestr(
+            "xl/styles.xml",
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <fonts count="1"><font><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font></fonts>
 <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
@@ -59,39 +79,54 @@ def create_test_xlsx():
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 <dxfs count="0"/>
 <tableStyles count="0" defaultTableStyle="TableStyleMedium9" defaultPivotStyle="PivotStyleLight16"/>
-</styleSheet>''')
+</styleSheet>""",
+        )
 
-        xlsx_zip.writestr('xl/_rels/workbook.xml.rels', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        xlsx_zip.writestr(
+            "xl/_rels/workbook.xml.rels",
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-</Relationships>''')
+</Relationships>""",
+        )
 
     return temp_file.name
 
+
 # Create test DOCX file
 def create_test_docx():
-    temp_file = tempfile.NamedTemporaryFile(suffix='.docx', delete=False)
+    temp_file = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
 
-    with zipfile.ZipFile(temp_file.name, 'w', zipfile.ZIP_DEFLATED) as docx_zip:
-        docx_zip.writestr('[Content_Types].xml', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    with zipfile.ZipFile(temp_file.name, "w", zipfile.ZIP_DEFLATED) as docx_zip:
+        docx_zip.writestr(
+            "[Content_Types].xml",
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="xml" ContentType="application/xml"/>
 <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-</Types>''')
+</Types>""",
+        )
 
-        docx_zip.writestr('_rels/.rels', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        docx_zip.writestr(
+            "_rels/.rels",
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>''')
+</Relationships>""",
+        )
 
-        docx_zip.writestr('word/document.xml', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        docx_zip.writestr(
+            "word/document.xml",
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
 <w:body>
 <w:p><w:r><w:t>Test document content</w:t></w:r></w:p>
 </w:body>
-</w:document>''')
+</w:document>""",
+        )
 
     return temp_file.name
+
 
 # Test fallback mechanisms
 async def test_fallbacks():
@@ -102,38 +137,35 @@ async def test_fallbacks():
         executors = OptimizedExecutors()
 
         # Test XLSX processing (should trigger fallbacks)
-        print('[TEST] Testing XLSX fallback mechanisms...')
+        print("[TEST] Testing XLSX fallback mechanisms...")
         try:
             result = await asyncio.get_event_loop().run_in_executor(
-                executors.get_io_executor(),
-                read_excel_sync,
-                xlsx_file
+                executors.get_io_executor(), read_excel_sync, xlsx_file
             )
-            print(f'[OK] XLSX processed successfully: {result[:50]}...')
+            print(f"[OK] XLSX processed successfully: {result[:50]}...")
         except Exception as e:
-            print(f'[WARNING] XLSX fallback used: {str(e)[:50]}...')
+            print(f"[WARNING] XLSX fallback used: {str(e)[:50]}...")
 
         # Test DOCX processing
-        print('[TEST] Testing DOCX processing...')
+        print("[TEST] Testing DOCX processing...")
         try:
             result = await asyncio.get_event_loop().run_in_executor(
-                executors.get_io_executor(),
-                read_docx_sync,
-                docx_file
+                executors.get_io_executor(), read_docx_sync, docx_file
             )
-            print(f'[OK] DOCX processed successfully: {result[:50]}...')
+            print(f"[OK] DOCX processed successfully: {result[:50]}...")
         except Exception as e:
-            print(f'[WARNING] DOCX fallback used: {str(e)[:50]}...')
+            print(f"[WARNING] DOCX fallback used: {str(e)[:50]}...")
 
-        print('[OK] Fallback mechanisms tested successfully')
+        print("[OK] Fallback mechanisms tested successfully")
 
     finally:
         try:
             os.unlink(xlsx_file)
             os.unlink(docx_file)
-        except:
+        except OSError:
             pass
+
 
 if __name__ == "__main__":
     asyncio.run(test_fallbacks())
-    print('=== XLSX/DOCX FALLBACKS TEST COMPLETED ===')
+    print("=== XLSX/DOCX FALLBACKS TEST COMPLETED ===")

@@ -4,7 +4,6 @@ CPU Health Checker
 This module provides health checking functionality for CPU load monitoring.
 """
 
-
 import asyncio
 import time
 from datetime import datetime

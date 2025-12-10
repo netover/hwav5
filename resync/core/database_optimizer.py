@@ -9,8 +9,8 @@ This module provides advanced database optimization features including:
 - Automatic query rewriting for better performance
 """
 
-
 import asyncio
+import contextlib
 import hashlib
 import re
 import time
@@ -96,17 +96,13 @@ class QueryOptimizationRule:
     pattern: str  # Regex pattern to match
     optimization: str  # Description of optimization
     priority: int = 1  # Priority for application (1-10)
-    applies_to: set[str] = field(
-        default_factory=lambda: {"select", "insert", "update", "delete"}
-    )
+    applies_to: set[str] = field(default_factory=lambda: {"select", "insert", "update", "delete"})
 
     def matches(self, sql: str) -> bool:
         """Check if this rule matches the SQL query."""
         return bool(re.search(self.pattern, sql, re.IGNORECASE))
 
-    def optimize(
-        self, sql: str, params: tuple[Any, ...]
-    ) -> tuple[str, tuple[Any, ...]]:
+    def optimize(self, sql: str, params: tuple[Any, ...]) -> tuple[str, tuple[Any, ...]]:
         """
         Apply optimization to the query.
 
@@ -119,9 +115,7 @@ class QueryOptimizationRule:
 class IndexOptimizationRule(QueryOptimizationRule):
     """Rule for index usage optimization."""
 
-    def optimize(
-        self, sql: str, params: tuple[Any, ...]
-    ) -> tuple[str, tuple[Any, ...]]:
+    def optimize(self, sql: str, params: tuple[Any, ...]) -> tuple[str, tuple[Any, ...]]:
         """Add index hints where beneficial."""
         # This is a simplified example. Real implementation would analyze query patterns
         # and suggest index usage based on table statistics
@@ -132,9 +126,7 @@ class IndexOptimizationRule(QueryOptimizationRule):
 class JoinOptimizationRule(QueryOptimizationRule):
     """Rule for JOIN optimization."""
 
-    def optimize(
-        self, sql: str, params: tuple[Any, ...]
-    ) -> tuple[str, tuple[Any, ...]]:
+    def optimize(self, sql: str, params: tuple[Any, ...]) -> tuple[str, tuple[Any, ...]]:
         """Optimize JOIN operations."""
         # Analyze JOIN patterns and suggest improvements
         return sql, params
@@ -201,10 +193,8 @@ class DatabaseOptimizer:
         self._running = False
         if self._batch_processor_task:
             self._batch_processor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._batch_processor_task
-            except asyncio.CancelledError:
-                pass
 
         logger.info("Database optimizer stopped")
 
@@ -297,9 +287,7 @@ class DatabaseOptimizer:
             },
         )
 
-    async def execute_optimized_batch(
-        self, batch: QueryBatch, executor: callable
-    ) -> list[Any]:
+    async def execute_optimized_batch(self, batch: QueryBatch, executor: callable) -> list[Any]:
         """
         Execute an optimized batch using the provided executor.
 
@@ -346,9 +334,7 @@ class DatabaseOptimizer:
 
     def get_optimizer_stats(self) -> dict[str, Any]:
         """Get comprehensive optimizer statistics."""
-        active_batches = sum(
-            1 for batch in self.batches.values() if not batch.is_expired
-        )
+        active_batches = sum(1 for batch in self.batches.values() if not batch.is_expired)
 
         return {
             "queries_processed": self.total_queries_processed,
@@ -405,36 +391,25 @@ class DatabaseOptimizer:
         for rule in self.optimization_rules:
             if rule.matches(optimized_sql):
                 try:
-                    optimized_sql, optimized_params = rule.optimize(
-                        optimized_sql, optimized_params
-                    )
+                    optimized_sql, optimized_params = rule.optimize(optimized_sql, optimized_params)
                     logger.debug(
                         "optimization_rule_applied",
                         rule=rule.optimization,
                         sql_preview=optimized_sql[:50],
                     )
                 except Exception as e:
-                    logger.warning(
-                        "optimization_rule_failed", rule=rule.optimization, error=str(e)
-                    )
+                    logger.warning("optimization_rule_failed", rule=rule.optimization, error=str(e))
 
         return optimized_sql, optimized_params
 
-    async def _try_add_to_batch(
-        self, sql: str, params: tuple[Any, ...]
-    ) -> str | None:
+    async def _try_add_to_batch(self, sql: str, params: tuple[Any, ...]) -> str | None:
         """Try to add query to an existing batch. Returns batch_id if successful."""
         # Simple batching strategy - group by query type
         query_type = self._classify_query_type(sql)
 
         # Look for existing batch of same type
         for batch_id, batch in self.batches.items():
-            if (
-                batch_id.startswith(f"{query_type}_")
-                and not batch.is_full
-                and not batch.is_expired
-            ):
-
+            if batch_id.startswith(f"{query_type}_") and not batch.is_full and not batch.is_expired:
                 if batch.add_query(sql, params):
                     return batch_id
 
@@ -461,9 +436,7 @@ class DatabaseOptimizer:
             return "delete"
         return "other"
 
-    def _create_smart_batches(
-        self, queries: list[tuple[str, tuple[Any, ...]]]
-    ) -> list[QueryBatch]:
+    def _create_smart_batches(self, queries: list[tuple[str, tuple[Any, ...]]]) -> list[QueryBatch]:
         """Create batches using smart grouping strategy."""
         # Group by query type and similar structure
         type_groups = defaultdict(list)

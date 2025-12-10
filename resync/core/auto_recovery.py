@@ -4,7 +4,6 @@ Auto-Recovery System
 This module provides automatic recovery capabilities for failed components and services.
 """
 
-
 import time
 from typing import Any
 
@@ -102,9 +101,7 @@ class AutoRecovery:
                     "total_connections": metrics.get("auto_scaling", {}).get(
                         "current_connections", 0
                     ),
-                    "scaling_recommended": metrics.get("smart_pool", {}).get(
-                        "scaling_signals", {}
-                    ),
+                    "scaling_recommended": metrics.get("smart_pool", {}).get("scaling_signals", {}),
                 }
             # Fallback to basic pool manager
             pool_manager = get_connection_pool_manager()
@@ -157,9 +154,7 @@ class AutoRecovery:
                         "successes": stats.get("successes", 0),
                         "error_rate": stats.get("failure_rate", 0),
                         "last_failure": stats.get("last_failure_time"),
-                        "latency_p95": stats.get("latency_percentiles", {}).get(
-                            "p95", 0
-                        ),
+                        "latency_p95": stats.get("latency_percentiles", {}).get("p95", 0),
                     }
                 except Exception as e:
                     logger.error("exception_caught", error=str(e), exc_info=True)
@@ -317,7 +312,7 @@ class AutoRecovery:
             cutoff_time = time.time() - 3600
 
             for filename in os.listdir(temp_dir):
-                if filename.startswith("health_check_") or filename.startswith("tmp_"):
+                if filename.startswith(("health_check_", "tmp_")):
                     filepath = os.path.join(temp_dir, filename)
                     if os.path.getmtime(filepath) < cutoff_time:
                         try:
@@ -378,7 +373,5 @@ class AutoRecovery:
             # Placeholder implementation
             return True
         except Exception as e:
-            logger.error(
-                "connection_pool_scaling_failed", direction=direction, error=str(e)
-            )
+            logger.error("connection_pool_scaling_failed", direction=direction, error=str(e))
             return False

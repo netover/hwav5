@@ -5,7 +5,6 @@ This module provides standardized error handling and response mapping
 for consistent API error responses across all endpoints.
 """
 
-
 from fastapi import HTTPException, status
 
 from resync.core.constants import ErrorMessages
@@ -89,9 +88,7 @@ def handle_api_error(
             return HTTPException(status_code=status_code, detail=detail)
 
     # Default error response for unmatched exceptions
-    detail = ErrorMessages.INTERNAL_ERROR.value.format(
-        operation=operation, detail=str(exception)
-    )
+    detail = ErrorMessages.INTERNAL_ERROR.value.format(operation=operation, detail=str(exception))
     return HTTPException(status_code=default_status, detail=detail)
 
 

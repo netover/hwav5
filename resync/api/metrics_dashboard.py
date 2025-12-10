@@ -8,7 +8,6 @@ Provides:
 - System health metrics
 """
 
-
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -34,14 +33,17 @@ templates = Jinja2Templates(directory=str(templates_dir))
 # PYDANTIC MODELS
 # =============================================================================
 
+
 class TimeSeriesPoint(BaseModel):
     """A single point in a time series."""
+
     timestamp: str
     value: float
 
 
 class ChartData(BaseModel):
     """Data for a chart visualization."""
+
     label: str
     data: list[TimeSeriesPoint]
     color: str | None = None
@@ -49,6 +51,7 @@ class ChartData(BaseModel):
 
 class GaugeData(BaseModel):
     """Current value gauge."""
+
     name: str
     value: float
     unit: str | None = None
@@ -57,6 +60,7 @@ class GaugeData(BaseModel):
 
 class DashboardResponse(BaseModel):
     """Complete dashboard data response."""
+
     summary: dict[str, Any]
     charts: dict[str, list[TimeSeriesPoint]]
     gauges: list[GaugeData]
@@ -66,6 +70,7 @@ class DashboardResponse(BaseModel):
 
 class MetricSummary(BaseModel):
     """Summary for a specific metric."""
+
     name: str
     current: float
     avg_1h: float
@@ -79,18 +84,19 @@ class MetricSummary(BaseModel):
 # DASHBOARD PAGE
 # =============================================================================
 
+
 @router.get("/dashboard", response_class=HTMLResponse)
 async def metrics_dashboard(request: Request):
     """Serve the metrics dashboard HTML page."""
     return templates.TemplateResponse(
-        "metrics_dashboard.html",
-        {"request": request, "title": "Continual Learning Metrics"}
+        "metrics_dashboard.html", {"request": request, "title": "Continual Learning Metrics"}
     )
 
 
 # =============================================================================
 # DATA ENDPOINTS
 # =============================================================================
+
 
 @router.get("/data", response_model=DashboardResponse)
 async def get_dashboard_data(
@@ -120,10 +126,7 @@ async def get_dashboard_data(
             hours=hours,
         )
         charts["queries"] = [
-            TimeSeriesPoint(
-                timestamp=m.period_start.isoformat(),
-                value=m.sum_value
-            )
+            TimeSeriesPoint(timestamp=m.period_start.isoformat(), value=m.sum_value)
             for m in query_data
         ]
 
@@ -134,10 +137,7 @@ async def get_dashboard_data(
             hours=hours,
         )
         charts["response_time"] = [
-            TimeSeriesPoint(
-                timestamp=m.period_start.isoformat(),
-                value=m.avg_value
-            )
+            TimeSeriesPoint(timestamp=m.period_start.isoformat(), value=m.avg_value)
             for m in response_time_data
         ]
 
@@ -148,10 +148,7 @@ async def get_dashboard_data(
             hours=hours,
         )
         charts["feedback"] = [
-            TimeSeriesPoint(
-                timestamp=m.period_start.isoformat(),
-                value=m.sum_value
-            )
+            TimeSeriesPoint(timestamp=m.period_start.isoformat(), value=m.sum_value)
             for m in feedback_data
         ]
 
@@ -162,10 +159,7 @@ async def get_dashboard_data(
             hours=hours,
         )
         charts["enrichment"] = [
-            TimeSeriesPoint(
-                timestamp=m.period_start.isoformat(),
-                value=m.sum_value
-            )
+            TimeSeriesPoint(timestamp=m.period_start.isoformat(), value=m.sum_value)
             for m in enrichment_data
         ]
 
@@ -174,42 +168,56 @@ async def get_dashboard_data(
 
         # Review queue gauge
         queue_size = store.get_gauge(MetricNames.REVIEW_QUEUE_SIZE) or 0
-        gauges.append(GaugeData(
-            name="Review Queue",
-            value=queue_size,
-            unit="items",
-            status="critical" if queue_size > 100 else "warning" if queue_size > 50 else "ok"
-        ))
+        gauges.append(
+            GaugeData(
+                name="Review Queue",
+                value=queue_size,
+                unit="items",
+                status="critical" if queue_size > 100 else "warning" if queue_size > 50 else "ok",
+            )
+        )
 
         # Feedback rate gauge
         total_feedback = store.get_counter(MetricNames.FEEDBACK_TOTAL)
         positive_feedback = store.get_counter(MetricNames.FEEDBACK_POSITIVE)
         positive_rate = (positive_feedback / total_feedback * 100) if total_feedback > 0 else 0
-        gauges.append(GaugeData(
-            name="Positive Feedback",
-            value=round(positive_rate, 1),
-            unit="%",
-            status="ok" if positive_rate >= 80 else "warning" if positive_rate >= 60 else "critical"
-        ))
+        gauges.append(
+            GaugeData(
+                name="Positive Feedback",
+                value=round(positive_rate, 1),
+                unit="%",
+                status="ok"
+                if positive_rate >= 80
+                else "warning"
+                if positive_rate >= 60
+                else "critical",
+            )
+        )
 
         # Enrichment rate gauge
         total_queries = store.get_counter(MetricNames.QUERY_TOTAL)
         enriched_queries = store.get_counter(MetricNames.QUERY_WITH_ENRICHMENT)
         enrichment_rate = (enriched_queries / total_queries * 100) if total_queries > 0 else 0
-        gauges.append(GaugeData(
-            name="Enrichment Rate",
-            value=round(enrichment_rate, 1),
-            unit="%",
-            status="ok" if enrichment_rate >= 30 else "warning" if enrichment_rate >= 10 else "critical"
-        ))
+        gauges.append(
+            GaugeData(
+                name="Enrichment Rate",
+                value=round(enrichment_rate, 1),
+                unit="%",
+                status="ok"
+                if enrichment_rate >= 30
+                else "warning"
+                if enrichment_rate >= 10
+                else "critical",
+            )
+        )
 
         # System metrics
         process = psutil.Process()
         system = {
             "memory_mb": round(process.memory_info().rss / 1024 / 1024, 1),
             "cpu_percent": process.cpu_percent(interval=0.1),
-            "db_records": summary.get("storage", {}).get("raw_records", 0) +
-                         summary.get("storage", {}).get("aggregated_records", 0),
+            "db_records": summary.get("storage", {}).get("raw_records", 0)
+            + summary.get("storage", {}).get("aggregated_records", 0),
         }
 
         # Add DB size
@@ -230,7 +238,7 @@ async def get_dashboard_data(
 
     except Exception as e:
         logger.error("dashboard_data_error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/series/{metric_name}")
@@ -266,11 +274,11 @@ async def get_metric_series(
                     "max": m.max_value,
                 }
                 for m in data
-            ]
+            ],
         }
     except Exception as e:
         logger.error("metric_series_error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/summary")
@@ -292,7 +300,7 @@ async def get_metrics_summary():
         }
     except Exception as e:
         logger.error("metrics_summary_error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/gauges")
@@ -343,7 +351,7 @@ async def get_current_gauges():
         }
     except Exception as e:
         logger.error("gauges_error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/health")
@@ -385,6 +393,7 @@ async def metrics_health():
 # CONTINUAL LEARNING SPECIFIC ENDPOINTS
 # =============================================================================
 
+
 @router.get("/continual-learning")
 async def get_cl_dashboard_data(
     hours: int = Query(24, ge=1, le=168),
@@ -394,12 +403,11 @@ async def get_cl_dashboard_data(
         from resync.core.metrics import get_cl_metrics
 
         cl_metrics = get_cl_metrics()
-        data = await cl_metrics.get_dashboard_data(hours=hours)
+        return await cl_metrics.get_dashboard_data(hours=hours)
 
-        return data
     except Exception as e:
         logger.error("cl_dashboard_error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/feedback-analysis")
@@ -443,13 +451,15 @@ async def get_feedback_analysis(
             neg = negative_by_date.get(date, 0)
             rate = (pos / m.sum_value * 100) if m.sum_value > 0 else 0
 
-            daily_stats.append({
-                "date": date.isoformat(),
-                "total": m.sum_value,
-                "positive": pos,
-                "negative": neg,
-                "positive_rate": round(rate, 1),
-            })
+            daily_stats.append(
+                {
+                    "date": date.isoformat(),
+                    "total": m.sum_value,
+                    "positive": pos,
+                    "negative": neg,
+                    "positive_rate": round(rate, 1),
+                }
+            )
 
         return {
             "daily_stats": daily_stats,
@@ -458,4 +468,4 @@ async def get_feedback_analysis(
         }
     except Exception as e:
         logger.error("feedback_analysis_error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

@@ -37,18 +37,19 @@ class TestAsyncContextStore:
     async def test_async_context_store_non_blocking(self):
         """Test that context store operations don't block the event loop."""
         # Using ContextStore (SQLite)
-        from resync.core.context_store import ContextStore
-        import tempfile
         import os
+        import tempfile
+
+        from resync.core.context_store import ContextStore
 
         # Create a temporary database for testing
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
             tmp_db_path = tmp.name
 
         try:
             # Temporarily override the database path
-            original_env = os.environ.get('CONTEXT_DB_PATH')
-            os.environ['CONTEXT_DB_PATH'] = tmp_db_path
+            original_env = os.environ.get("CONTEXT_DB_PATH")
+            os.environ["CONTEXT_DB_PATH"] = tmp_db_path
 
             # Reset singleton to use test database
             ContextStore._instance = None
@@ -74,9 +75,9 @@ class TestAsyncContextStore:
         finally:
             # Restore environment
             if original_env:
-                os.environ['CONTEXT_DB_PATH'] = original_env
-            elif 'CONTEXT_DB_PATH' in os.environ:
-                del os.environ['CONTEXT_DB_PATH']
+                os.environ["CONTEXT_DB_PATH"] = original_env
+            elif "CONTEXT_DB_PATH" in os.environ:
+                del os.environ["CONTEXT_DB_PATH"]
             ContextStore._instance = None
 
             # Remove test database
@@ -189,9 +190,7 @@ class TestIaAuditorIntegration:
     async def test_knowledge_graph_failure(self, mock_aq, mock_lock):
         """Test behavior when knowledge graph fails."""
         mock_kg_fail = AsyncMock(spec=IKnowledgeGraph)
-        mock_kg_fail.get_all_recent_conversations.side_effect = DatabaseError(
-            "DB error"
-        )
+        mock_kg_fail.get_all_recent_conversations.side_effect = DatabaseError("DB error")
 
         with (
             patch("resync.core.ia_auditor.knowledge_graph", mock_kg_fail),
@@ -242,9 +241,7 @@ class TestEndToEndIntegration:
     """Complete end-to-end integration tests simulating full user interaction flow."""
 
     @pytest.mark.asyncio
-    async def test_complete_user_interaction_flow(
-        self, test_app: FastAPI, client: TestClient
-    ):
+    async def test_complete_user_interaction_flow(self, test_app: FastAPI, client: TestClient):
         """Test the complete user interaction flow: WebSocket → AgentManager → ... → Auditor."""
         mock_agent = AsyncMock()
         mock_agent.stream = MagicMock(return_value=create_text_stream("Test response"))
@@ -267,9 +264,7 @@ class TestEndToEndIntegration:
         mock_run_auditor.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_end_to_end_agent_not_found(
-        self, test_app: FastAPI, client: TestClient
-    ):
+    async def test_end_to_end_agent_not_found(self, test_app: FastAPI, client: TestClient):
         """Test end-to-end flow when an agent is not found."""
         mock_agent_manager = AsyncMock(spec=IAgentManager)
         mock_agent_manager.get_agent.return_value = None
@@ -285,24 +280,20 @@ class TestEndToEndIntegration:
         # but TestClient doesn't expose it easily. The code is sufficient here.
 
     @pytest.mark.asyncio
-    async def test_concurrent_websocket_connections(
-        self, test_app: FastAPI, client: TestClient
-    ):
+    async def test_concurrent_websocket_connections(self, test_app: FastAPI, client: TestClient):
         """Test handling multiple concurrent WebSocket connections."""
         mock_conn_manager = AsyncMock(spec=IConnectionManager)
-        test_app.dependency_overrides[get_connection_manager] = (
-            lambda: mock_conn_manager
-        )
+        test_app.dependency_overrides[get_connection_manager] = lambda: mock_conn_manager
 
         async def simulate_connection(user_id):
             # Each connection needs its own TestClient instance to be isolated
-            with TestClient(test_app) as local_client:
-                with local_client.websocket_connect(
-                    f"/ws/test-agent"
-                ) as websocket:
-                    websocket.send_text(f"Question from {user_id}")
-                    data = websocket.receive_text()
-                    assert "Test response" in data
+            with (
+                TestClient(test_app) as local_client,
+                local_client.websocket_connect("/ws/test-agent") as websocket,
+            ):
+                websocket.send_text(f"Question from {user_id}")
+                data = websocket.receive_text()
+                assert "Test response" in data
 
         tasks = [simulate_connection(i) for i in range(5)]
         await asyncio.gather(*tasks)

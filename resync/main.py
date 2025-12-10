@@ -131,9 +131,7 @@ async def _check_tcp(host: str, port: int, timeout: float = 3.0) -> bool:
     Usa asyncio.open_connection com timeout explícito e fechamento adequado de recursos.
     """
     try:
-        _, writer = await asyncio.wait_for(
-            asyncio.open_connection(host, port), timeout=timeout
-        )
+        _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
         writer.close()
         try:
             await writer.wait_closed()
@@ -187,24 +185,25 @@ async def run_startup_health_checks(settings: "Settings") -> dict[str, Any]:
             health_results["tws_reachability"] = False
 
         # LLM service basic check (GET curto; HEAD pode retornar 405 em alguns provedores)
-        if getattr(settings, 'llm_endpoint', None):
+        if getattr(settings, "llm_endpoint", None):
             try:
                 timeout = aiohttp.ClientTimeout(total=5.0)
                 async with aiohttp.ClientSession(timeout=timeout) as session:
-                    endpoint = settings.llm_endpoint.rstrip('/')
-                    async with session.get(
-                        endpoint, allow_redirects=True
-                    ) as resp:
+                    endpoint = settings.llm_endpoint.rstrip("/")
+                    async with session.get(endpoint, allow_redirects=True) as resp:
                         # Considera apenas status 200-399 como saudável (mais rigoroso)
                         health_results["llm_service"] = 200 <= resp.status < 400
                         if not health_results["llm_service"]:
                             startup_logger.warning(
                                 "llm_service_unhealthy_status",
                                 status=resp.status,
-                                reason="Status code not in 200-399 range"
+                                reason="Status code not in 200-399 range",
                             )
-            except (aiohttp.ClientPayloadError, aiohttp.ServerDisconnectedError,
-                    aiohttp.ClientConnectionError) as e:
+            except (
+                aiohttp.ClientPayloadError,
+                aiohttp.ServerDisconnectedError,
+                aiohttp.ClientConnectionError,
+            ) as e:
                 startup_logger.warning("llm_service_check_unexpected_error", error=str(e))
                 health_results["llm_service"] = False
             except aiohttp.ClientError as e:
@@ -215,7 +214,7 @@ async def run_startup_health_checks(settings: "Settings") -> dict[str, Any]:
                 health_results["llm_service"] = False
 
         # Overall health assessment
-        critical_services = ["redis_connection"] # Redis is always critical
+        critical_services = ["redis_connection"]  # Redis is always critical
         if getattr(settings, "require_llm_at_boot", False):
             critical_services.append("llm_service")
         if getattr(settings, "require_tws_at_boot", False):
@@ -228,7 +227,7 @@ async def run_startup_health_checks(settings: "Settings") -> dict[str, Any]:
         startup_logger.info(
             "startup_health_checks_completed",
             health_results=health_results,
-            overall_health=health_results["overall_health"]
+            overall_health=health_results["overall_health"],
         )
 
         return health_results
@@ -327,21 +326,30 @@ async def validate_configuration_on_startup(fail_fast: bool = True) -> "Settings
     except (ConfigurationValidationError, DependencyUnavailableError, StartupError) as e:
         # ✅ StartupError agora tratado aqui
         if isinstance(e, ConfigurationValidationError):
-            startup_logger.error("configuration_validation_failed",
-                                 error_type="ConfigurationValidationError",
-                                 error_message=e.message, error_details=e.details,
-                                 status_symbol=symbol(False, sys.stdout))
+            startup_logger.error(
+                "configuration_validation_failed",
+                error_type="ConfigurationValidationError",
+                error_message=e.message,
+                error_details=e.details,
+                status_symbol=symbol(False, sys.stdout),
+            )
         elif isinstance(e, DependencyUnavailableError):
-            startup_logger.error("dependency_unavailable",
-                                 error_type="DependencyUnavailableError",
-                                 dependency=e.dependency, error_message=e.message,
-                                 error_details=e.details, status_symbol=symbol(False, sys.stdout))
+            startup_logger.error(
+                "dependency_unavailable",
+                error_type="DependencyUnavailableError",
+                dependency=e.dependency,
+                error_message=e.message,
+                error_details=e.details,
+                status_symbol=symbol(False, sys.stdout),
+            )
         else:
-            startup_logger.error("startup_error",
-                                 error_type="StartupError",
-                                 error_message=getattr(e, "message", str(e)),
-                                 error_details=getattr(e, "details", None),
-                                 status_symbol=symbol(False, sys.stdout))
+            startup_logger.error(
+                "startup_error",
+                error_type="StartupError",
+                error_message=getattr(e, "message", str(e)),
+                error_details=getattr(e, "details", None),
+                status_symbol=symbol(False, sys.stdout),
+            )
 
         # Log configuration guidance for developers (only for configuration errors)
         if isinstance(e, ConfigurationValidationError):
@@ -367,6 +375,7 @@ async def validate_configuration_on_startup(fail_fast: bool = True) -> "Settings
 
 # Create the FastAPI application
 # app is already imported at the top of the file
+
 
 async def main() -> None:
     """
@@ -397,7 +406,7 @@ async def main() -> None:
             startup_logger.critical(
                 "startup_health_checks_failed",
                 health_results=health_results,
-                message="Critical services are not healthy. Application will not start."
+                message="Critical services are not healthy. Application will not start.",
             )
             sys.exit(1)
 
@@ -406,7 +415,7 @@ async def main() -> None:
             host=getattr(settings, "server_host", "127.0.0.1"),
             port=getattr(settings, "server_port", 8000),
             environment=settings.environment,
-            health_status="all_systems_go"
+            health_status="all_systems_go",
         )
 
         # Start the server
@@ -414,7 +423,7 @@ async def main() -> None:
             app,
             host=getattr(settings, "server_host", "127.0.0.1"),
             port=getattr(settings, "server_port", 8000),
-            log_config=None,   # usar nosso logging estruturado
+            log_config=None,  # usar nosso logging estruturado
             access_log=False,  # logs de acesso via middleware, se necessário
         )
         server = uvicorn.Server(config)
@@ -426,12 +435,11 @@ async def main() -> None:
 
     except (RuntimeError, OSError, ConnectionError) as e:
         startup_logger.critical(
-            "main_startup_failed",
-            error_type=type(e).__name__,
-            error_message=str(e)
+            "main_startup_failed", error_type=type(e).__name__, error_message=str(e)
         )
         cleanup_resources()
         raise
+
 
 if __name__ == "__main__":
     try:
@@ -448,7 +456,7 @@ if __name__ == "__main__":
             "application_startup_failed_unexpected_error",
             error_type=type(e).__name__,
             error_message=str(e),
-            traceback_info=True
+            traceback_info=True,
         )
         # Ensure cleanup even on unexpected errors
         cleanup_resources()

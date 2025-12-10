@@ -4,7 +4,6 @@ Connection Pools Health Checker
 This module provides health checking functionality for connection pools.
 """
 
-
 import time
 from datetime import datetime
 from typing import Any
@@ -105,9 +104,7 @@ class ConnectionPoolsHealthChecker(BaseHealthChecker):
             # Enhance metadata with calculated percentages and thresholds
             enhanced_metadata = dict(pool_stats)
             if "active_connections" in pool_stats and "total_connections" in pool_stats:
-                enhanced_metadata["connection_usage_percent"] = round(
-                    connection_usage_percent, 1
-                )
+                enhanced_metadata["connection_usage_percent"] = round(connection_usage_percent, 1)
                 enhanced_metadata["threshold_percent"] = (
                     self.config.database_connection_threshold_percent
                 )

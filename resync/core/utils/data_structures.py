@@ -5,15 +5,16 @@ This module provides high-performance data structures
 that replace O(n²) operations with O(1) or O(n log n) alternatives.
 """
 
+import contextlib
 import heapq
 import math
 import time
 from collections import deque
 from typing import Any, Generic, TypeVar
 
-T = TypeVar('T')
-K = TypeVar('K')
-V = TypeVar('V')
+T = TypeVar("T")
+K = TypeVar("K")
+V = TypeVar("V")
 
 
 class LRUCache(Generic[K, V]):
@@ -69,10 +70,8 @@ class LRUCache(Generic[K, V]):
         del self.cache[key]
         if key in self.access_set:
             self.access_set.remove(key)
-            try:
+            with contextlib.suppress(ValueError):
                 self.access_order.remove(key)
-            except ValueError:
-                pass
 
         return True
 
@@ -163,7 +162,7 @@ class IndexedPriorityQueue(Generic[T]):
         index = self._index[item]
         if index < len(self._heap):
             # Mark as removed (using priority as sentinel)
-            self._heap[index] = (float('-inf'), float('-inf'), item)
+            self._heap[index] = (float("-inf"), float("-inf"), item)
 
         del self._index[item]
         return True
@@ -263,11 +262,7 @@ class FrequencyCounter:
 
     def most_common(self, n: int = 10) -> list[tuple[Any, int]]:
         """Get n most common items efficiently."""
-        return sorted(
-            self._counts.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )[:n]
+        return sorted(self._counts.items(), key=lambda x: x[1], reverse=True)[:n]
 
     def total(self) -> int:
         """Get total count."""
@@ -308,7 +303,7 @@ class BloomFilter:
         for i in range(self.hash_count):
             hash_val = self._hash(item, i)
             bit_index = hash_val % self.bit_array_size
-            self.bit_array |= (1 << bit_index)
+            self.bit_array |= 1 << bit_index
 
         self.items_added += 1
 

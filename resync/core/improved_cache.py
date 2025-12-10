@@ -10,6 +10,7 @@ Este módulo implementa um cache TTL assíncrono seguindo os princípios SOLID:
 """
 
 import asyncio
+import contextlib
 from abc import ABC, abstractmethod
 from typing import Any, TypeVar
 
@@ -94,14 +95,14 @@ class InMemoryCacheStorage(CacheStorage):
 
     async def clear(self) -> None:
         """Limpa todos os shards."""
-        for shard, lock in zip(self.shards, self.locks):
+        for shard, lock in zip(self.shards, self.locks, strict=False):
             async with lock:
                 shard.clear()
 
     async def keys(self) -> list[str]:
         """Retorna todas as chaves ativas (não expiradas)."""
         all_keys = []
-        for shard, lock in zip(self.shards, self.locks):
+        for shard, lock in zip(self.shards, self.locks, strict=False):
             async with lock:
                 # Filtrar apenas chaves não expiradas
                 for key, entry in shard.items():
@@ -129,10 +130,8 @@ class CacheTTLManager:
         self._stop_cleanup = True
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
             self._cleanup_task = None
             logger.info("cache_ttl_cleanup_stopped")
 

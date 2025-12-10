@@ -4,7 +4,6 @@ Memory Health Checker
 This module provides health checking functionality for memory usage monitoring.
 """
 
-
 import time
 from datetime import datetime
 from typing import Any

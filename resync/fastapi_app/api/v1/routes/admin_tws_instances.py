@@ -21,9 +21,13 @@ router = APIRouter()
 
 # Pydantic Models
 
+
 class TWSInstanceCreate(BaseModel):
     """Model for creating a TWS instance."""
-    name: str = Field(..., min_length=1, max_length=50, description="Instance name (e.g., SAZ, NAZ)")
+
+    name: str = Field(
+        ..., min_length=1, max_length=50, description="Instance name (e.g., SAZ, NAZ)"
+    )
     display_name: str = Field(..., min_length=1, max_length=100)
     description: str = ""
     host: str = Field(..., min_length=1)
@@ -41,6 +45,7 @@ class TWSInstanceCreate(BaseModel):
 
 class TWSInstanceUpdate(BaseModel):
     """Model for updating a TWS instance."""
+
     display_name: str | None = None
     description: str | None = None
     host: str | None = None
@@ -57,21 +62,25 @@ class TWSInstanceUpdate(BaseModel):
 
 class SessionCreate(BaseModel):
     """Model for creating a session."""
+
     instance_id: str
 
 
 # Lazy import to avoid circular dependencies
 def _get_manager():
     from resync.core.tws_multi import get_tws_manager
+
     return get_tws_manager()
 
 
 def _get_config_class():
     from resync.core.tws_multi.instance import TWSEnvironment, TWSInstanceConfig
+
     return TWSInstanceConfig, TWSEnvironment
 
 
 # Instance Endpoints
+
 
 @router.get("/tws-instances", tags=["TWS Instances"])
 async def list_tws_instances():
@@ -138,7 +147,7 @@ async def create_tws_instance(instance: TWSInstanceCreate):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
 
 @router.get("/tws-instances/{instance_id}", tags=["TWS Instances"])
@@ -207,6 +216,7 @@ async def delete_tws_instance(instance_id: str):
 
 # Connection Endpoints
 
+
 @router.post("/tws-instances/{instance_id}/connect", tags=["TWS Instances"])
 async def connect_tws_instance(instance_id: str):
     """Connect to a TWS instance."""
@@ -224,7 +234,9 @@ async def connect_tws_instance(instance_id: str):
     return {
         "success": success,
         "status": instance.status.value,
-        "message": "Connected successfully" if success else f"Connection failed: {instance.last_error}",
+        "message": "Connected successfully"
+        if success
+        else f"Connection failed: {instance.last_error}",
     }
 
 
@@ -261,11 +273,11 @@ async def test_tws_connection(instance_id: str):
             detail="Instance not found",
         )
 
-    result = await manager.test_connection(instance_id)
-    return result
+    return await manager.test_connection(instance_id)
 
 
 # Session Endpoints (for tabs)
+
 
 @router.post("/tws-instances/{instance_id}/sessions", tags=["TWS Sessions"])
 async def create_session(
@@ -326,6 +338,7 @@ async def close_session(session_id: str):
 
 
 # Learning Endpoints
+
 
 @router.get("/tws-instances/{instance_id}/learning", tags=["TWS Learning"])
 async def get_instance_learning(instance_id: str):
@@ -438,6 +451,7 @@ async def clear_learning_data(instance_id: str, confirm: bool = False):
 
 
 # Bulk Operations
+
 
 @router.post("/tws-instances/bulk/connect", tags=["TWS Instances"])
 async def connect_all_instances():

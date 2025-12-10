@@ -1,4 +1,3 @@
-
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -57,9 +56,7 @@ class OverallHealthStatus:
     unhealthy_components: int
     unknown_components: int
     overall_health_percentage: float
-    component_summaries: dict[ComponentType, ComponentHealthSummary] = field(
-        default_factory=dict
-    )
+    component_summaries: dict[ComponentType, ComponentHealthSummary] = field(default_factory=dict)
     critical_issues: list[str] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
 
@@ -166,9 +163,7 @@ class HealthMonitoringAggregator:
             await self.collect_all_health_checks()
 
         # Group components by type
-        components_by_type: dict[ComponentType, list[ComponentHealth]] = defaultdict(
-            list
-        )
+        components_by_type: dict[ComponentType, list[ComponentHealth]] = defaultdict(list)
 
         for component in self._cached_report.component_health.values():
             components_by_type[component.component_type].append(component)
@@ -206,9 +201,7 @@ class HealthMonitoringAggregator:
             )
 
         # Count components by status
-        status_counts = Counter(
-            component.status for component in health_result.components.values()
-        )
+        status_counts = Counter(component.status for component in health_result.components.values())
 
         total_components = len(health_result.components)
         healthy_count = status_counts.get(HealthStatus.HEALTHY, 0)
@@ -261,9 +254,7 @@ class HealthMonitoringAggregator:
         status_counts = Counter(component.status for component in components)
 
         # Calculate average response time
-        response_times = [
-            c.response_time_ms for c in components if c.response_time_ms is not None
-        ]
+        response_times = [c.response_time_ms for c in components if c.response_time_ms is not None]
         average_response_time = (
             sum(response_times) / len(response_times) if response_times else None
         )
@@ -281,9 +272,7 @@ class HealthMonitoringAggregator:
             components=components,
         )
 
-    def _identify_critical_issues(
-        self, components: dict[str, ComponentHealth]
-    ) -> list[str]:
+    def _identify_critical_issues(self, components: dict[str, ComponentHealth]) -> list[str]:
         """Identify critical issues from component health data."""
         issues = []
 
@@ -298,9 +287,7 @@ class HealthMonitoringAggregator:
             if component.component_type == ComponentType.DATABASE:
                 usage_percent = component.metadata.get("connection_usage_percent")
                 if usage_percent and usage_percent > 95:
-                    issues.append(
-                        f"Database connection pool critically high: {usage_percent}%"
-                    )
+                    issues.append(f"Database connection pool critically high: {usage_percent}%")
 
             elif component.component_type == ComponentType.MEMORY:
                 usage_percent = component.metadata.get("memory_usage_percent")
@@ -340,18 +327,14 @@ class HealthMonitoringAggregator:
 
         # Check for high response times
         for component_type, summary in summaries.items():
-            if (
-                summary.average_response_time and summary.average_response_time > 1000
-            ):  # > 1 second
+            if summary.average_response_time and summary.average_response_time > 1000:  # > 1 second
                 recommendations.append(
                     f"High response times detected for {component_type.value} components"
                 )
 
         # General recommendations based on overall health
         unhealthy_types = [
-            ct
-            for ct, summary in summaries.items()
-            if summary.status == HealthStatus.UNHEALTHY
+            ct for ct, summary in summaries.items() if summary.status == HealthStatus.UNHEALTHY
         ]
         if unhealthy_types:
             recommendations.append(

@@ -1,4 +1,3 @@
-
 import os
 import stat
 import time
@@ -131,9 +130,7 @@ class FileSystemHealthMonitor:
         self._monitoring_active = False
 
         # Configuration defaults
-        self.disk_space_threshold = self.config.get(
-            "disk_space_threshold_percent", 90.0
-        )
+        self.disk_space_threshold = self.config.get("disk_space_threshold_percent", 90.0)
         self.integrity_check_paths = self.config.get("integrity_check_paths", ["/"])
         self.permission_check_paths = self.config.get("permission_check_paths", ["/"])
         self.exclude_patterns = self.config.get("exclude_patterns", [])
@@ -149,7 +146,7 @@ class FileSystemHealthMonitor:
         Returns:
             DiskSpaceStatus: Current disk space status
         """
-        start_time = time.time()
+        time.time()
 
         try:
             disk_status = DiskSpaceStatus()
@@ -171,9 +168,7 @@ class FileSystemHealthMonitor:
                     total_bytes = stat_info.f_blocks * stat_info.f_frsize
                     free_bytes = stat_info.f_bavail * stat_info.f_frsize
                     used_bytes = total_bytes - free_bytes
-                    used_percent = (
-                        (used_bytes / total_bytes) * 100 if total_bytes > 0 else 0.0
-                    )
+                    used_percent = (used_bytes / total_bytes) * 100 if total_bytes > 0 else 0.0
 
                     # Track maximum usage across all paths
                     if used_percent > max_usage_percent:
@@ -183,17 +178,13 @@ class FileSystemHealthMonitor:
                         disk_status.free_bytes = free_bytes
                         disk_status.used_percent = used_percent
                         disk_status.mount_point = str(path_obj)
-                        disk_status.device = str(
-                            path_obj
-                        )  # Simplified for basic implementation
+                        disk_status.device = str(path_obj)  # Simplified for basic implementation
 
                     # Check if filesystem is readonly
                     disk_status.is_readonly = not os.access(path, os.W_OK)
 
                 except (OSError, AttributeError) as e:
-                    logger.warning(
-                        "disk_space_check_failed_for_path", path=path, error=str(e)
-                    )
+                    logger.warning("disk_space_check_failed_for_path", path=path, error=str(e))
                     continue
 
             # Determine health status based on usage
@@ -223,7 +214,7 @@ class FileSystemHealthMonitor:
         Returns:
             IntegrityStatus: Current file integrity status
         """
-        start_time = time.time()
+        time.time()
 
         try:
             integrity_status = IntegrityStatus()
@@ -239,9 +230,7 @@ class FileSystemHealthMonitor:
                     self._scan_directory_integrity(path_obj, integrity_status)
 
                 except (OSError, AttributeError) as e:
-                    logger.warning(
-                        "integrity_check_failed_for_path", path=path, error=str(e)
-                    )
+                    logger.warning("integrity_check_failed_for_path", path=path, error=str(e))
                     integrity_status.scan_errors += 1
                     integrity_status.error_details.append(f"Path {path}: {str(e)}")
                     continue
@@ -285,7 +274,7 @@ class FileSystemHealthMonitor:
         Returns:
             PermissionStatus: Current permission status
         """
-        start_time = time.time()
+        time.time()
 
         try:
             permission_status = PermissionStatus()
@@ -301,9 +290,7 @@ class FileSystemHealthMonitor:
                     self._scan_directory_permissions(path_obj, permission_status)
 
                 except (OSError, AttributeError) as e:
-                    logger.warning(
-                        "permission_check_failed_for_path", path=path, error=str(e)
-                    )
+                    logger.warning("permission_check_failed_for_path", path=path, error=str(e))
                     permission_status.permission_errors += 1
                     permission_status.error_details.append(f"Path {path}: {str(e)}")
                     continue
@@ -425,11 +412,7 @@ class FileSystemHealthMonitor:
         """Check if a path should be excluded from scanning."""
         path_str = str(path)
 
-        for pattern in self.exclude_patterns:
-            if pattern in path_str:
-                return True
-
-        return False
+        return any(pattern in path_str for pattern in self.exclude_patterns)
 
     def _has_suspicious_permissions(self, path: Path, mode: int) -> bool:
         """Check if file has suspicious permissions."""
@@ -479,9 +462,7 @@ class FileSystemHealthMonitor:
         filtered_history = self._check_history
 
         if check_type:
-            filtered_history = [
-                entry for entry in filtered_history if entry["type"] == check_type
-            ]
+            filtered_history = [entry for entry in filtered_history if entry["type"] == check_type]
 
         if limit:
             filtered_history = filtered_history[-limit:]
@@ -497,7 +478,7 @@ class FileSystemHealthMonitor:
 
         Verifies checksums for critical configuration files.
         """
-        critical_extensions = {'.json', '.yaml', '.yml', '.conf', '.ini'}
+        critical_extensions = {".json", ".yaml", ".yml", ".conf", ".ini"}
         return file_path.suffix.lower() in critical_extensions
 
     def _verify_file_checksum(self, file_path: Path) -> bool:
@@ -509,9 +490,9 @@ class FileSystemHealthMonitor:
 
         try:
             # Calculate current checksum
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 content = f.read()
-                current_hash = hashlib.sha256(content).hexdigest()
+                hashlib.sha256(content).hexdigest()
 
             # For now, just verify file is readable and has content
             # In production, compare against stored checksums

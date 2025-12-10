@@ -54,9 +54,7 @@ async def get_cors_config(request: Request) -> CorsConfigResponse:
     )
 
 
-@cors_monitor_router.post(
-    "/test", response_model=CorsTestResponse, summary="Test CORS policy"
-)
+@cors_monitor_router.post("/test", response_model=CorsTestResponse, summary="Test CORS policy")
 async def test_cors_policy(
     params: CorsTestParams = Depends(),
 ) -> CorsTestResponse:
@@ -64,12 +62,10 @@ async def test_cors_policy(
     Tests if a given request would be allowed by the current CORS policy.
     """
     origin_allowed = (
-        "*" in settings.CORS_ALLOW_ORIGINS
-        or params.origin in settings.CORS_ALLOW_ORIGINS
+        "*" in settings.CORS_ALLOW_ORIGINS or params.origin in settings.CORS_ALLOW_ORIGINS
     )
     method_allowed = (
-        "*" in settings.CORS_ALLOW_METHODS
-        or params.method in settings.CORS_ALLOW_METHODS
+        "*" in settings.CORS_ALLOW_METHODS or params.method in settings.CORS_ALLOW_METHODS
     )
     is_allowed = origin_allowed and method_allowed
 

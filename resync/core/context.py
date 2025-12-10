@@ -11,9 +11,7 @@ import uuid
 from contextvars import ContextVar, Token
 
 # Context variables para armazenar informações da requisição
-_correlation_id_ctx: ContextVar[str | None] = ContextVar(
-    "correlation_id", default=None
-)
+_correlation_id_ctx: ContextVar[str | None] = ContextVar("correlation_id", default=None)
 
 _user_id_ctx: ContextVar[str | None] = ContextVar("user_id", default=None)
 
@@ -214,9 +212,7 @@ class RequestContext:
     def __enter__(self):
         """Entra no contexto, definindo os valores."""
         if self.correlation_id:
-            self.tokens.append(
-                ("correlation_id", set_correlation_id(self.correlation_id))
-            )
+            self.tokens.append(("correlation_id", set_correlation_id(self.correlation_id)))
         if self.user_id:
             self.tokens.append(("user_id", set_user_id(self.user_id)))
         if self.request_id:

@@ -1,4 +1,3 @@
-
 import logging
 import time
 from datetime import datetime
@@ -52,9 +51,7 @@ class HealthCheckService:
                 component_type = self._get_component_type(component_name)
 
                 # Perform basic health check
-                health = await self._perform_basic_health_check(
-                    component_name, component_type
-                )
+                health = await self._perform_basic_health_check(component_name, component_type)
 
                 # Create result
                 result = HealthCheckResult(
@@ -66,9 +63,7 @@ class HealthCheckService:
                         "total_components": 1,
                         "healthy": 1 if health.status == HealthStatus.HEALTHY else 0,
                         "degraded": 1 if health.status == HealthStatus.DEGRADED else 0,
-                        "unhealthy": (
-                            1 if health.status == HealthStatus.UNHEALTHY else 0
-                        ),
+                        "unhealthy": (1 if health.status == HealthStatus.UNHEALTHY else 0),
                         "unknown": 1 if health.status == HealthStatus.UNKNOWN else 0,
                     },
                 )
@@ -102,9 +97,7 @@ class HealthCheckService:
 
         return results
 
-    async def get_component_health(
-        self, component_type: ComponentType
-    ) -> ComponentHealth:
+    async def get_component_health(self, component_type: ComponentType) -> ComponentHealth:
         """
         Get health status for a specific component type.
 
@@ -180,9 +173,7 @@ class HealthCheckService:
 
             # Determine overall status
             total_components = len(results)
-            critical_ratio = (
-                critical_count / total_components if total_components > 0 else 0
-            )
+            critical_ratio = critical_count / total_components if total_components > 0 else 0
 
             if critical_ratio > 0.5:  # More than 50% critical
                 return SystemHealthStatus.CRITICAL
@@ -248,9 +239,7 @@ class HealthCheckService:
                 error_count=1,
             )
 
-    async def _check_database_health_basic(
-        self, component_name: str
-    ) -> ComponentHealth:
+    async def _check_database_health_basic(self, component_name: str) -> ComponentHealth:
         """Basic database health check."""
         # This would contain basic database connectivity checks
         # For now, return a placeholder healthy status
@@ -289,9 +278,7 @@ class HealthCheckService:
             last_check=datetime.now(),
         )
 
-    async def _check_file_system_health_basic(
-        self, component_name: str
-    ) -> ComponentHealth:
+    async def _check_file_system_health_basic(self, component_name: str) -> ComponentHealth:
         """Basic file system health check."""
         # This would contain basic file system checks
         # For now, return a placeholder healthy status

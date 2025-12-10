@@ -1,4 +1,3 @@
-
 import logging
 
 from fastapi import FastAPI, Request, Response
@@ -113,8 +112,7 @@ class LoggingCORSMiddleware(BaseHTTPMiddleware):
 
         # If no origin header, proceed normally (same-origin request)
         if not origin:
-            response = await call_next(request)
-            return response
+            return await call_next(request)
 
         # Validate origin against policy
         is_allowed = self.policy.is_origin_allowed(origin)
@@ -179,12 +177,8 @@ class LoggingCORSMiddleware(BaseHTTPMiddleware):
 
         # Add preflight-specific headers if needed
         if is_preflight:
-            response.headers["Access-Control-Allow-Methods"] = ", ".join(
-                self.allow_methods
-            )
-            response.headers["Access-Control-Allow-Headers"] = ", ".join(
-                self.allow_headers
-            )
+            response.headers["Access-Control-Allow-Methods"] = ", ".join(self.allow_methods)
+            response.headers["Access-Control-Allow-Headers"] = ", ".join(self.allow_headers)
             response.headers["Access-Control-Max-Age"] = str(self.max_age)
 
         return response
@@ -201,9 +195,7 @@ class LoggingCORSMiddleware(BaseHTTPMiddleware):
             "preflight_requests": self._preflight_requests,
             "violations": self._cors_violations,
             "violation_rate": (
-                self._cors_violations / self._cors_requests * 100
-                if self._cors_requests > 0
-                else 0
+                self._cors_violations / self._cors_requests * 100 if self._cors_requests > 0 else 0
             ),
         }
 
@@ -234,10 +226,7 @@ def add_cors_middleware(
         environment = Environment(environment.lower())
 
     # Get CORS policy
-    if custom_policy:
-        policy = custom_policy
-    else:
-        policy = cors_config.get_policy(environment)
+    policy = custom_policy or cors_config.get_policy(environment)
 
     logger.info(
         f"Adding CORS middleware for environment: {policy.environment} "

@@ -5,7 +5,6 @@ This module provides monitoring capabilities for circuit breakers,
 including metrics, statistics, and management operations.
 """
 
-
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
@@ -203,7 +202,7 @@ async def get_proactive_health_checks() -> dict[str, Any]:
         logger.error("proactive_health_check_endpoint_failed", error=str(e))
         raise HTTPException(
             status_code=500, detail=f"Proactive health check failed: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/proactive-health/analyze")
@@ -229,7 +228,7 @@ async def analyze_system_health() -> dict[str, Any]:
 
     except Exception as e:
         logger.error("health_analysis_endpoint_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Health analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Health analysis failed: {str(e)}") from e
 
 
 async def _calculate_health_score(results: dict[str, Any]) -> float:
@@ -238,14 +237,10 @@ async def _calculate_health_score(results: dict[str, Any]) -> float:
 
     # Deduct points for issues
     critical_issues = sum(
-        1
-        for issue in results.get("issues_detected", [])
-        if issue.get("severity") == "critical"
+        1 for issue in results.get("issues_detected", []) if issue.get("severity") == "critical"
     )
     high_issues = sum(
-        1
-        for issue in results.get("issues_detected", [])
-        if issue.get("severity") == "high"
+        1 for issue in results.get("issues_detected", []) if issue.get("severity") == "high"
     )
 
     # Critical issues have bigger impact

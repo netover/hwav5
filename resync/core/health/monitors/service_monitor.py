@@ -1,4 +1,3 @@
-
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -91,9 +90,7 @@ class ServiceHealthMonitor:
 
             if unhealthy_deps:
                 overall_status = HealthStatus.UNHEALTHY
-            elif any(
-                status == HealthStatus.DEGRADED for status in dependency_status.values()
-            ):
+            elif any(status == HealthStatus.DEGRADED for status in dependency_status.values()):
                 overall_status = HealthStatus.DEGRADED
 
             return ServiceDependencyStatus(
@@ -106,25 +103,13 @@ class ServiceHealthMonitor:
                 metadata={
                     "total_dependencies": len(dependencies),
                     "healthy_count": len(
-                        [
-                            s
-                            for s in dependency_status.values()
-                            if s == HealthStatus.HEALTHY
-                        ]
+                        [s for s in dependency_status.values() if s == HealthStatus.HEALTHY]
                     ),
                     "degraded_count": len(
-                        [
-                            s
-                            for s in dependency_status.values()
-                            if s == HealthStatus.DEGRADED
-                        ]
+                        [s for s in dependency_status.values() if s == HealthStatus.DEGRADED]
                     ),
                     "unhealthy_count": len(
-                        [
-                            s
-                            for s in dependency_status.values()
-                            if s == HealthStatus.UNHEALTHY
-                        ]
+                        [s for s in dependency_status.values() if s == HealthStatus.UNHEALTHY]
                     ),
                 },
             )

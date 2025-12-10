@@ -5,7 +5,6 @@ This module provides comprehensive performance tracking capabilities including
 cache statistics, response time monitoring, and performance metrics collection.
 """
 
-
 import asyncio
 import time
 from collections import defaultdict, deque
@@ -51,9 +50,7 @@ class CacheStatistics:
             self.misses += 1
 
         self.total_requests = self.hits + self.misses
-        self.hit_rate = (
-            self.hits / self.total_requests if self.total_requests > 0 else 0.0
-        )
+        self.hit_rate = self.hits / self.total_requests if self.total_requests > 0 else 0.0
         self.last_updated = datetime.now()
 
 
@@ -71,9 +68,7 @@ class PerformanceTracker:
         self.cache_stats = CacheStatistics()
 
         # Component-specific metrics
-        self.component_metrics: dict[str, CacheStatistics] = defaultdict(
-            CacheStatistics
-        )
+        self.component_metrics: dict[str, CacheStatistics] = defaultdict(CacheStatistics)
 
         # Response time tracking
         self.response_times: deque = deque(maxlen=1000)
@@ -177,17 +172,13 @@ class PerformanceTracker:
             "resource_usage": {
                 "cpu_percent": {
                     "current": cpu_usage[-1] if cpu_usage else 0,
-                    "average": (
-                        round(sum(cpu_usage) / len(cpu_usage), 2) if cpu_usage else 0
-                    ),
+                    "average": (round(sum(cpu_usage) / len(cpu_usage), 2) if cpu_usage else 0),
                     "max": max(cpu_usage) if cpu_usage else 0,
                 },
                 "memory_percent": {
                     "current": memory_usage[-1] if memory_usage else 0,
                     "average": (
-                        round(sum(memory_usage) / len(memory_usage), 2)
-                        if memory_usage
-                        else 0
+                        round(sum(memory_usage) / len(memory_usage), 2) if memory_usage else 0
                     ),
                     "max": max(memory_usage) if memory_usage else 0,
                 },
@@ -245,9 +236,7 @@ class PerformanceTracker:
             logger.warning("failed_to_calculate_health_score", error=str(e))
             return 0.0
 
-    def _calculate_response_time_score(
-        self, metrics: list[PerformanceMetrics]
-    ) -> float:
+    def _calculate_response_time_score(self, metrics: list[PerformanceMetrics]) -> float:
         """Calculate score based on response times (lower is better)."""
         if not metrics:
             return 0.0
@@ -333,10 +322,7 @@ class PerformanceTracker:
         lower_index = int(index)
         upper_index = lower_index + 1
         weight = index - lower_index
-        return (
-            sorted_data[lower_index] * (1 - weight)
-            + sorted_data[upper_index] * weight
-        )
+        return sorted_data[lower_index] * (1 - weight) + sorted_data[upper_index] * weight
 
     async def _cleanup_old_metrics(self) -> None:
         """Clean up old performance metrics."""

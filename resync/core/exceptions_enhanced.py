@@ -36,9 +36,7 @@ class ResyncException(Exception):
         self.error_code = error_code or self._generate_error_code()
         self.error_category = error_category or self._get_default_category()
         self.severity = severity or self._get_default_severity()
-        self.user_friendly_message = (
-            user_friendly_message or self._get_default_user_message()
-        )
+        self.user_friendly_message = user_friendly_message or self._get_default_user_message()
         self.troubleshooting_hints = (
             troubleshooting_hints or self._get_default_troubleshooting_hints()
         )

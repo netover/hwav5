@@ -57,9 +57,7 @@ class IngestService:
             ck_norm = ck.strip()
             sha = hashlib.sha256(ck_norm.encode("utf-8")).hexdigest()
             # dedup duro por sha256 (consulta por payload)
-            exists = await self.store.exists_by_sha256(
-                sha, collection=CFG.collection_read
-            )
+            exists = await self.store.exists_by_sha256(sha, collection=CFG.collection_read)
             if exists:
                 continue
             chunk_id = f"{doc_id}#c{i:06d}"

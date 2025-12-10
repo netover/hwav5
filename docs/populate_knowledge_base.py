@@ -27,14 +27,12 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from resync.core.context_store import ContextStore
 from resync.core.file_ingestor import FileIngestor, load_existing_rag_documents
 from resync.core.interfaces import IKnowledgeGraph
-from resync.core.context_store import ContextStore
 
 # Configuração do logging para exibir o progresso
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 

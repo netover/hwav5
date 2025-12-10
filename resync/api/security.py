@@ -50,7 +50,7 @@ def decode_token(token: str, settings: AppSettings) -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token",
-        )
+        ) from _e
 
 
 async def get_current_user(

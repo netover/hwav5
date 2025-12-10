@@ -28,6 +28,7 @@ def _get_soc2_classes():
 
     # Get the actual implementation from soc2_compliance_refactored
     from resync.core.soc2_compliance_refactored import SOC2ComplianceManager
+
     return SOC2ComplianceManager, SOC2TrustServiceCriteria
 
 
@@ -88,9 +89,7 @@ class ReportStrategy(ABC):
     def validate_manager(self, manager: Any) -> None:
         """Validate that manager implements required protocol."""
         if not isinstance(manager, ComplianceManagerProtocol):
-            raise StrategyValidationError(
-                "Manager must implement ComplianceManagerProtocol"
-            )
+            raise StrategyValidationError("Manager must implement ComplianceManagerProtocol")
 
     def execute(self, manager: Any, context: dict[str, Any] | None = None) -> Any:
         """Execute the strategy and return the report component.
@@ -113,7 +112,7 @@ class ReportStrategy(ABC):
             logger.error(f"Error executing strategy {self.__class__.__name__}: {e}")
             if isinstance(e, (StrategyValidationError, ComplianceCalculationError)):
                 raise
-            raise ComplianceCalculationError(f"Strategy execution failed: {e}")
+            raise ComplianceCalculationError(f"Strategy execution failed: {e}") from e
 
     @abstractmethod
     def _execute_strategy(self, manager: Any, context: dict[str, Any]) -> Any:
@@ -148,29 +147,27 @@ class ControlComplianceStrategy(ReportStrategy):
             total_controls = len(manager.controls)
             if total_controls == 0:
                 logger.warning("No controls found in compliance manager")
-                return {
-                    "total_controls": 0,
-                    "compliant_controls": 0,
-                    "compliance_rate": 0.0
-                }
+                return {"total_controls": 0, "compliant_controls": 0, "compliance_rate": 0.0}
 
             compliant_controls = sum(1 for c in manager.controls.values() if c.is_compliant())
 
             compliance_rate = compliant_controls / total_controls
 
-            logger.info(f"Control compliance calculated: {compliant_controls}/{total_controls} "
-                       f"({compliance_rate:.2%})")
+            logger.info(
+                f"Control compliance calculated: {compliant_controls}/{total_controls} "
+                f"({compliance_rate:.2%})"
+            )
 
             return {
                 "total_controls": total_controls,
                 "compliant_controls": compliant_controls,
-                "compliance_rate": compliance_rate
+                "compliance_rate": compliance_rate,
             }
 
         except AttributeError as e:
-            raise ComplianceCalculationError(f"Manager missing required attributes: {e}")
+            raise ComplianceCalculationError(f"Manager missing required attributes: {e}") from None
         except Exception as e:
-            raise ComplianceCalculationError(f"Error calculating control compliance: {e}")
+            raise ComplianceCalculationError(f"Error calculating control compliance: {e}") from None
 
 
 class CriteriaScoresStrategy(ReportStrategy):
@@ -208,15 +205,19 @@ class CriteriaScoresStrategy(ReportStrategy):
                     "total_controls": scores["total"],
                 }
 
-                logger.debug(f"Criteria {criterion.value}: {scores['compliant']}/{scores['total']} "
-                           f"({score:.2%})")
+                logger.debug(
+                    f"Criteria {criterion.value}: {scores['compliant']}/{scores['total']} "
+                    f"({score:.2%})"
+                )
 
             return criteria_scores
 
         except AttributeError as e:
-            raise ComplianceCalculationError(f"Manager or control missing required attributes: {e}")
+            raise ComplianceCalculationError(
+                f"Manager or control missing required attributes: {e}"
+            ) from None
         except Exception as e:
-            raise ComplianceCalculationError(f"Error calculating criteria scores: {e}")
+            raise ComplianceCalculationError(f"Error calculating criteria scores: {e}") from None
 
 
 class OverallComplianceStrategy(ReportStrategy):
@@ -278,7 +279,9 @@ class OverallComplianceStrategy(ReportStrategy):
             return overall_score
 
         except Exception as e:
-            raise ComplianceCalculationError(f"Error calculating overall compliance score: {e}")
+            raise ComplianceCalculationError(
+                f"Error calculating overall compliance score: {e}"
+            ) from None
 
 
 class ControlStatusSummaryStrategy(ReportStrategy):
@@ -305,9 +308,13 @@ class ControlStatusSummaryStrategy(ReportStrategy):
             return result
 
         except AttributeError as e:
-            raise ComplianceCalculationError(f"Manager or control missing required attributes: {e}")
+            raise ComplianceCalculationError(
+                f"Manager or control missing required attributes: {e}"
+            ) from None
         except Exception as e:
-            raise ComplianceCalculationError(f"Error generating control status summary: {e}")
+            raise ComplianceCalculationError(
+                f"Error generating control status summary: {e}"
+            ) from None
 
 
 class EvidenceSummaryStrategy(ReportStrategy):
@@ -336,15 +343,19 @@ class EvidenceSummaryStrategy(ReportStrategy):
                 "by_type": dict(evidence_counts),
             }
 
-            logger.info(f"Evidence summary: {total_valid} valid evidence items across "
-                       f"{len(evidence_counts)} types")
+            logger.info(
+                f"Evidence summary: {total_valid} valid evidence items across "
+                f"{len(evidence_counts)} types"
+            )
 
             return result
 
         except AttributeError as e:
-            raise ComplianceCalculationError(f"Manager or evidence missing required attributes: {e}")
+            raise ComplianceCalculationError(
+                f"Manager or evidence missing required attributes: {e}"
+            ) from e
         except Exception as e:
-            raise ComplianceCalculationError(f"Error generating evidence summary: {e}")
+            raise ComplianceCalculationError(f"Error generating evidence summary: {e}") from None
 
 
 class AvailabilitySummaryStrategy(ReportStrategy):
@@ -370,9 +381,7 @@ class AvailabilitySummaryStrategy(ReportStrategy):
                 m.availability_score for m in manager.availability_metrics
             ) / len(manager.availability_metrics)
 
-            total_downtime = sum(
-                m.total_downtime_seconds for m in manager.availability_metrics
-            )
+            total_downtime = sum(m.total_downtime_seconds for m in manager.availability_metrics)
 
             target_availability = manager.config.target_availability_percentage
             meets_target = avg_availability >= target_availability
@@ -384,17 +393,25 @@ class AvailabilitySummaryStrategy(ReportStrategy):
                 "meets_target": meets_target,
             }
 
-            logger.info(f"Availability summary: {avg_availability:.2%} avg availability, "
-                       f"{total_downtime}s downtime, meets target: {meets_target}")
+            logger.info(
+                f"Availability summary: {avg_availability:.2%} avg availability, "
+                f"{total_downtime}s downtime, meets target: {meets_target}"
+            )
 
             return result
 
         except AttributeError as e:
-            raise ComplianceCalculationError(f"Manager or metrics missing required attributes: {e}")
+            raise ComplianceCalculationError(
+                f"Manager or metrics missing required attributes: {e}"
+            ) from None
         except ZeroDivisionError:
-            raise ComplianceCalculationError("Cannot calculate average with empty metrics list")
+            raise ComplianceCalculationError(
+                "Cannot calculate average with empty metrics list"
+            ) from None
         except Exception as e:
-            raise ComplianceCalculationError(f"Error generating availability summary: {e}")
+            raise ComplianceCalculationError(
+                f"Error generating availability summary: {e}"
+            ) from None
 
 
 class ProcessingIntegritySummaryStrategy(ReportStrategy):
@@ -416,9 +433,9 @@ class ProcessingIntegritySummaryStrategy(ReportStrategy):
                 logger.warning("No processing integrity checks found")
                 return {}
 
-            avg_integrity = sum(
-                c.integrity_score for c in manager.processing_checks
-            ) / len(manager.processing_checks)
+            avg_integrity = sum(c.integrity_score for c in manager.processing_checks) / len(
+                manager.processing_checks
+            )
 
             failed_checks = sum(1 for c in manager.processing_checks if not c.is_valid())
 
@@ -433,18 +450,26 @@ class ProcessingIntegritySummaryStrategy(ReportStrategy):
                 "meets_target": meets_target,
             }
 
-            logger.info(f"Processing integrity: {avg_integrity:.1f}% avg score, "
-                       f"{failed_checks}/{len(manager.processing_checks)} failed, "
-                       f"meets target: {meets_target}")
+            logger.info(
+                f"Processing integrity: {avg_integrity:.1f}% avg score, "
+                f"{failed_checks}/{len(manager.processing_checks)} failed, "
+                f"meets target: {meets_target}"
+            )
 
             return result
 
         except AttributeError as e:
-            raise ComplianceCalculationError(f"Manager or checks missing required attributes: {e}")
+            raise ComplianceCalculationError(
+                f"Manager or checks missing required attributes: {e}"
+            ) from None
         except ZeroDivisionError:
-            raise ComplianceCalculationError("Cannot calculate average with empty checks list")
+            raise ComplianceCalculationError(
+                "Cannot calculate average with empty checks list"
+            ) from None
         except Exception as e:
-            raise ComplianceCalculationError(f"Error generating processing integrity summary: {e}")
+            raise ComplianceCalculationError(
+                f"Error generating processing integrity summary: {e}"
+            ) from None
 
 
 class ConfidentialityIncidentsSummaryStrategy(ReportStrategy):
@@ -477,15 +502,21 @@ class ConfidentialityIncidentsSummaryStrategy(ReportStrategy):
                 "unresolved_incidents": unresolved_incidents,
             }
 
-            logger.info(f"Confidentiality incidents: {len(manager.confidentiality_incidents)} total, "
-                       f"{unresolved_incidents} unresolved")
+            logger.info(
+                f"Confidentiality incidents: {len(manager.confidentiality_incidents)} total, "
+                f"{unresolved_incidents} unresolved"
+            )
 
             return result
 
         except AttributeError as e:
-            raise ComplianceCalculationError(f"Manager or incidents missing required attributes: {e}")
+            raise ComplianceCalculationError(
+                f"Manager or incidents missing required attributes: {e}"
+            ) from e
         except Exception as e:
-            raise ComplianceCalculationError(f"Error generating confidentiality incidents summary: {e}")
+            raise ComplianceCalculationError(
+                f"Error generating confidentiality incidents summary: {e}"
+            ) from e
 
 
 class RecommendationsStrategy(ReportStrategy):
@@ -515,9 +546,11 @@ class RecommendationsStrategy(ReportStrategy):
             return recommendations
 
         except AttributeError as e:
-            raise ComplianceCalculationError(f"Manager missing _generate_recommendations method: {e}")
+            raise ComplianceCalculationError(
+                f"Manager missing _generate_recommendations method: {e}"
+            ) from e
         except Exception as e:
-            raise ComplianceCalculationError(f"Error generating recommendations: {e}")
+            raise ComplianceCalculationError(f"Error generating recommendations: {e}") from None
 
     def execute(self, manager: Any, report: dict[str, Any] = None) -> list[dict[str, Any]]:
         """Legacy method for backward compatibility.
@@ -586,20 +619,32 @@ class ReportGenerator:
 
             # Pass criteria scores as context to overall compliance calculation
             overall_context = {"criteria_scores": report["criteria_scores"]}
-            report["overall_compliance_score"] = self.strategies["overall_compliance"].execute(manager, overall_context)
+            report["overall_compliance_score"] = self.strategies["overall_compliance"].execute(
+                manager, overall_context
+            )
 
             report["control_status"] = self.strategies["control_status"].execute(manager)
             report["evidence_summary"] = self.strategies["evidence_summary"].execute(manager)
-            report["availability_summary"] = self.strategies["availability_summary"].execute(manager)
-            report["processing_integrity_summary"] = self.strategies["processing_integrity_summary"].execute(manager)
-            report["confidentiality_incidents"] = self.strategies["confidentiality_incidents"].execute(manager)
+            report["availability_summary"] = self.strategies["availability_summary"].execute(
+                manager
+            )
+            report["processing_integrity_summary"] = self.strategies[
+                "processing_integrity_summary"
+            ].execute(manager)
+            report["confidentiality_incidents"] = self.strategies[
+                "confidentiality_incidents"
+            ].execute(manager)
 
             # Pass complete report as context for recommendations
             recommendations_context = {"report": report}
-            report["recommendations"] = self.strategies["recommendations"].execute(manager, recommendations_context)
+            report["recommendations"] = self.strategies["recommendations"].execute(
+                manager, recommendations_context
+            )
 
-            logger.info(f"Compliance report generated successfully with overall score: "
-                       f"{report['overall_compliance_score']:.3f}")
+            logger.info(
+                f"Compliance report generated successfully with overall score: "
+                f"{report['overall_compliance_score']:.3f}"
+            )
 
             return report
 
@@ -607,4 +652,4 @@ class ReportGenerator:
             raise
         except Exception as e:
             logger.error(f"Error generating compliance report: {e}")
-            raise ComplianceCalculationError(f"Failed to generate compliance report: {e}")
+            raise ComplianceCalculationError(f"Failed to generate compliance report: {e}") from None

@@ -31,9 +31,7 @@ def client_with_mocks(test_app: FastAPI):
 
     # Apply overrides to the app instance provided by the factory
     test_app.dependency_overrides[get_agent_manager] = lambda: mock_agent_manager
-    test_app.dependency_overrides[get_connection_manager] = (
-        lambda: mock_connection_manager
-    )
+    test_app.dependency_overrides[get_connection_manager] = lambda: mock_connection_manager
     test_app.dependency_overrides[get_knowledge_graph] = lambda: mock_knowledge_graph
 
     with TestClient(test_app) as test_client:
@@ -94,7 +92,11 @@ class TestWebSocketAsync:
             user_query="test message",
             agent_response="Hello World",
             agent_id="test-agent",
-            context={"agent_name": "Unknown Agent", "agent_description": "No description", "model_used": "Unknown Model"},
+            context={
+                "agent_name": "Unknown Agent",
+                "agent_description": "No description",
+                "model_used": "Unknown Model",
+            },
         )
 
     def test_websocket_disconnect(self, client_with_mocks):

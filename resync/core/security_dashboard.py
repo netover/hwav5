@@ -11,8 +11,8 @@ This module provides comprehensive security monitoring and dashboard capabilitie
 - Role-based access control for dashboard views
 """
 
-
 import asyncio
+import contextlib
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -85,9 +85,7 @@ class SecurityMetric:
         if len(self.data_points) < 2:
             return "stable"
 
-        recent = list(self.data_points)[
-            -10:
-        ]  # Last 10 points (timestamp, value tuples)
+        recent = list(self.data_points)[-10:]  # Last 10 points (timestamp, value tuples)
         if len(recent) < 2:
             return "stable"
 
@@ -163,9 +161,7 @@ class DashboardWidget:
     position: dict[str, int] = field(default_factory=dict)  # x, y, width, height
     config: dict[str, Any] = field(default_factory=dict)  # Widget-specific config
     refresh_interval: int = 30  # seconds
-    roles: set[str] = field(
-        default_factory=lambda: {"admin", "security"}
-    )  # Access control
+    roles: set[str] = field(default_factory=lambda: {"admin", "security"})  # Access control
 
     def can_access(self, user_roles: set[str]) -> bool:
         """Check if user can access this widget."""
@@ -462,9 +458,7 @@ class MetricCollector:
         for metric in standard_metrics:
             self.metrics[metric.metric_id] = metric
 
-    def update_metric(
-        self, metric_id: str, value: float, timestamp: float | None = None
-    ) -> None:
+    def update_metric(self, metric_id: str, value: float, timestamp: float | None = None) -> None:
         """Update a metric value."""
         if metric_id in self.metrics:
             self.metrics[metric_id].update_value(value, timestamp)
@@ -562,9 +556,7 @@ class AlertManager:
         for rule in rules:
             self.alert_rules[rule.rule_id] = rule
 
-    async def check_alerts(
-        self, metrics: dict[str, SecurityMetric]
-    ) -> list[dict[str, Any]]:
+    async def check_alerts(self, metrics: dict[str, SecurityMetric]) -> list[dict[str, Any]]:
         """Check all alert rules and return triggered alerts."""
         triggered_alerts = []
 
@@ -692,7 +684,7 @@ class ReportGenerator:
         # For now, provide sample content
 
         report.executive_summary = f"""
-        Security Report for {report.report_type} period ending {datetime.fromtimestamp(report.period_end).strftime('%Y-%m-%d')}.
+        Security Report for {report.report_type} period ending {datetime.fromtimestamp(report.period_end).strftime("%Y-%m-%d")}.
 
         This report provides an overview of security metrics, incidents, and compliance status for the reporting period.
         """
@@ -855,10 +847,8 @@ class SecurityDashboard:
         for task in [self._collection_task, self._alert_task, self._reporting_task]:
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         logger.info("Security dashboard system stopped")
 
@@ -866,9 +856,7 @@ class SecurityDashboard:
         """Update a metric value."""
         self.metric_collector.update_metric(metric_id, value)
 
-    def get_dashboard(
-        self, dashboard_id: str, user_roles: set[str]
-    ) -> Dashboard | None:
+    def get_dashboard(self, dashboard_id: str, user_roles: set[str]) -> Dashboard | None:
         """Get a dashboard if user has access."""
         dashboard = self.dashboards.get(dashboard_id)
         if dashboard and dashboard.can_access(user_roles):
@@ -910,9 +898,7 @@ class SecurityDashboard:
 
             # Special handling for alert widgets
             if widget.widget_type == "alert":
-                widget_data["data"][
-                    "active_alerts"
-                ] = self.alert_manager.get_active_alerts()[
+                widget_data["data"]["active_alerts"] = self.alert_manager.get_active_alerts()[
                     : widget.config.get("max_alerts", 5)
                 ]
 
@@ -941,9 +927,7 @@ class SecurityDashboard:
             "timestamp": time.time(),
         }
 
-    def get_alerts_data(
-        self, include_history: bool = False, limit: int = 50
-    ) -> dict[str, Any]:
+    def get_alerts_data(self, include_history: bool = False, limit: int = 50) -> dict[str, Any]:
         """Get alerts data."""
         data = {
             "active_alerts": self.alert_manager.get_active_alerts(),
@@ -1029,14 +1013,10 @@ class SecurityDashboard:
         import random
 
         # Simulate some realistic metric values
-        self.metric_collector.update_metric(
-            "system_uptime", 99.7 + random.uniform(-0.5, 0.5)
-        )
+        self.metric_collector.update_metric("system_uptime", 99.7 + random.uniform(-0.5, 0.5))
         self.metric_collector.update_metric("threats_detected", random.randint(0, 10))
         self.metric_collector.update_metric("active_incidents", random.randint(0, 3))
-        self.metric_collector.update_metric(
-            "compliance_score", 85.0 + random.uniform(-5, 5)
-        )
+        self.metric_collector.update_metric("compliance_score", 85.0 + random.uniform(-5, 5))
 
     async def _alert_checking_worker(self) -> None:
         """Background worker for alert checking."""
@@ -1045,9 +1025,7 @@ class SecurityDashboard:
                 await asyncio.sleep(self.config.alert_check_interval_seconds)
 
                 # Check for triggered alerts
-                metrics = {
-                    m.metric_id: m for m in self.metric_collector.get_all_metrics()
-                }
+                metrics = {m.metric_id: m for m in self.metric_collector.get_all_metrics()}
                 triggered_alerts = await self.alert_manager.check_alerts(metrics)
 
                 # Handle triggered alerts (send notifications, etc.)
@@ -1088,29 +1066,20 @@ class SecurityDashboard:
                     logger.info(f"Generated daily security report: {report.report_id}")
 
                 # Generate weekly report on configured day/time
-                weekly_schedule = self.config.report_schedule.get(
-                    "weekly", "Monday 09:00"
-                )
-                if (
-                    weekly_schedule
-                    and current_time.strftime("%A %H:%M") == weekly_schedule
-                ):
+                weekly_schedule = self.config.report_schedule.get("weekly", "Monday 09:00")
+                if weekly_schedule and current_time.strftime("%A %H:%M") == weekly_schedule:
                     report = await self.report_generator.generate_weekly_report()
                     logger.info(f"Generated weekly security report: {report.report_id}")
 
                 # Generate monthly report on configured day/time
-                monthly_schedule = self.config.report_schedule.get(
-                    "monthly", "1st 10:00"
-                )
+                monthly_schedule = self.config.report_schedule.get("monthly", "1st 10:00")
                 if (
                     monthly_schedule
                     and current_time.day == 1
                     and current_time.strftime("%H:%M") == monthly_schedule.split()[1]
                 ):
                     report = await self.report_generator.generate_monthly_report()
-                    logger.info(
-                        f"Generated monthly security report: {report.report_id}"
-                    )
+                    logger.info(f"Generated monthly security report: {report.report_id}")
 
             except asyncio.CancelledError:
                 break

@@ -1,6 +1,5 @@
 """Authentication and user management models."""
 
-
 from pydantic import BaseModel
 
 
@@ -49,25 +48,3 @@ class TokenData(BaseModel):
     """JWT token payload data."""
 
     username: str | None = None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

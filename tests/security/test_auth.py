@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from resync.api.auth import SecureAuthenticator
 from resync.settings import settings
@@ -22,7 +23,6 @@ class TestSecureAuthenticator:
             patch.object(settings, "admin_password", "testpassword"),
             patch.object(settings, "secret_key", "testsecretkey"),
         ):
-
             result, error = await authenticator.verify_credentials(
                 username="testadmin", password="testpassword", request_ip="127.0.0.1"
             )
@@ -38,7 +38,6 @@ class TestSecureAuthenticator:
             patch.object(settings, "admin_password", "testpassword"),
             patch.object(settings, "secret_key", "testsecretkey"),
         ):
-
             result, error = await authenticator.verify_credentials(
                 username="wronguser", password="testpassword", request_ip="127.0.0.1"
             )
@@ -54,7 +53,6 @@ class TestSecureAuthenticator:
             patch.object(settings, "admin_password", "testpassword"),
             patch.object(settings, "secret_key", "testsecretkey"),
         ):
-
             result, error = await authenticator.verify_credentials(
                 username="testadmin", password="wrongpassword", request_ip="127.0.0.1"
             )
@@ -70,7 +68,6 @@ class TestSecureAuthenticator:
             patch.object(settings, "admin_password", "testpassword"),
             patch.object(settings, "secret_key", "testsecretkey"),
         ):
-
             # Simular múltiplas tentativas inválidas
             ip = "192.168.1.100"
             for _ in range(6):  # Mais que o limite de tentativas
@@ -96,7 +93,6 @@ class TestSecureAuthenticator:
             patch.object(settings, "admin_password", "testpassword"),
             patch.object(settings, "secret_key", "testsecretkey"),
         ):
-
             # Medir tempo para credenciais válidas
             start_valid = time.time()
             await authenticator.verify_credentials(
@@ -122,7 +118,6 @@ class TestSecureAuthenticator:
             patch.object(settings, "admin_password", "testpassword"),
             patch.object(settings, "secret_key", "testsecretkey"),
         ):
-
             ip = "192.168.1.200"
 
             # Bloquear o IP

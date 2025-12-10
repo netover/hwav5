@@ -1,4 +1,3 @@
-
 import logging
 from typing import Any
 
@@ -93,10 +92,7 @@ class ConnectionManager:
 
         logger.info("broadcasting_message", client_count=len(self.active_connections))
         # Create a list of tasks to send messages concurrently
-        tasks = [
-            connection.send_text(message)
-            for connection in self.active_connections.values()
-        ]
+        tasks = [connection.send_text(message) for connection in self.active_connections.values()]
         # In a high-load scenario, you might want to handle exceptions here
         # for failed sends, but for now, we keep it simple.
         for task in tasks:
@@ -135,13 +131,8 @@ class ConnectionManager:
             logger.info("JSON broadcast requested, but no active connections.")
             return
 
-        logger.info(
-            "Broadcasting JSON data to %d clients.", len(self.active_connections)
-        )
-        tasks = [
-            connection.send_json(data)
-            for connection in self.active_connections.values()
-        ]
+        logger.info("Broadcasting JSON data to %d clients.", len(self.active_connections))
+        tasks = [connection.send_json(data) for connection in self.active_connections.values()]
         for task in tasks:
             try:
                 await task
@@ -151,16 +142,12 @@ class ConnectionManager:
             except RuntimeError as e:  # pragma: no cover
                 # WebSocket in wrong state
                 if "websocket state" in str(e).lower():
-                    logger.warning(
-                        "WebSocket in wrong state during JSON broadcast: %s", e
-                    )
+                    logger.warning("WebSocket in wrong state during JSON broadcast: %s", e)
                 else:
                     logger.error("Runtime error during JSON broadcast: %s", e)
             except ValueError as e:
                 # JSON serialization error
-                logger.error(
-                    "JSON serialization error during broadcast: %s", e, exc_info=True
-                )
+                logger.error("JSON serialization error during broadcast: %s", e, exc_info=True)
             except Exception as _e:
                 logger.error("Unexpected error during JSON broadcast.", exc_info=True)
 
@@ -183,9 +170,7 @@ class ConnectionManager:
                 "total_messages_received": stats.total_messages_received,
                 "connection_errors": stats.connection_errors,
                 "cleanup_cycles": stats.cleanup_cycles,
-                "last_cleanup": (
-                    stats.last_cleanup.isoformat() if stats.last_cleanup else None
-                ),
+                "last_cleanup": (stats.last_cleanup.isoformat() if stats.last_cleanup else None),
             }
         # Fallback to basic stats if pool manager not available
         return {

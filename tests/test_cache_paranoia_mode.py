@@ -1,4 +1,5 @@
 import pytest
+
 from resync.core.async_cache import AsyncTTLCache
 
 
@@ -23,8 +24,6 @@ async def test_cache_paranoia_mode_bounds_reduction():
     cache = AsyncTTLCache(ttl_seconds=10)
 
     # Check normal bounds
-    normal_max_entries = cache.max_entries
-    normal_max_memory_mb = cache.max_memory_mb
 
     # Enable paranoia mode
     cache.paranoia_mode = True
@@ -35,9 +34,7 @@ async def test_cache_paranoia_mode_bounds_reduction():
 
     # Manually apply the paranoia mode logic
     if cache.paranoia_mode:
-        cache.max_entries = min(
-            cache.max_entries, 10000
-        )  # Max 10K entries in paranoia mode
+        cache.max_entries = min(cache.max_entries, 10000)  # Max 10K entries in paranoia mode
         cache.max_memory_mb = min(cache.max_memory_mb, 10)  # Max 10MB in paranoia mode
 
     # Check that bounds were reduced

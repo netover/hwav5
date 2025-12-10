@@ -28,6 +28,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 # -----------------------------
 # Utilidades
 # -----------------------------
@@ -35,9 +36,11 @@ def _now_wall() -> float:
     """Wall-clock (para timestamps e logs)."""
     return time.time()
 
+
 def _now_perf() -> float:
     """Monotônico, alta resolução (para medir durações)."""
     return time.perf_counter()  # recomendado para benchmarking/medição de duração
+
 
 def _sanitize_metric_name(name: str) -> str:
     """Sanitiza nomes para Prometheus (básico: substitui chars inválidos por '_')."""
@@ -53,8 +56,10 @@ def _sanitize_metric_name(name: str) -> str:
         s = "m_" + s
     return s
 
+
 def _escape_help(text: str) -> str:
     return text.replace("\\", "\\\\").replace("\n", "\\n")
+
 
 # -----------------------------
 # Métricas básicas
@@ -62,6 +67,7 @@ def _escape_help(text: str) -> str:
 @dataclass
 class MetricCounter:
     """Counter (só cresce ou zera)."""
+
     value: int = 0
     _lock: threading.Lock = field(default_factory=threading.Lock)
 
@@ -84,6 +90,7 @@ class MetricCounter:
 @dataclass
 class MetricGauge:
     """Gauge (sobe e desce)."""
+
     value: float = 0.0
     _lock: threading.Lock = field(default_factory=threading.Lock)
 
@@ -106,8 +113,8 @@ class MetricHistogram:
 
     __slots__ = (
         "boundaries",  # sorted list[float]
-        "counts",      # list[int] len = len(boundaries)+1
-        "samples",     # sliding window p/ quantis/diagnóstico
+        "counts",  # list[int] len = len(boundaries)+1
+        "samples",  # sliding window p/ quantis/diagnóstico
         "max_samples",
         "_sum",
         "_count",
@@ -125,8 +132,19 @@ class MetricHistogram:
     ) -> None:
         # Defaults bons p/ latências (segundos) — próximos aos defaults do Prom-client
         if boundaries is None:
-            boundaries = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25,
-                          0.5, 1.0, 2.5, 5.0, 10.0]  # pode ajustar conforme o domínio
+            boundaries = [
+                0.005,
+                0.01,
+                0.025,
+                0.05,
+                0.1,
+                0.25,
+                0.5,
+                1.0,
+                2.5,
+                5.0,
+                10.0,
+            ]  # pode ajustar conforme o domínio
         b = sorted(set(float(x) for x in boundaries))
         self.boundaries: list[float] = b
         self.counts: list[int] = [0] * (len(b) + 1)  # +Inf
@@ -200,7 +218,7 @@ class MetricHistogram:
         with self._lock:
             # cumulativos
             cumul = 0
-            for b, c in zip(self.boundaries, self.counts[:-1]):
+            for b, c in zip(self.boundaries, self.counts[:-1], strict=False):
                 cumul += c
                 lines.append(f'{name}_bucket{{le="{b}"}} {cumul}')
             # +Inf
@@ -215,7 +233,9 @@ class MetricHistogram:
 # -----------------------------
 # Correlation por contexto (contextvars)
 # -----------------------------
-_current_correlation_id: ContextVar[str | None] = ContextVar("_current_correlation_id", default=None)
+_current_correlation_id: ContextVar[str | None] = ContextVar(
+    "_current_correlation_id", default=None
+)
 
 
 class RuntimeMetrics:
@@ -234,7 +254,9 @@ class RuntimeMetrics:
         self.agent_creation_failures = MetricCounter()
         self.agent_mock_fallbacks = MetricCounter()
         self.agent_active_count = MetricGauge()
-        self.agent_orchestration_time = MetricHistogram(help_text="Agent orchestration duration seconds")
+        self.agent_orchestration_time = MetricHistogram(
+            help_text="Agent orchestration duration seconds"
+        )
 
         # Cache
         self.cache_hits = MetricCounter()
@@ -283,7 +305,7 @@ class RuntimeMetrics:
 
         # SLO
         self.api_response_time = MetricHistogram(help_text="API response time seconds")
-        self.api_error_rate = MetricGauge()       # percentual agregado externamente
+        self.api_error_rate = MetricGauge()  # percentual agregado externamente
         self.system_availability = MetricGauge()  # percentual agregado externamente
         self.tws_connection_success_rate = MetricGauge()
         self.ai_agent_response_time = MetricHistogram(help_text="AI agent response time seconds")
@@ -342,12 +364,15 @@ class RuntimeMetrics:
             op_count = len(ctx["operations"])
             logger.info(
                 "Correlation %s completed: duration=%.4fs, operations=%d",
-                correlation_id, duration, op_count
+                correlation_id,
+                duration,
+                op_count,
             )
 
     # Context manager p/ spans
     class _Span:
         """_ span."""
+
         def __init__(self, rm: "RuntimeMetrics", name: str, context: dict[str, Any] | None = None):
             self.rm = rm
             self.name = name
@@ -416,8 +441,7 @@ class RuntimeMetrics:
         )
         if total_requests > 0:
             return (
-                self.agent_creation_failures.value
-                + self.tws_status_requests_failed.value
+                self.agent_creation_failures.value + self.tws_status_requests_failed.value
             ) / total_requests
         return 0.0
 
@@ -549,6 +573,7 @@ class RuntimeMetrics:
 _runtime_metrics: RuntimeMetrics | None = None
 _runtime_lock = threading.Lock()
 
+
 def _get_runtime_metrics() -> RuntimeMetrics:
     global _runtime_metrics
     if _runtime_metrics is None:
@@ -557,12 +582,16 @@ def _get_runtime_metrics() -> RuntimeMetrics:
                 _runtime_metrics = RuntimeMetrics()
     return _runtime_metrics
 
+
 class _RuntimeMetricsProxy:
     """Proxy que delega dinamicamente ao singleton verdadeiro (sem instância própria)."""
+
     def __getattr__(self, name):
         return getattr(_get_runtime_metrics(), name)
 
+
 runtime_metrics = _RuntimeMetricsProxy()
+
 
 # -----------------------------
 # Funções utilitárias públicas
@@ -592,6 +621,7 @@ def track_llm_metrics(func):
     import inspect
 
     if inspect.iscoroutinefunction(func):
+
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
             t0 = _now_perf()
@@ -614,6 +644,7 @@ def track_llm_metrics(func):
             except Exception as _e:
                 runtime_metrics.llm_errors.increment()
                 raise
+
         return async_wrapper
 
     @functools.wraps(func)
@@ -637,6 +668,7 @@ def track_llm_metrics(func):
         except Exception as _e:
             runtime_metrics.llm_errors.increment()
             raise
+
     return sync_wrapper
 
 

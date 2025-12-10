@@ -54,6 +54,7 @@ class Book(BaseModel):
 
 class BookOut(Book):
     """Book out."""
+
     _links: dict[str, Any]
 
 
@@ -66,9 +67,7 @@ class BookCreate(BaseModel):
     title: str = Field(..., description="Título do livro", min_length=1, max_length=200)
     author: str = Field(..., description="Autor do livro", min_length=1, max_length=100)
     isbn: ISBN | None = Field(None, description="ISBN")
-    published_year: int | None = Field(
-        None, description="Ano de publicação", ge=1000, le=9999
-    )
+    published_year: int | None = Field(None, description="Ano de publicação", ge=1000, le=9999)
 
 
 # Simulação de banco de dados em memória
@@ -154,9 +153,7 @@ async def list_books(
     for book in items:
         book_dict = book.model_dump()
         book_dict["_links"] = {
-            "self": builder.build_self_link(
-                path=f"/api/v1/examples/books/{book.id}"
-            ).model_dump(),
+            "self": builder.build_self_link(path=f"/api/v1/examples/books/{book.id}").model_dump(),
             "update": builder.build_link(
                 path=f"/api/v1/examples/books/{book.id}",
                 rel="update",
@@ -177,7 +174,7 @@ async def list_books(
     if author:
         query_params["author"] = author
 
-    response = create_paginated_response(
+    return create_paginated_response(
         items=items_with_links,
         total=total,
         page=page,
@@ -185,8 +182,6 @@ async def list_books(
         base_path="/api/v1/examples/books",
         query_params=query_params,
     )
-
-    return response
 
 
 @router.get(
@@ -244,9 +239,7 @@ async def get_book(book_id: str):
     builder = LinkBuilder()
     book_dict = book.model_dump()
     book_dict["_links"] = {
-        "self": builder.build_self_link(
-            path=f"/api/v1/examples/books/{book_id}"
-        ).model_dump(),
+        "self": builder.build_self_link(path=f"/api/v1/examples/books/{book_id}").model_dump(),
         "update": builder.build_link(
             path=f"/api/v1/examples/books/{book_id}",
             rel="update",
@@ -259,9 +252,7 @@ async def get_book(book_id: str):
             method="DELETE",
             title="Delete this book",
         ).model_dump(),
-        "collection": builder.build_collection_link(
-            path="/api/v1/examples/books"
-        ).model_dump(),
+        "collection": builder.build_collection_link(path="/api/v1/examples/books").model_dump(),
     }
 
     return book_dict
@@ -336,18 +327,14 @@ async def create_book(book_data: BookCreate):
     builder = LinkBuilder()
     book_dict = book.model_dump()
     book_dict["_links"] = {
-        "self": builder.build_self_link(
-            path=f"/api/v1/examples/books/{book.id}"
-        ).model_dump(),
+        "self": builder.build_self_link(path=f"/api/v1/examples/books/{book.id}").model_dump(),
         "update": builder.build_link(
             path=f"/api/v1/examples/books/{book.id}", rel="update", method="PUT"
         ).model_dump(),
         "delete": builder.build_link(
             path=f"/api/v1/examples/books/{book.id}", rel="delete", method="DELETE"
         ).model_dump(),
-        "collection": builder.build_collection_link(
-            path="/api/v1/examples/books"
-        ).model_dump(),
+        "collection": builder.build_collection_link(path="/api/v1/examples/books").model_dump(),
     }
 
     logger.info("Book created", book_id=book.id, title=book.title)

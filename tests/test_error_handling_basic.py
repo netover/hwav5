@@ -68,9 +68,7 @@ def test_error_response_builder():
     builder = ErrorResponseBuilder()
     builder.with_correlation_id("test-123")
 
-    validation_errors = [
-        {"loc": ["field1"], "msg": "Field required", "type": "missing"}
-    ]
+    validation_errors = [{"loc": ["field1"], "msg": "Field required", "type": "missing"}]
     error_response = builder.build_validation_error(validation_errors)
 
     assert error_response.error_code == "VALIDATION_ERROR"
@@ -143,9 +141,7 @@ def test_resync_exception_base_class():
     assert exc.error_code == "RESYNC_EXCEPTION"
     assert exc.error_category == "SYSTEM"
     assert exc.severity == "MEDIUM"
-    assert (
-        exc.user_friendly_message == "An error occurred while processing your request."
-    )
+    assert exc.user_friendly_message == "An error occurred while processing your request."
     assert len(exc.troubleshooting_hints) == 2
     assert exc.details == {}
     assert exc.timestamp is not None

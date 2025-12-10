@@ -4,8 +4,8 @@ Test script for RAG Health Check implementation.
 This script tests the comprehensive health check for RAG system components.
 """
 
-import sys
 import asyncio
+import sys
 from pathlib import Path
 
 # Add the project root to Python path
@@ -14,8 +14,8 @@ sys.path.insert(0, str(project_root))
 
 from resync.core.rag_health_check import (
     RAGHealthCheck,
+    get_rag_health_summary,
     run_rag_health_check,
-    get_rag_health_summary
 )
 
 
@@ -27,8 +27,8 @@ async def test_rag_health_check():
 
     try:
         # Import dependencies (these would normally come from DI container)
-        from resync.core.file_ingestor import FileIngestor
         from resync.core.context_store import ContextStore
+        from resync.core.file_ingestor import FileIngestor
 
         # Create services (simplified for testing)
         file_ingestor = FileIngestor.__new__(FileIngestor)  # Create without __init__ for testing
@@ -71,7 +71,7 @@ async def test_rag_health_check():
         # Test 4: Test summary generation
         print("\n4. Testing summary generation...")
         try:
-            if 'results' in locals():
+            if "results" in locals():
                 summary = get_rag_health_summary(results)
                 print("   Summary generated successfully")
                 print("   Summary preview:")
@@ -88,6 +88,7 @@ async def test_rag_health_check():
     except Exception as e:
         print(f"\n[ERROR] Unexpected error during testing: {e}")
         import traceback
+
         traceback.print_exc()
 
 

@@ -1,4 +1,3 @@
-
 from collections.abc import Callable
 
 from fastapi import Request
@@ -27,7 +26,7 @@ async def oauth2_middleware(request: Request, call_next: Callable):
         request.state.user = user
 
     except JWTError as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}") from e
 
     # Proceed to next middleware or route handler
     return await call_next(request)

@@ -43,12 +43,10 @@ __all__ = [
     # Service
     "PgVectorService",
     "get_vector_service",
-
     # Models
     "VectorDocument",
     "SearchResult",
     "CollectionStats",
-
     # Embedding
     "EmbeddingProvider",
     "LiteLLMEmbeddingProvider",

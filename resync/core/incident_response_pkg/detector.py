@@ -35,35 +35,41 @@ class IncidentDetector:
         # Check CPU
         cpu = metrics.get("cpu_percent", 0)
         if cpu > self.config.severity_thresholds.get("cpu_critical", 95):
-            incidents.append(self._create_incident(
-                title="High CPU Usage",
-                description=f"CPU usage at {cpu}%",
-                severity=IncidentSeverity.CRITICAL,
-                category=IncidentCategory.PERFORMANCE,
-                affected=["cpu"],
-            ))
+            incidents.append(
+                self._create_incident(
+                    title="High CPU Usage",
+                    description=f"CPU usage at {cpu}%",
+                    severity=IncidentSeverity.CRITICAL,
+                    category=IncidentCategory.PERFORMANCE,
+                    affected=["cpu"],
+                )
+            )
 
         # Check memory
         memory = metrics.get("memory_percent", 0)
         if memory > self.config.severity_thresholds.get("memory_critical", 95):
-            incidents.append(self._create_incident(
-                title="High Memory Usage",
-                description=f"Memory usage at {memory}%",
-                severity=IncidentSeverity.CRITICAL,
-                category=IncidentCategory.PERFORMANCE,
-                affected=["memory"],
-            ))
+            incidents.append(
+                self._create_incident(
+                    title="High Memory Usage",
+                    description=f"Memory usage at {memory}%",
+                    severity=IncidentSeverity.CRITICAL,
+                    category=IncidentCategory.PERFORMANCE,
+                    affected=["memory"],
+                )
+            )
 
         # Check error rate
         error_rate = metrics.get("error_rate", 0)
         if error_rate > self.config.severity_thresholds.get("error_rate_critical", 0.1):
-            incidents.append(self._create_incident(
-                title="High Error Rate",
-                description=f"Error rate at {error_rate*100:.1f}%",
-                severity=IncidentSeverity.HIGH,
-                category=IncidentCategory.AVAILABILITY,
-                affected=["api"],
-            ))
+            incidents.append(
+                self._create_incident(
+                    title="High Error Rate",
+                    description=f"Error rate at {error_rate * 100:.1f}%",
+                    severity=IncidentSeverity.HIGH,
+                    category=IncidentCategory.AVAILABILITY,
+                    affected=["api"],
+                )
+            )
 
         return incidents
 

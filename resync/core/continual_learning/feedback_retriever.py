@@ -8,7 +8,6 @@ em feedback histórico de usuários:
 - Query-specific feedback tem maior peso que global
 """
 
-
 from typing import Any
 
 from resync.core.continual_learning.feedback_store import (
@@ -162,10 +161,7 @@ class FeedbackAwareRetriever:
         results.sort(key=lambda x: self._get_score(x), reverse=True)
 
         # Log significant adjustments
-        adjusted_count = sum(
-            1 for doc in results
-            if abs(doc.get("_feedback_adjustment", 0)) > 0.1
-        )
+        adjusted_count = sum(1 for doc in results if abs(doc.get("_feedback_adjustment", 0)) > 0.1)
         if adjusted_count > 0:
             logger.info(
                 "feedback_reranking_applied",
@@ -248,15 +244,13 @@ class FeedbackAwareRetriever:
             return None
 
         # Record feedback
-        feedback_id = await self.feedback_store.record_feedback(
+        return await self.feedback_store.record_feedback(
             query=self._last_query,
             doc_id=doc_id,
             rating=rating,
             user_id=user_id,
             response_text=response_text,
         )
-
-        return feedback_id
 
     async def record_positive_feedback(
         self,

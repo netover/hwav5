@@ -72,9 +72,7 @@ async def test_load_agents_from_config_non_existent_file(agent_manager):
 
 
 @pytest.mark.asyncio
-async def test_load_agents_from_config_valid_file(
-    agent_manager, test_agent_config, tmp_path
-):
+async def test_load_agents_from_config_valid_file(agent_manager, test_agent_config, tmp_path):
     """Test loading agents from a valid config file."""
     config_data = {"agents": [test_agent_config]}
     config_file = tmp_path / "config.json"
@@ -114,9 +112,7 @@ def test_discover_tools(agent_manager):
 
 
 @pytest.mark.asyncio
-async def test_error_handling_missing_tool(
-    agent_manager, test_agent_config, tmp_path, caplog
-):
+async def test_error_handling_missing_tool(agent_manager, test_agent_config, tmp_path, caplog):
     """Test error handling when getting agent with missing tool."""
     # Arrange: Load a valid config first
     config_data = {"agents": [test_agent_config]}
@@ -125,9 +121,7 @@ async def test_error_handling_missing_tool(
     await agent_manager.load_agents_from_config(config_file)
 
     # Act & Assert
-    with pytest.raises(
-        ValueError, match="Tool non_existent_tool not found for agent test_agent_1"
-    ):
+    with pytest.raises(ValueError, match="Tool non_existent_tool not found for agent test_agent_1"):
         await agent_manager.get_agent_with_tool("test_agent_1", "non_existent_tool")
 
     # Check log
@@ -183,7 +177,5 @@ async def test_invalid_agent_id(agent_manager, tmp_path):
     await agent_manager.load_agents_from_config(config_file)
 
     assert "an-id-that-is-technically-valid-but-could-be-bad" in agent_manager.agents
-    agent = await agent_manager.get_agent(
-        "an-id-that-is-technically-valid-but-could-be-bad"
-    )
+    agent = await agent_manager.get_agent("an-id-that-is-technically-valid-but-could-be-bad")
     assert agent is not None

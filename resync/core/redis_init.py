@@ -5,7 +5,6 @@ This module provides Redis client initialization with connection pooling,
 distributed locking, health checks, and proper error handling.
 """
 
-
 import asyncio
 import logging
 import os
@@ -43,14 +42,18 @@ except ImportError:  # redis opcional
 
 logger = logging.getLogger(__name__)
 
+
 class RedisInitError(RuntimeError):
     """Erro de inicialização do Redis."""
 
+
 _REDIS_CLIENT: Optional["redis.Redis"] = None  # type: ignore
+
 
 def is_redis_available() -> bool:
     """Check if Redis library is available."""
     return redis is not None
+
 
 def get_redis_client() -> "redis.Redis":  # type: ignore
     """
@@ -131,13 +134,12 @@ class RedisInitializer:
                 try:
                     redis_client = await self._create_client_with_pool(redis_url)
 
-                    acquired = await redis_client.set(
-                        lock_key, lock_val, nx=True, ex=lock_timeout
-                    )
+                    acquired = await redis_client.set(lock_key, lock_val, nx=True, ex=lock_timeout)
                     if not acquired:
                         logger.info(
-                            "Another instance is initializing Redis, waiting... "
-                            "(attempt %s/%s)", attempt + 1, max_retries
+                            "Another instance is initializing Redis, waiting... (attempt %s/%s)",
+                            attempt + 1,
+                            max_retries,
                         )
                         await asyncio.sleep(2)
                         continue
@@ -200,11 +202,9 @@ class RedisInitializer:
                     logger.critical(msg, exc_info=True)
                     raise RedisInitError(f"{msg}: {e}") from e
 
-        raise RedisInitError("Redis initialization failed - unexpected fallthrough")
+        raise RedisInitError("Redis initialization failed - unexpected fallthrough") from None
 
-    async def _create_client_with_pool(
-        self, redis_url: str | None = None
-    ) -> "redis.Redis":  # type: ignore
+    async def _create_client_with_pool(self, redis_url: str | None = None) -> "redis.Redis":  # type: ignore
         if redis is None:
             raise RedisInitError("redis not installed.")
         keepalive_opts = {}

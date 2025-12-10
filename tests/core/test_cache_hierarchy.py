@@ -114,9 +114,7 @@ class TestCacheHierarchy:
     @pytest_asyncio.fixture
     async def cache_hierarchy(self):
         """Create cache hierarchy instance for testing."""
-        cache = CacheHierarchy(
-            l1_max_size=100, l2_ttl_seconds=30, l2_cleanup_interval=10
-        )
+        cache = CacheHierarchy(l1_max_size=100, l2_ttl_seconds=30, l2_cleanup_interval=10)
         await cache.start()
         yield cache
         await cache.stop()
@@ -152,9 +150,7 @@ class TestCacheHierarchy:
     @pytest.mark.asyncio
     async def test_hierarchy_set_from_source(self, cache_hierarchy):
         """Test set_from_source method."""
-        await cache_hierarchy.set_from_source(
-            "source_key", "source_value", ttl_seconds=60
-        )
+        await cache_hierarchy.set_from_source("source_key", "source_value", ttl_seconds=60)
         value = await cache_hierarchy.get("source_key")
         assert value == "source_value"
         assert cache_hierarchy.metrics.total_sets == 1

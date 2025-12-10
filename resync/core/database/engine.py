@@ -47,7 +47,7 @@ def get_engine():
                 "host": config.host,
                 "database": config.name,
                 "pool_size": config.pool_size,
-            }
+            },
         )
 
         _engine = create_async_engine(config.url, **options)
@@ -125,8 +125,8 @@ def get_engine_status() -> dict:
     pool = _engine.pool
     return {
         "status": "running",
-        "pool_size": pool.size() if hasattr(pool, 'size') else 0,
-        "checked_in": pool.checkedin() if hasattr(pool, 'checkedin') else 0,
-        "checked_out": pool.checkedout() if hasattr(pool, 'checkedout') else 0,
-        "overflow": pool.overflow() if hasattr(pool, 'overflow') else 0,
+        "pool_size": pool.size() if hasattr(pool, "size") else 0,
+        "checked_in": pool.checkedin() if hasattr(pool, "checkedin") else 0,
+        "checked_out": pool.checkedout() if hasattr(pool, "checkedout") else 0,
+        "overflow": pool.overflow() if hasattr(pool, "overflow") else 0,
     }

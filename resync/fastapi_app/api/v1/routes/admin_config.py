@@ -47,7 +47,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "webhook_url": "",
         "channel_name": "",
         "bot_name": "Resync Bot",
-        "avatar_url": ""
+        "avatar_url": "",
     },
     # Configuration for TWS instances.  ``primary_instance`` is
     # required; ``monitored_instances`` is a list of instance names.
@@ -71,6 +71,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "notify_performance": False,
     },
 }
+
 
 # -----------------------------------------------------------------------------
 # Health monitoring helpers
@@ -99,7 +100,6 @@ def _get_health_report() -> dict[str, Any]:
     teams_cfg = cfg.get("teams_config", DEFAULT_CONFIG["teams_config"])
     report["teams"] = bool(teams_cfg.get("enabled"))
     return report
-
 
 
 def _load_config() -> dict[str, Any]:
@@ -143,8 +143,8 @@ def _save_config(config: dict[str, Any]) -> None:
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to save configuration: {exc}"
-        )
+            detail=f"Failed to save configuration: {exc}",
+        ) from exc
 
 
 @router.get("/teams-config", tags=["Admin"])
@@ -190,6 +190,7 @@ async def update_teams_config(settings: dict[str, Any]) -> None:
 
 # ----- TWS Configuration Endpoints -----
 
+
 @router.get("/tws-config", tags=["Admin"])
 async def get_tws_config() -> dict[str, Any]:
     """Return current TWS connection configuration."""
@@ -215,6 +216,7 @@ async def update_tws_config(settings: dict[str, Any]) -> None:
 
 # ----- System Settings Endpoints -----
 
+
 @router.get("/system-settings", tags=["Admin"])
 async def get_system_settings() -> dict[str, Any]:
     """Return current system settings."""
@@ -238,6 +240,7 @@ async def update_system_settings(settings: dict[str, Any]) -> None:
 
 
 # ----- Notifications Endpoints -----
+
 
 @router.get("/notifications", tags=["Admin"])
 async def get_notifications() -> dict[str, Any]:
@@ -266,6 +269,7 @@ async def update_notifications(settings: dict[str, Any]) -> None:
 
 # ----- Logs Endpoint -----
 
+
 @router.get("/logs", tags=["Admin"])
 async def get_logs(file: str = "app.log", lines: int = 100) -> dict[str, Any]:
     """Return the last ``lines`` lines of the specified log file.
@@ -285,26 +289,25 @@ async def get_logs(file: str = "app.log", lines: int = 100) -> dict[str, Any]:
     logs_dir = Path(__file__).resolve().parent.parent.parent.parent / "logs"
     log_path = logs_dir / file
     if not log_path.is_file():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Log file not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Log file not found")
     try:
         # Read the last ``lines`` lines efficiently
         with log_path.open("r", encoding="utf-8", errors="ignore") as f:
             # Use deque to store the last ``lines`` lines
             from collections import deque
+
             dq = deque(f, maxlen=lines)
             content = "".join(dq)
         return {"file": file, "content": content}
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to read log file: {exc}"
-        )
+            detail=f"Failed to read log file: {exc}",
+        ) from exc
 
 
 # ----- Backup and Restore Endpoints -----
+
 
 @router.post("/backup", tags=["Admin"])
 async def create_backup() -> dict[str, str]:
@@ -346,9 +349,8 @@ async def create_backup() -> dict[str, str]:
     except Exception as exc:
         logger.error("backup_failed", error=str(exc), exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Backup failed: {exc}"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Backup failed: {exc}"
+        ) from exc
 
 
 @router.post("/restore", tags=["Admin"])
@@ -364,27 +366,21 @@ async def restore_from_latest() -> dict[str, str]:
     backup_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "backup"
     if not backup_dir.is_dir():
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No backup directory found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="No backup directory found"
         )
 
     # Find latest JSON backup
     backups = sorted(
-        backup_dir.glob("audit_backup_*.json"),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True
+        backup_dir.glob("audit_backup_*.json"), key=lambda p: p.stat().st_mtime, reverse=True
     )
 
     if not backups:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No backup files found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No backup files found")
 
     return {
         "message": "PostgreSQL restore should be done via pg_restore",
         "latest_backup": backups[0].name,
-        "recommendation": "Use: pg_restore -d resync backup.dump"
+        "recommendation": "Use: pg_restore -d resync backup.dump",
     }
 
 
@@ -428,6 +424,7 @@ async def get_audit_logs(limit: int = 50) -> dict[str, Any]:
 
 
 # ----- Health Monitoring Endpoint -----
+
 
 @router.get("/health", tags=["Admin"])
 async def get_health() -> dict[str, Any]:

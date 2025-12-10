@@ -11,7 +11,6 @@ Collects metrics from all continual learning components:
 Designed to work with LightweightMetricsStore.
 """
 
-
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -31,6 +30,7 @@ logger = get_logger(__name__)
 # =============================================================================
 # METRIC NAMES (centralized for consistency)
 # =============================================================================
+
 
 class MetricNames:
     """Centralized metric names for continual learning."""
@@ -81,6 +81,7 @@ class MetricNames:
 @dataclass
 class QueryMetrics:
     """Metrics collected during a single query."""
+
     start_time: float
     query_length: int
     enrichment_applied: bool = False

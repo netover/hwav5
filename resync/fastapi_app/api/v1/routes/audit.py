@@ -68,7 +68,7 @@ def _calculate_metrics() -> dict:
 async def get_audit_flags(
     query_params: AuditFlagsQuery = Depends(),
     current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger),
+    logger_instance=Depends(get_logger),
 ) -> list[AuditFlagInfo]:
     """Get audit flags for review."""
     # Initialize sample data if empty
@@ -87,7 +87,7 @@ async def get_audit_flags(
     # Apply pagination
     offset = query_params.offset or 0
     limit = query_params.limit or 100
-    flags = flags[offset:offset + limit]
+    flags = flags[offset : offset + limit]
 
     # Convert to response model
     audit_flags = [
@@ -117,7 +117,7 @@ async def get_audit_flags(
 @router.get("/audit/metrics", response_model=AuditMetricsResponse)
 async def get_audit_metrics(
     current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger),
+    logger_instance=Depends(get_logger),
 ) -> AuditMetricsResponse:
     """Get audit metrics summary."""
     # Initialize sample data if empty
@@ -130,13 +130,13 @@ async def get_audit_metrics(
         pending=calculated["pending"],
         approved=calculated["approved"],
         rejected=calculated["rejected"],
-        total=calculated["total"]
+        total=calculated["total"],
     )
 
     logger_instance.info(
         "audit_metrics_retrieved",
         user_id=current_user.get("user_id"),
-        metrics=metrics.model_dump() if hasattr(metrics, 'model_dump') else metrics.dict(),
+        metrics=metrics.model_dump() if hasattr(metrics, "model_dump") else metrics.dict(),
     )
     return metrics
 
@@ -145,7 +145,7 @@ async def get_audit_metrics(
 async def review_audit_flag(
     request: AuditReviewRequest,
     current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger),
+    logger_instance=Depends(get_logger),
     rate_limit_ok: bool = Depends(check_rate_limit),
 ) -> AuditReviewResponse:
     """Review and approve/reject an audit flag."""
@@ -159,7 +159,7 @@ async def review_audit_flag(
     flag_found = False
     for flag in _audit_store["flags"]:
         if flag.get("memory_id") == request.memory_id:
-            old_status = flag.get("status")
+            flag.get("status")
             new_status = "approved" if request.action == "approve" else "rejected"
             flag["status"] = new_status
             flag["reviewed_at"] = datetime.now().isoformat()
@@ -196,7 +196,7 @@ async def create_audit_flag(
     description: str = "",
     severity: str = "medium",
     current_user: dict = Depends(get_current_user),
-    logger_instance = Depends(get_logger),
+    logger_instance=Depends(get_logger),
 ):
     """Create a new audit flag."""
     new_flag = {

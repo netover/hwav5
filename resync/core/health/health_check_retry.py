@@ -5,7 +5,6 @@ This module provides retry mechanisms with exponential backoff for health checks
 ensuring reliable health monitoring even in the face of transient failures.
 """
 
-
 import asyncio
 from collections.abc import Callable
 from typing import Any, TypeVar
@@ -78,6 +77,7 @@ class HealthCheckRetry:
         # This should never be reached, but just in case
         if last_exception:
             raise last_exception
+        return None
 
     @staticmethod
     def create_retry_wrapper(

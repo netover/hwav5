@@ -10,7 +10,6 @@ para adicionar contexto relevante às queries antes do RAG retrieval:
 4. Enriquece com padrões de dependência conhecidos
 """
 
-
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -24,6 +23,7 @@ logger = get_logger(__name__)
 @dataclass
 class EnrichmentResult:
     """Result of query enrichment."""
+
     original_query: str
     enriched_query: str
     context_added: list[str]
@@ -35,6 +35,7 @@ class EnrichmentResult:
 @dataclass
 class EntityContext:
     """Context information about an entity."""
+
     entity_id: str
     entity_type: str
 
@@ -133,6 +134,7 @@ class ContextEnricher:
         # Default: try to import and get from tws_multi
         try:
             from resync.core.tws_multi.learning import TWSLearningStore
+
             return TWSLearningStore(instance_id)
         except ImportError:
             return None
@@ -144,6 +146,7 @@ class ContextEnricher:
 
         try:
             from resync.core.knowledge_graph.graph import get_knowledge_graph
+
             self._kg = await get_knowledge_graph()
             return self._kg
         except ImportError:
@@ -240,7 +243,7 @@ class ContextEnricher:
             # Truncate context if too long
             total_context = " | ".join(context_parts)
             if len(total_context) > self.max_context_length:
-                total_context = total_context[:self.max_context_length] + "..."
+                total_context = total_context[: self.max_context_length] + "..."
 
             enriched_query = f"{query} [Contexto: {total_context}]"
         else:
@@ -294,16 +297,12 @@ class ContextEnricher:
                     # Add duration if long-running
                     if pattern.avg_duration_seconds > 1800:  # > 30 min
                         duration_min = pattern.avg_duration_seconds / 60
-                        context_parts.append(
-                            f"Job {job_name} duração ~{duration_min:.0f}min"
-                        )
+                        context_parts.append(f"Job {job_name} duração ~{duration_min:.0f}min")
 
                     # Add common errors
                     if pattern.common_failure_reasons:
                         top_errors = pattern.common_failure_reasons[:2]
-                        context_parts.append(
-                            f"Erros comuns {job_name}: {', '.join(top_errors)}"
-                        )
+                        context_parts.append(f"Erros comuns {job_name}: {', '.join(top_errors)}")
 
             except Exception as e:
                 logger.debug(f"Error getting job context for {job_name}: {e}")
@@ -331,9 +330,7 @@ class ContextEnricher:
                 resolution = learning_store.get_suggested_resolution(error_code)
 
                 if resolution:
-                    context_parts.append(
-                        f"Erro {error_code}: resolução comum '{resolution[:50]}'"
-                    )
+                    context_parts.append(f"Erro {error_code}: resolução comum '{resolution[:50]}'")
 
             except Exception as e:
                 logger.debug(f"Error getting error context for {error_code}: {e}")
@@ -359,18 +356,14 @@ class ContextEnricher:
                 if chain and len(chain) > 1:
                     # Show immediate dependencies
                     deps = chain[:3]
-                    context_parts.append(
-                        f"{job_name} depende de: {' → '.join(deps)}"
-                    )
+                    context_parts.append(f"{job_name} depende de: {' → '.join(deps)}")
 
                 # Get downstream jobs
                 downstream = await kg.get_downstream_jobs(job_name, max_depth=1)
 
                 if downstream:
                     jobs = list(downstream)[:3]
-                    context_parts.append(
-                        f"Jobs após {job_name}: {', '.join(jobs)}"
-                    )
+                    context_parts.append(f"Jobs após {job_name}: {', '.join(jobs)}")
 
             except Exception as e:
                 logger.debug(f"Error getting dependency context for {job_name}: {e}")
@@ -432,9 +425,9 @@ class ContextEnricher:
 
             if context.avg_duration_seconds is not None:
                 if context.avg_duration_seconds > 3600:
-                    parts.append(f"Duração média: {context.avg_duration_seconds/3600:.1f}h")
+                    parts.append(f"Duração média: {context.avg_duration_seconds / 3600:.1f}h")
                 elif context.avg_duration_seconds > 60:
-                    parts.append(f"Duração média: {context.avg_duration_seconds/60:.0f}min")
+                    parts.append(f"Duração média: {context.avg_duration_seconds / 60:.0f}min")
 
             if context.dependencies:
                 deps = context.dependencies[:3]

@@ -48,8 +48,9 @@ class UserBehaviorAnalyzer:
         """Update user preferences."""
         return await self._store.profiles.update_preferences(user_id, preferences)
 
-    async def record_activity(self, user_id: str, increment_sessions: bool = False,
-                            increment_queries: bool = False) -> UserProfile:
+    async def record_activity(
+        self, user_id: str, increment_sessions: bool = False, increment_queries: bool = False
+    ) -> UserProfile:
         """Record user activity."""
         return await self._store.profiles.update_activity(
             user_id, increment_sessions, increment_queries
@@ -108,12 +109,14 @@ class UserBehaviorAnalyzer:
 
 _instance: UserBehaviorAnalyzer | None = None
 
+
 def get_user_behavior_analyzer() -> UserBehaviorAnalyzer:
     """Get the singleton UserBehaviorAnalyzer instance."""
     global _instance
     if _instance is None:
         _instance = UserBehaviorAnalyzer()
     return _instance
+
 
 async def initialize_user_behavior_analyzer() -> UserBehaviorAnalyzer:
     """Initialize and return the UserBehaviorAnalyzer."""

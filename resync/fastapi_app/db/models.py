@@ -15,6 +15,7 @@ from resync.core.database.engine import Base
 
 class UserRole(str, Enum):
     """User roles."""
+
     ADMIN = "admin"
     USER = "user"
     OPERATOR = "operator"
@@ -117,6 +118,7 @@ class User(Base):
         """Get permissions as list."""
         if self.permissions_json:
             import json
+
             return json.loads(self.permissions_json)
         return []
 
@@ -124,6 +126,7 @@ class User(Base):
     def permissions(self, value: list[str]):
         """Set permissions from list."""
         import json
+
         self.permissions_json = json.dumps(value) if value else None
 
     def to_dict(self) -> dict:
@@ -230,6 +233,7 @@ class AuditLog(Base):
         """Get details as dict."""
         if self.details_json:
             import json
+
             return json.loads(self.details_json)
         return {}
 
@@ -237,6 +241,7 @@ class AuditLog(Base):
     def details(self, value: dict):
         """Set details from dict."""
         import json
+
         self.details_json = json.dumps(value) if value else None
 
     def to_dict(self) -> dict:

@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 @dataclass
 class SimpleCacheConfig:
     """Simple cache configuration."""
+
     ttl_seconds: float = 300.0
     max_entries: int = 10000
     enable_stats: bool = True
@@ -28,6 +29,7 @@ class SimpleCacheConfig:
 @dataclass
 class CacheEntry:
     """Cache entry with timestamp and TTL."""
+
     data: Any
     timestamp: float = field(default_factory=time.time)
     ttl: float = 300.0
@@ -65,10 +67,7 @@ class MemoryCache(BaseCache):
             if len(self._store) >= self.config.max_entries:
                 await self._evict_oldest()
 
-            self._store[key] = CacheEntry(
-                data=value,
-                ttl=ttl or self.config.ttl_seconds
-            )
+            self._store[key] = CacheEntry(data=value, ttl=ttl or self.config.ttl_seconds)
             return True
 
     async def delete(self, key: str) -> bool:
@@ -106,12 +105,7 @@ class EnhancedCache(MemoryCache):
         super().__init__(config)
         self._computing: dict[str, asyncio.Event] = {}
 
-    async def get_or_compute(
-        self,
-        key: str,
-        compute_fn: callable,
-        ttl: float | None = None
-    ) -> Any:
+    async def get_or_compute(self, key: str, compute_fn: callable, ttl: float | None = None) -> Any:
         """Get value or compute if missing (with stampede protection)."""
         # Check cache first
         value = await self.get(key)
@@ -138,9 +132,7 @@ class HybridCache(BaseCache):
     """Hybrid cache combining memory and persistent storage."""
 
     def __init__(
-        self,
-        memory_config: SimpleCacheConfig | None = None,
-        persistent_store: dict | None = None
+        self, memory_config: SimpleCacheConfig | None = None, persistent_store: dict | None = None
     ):
         self._memory = MemoryCache(memory_config)
         self._persistent = persistent_store or {}
@@ -204,10 +196,14 @@ class CacheFactory:
         Returns:
             BaseCache: An enhanced cache implementation instance
         """
-        simple_config = SimpleCacheConfig(
-            ttl_seconds=getattr(config, 'ttl_seconds', 300),
-            max_entries=getattr(config, 'max_entries', 10000),
-        ) if config else SimpleCacheConfig()
+        simple_config = (
+            SimpleCacheConfig(
+                ttl_seconds=getattr(config, "ttl_seconds", 300),
+                max_entries=getattr(config, "max_entries", 10000),
+            )
+            if config
+            else SimpleCacheConfig()
+        )
 
         return EnhancedCache(simple_config)
 
@@ -222,10 +218,14 @@ class CacheFactory:
         Returns:
             BaseCache: A memory-based cache implementation instance
         """
-        simple_config = SimpleCacheConfig(
-            ttl_seconds=getattr(config, 'ttl_seconds', 300),
-            max_entries=getattr(config, 'max_entries', 10000),
-        ) if config else SimpleCacheConfig()
+        simple_config = (
+            SimpleCacheConfig(
+                ttl_seconds=getattr(config, "ttl_seconds", 300),
+                max_entries=getattr(config, "max_entries", 10000),
+            )
+            if config
+            else SimpleCacheConfig()
+        )
 
         return MemoryCache(simple_config)
 
@@ -240,9 +240,13 @@ class CacheFactory:
         Returns:
             BaseCache: A hybrid cache implementation instance
         """
-        memory_config = SimpleCacheConfig(
-            ttl_seconds=getattr(config, 'ttl_seconds', 300),
-            max_entries=getattr(config, 'max_entries', 5000),
-        ) if config else SimpleCacheConfig()
+        memory_config = (
+            SimpleCacheConfig(
+                ttl_seconds=getattr(config, "ttl_seconds", 300),
+                max_entries=getattr(config, "max_entries", 5000),
+            )
+            if config
+            else SimpleCacheConfig()
+        )
 
         return HybridCache(memory_config)

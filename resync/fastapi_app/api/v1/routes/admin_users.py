@@ -21,6 +21,7 @@ router = APIRouter()
 # Pydantic models for API
 class UserCreate(BaseModel):
     """Model for creating a user."""
+
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
@@ -30,6 +31,7 @@ class UserCreate(BaseModel):
 
 class UserUpdate(BaseModel):
     """Model for updating a user."""
+
     email: EmailStr | None = None
     full_name: str | None = None
     role: str | None = None
@@ -38,6 +40,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(BaseModel):
     """Model for user response."""
+
     id: str
     username: str
     email: str
@@ -51,12 +54,14 @@ class UserResponse(BaseModel):
 
 class PasswordChange(BaseModel):
     """Model for password change."""
+
     current_password: str
     new_password: str = Field(..., min_length=8)
 
 
 class BulkUserAction(BaseModel):
     """Model for bulk user actions."""
+
     user_ids: list[str]
     action: str  # activate, deactivate, delete
 
@@ -77,10 +82,12 @@ async def list_users(
     if active_only:
         users = [u for u in users if u.get("is_active", True)]
 
-    return users[skip:skip + limit]
+    return users[skip : skip + limit]
 
 
-@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["Admin Users"])
+@router.post(
+    "/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["Admin Users"]
+)
 async def create_user(user: UserCreate):
     """Create a new user."""
     import uuid
@@ -104,6 +111,7 @@ async def create_user(user: UserCreate):
 
     # Hash password (in production, use proper hashing)
     from resync.fastapi_app.core.security import get_password_hash
+
     hashed_password = get_password_hash(user.password)
 
     new_user = {
@@ -169,7 +177,9 @@ async def delete_user(user_id: str):
     logger.info(f"User deleted: {username}")
 
 
-@router.post("/users/{user_id}/change-password", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Users"])
+@router.post(
+    "/users/{user_id}/change-password", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Users"]
+)
 async def change_password(user_id: str, password_change: PasswordChange):
     """Change user password."""
     if user_id not in _users:
@@ -182,6 +192,7 @@ async def change_password(user_id: str, password_change: PasswordChange):
 
     # Verify current password
     from resync.fastapi_app.core.security import get_password_hash, verify_password
+
     if not verify_password(password_change.current_password, user["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -193,7 +204,9 @@ async def change_password(user_id: str, password_change: PasswordChange):
     logger.info(f"Password changed for user: {user['username']}")
 
 
-@router.post("/users/{user_id}/activate", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Users"])
+@router.post(
+    "/users/{user_id}/activate", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Users"]
+)
 async def activate_user(user_id: str):
     """Activate a user account."""
     if user_id not in _users:
@@ -206,7 +219,9 @@ async def activate_user(user_id: str):
     logger.info(f"User activated: {_users[user_id]['username']}")
 
 
-@router.post("/users/{user_id}/deactivate", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Users"])
+@router.post(
+    "/users/{user_id}/deactivate", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Users"]
+)
 async def deactivate_user(user_id: str):
     """Deactivate a user account."""
     if user_id not in _users:

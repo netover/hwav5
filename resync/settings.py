@@ -80,9 +80,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
 
     log_sensitive_data_redaction: bool = Field(
         default=True,
-        description=(
-            "Enable redaction of sensitive data in logs (passwords, tokens, etc.)"
-        ),
+        description=("Enable redaction of sensitive data in logs (passwords, tokens, etc.)"),
     )
 
     description: str = Field(
@@ -108,7 +106,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     context_db_path: str = Field(
         default="",
         description="DEPRECATED: SQLite removed - using PostgreSQL. Keep empty.",
-        deprecated=True
+        deprecated=True,
     )
 
     # ============================================================================
@@ -124,9 +122,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     # ============================================================================
     # REDIS
     # ============================================================================
-    redis_url: str = Field(
-        default="redis://localhost:6379/0", description="URL de conexão Redis"
-    )
+    redis_url: str = Field(default="redis://localhost:6379/0", description="URL de conexão Redis")
 
     redis_min_connections: int = Field(default=1, ge=1, le=100)
     redis_max_connections: int = Field(default=10, ge=1, le=1000)
@@ -307,9 +303,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     cache_hierarchy_l2_cleanup_interval: int = Field(
         default=60, description="Cleanup interval for L2 cache in seconds"
     )
-    cache_hierarchy_num_shards: int = Field(
-        default=8, description="Number of shards for cache"
-    )
+    cache_hierarchy_num_shards: int = Field(default=8, description="Number of shards for cache")
     cache_hierarchy_max_workers: int = Field(
         default=4, description="Max workers for cache operations"
     )
@@ -348,9 +342,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     )
     tws_ca_bundle: str | None = Field(
         default=None,
-        description=(
-            "CA bundle for TWS TLS verification (ignored if tws_verify=False)"
-        ),
+        description=("CA bundle for TWS TLS verification (ignored if tws_verify=False)"),
     )
 
     # Connection Pool - HTTP
@@ -483,9 +475,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         default=None,
         # Reads from ADMIN_PASSWORD (without APP_ prefix)
         validation_alias="ADMIN_PASSWORD",
-        description=(
-            "Senha do administrador. Deve ser configurada via variável de ambiente."
-        ),
+        description=("Senha do administrador. Deve ser configurada via variável de ambiente."),
         exclude=True,
         repr=False,
     )
@@ -505,9 +495,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     server_host: str = Field(
         default="127.0.0.1", description="Host do servidor (padrão: localhost apenas)"
     )
-    server_port: int = Field(
-        default=8000, ge=1024, le=65535, description="Porta do servidor"
-    )
+    server_port: int = Field(default=8000, ge=1024, le=65535, description="Porta do servidor")
 
     # ============================================================================
     # RATE LIMITING
@@ -553,8 +541,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     rag_service_retry_backoff: float = Field(
         default=1.0,
         description=(
-            "Fator de backoff exponencial para tentativas de requisição ao "
-            "microserviço RAG"
+            "Fator de backoff exponencial para tentativas de requisição ao microserviço RAG"
         ),
     )
 
@@ -657,4 +644,4 @@ def __getattr__(name: str) -> Any:
             except ImportError:
                 _LOADED_IMPORTS[name] = None
         return _LOADED_IMPORTS[name]
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'") from None

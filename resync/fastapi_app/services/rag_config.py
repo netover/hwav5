@@ -18,8 +18,7 @@ class RAGConfig:
     # PostgreSQL settings (uses main DATABASE_URL)
     database_url: str = field(
         default_factory=lambda: os.getenv(
-            "DATABASE_URL",
-            "postgresql://resync:password@localhost:5432/resync"
+            "DATABASE_URL", "postgresql://resync:password@localhost:5432/resync"
         )
     )
     collection_name: str = field(
@@ -40,9 +39,7 @@ class RAGConfig:
     use_mock: bool = field(
         default_factory=lambda: os.getenv("RAG_USE_MOCK", "true").lower() == "true"
     )
-    upload_dir: str = field(
-        default_factory=lambda: os.getenv("RAG_UPLOAD_DIR", "uploads")
-    )
+    upload_dir: str = field(default_factory=lambda: os.getenv("RAG_UPLOAD_DIR", "uploads"))
 
     # Search settings
     default_top_k: int = 10

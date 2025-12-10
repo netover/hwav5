@@ -5,7 +5,6 @@ This module provides comprehensive management functionality for multiple
 circuit breakers across different system components.
 """
 
-
 import asyncio
 from datetime import datetime, timedelta
 from typing import Any
@@ -59,9 +58,7 @@ class CircuitBreakerManager:
             return True
         return False
 
-    async def execute_with_circuit_breaker(
-        self, breaker_name: str, func, *args, **kwargs
-    ) -> Any:
+    async def execute_with_circuit_breaker(self, breaker_name: str, func, *args, **kwargs) -> Any:
         """
         Execute a function with circuit breaker protection.
 
@@ -102,9 +99,7 @@ class CircuitBreakerManager:
             )
             raise
 
-    async def get_circuit_breaker_status(
-        self, breaker_name: str
-    ) -> dict[str, Any] | None:
+    async def get_circuit_breaker_status(self, breaker_name: str) -> dict[str, Any] | None:
         """
         Get the status of a specific circuit breaker.
 
@@ -167,7 +162,7 @@ class CircuitBreakerManager:
         """
         statuses = {}
 
-        for breaker_name in self._circuit_breakers.keys():
+        for breaker_name in self._circuit_breakers:
             status = await self.get_circuit_breaker_status(breaker_name)
             if status:
                 statuses[breaker_name] = status
@@ -186,9 +181,7 @@ class CircuitBreakerManager:
         """
         circuit_breaker = self._circuit_breakers.get(breaker_name)
         if not circuit_breaker:
-            logger.warning(
-                "circuit_breaker_not_found_for_reset", breaker_name=breaker_name
-            )
+            logger.warning("circuit_breaker_not_found_for_reset", breaker_name=breaker_name)
             return False
 
         try:
@@ -208,9 +201,7 @@ class CircuitBreakerManager:
             return True
 
         except Exception as e:
-            logger.error(
-                "circuit_breaker_reset_failed", breaker_name=breaker_name, error=str(e)
-            )
+            logger.error("circuit_breaker_reset_failed", breaker_name=breaker_name, error=str(e))
             return False
 
     async def reset_all_circuit_breakers(self) -> dict[str, bool]:
@@ -222,7 +213,7 @@ class CircuitBreakerManager:
         """
         results = {}
 
-        for breaker_name in self._circuit_breakers.keys():
+        for breaker_name in self._circuit_breakers:
             results[breaker_name] = await self.reset_circuit_breaker(breaker_name)
 
         logger.info("all_circuit_breakers_reset", results=results)
@@ -353,9 +344,7 @@ class CircuitBreakerManager:
                 cleaned_count += 1
 
         if cleaned_count > 0:
-            logger.info(
-                "cleaned_stale_circuit_breaker_stats", cleaned_count=cleaned_count
-            )
+            logger.info("cleaned_stale_circuit_breaker_stats", cleaned_count=cleaned_count)
 
         return cleaned_count
 

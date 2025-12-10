@@ -5,7 +5,6 @@ Provides export/import operations for document_embeddings table to enable safe m
 Uses PostgreSQL COPY command for efficient bulk operations.
 """
 
-
 import json
 import logging
 import os
@@ -19,6 +18,7 @@ logger = logging.getLogger(__name__)
 # Optional import
 try:
     import asyncpg
+
     ASYNCPG_AVAILABLE = True
 except ImportError:
     asyncpg = None
@@ -40,7 +40,9 @@ class PgVectorPersistence:
         self._database_url = database_url or CFG.database_url
         # Clean URL for asyncpg
         if self._database_url.startswith("postgresql+asyncpg://"):
-            self._database_url = self._database_url.replace("postgresql+asyncpg://", "postgresql://")
+            self._database_url = self._database_url.replace(
+                "postgresql+asyncpg://", "postgresql://"
+            )
 
         self._snapshot_dir = Path(os.getenv("RAG_SNAPSHOT_DIR", "/tmp/rag_snapshots"))
         self._snapshot_dir.mkdir(parents=True, exist_ok=True)
@@ -62,31 +64,41 @@ class PgVectorPersistence:
         conn = await asyncpg.connect(self._database_url)
         try:
             # Export documents (without embeddings for space efficiency)
-            rows = await conn.fetch("""
+            rows = await conn.fetch(
+                """
                 SELECT document_id, chunk_id, content, metadata, sha256
                 FROM document_embeddings
                 WHERE collection_name = $1
                 ORDER BY document_id, chunk_id
-            """, col)
+            """,
+                col,
+            )
 
             documents = []
             for row in rows:
-                documents.append({
-                    "document_id": row["document_id"],
-                    "chunk_id": row["chunk_id"],
-                    "content": row["content"],
-                    "metadata": dict(row["metadata"]) if row["metadata"] else {},
-                    "sha256": row["sha256"],
-                })
+                documents.append(
+                    {
+                        "document_id": row["document_id"],
+                        "chunk_id": row["chunk_id"],
+                        "content": row["content"],
+                        "metadata": dict(row["metadata"]) if row["metadata"] else {},
+                        "sha256": row["sha256"],
+                    }
+                )
 
             # Write to file
             with open(filepath, "w", encoding="utf-8") as f:
-                json.dump({
-                    "collection": col,
-                    "timestamp": timestamp,
-                    "document_count": len(documents),
-                    "documents": documents,
-                }, f, indent=2, ensure_ascii=False)
+                json.dump(
+                    {
+                        "collection": col,
+                        "timestamp": timestamp,
+                        "document_count": len(documents),
+                        "documents": documents,
+                    },
+                    f,
+                    indent=2,
+                    ensure_ascii=False,
+                )
 
             logger.info("Snapshot created for %s: %s (%d docs)", col, filename, len(documents))
             return filename
@@ -158,10 +170,13 @@ class PgVectorPersistence:
         conn = await asyncpg.connect(self._database_url)
         try:
             # Clear existing documents in target collection
-            await conn.execute("""
+            await conn.execute(
+                """
                 DELETE FROM document_embeddings
                 WHERE collection_name = $1
-            """, target_col)
+            """,
+                target_col,
+            )
 
             # Re-insert documents
             # Note: If embedder is provided, regenerate embeddings
@@ -175,7 +190,8 @@ class PgVectorPersistence:
                     embedding = await embedder.embed(doc["content"])
                     embedding_str = f"[{','.join(str(x) for x in embedding)}]"
 
-                await conn.execute("""
+                await conn.execute(
+                    """
                     INSERT INTO document_embeddings
                     (collection_name, document_id, chunk_id, content, embedding, metadata, sha256)
                     VALUES ($1, $2, $3, $4, $5::vector, $6::jsonb, $7)
@@ -195,7 +211,9 @@ class PgVectorPersistence:
                     doc["sha256"],
                 )
 
-            logger.info("Restored %d documents to %s from %s", len(documents), target_col, snapshot_name)
+            logger.info(
+                "Restored %d documents to %s from %s", len(documents), target_col, snapshot_name
+            )
             return len(documents)
 
         finally:

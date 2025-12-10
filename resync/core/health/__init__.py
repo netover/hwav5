@@ -40,12 +40,29 @@ __doc__ = (
 # Mantém a API pública coesa e evita divergência entre imports e __all__.
 # ---------------------------------------------------------------------------
 _EXPORTS: dict[str, tuple[str, str]] = {
-    # Core orchestration
-    "HealthServiceOrchestrator": (
-        "health_service_orchestrator",
-        "HealthServiceOrchestrator",
+    # === RECOMMENDED (v5.3.9+) ===
+    # Unified service (consolidates orchestrator + enhanced)
+    "UnifiedHealthService": ("unified_health_service", "UnifiedHealthService"),
+    "get_unified_health_service": (
+        "unified_health_service",
+        "get_unified_health_service",
     ),
-    "HealthServiceManager": ("health_service_manager", "HealthServiceManager"),
+    "shutdown_unified_health_service": (
+        "unified_health_service",
+        "shutdown_unified_health_service",
+    ),
+    # Health check service (refactored, delegates to checkers)
+    "HealthCheckService": ("health_check_service", "HealthCheckService"),
+    # Facade (public API)
+    "HealthServiceFacade": ("health_service_facade", "HealthServiceFacade"),
+    # Configuration
+    "HealthCheckConfigurationManager": (
+        "health_config_manager",
+        "HealthCheckConfigurationManager",
+    ),
+    # History
+    "HealthHistoryManager": ("health_history_manager", "HealthHistoryManager"),
+    # === SUPPORTING COMPONENTS ===
     # Monitoring components
     "ProactiveHealthMonitor": ("proactive_monitor", "ProactiveHealthMonitor"),
     "PerformanceMetricsCollector": (
@@ -60,52 +77,24 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "monitoring_aggregator",
         "HealthMonitoringAggregator",
     ),
-    # Circuit breaker functionality (use resync.core.circuit_breaker instead)
+    # Circuit breaker functionality
     "CircuitBreakerManager": (
         "circuit_breaker_manager",
         "CircuitBreakerManager",
     ),
-    # Caching and history
+    # Caching
     "ComponentCacheManager": (
         "component_cache_manager",
         "ComponentCacheManager",
     ),
-    "HealthHistoryManager": ("health_history_manager", "HealthHistoryManager"),
-    # Memory management (use resync.core.cache.memory_manager instead)
+    # Memory management
     "MemoryUsageTracker": ("memory_usage_tracker", "MemoryUsageTracker"),
     # Recovery and alerting
     "HealthRecoveryManager": ("recovery_manager", "HealthRecoveryManager"),
     "HealthAlerting": ("health_alerting", "HealthAlerting"),
-    # Configuration & utilities
-    "HealthCheckConfigurationManager": (
-        "health_config_manager",
-        "HealthCheckConfigurationManager",
-    ),
+    # Utilities
     "HealthCheckUtils": ("health_check_utils", "HealthCheckUtils"),
     "HealthCheckRetry": ("health_check_retry", "HealthCheckRetry"),
-    # Global service management
-    "GlobalHealthServiceManager": (
-        "global_health_service_manager",
-        "GlobalHealthServiceManager",
-    ),
-    "get_global_health_service": (
-        "global_health_service_manager",
-        "get_global_health_service",
-    ),
-    "shutdown_global_health_service": (
-        "global_health_service_manager",
-        "shutdown_global_health_service",
-    ),
-    "get_current_global_health_service": (
-        "global_health_service_manager",
-        "get_current_global_health_service",
-    ),
-    "is_global_health_service_initialized": (
-        "global_health_service_manager",
-        "is_global_health_service_initialized",
-    ),
-    # Legacy support (mantido com aviso de deprecação)
-    "HealthCheckService": ("health_check_service", "HealthCheckService"),
 }
 
 __all__ = tuple(_EXPORTS.keys())
@@ -114,19 +103,16 @@ __all__ = tuple(_EXPORTS.keys())
 # Deprecations — mensagens específicas por símbolo legado
 # ---------------------------------------------------------------------------
 _DEPRECATED: dict[str, str] = {
-    "HealthCheckService": (
-        "HealthCheckService é legado e será removido em versão futura; "
-        "prefira HealthServiceManager ou HealthServiceOrchestrator conforme o caso."
-    ),
+    # No deprecated symbols - all legacy code removed in v5.3.9
 }
 
 # ---------------------------------------------------------------------------
 # Helpers de ambiente (pré-carregamento opcional de essenciais)
 # ---------------------------------------------------------------------------
 _ESSENTIALS = (
-    "get_global_health_service",
-    "shutdown_global_health_service",
-    "is_global_health_service_initialized",
+    "get_unified_health_service",
+    "shutdown_unified_health_service",
+    "UnifiedHealthService",
 )
 
 
@@ -141,9 +127,7 @@ def __getattr__(name: str) -> Any:
     try:
         module_name, attr_name = _EXPORTS[name]
     except KeyError as exc:
-        raise AttributeError(
-            f"module {__name__!r} has no attribute {name!r}"
-        ) from exc
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
 
     if name in _DEPRECATED:
         warnings.warn(_DEPRECATED[name], DeprecationWarning, stacklevel=2)
@@ -191,13 +175,6 @@ if _env_flag("HSC_STRICT_IMPORTS"):
 if TYPE_CHECKING:
     from .circuit_breaker_manager import CircuitBreakerManager  # noqa: F401
     from .component_cache_manager import ComponentCacheManager  # noqa: F401
-    from .global_health_service_manager import (  # noqa: F401
-        GlobalHealthServiceManager,
-        get_current_global_health_service,
-        get_global_health_service,
-        is_global_health_service_initialized,
-        shutdown_global_health_service,
-    )
     from .health_alerting import HealthAlerting  # noqa: F401
     from .health_check_retry import HealthCheckRetry  # noqa: F401
     from .health_check_service import HealthCheckService  # noqa: F401
@@ -205,10 +182,14 @@ if TYPE_CHECKING:
     from .health_config_manager import HealthCheckConfigurationManager  # noqa: F401
     from .health_history_manager import HealthHistoryManager  # noqa: F401
     from .health_monitoring_coordinator import HealthMonitoringCoordinator  # noqa: F401
-    from .health_service_manager import HealthServiceManager  # noqa: F401
-    from .health_service_orchestrator import HealthServiceOrchestrator  # noqa: F401
+    from .health_service_facade import HealthServiceFacade  # noqa: F401
     from .memory_usage_tracker import MemoryUsageTracker  # noqa: F401
     from .monitoring_aggregator import HealthMonitoringAggregator  # noqa: F401
     from .performance_metrics_collector import PerformanceMetricsCollector  # noqa: F401
     from .proactive_monitor import ProactiveHealthMonitor  # noqa: F401
     from .recovery_manager import HealthRecoveryManager  # noqa: F401
+    from .unified_health_service import (  # noqa: F401
+        UnifiedHealthService,
+        get_unified_health_service,
+        shutdown_unified_health_service,
+    )

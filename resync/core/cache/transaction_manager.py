@@ -5,7 +5,6 @@ This module provides transaction management functionality for cache operations,
 allowing atomic multi-key operations with rollback capabilities.
 """
 
-
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -220,9 +219,7 @@ class CacheTransactionManager:
 
             # Check if transaction is already committed or rolled back
             if transaction_state.committed:
-                logger.warning(
-                    f"Cannot rollback committed transaction: {transaction_id}"
-                )
+                logger.warning(f"Cannot rollback committed transaction: {transaction_id}")
                 return False
 
             if transaction_state.rolled_back:
@@ -350,10 +347,7 @@ class CacheTransactionManager:
         Returns:
             Dict mapping transaction IDs to transaction information
         """
-        return {
-            tx_id: self.get_transaction_info(tx_id)
-            for tx_id in self._transactions.keys()
-        }
+        return {tx_id: self.get_transaction_info(tx_id) for tx_id in self._transactions}
 
     def clear_all_transactions(self) -> int:
         """

@@ -6,7 +6,6 @@ resource tracking, and leak detection following best practices from
 Java's try-with-resources and Python's context managers.
 """
 
-
 import asyncio
 import logging
 from collections.abc import AsyncIterator, Callable, Iterator
@@ -317,14 +316,10 @@ class ResourcePool:
         async with self._lock:
             for resource_id in list(self.active_resources.keys()):
                 info = self.active_resources[resource_id]
-                logger.warning(
-                    f"Force cleaning up resource: {resource_id} ({info.resource_type})"
-                )
+                logger.warning(f"Force cleaning up resource: {resource_id} ({info.resource_type})")
                 del self.active_resources[resource_id]
 
-    async def detect_leaks(
-        self, max_lifetime_seconds: int = 3600
-    ) -> list[ResourceInfo]:
+    async def detect_leaks(self, max_lifetime_seconds: int = 3600) -> list[ResourceInfo]:
         """
         Detect potential resource leaks.
 

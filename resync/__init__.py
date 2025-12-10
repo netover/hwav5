@@ -7,14 +7,15 @@ This package provides lazy imports to avoid circular dependencies.
 # PEP 562 __getattr__ for lazy imports to avoid circular dependencies
 _LAZY_MODULES = {
     # Core modules that may have circular dependencies
-    'settings': ('resync.settings', 'settings'),
-    'core': ('resync.core', None),
-    'api': ('resync.api', None),
-    'services': ('resync.services', None),
-    'models': ('resync.models', None),
+    "settings": ("resync.settings", "settings"),
+    "core": ("resync.core", None),
+    "api": ("resync.api", None),
+    "services": ("resync.services", None),
+    "models": ("resync.models", None),
 }
 
 _LOADED_MODULES = {}
+
 
 def __getattr__(name):
     """PEP 562 lazy imports for resync package."""
@@ -27,11 +28,12 @@ def __getattr__(name):
                 _LOADED_MODULES[name] = module if attr_name is None else getattr(module, attr_name)
             except ImportError as e:
                 _LOADED_MODULES[name] = None
-                raise ImportError(f"Failed to lazy import {name}: {e}")
+                raise ImportError(f"Failed to lazy import {name}: {e}") from None
 
         return _LOADED_MODULES[name]
 
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'") from None
+
 
 # Version info
 __version__ = "0.7.0"

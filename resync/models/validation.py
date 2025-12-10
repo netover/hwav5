@@ -282,9 +282,7 @@ class JobStatusUpdate(BaseModel):
         """
         valid_statuses = {"running", "completed", "failed", "cancelled", "pending"}
         if v.lower() not in valid_statuses:
-            raise ValueError(
-                f"Invalid job status: {v}. Must be one of {valid_statuses}"
-            )
+            raise ValueError(f"Invalid job status: {v}. Must be one of {valid_statuses}")
         return v.lower()
 
 
@@ -330,7 +328,7 @@ class DocumentUpload(BaseModel):
 
         if file_extension not in allowed_extensions:
             raise ValueError(
-                f'File type not allowed. Allowed types: {", ".join(allowed_extensions)}'
+                f"File type not allowed. Allowed types: {', '.join(allowed_extensions)}"
             )
 
         return v

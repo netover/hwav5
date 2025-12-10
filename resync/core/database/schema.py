@@ -49,9 +49,9 @@ async def create_schemas(engine: AsyncEngine | None = None) -> None:
 
     async with engine.begin() as conn:
         # Create schemas
-        for statement in CREATE_SCHEMAS_SQL.strip().split(';'):
+        for statement in CREATE_SCHEMAS_SQL.strip().split(";"):
             statement = statement.strip()
-            if statement and not statement.startswith('--'):
+            if statement and not statement.startswith("--"):
                 try:
                     await conn.execute(text(statement))
                 except Exception as e:

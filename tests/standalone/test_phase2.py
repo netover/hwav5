@@ -2,8 +2,8 @@
 Test script for Phase 2 Performance Optimization features.
 """
 
-import sys
 import asyncio
+import sys
 from pathlib import Path
 
 # Add project root to path
@@ -157,9 +157,8 @@ async def main():
     if passed == total:
         print("\n✓ All tests passed! Phase 2 implementation is working correctly.")
         return 0
-    else:
-        print(f"\n✗ {total - passed} test(s) failed. Please review the errors above.")
-        return 1
+    print(f"\n✗ {total - passed} test(s) failed. Please review the errors above.")
+    return 1
 
 
 if __name__ == "__main__":

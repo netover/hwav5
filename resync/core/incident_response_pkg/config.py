@@ -18,23 +18,29 @@ class IncidentResponseConfig:
     max_auto_actions: int = 3
 
     # Notification settings
-    notification_channels: list[str] = field(default_factory=lambda: [
-        "email",
-        "slack",
-        "pagerduty",
-    ])
+    notification_channels: list[str] = field(
+        default_factory=lambda: [
+            "email",
+            "slack",
+            "pagerduty",
+        ]
+    )
 
     # Escalation
     escalation_timeout: int = 900  # 15 minutes
-    escalation_levels: list[str] = field(default_factory=lambda: [
-        "on_call",
-        "team_lead",
-        "manager",
-    ])
+    escalation_levels: list[str] = field(
+        default_factory=lambda: [
+            "on_call",
+            "team_lead",
+            "manager",
+        ]
+    )
 
     # Severity thresholds
-    severity_thresholds: dict[str, float] = field(default_factory=lambda: {
-        "cpu_critical": 95.0,
-        "memory_critical": 95.0,
-        "error_rate_critical": 0.1,
-    })
+    severity_thresholds: dict[str, float] = field(
+        default_factory=lambda: {
+            "cpu_critical": 95.0,
+            "memory_critical": 95.0,
+            "error_rate_critical": 0.1,
+        }
+    )

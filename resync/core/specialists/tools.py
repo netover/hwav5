@@ -8,7 +8,6 @@ Author: Resync Team
 Version: 5.2.3.29
 """
 
-
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
@@ -21,6 +20,7 @@ logger = structlog.get_logger(__name__)
 # ============================================================================
 # TOOL DECORATOR (Agno-compatible)
 # ============================================================================
+
 
 def tool(func: Callable) -> Callable:
     """
@@ -37,6 +37,7 @@ def tool(func: Callable) -> Callable:
 # ============================================================================
 # JOB ANALYST TOOLS
 # ============================================================================
+
 
 class JobLogTool:
     """
@@ -144,10 +145,7 @@ class JobLogTool:
         else:
             severity = "CRITICAL"
 
-        description = self.RETURN_CODES.get(
-            return_code,
-            f"Custom return code {return_code}"
-        )
+        description = self.RETURN_CODES.get(return_code, f"Custom return code {return_code}")
 
         return {
             "return_code": return_code,
@@ -169,10 +167,7 @@ class JobLogTool:
             Analysis with description, common causes, and solutions
         """
         abend_upper = abend_code.upper()
-        description = self.ABEND_CODES.get(
-            abend_upper,
-            f"Unknown ABEND code {abend_upper}"
-        )
+        description = self.ABEND_CODES.get(abend_upper, f"Unknown ABEND code {abend_upper}")
 
         return {
             "abend_code": abend_upper,
@@ -322,10 +317,7 @@ class ErrorCodeTool:
             Error details with description and resolution steps
         """
         code_upper = error_code.upper()
-        description = self.TWS_ERRORS.get(
-            code_upper,
-            "Unknown TWS error code"
-        )
+        description = self.TWS_ERRORS.get(code_upper, "Unknown TWS error code")
 
         return {
             "error_code": code_upper,
@@ -377,6 +369,7 @@ class ErrorCodeTool:
 # ============================================================================
 # DEPENDENCY SPECIALIST TOOLS
 # ============================================================================
+
 
 class DependencyGraphTool:
     """
@@ -539,6 +532,7 @@ class DependencyGraphTool:
 # ============================================================================
 # RESOURCE SPECIALIST TOOLS
 # ============================================================================
+
 
 class WorkstationTool:
     """

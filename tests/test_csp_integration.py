@@ -1,10 +1,10 @@
 """Integration tests for CSP functionality with the full FastAPI application."""
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from resync.api.endpoints import api_router as csp_router
-from fastapi import FastAPI
 
 app = FastAPI()
 app.include_router(csp_router)
@@ -107,9 +107,7 @@ class TestCSPIntegration:
 
         # Get the CSP header
         csp_header = response.headers.get("Content-Security-Policy", "")
-        csp_report_only = response.headers.get(
-            "Content-Security-Policy-Report-Only", ""
-        )
+        csp_report_only = response.headers.get("Content-Security-Policy-Report-Only", "")
 
         # Should have one or the other
         assert csp_header or csp_report_only
@@ -149,9 +147,9 @@ class TestCSPIntegration:
         """Test that CSP policy would block unsafe content."""
         response = client.get("/revisao")
 
-        csp_header = response.headers.get(
-            "Content-Security-Policy", ""
-        ) or response.headers.get("Content-Security-Policy-Report-Only", "")
+        csp_header = response.headers.get("Content-Security-Policy", "") or response.headers.get(
+            "Content-Security-Policy-Report-Only", ""
+        )
 
         # Should not allow unsafe-inline for scripts
         assert "script-src" in csp_header
@@ -160,10 +158,7 @@ class TestCSPIntegration:
         assert "nonce-" in csp_header
 
         # Should not allow external script sources by default
-        assert (
-            "https:" not in csp_header
-            or "script-src" not in csp_header.split("https:")[0]
-        )
+        assert "https:" not in csp_header or "script-src" not in csp_header.split("https:")[0]
 
     def test_security_headers_completeness(self, client):
         """Test that all expected security headers are present."""

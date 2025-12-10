@@ -3,7 +3,6 @@ HTTP connection pool implementation for the Resync project.
 Separated to follow Single Responsibility Principle.
 """
 
-
 import logging
 import time
 from collections.abc import AsyncIterator
@@ -22,9 +21,7 @@ logger = logging.getLogger(__name__)
 class HTTPConnectionPool(ConnectionPool[httpx.AsyncClient]):
     """HTTP connection pool for external API calls."""
 
-    def __init__(
-        self, config: ConnectionPoolConfig, base_url: str, **client_kwargs: Any
-    ) -> None:
+    def __init__(self, config: ConnectionPoolConfig, base_url: str, **client_kwargs: Any) -> None:
         super().__init__(config)
         self.base_url = base_url
         self.client_kwargs = client_kwargs
@@ -62,9 +59,7 @@ class HTTPConnectionPool(ConnectionPool[httpx.AsyncClient]):
             )
         except Exception as e:
             logger.error(f"Failed to setup HTTP connection pool: {e}")
-            raise TWSConnectionError(
-                f"Failed to setup HTTP connection pool: {e}"
-            ) from e
+            raise TWSConnectionError(f"Failed to setup HTTP connection pool: {e}") from e
 
     @asynccontextmanager
     async def get_connection(self) -> AsyncIterator[httpx.AsyncClient]:

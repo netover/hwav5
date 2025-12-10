@@ -64,9 +64,7 @@ class ChaosEngineer:
         self.active_tests: dict[str, asyncio.Task[Any]] = {}
         self._lock = threading.RLock()
 
-    async def run_full_chaos_suite(
-        self, duration_minutes: float = 5.0
-    ) -> dict[str, Any]:
+    async def run_full_chaos_suite(self, duration_minutes: float = 5.0) -> dict[str, Any]:
         """
         Run the complete chaos engineering test suite.
         """
@@ -244,9 +242,7 @@ class ChaosEngineer:
                     # Try concurrent operations
                     tasks = []
                     for i in range(10):
-                        task = asyncio.create_task(
-                            self._simulate_agent_operation(manager, i)
-                        )
+                        task = asyncio.create_task(self._simulate_agent_operation(manager, i))
                         tasks.append(task)
 
                     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -280,9 +276,7 @@ class ChaosEngineer:
         finally:
             runtime_metrics.close_correlation_id(correlation_id)
 
-    async def _simulate_agent_operation(
-        self, manager: AgentManager, op_id: int
-    ) -> None:
+    async def _simulate_agent_operation(self, manager: AgentManager, op_id: int) -> None:
         """Simulate agent operations for chaos testing."""
         # Simulate getting non-existent agent
         try:
@@ -296,7 +290,7 @@ class ChaosEngineer:
             if "total_agents" not in metrics:
                 raise ValueError("Metrics missing total_agents")
         except Exception as e:
-            raise RuntimeError(f"Metrics operation failed: {e}")
+            raise RuntimeError(f"Metrics operation failed: {e}") from None
 
     async def _audit_db_failure_injection(self) -> ChaosTestResult:
         """
@@ -358,9 +352,7 @@ class ChaosEngineer:
             try:
                 sweep_result = await asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda: __import__(
-                        "resync.core.audit_db"
-                    ).auto_sweep_pending_audits(1, 10),
+                    lambda: __import__("resync.core.audit_db").auto_sweep_pending_audits(1, 10),
                 )
                 operations += sweep_result.get("total_processed", 0)
             except Exception as e:
@@ -434,9 +426,7 @@ class ChaosEngineer:
             final_metrics = cache.get_detailed_metrics()
 
             if final_metrics["size"] > 10:  # Should have cleaned up most items
-                anomalies.append(
-                    f"Cleanup ineffective: {final_metrics['size']} items remaining"
-                )
+                anomalies.append(f"Cleanup ineffective: {final_metrics['size']} items remaining")
 
             success = len(anomalies) == 0
 
@@ -476,9 +466,7 @@ class ChaosEngineer:
 
             def failing_import(name: str, *args: Any, **kwargs: Any) -> Any:
                 # Randomly fail some imports to simulate network issues
-                if (
-                    random.random() < 0.1 and "agent" in name
-                ):  # 10% failure rate for agent-related
+                if random.random() < 0.1 and "agent" in name:  # 10% failure rate for agent-related
                     raise ImportError(f"Simulated network failure for {name}")
                 return original_import(name, *args, **kwargs)
 
@@ -498,9 +486,7 @@ class ChaosEngineer:
                         logger.error("exception_caught", error=str(e), exc_info=True)
                         errors += 1
                         if "network failure" not in str(e):
-                            anomalies.append(
-                                f"Unexpected error during network chaos {i}: {str(e)}"
-                            )
+                            anomalies.append(f"Unexpected error during network chaos {i}: {str(e)}")
 
             success = len(anomalies) == 0
 
@@ -542,17 +528,13 @@ class ChaosEngineer:
                     if component == "async_cache":
                         # Try cache operations with mocked failures
                         cache = AsyncTTLCache()
-                        with patch.object(
-                            cache, "set", side_effect=Exception("Simulated failure")
-                        ):
+                        with patch.object(cache, "set", side_effect=Exception("Simulated failure")):
                             try:
                                 await cache.set("test_key", "test_value")
                                 anomalies.append("Cache set should have failed")
                             except Exception as e:
                                 # Expected failure in chaos test - cache should be broken
-                                logger.debug(
-                                    f"Expected cache failure in chaos test: {e}"
-                                )
+                                logger.debug(f"Expected cache failure in chaos test: {e}")
 
                         await cache.stop()
                         operations += 1
@@ -570,9 +552,7 @@ class ChaosEngineer:
                             except Exception as e:
                                 logger.error("exception_caught", error=str(e), exc_info=True)
                                 if "import failure" not in str(e):
-                                    anomalies.append(
-                                        f"Agent manager unexpected error: {str(e)}"
-                                    )
+                                    anomalies.append(f"Agent manager unexpected error: {str(e)}")
 
                     elif component == "audit_db":
                         # Test audit operations with DB failures
@@ -581,27 +561,20 @@ class ChaosEngineer:
                             side_effect=Exception("Simulated DB failure"),
                         ):
                             try:
-
                                 audit_manager = get_audit_log_manager()
                                 metrics = audit_manager.get_audit_metrics()
                                 if "error" not in metrics:
-                                    anomalies.append(
-                                        "Audit DB should have reported error"
-                                    )
+                                    anomalies.append("Audit DB should have reported error")
                             except Exception as e:
                                 logger.error("exception_caught", error=str(e), exc_info=True)
                                 errors += 1
                                 if "DB failure" not in str(e):
-                                    anomalies.append(
-                                        f"Audit DB unexpected error: {str(e)}"
-                                    )
+                                    anomalies.append(f"Audit DB unexpected error: {str(e)}")
 
                 except Exception as e:
                     logger.error("exception_caught", error=str(e), exc_info=True)
                     errors += 1
-                    anomalies.append(
-                        f"Component {component} isolation test failed: {str(e)}"
-                    )
+                    anomalies.append(f"Component {component} isolation test failed: {str(e)}")
 
             success = len(anomalies) == 0
 
@@ -930,9 +903,7 @@ class FuzzingEngine:
                         results["passed"] += 1
                     else:
                         results["failed"] += 1
-                        results["errors"].append(
-                            f"TTL {repr(ttl)}: immediate expiration"
-                        )
+                        results["errors"].append(f"TTL {repr(ttl)}: immediate expiration")
 
                 except Exception as e:
                     logger.error("exception_caught", error=str(e), exc_info=True)
@@ -1060,9 +1031,7 @@ class FuzzingEngine:
 
                 result = add_audit_record(record)
 
-                if (
-                    result is not None or i > 0
-                ):  # First record should succeed, others may fail
+                if result is not None or i > 0:  # First record should succeed, others may fail
                     results["passed"] += 1
                 else:
                     results["failed"] += 1

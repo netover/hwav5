@@ -14,14 +14,13 @@ Supports multiple embedding providers through LiteLLM's unified interface:
 Falls back to deterministic SHA-256 hash-based vectors for development/testing.
 """
 
-
 import asyncio
 import hashlib
 import logging
 import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from .config import CFG
 from .interfaces import Embedder
@@ -31,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 class EmbeddingProvider(str, Enum):
     """Supported embedding providers."""
+
     OPENAI = "openai"
     AZURE = "azure"
     COHERE = "cohere"
@@ -47,6 +47,7 @@ class EmbeddingProvider(str, Enum):
 @dataclass
 class EmbeddingConfig:
     """Configuration for embedding service."""
+
     model: str
     provider: EmbeddingProvider = EmbeddingProvider.AUTO
     dimension: int = 1536
@@ -161,7 +162,9 @@ class MultiProviderEmbeddingService(Embedder):
         """
         # Use config or defaults
         self._model = model or os.getenv("EMBED_MODEL", CFG.embed_model)
-        self._provider = self._detect_provider(self._model) if provider == EmbeddingProvider.AUTO else provider
+        self._provider = (
+            self._detect_provider(self._model) if provider == EmbeddingProvider.AUTO else provider
+        )
         self._dimension = dimension or self._infer_dimension(self._model) or CFG.embed_dim
         self._api_key = api_key
         self._api_base = api_base
@@ -189,7 +192,7 @@ class MultiProviderEmbeddingService(Embedder):
                 "provider": self._provider.value,
                 "dimension": self._dimension,
                 "litellm_available": self._litellm_available,
-            }
+            },
         )
 
     def _check_litellm(self) -> bool:
@@ -226,10 +229,16 @@ class MultiProviderEmbeddingService(Embedder):
                     return True
             else:
                 # Try to use any available key
-                if any(os.getenv(k) for k in [
-                    "OPENAI_API_KEY", "COHERE_API_KEY", "VOYAGE_API_KEY",
-                    "HUGGINGFACE_API_KEY", "AZURE_API_KEY"
-                ]):
+                if any(
+                    os.getenv(k)
+                    for k in [
+                        "OPENAI_API_KEY",
+                        "COHERE_API_KEY",
+                        "VOYAGE_API_KEY",
+                        "HUGGINGFACE_API_KEY",
+                        "AZURE_API_KEY",
+                    ]
+                ):
                     return True
 
             logger.warning(
@@ -326,8 +335,7 @@ class MultiProviderEmbeddingService(Embedder):
                 return await self._embed_with_litellm(texts)
             except Exception as e:
                 logger.warning(
-                    f"LiteLLM embedding failed, falling back to hash: {e}",
-                    exc_info=True
+                    f"LiteLLM embedding failed, falling back to hash: {e}", exc_info=True
                 )
                 self._stats["errors"] += 1
 
@@ -343,7 +351,7 @@ class MultiProviderEmbeddingService(Embedder):
 
         # Process in batches
         for i in range(0, len(texts), self._batch_size):
-            batch = texts[i:i + self._batch_size]
+            batch = texts[i : i + self._batch_size]
 
             # Build request parameters
             params: dict[str, Any] = {
@@ -370,10 +378,7 @@ class MultiProviderEmbeddingService(Embedder):
             # Make the embedding call with retries
             for attempt in range(self._retry_attempts):
                 try:
-                    response = await asyncio.to_thread(
-                        litellm.embedding,
-                        **params
-                    )
+                    response = await asyncio.to_thread(litellm.embedding, **params)
 
                     # Extract embeddings from response
                     batch_embeddings = [item["embedding"] for item in response.data]
@@ -383,7 +388,7 @@ class MultiProviderEmbeddingService(Embedder):
 
                 except Exception as e:
                     if attempt < self._retry_attempts - 1:
-                        wait_time = 2 ** attempt  # Exponential backoff
+                        wait_time = 2**attempt  # Exponential backoff
                         logger.warning(
                             f"Embedding attempt {attempt + 1} failed, retrying in {wait_time}s: {e}"
                         )

@@ -31,6 +31,7 @@ logger = get_logger(__name__)
 # BASE NODE
 # =============================================================================
 
+
 class BaseNode(ABC):
     """
     Base class for graph nodes.
@@ -56,6 +57,7 @@ class BaseNode(ABC):
 # =============================================================================
 # ROUTER NODE
 # =============================================================================
+
 
 @dataclass
 class RouterConfig:
@@ -180,6 +182,7 @@ class RouterNode(BaseNode):
 # LLM NODE
 # =============================================================================
 
+
 @dataclass
 class LLMNodeConfig:
     """Configuration for LLM nodes."""
@@ -249,7 +252,7 @@ class LLMNode(BaseNode):
 
         # Add history
         if self.config.include_history and history:
-            messages.extend(history[-self.config.max_history_messages:])
+            messages.extend(history[-self.config.max_history_messages :])
 
         # Add user message
         messages.append({"role": "user", "content": message})
@@ -257,12 +260,14 @@ class LLMNode(BaseNode):
         # Call LLM with tracing via project standard (call_llm with LiteLLM + resilience)
         tracer = get_tracer()
 
-        model = self.config.model or (prompt.model_hint if prompt else None) or getattr(settings, "llm_model", "gpt-4o")
+        model = (
+            self.config.model
+            or (prompt.model_hint if prompt else None)
+            or getattr(settings, "llm_model", "gpt-4o")
+        )
 
         # Build full prompt from messages for call_llm
-        full_prompt = "\n".join([
-            f"{m['role'].upper()}: {m['content']}" for m in messages
-        ])
+        full_prompt = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
 
         async with tracer.trace(self.name, model=model, prompt_id=self.config.prompt_id) as trace:
             # Use call_llm which has circuit breaker, retry, and timeout built-in
@@ -285,6 +290,7 @@ class LLMNode(BaseNode):
 # =============================================================================
 # TOOL NODE
 # =============================================================================
+
 
 @dataclass
 class ToolNodeConfig:
@@ -355,7 +361,9 @@ class ToolNode(BaseNode):
                 return state
 
             except asyncio.TimeoutError:
-                last_error = f"Tool {self.config.tool_name} timed out after {self.config.timeout_seconds}s"
+                last_error = (
+                    f"Tool {self.config.tool_name} timed out after {self.config.timeout_seconds}s"
+                )
             except Exception as e:
                 last_error = str(e)
 
@@ -391,6 +399,7 @@ class ToolNode(BaseNode):
 # =============================================================================
 # VALIDATION NODE
 # =============================================================================
+
 
 @dataclass
 class ValidationConfig:
@@ -466,6 +475,7 @@ class ValidationNode(BaseNode):
 # =============================================================================
 # HUMAN APPROVAL NODE
 # =============================================================================
+
 
 @dataclass
 class ApprovalRequest:

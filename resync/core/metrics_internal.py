@@ -5,7 +5,6 @@ Provides lightweight metrics collection without external dependencies.
 Metrics can be exported to JSON for any visualization tool.
 """
 
-
 import logging
 import time
 from collections import defaultdict
@@ -20,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class MetricType(str, Enum):
     """Types of metrics."""
+
     COUNTER = "counter"
     GAUGE = "gauge"
     HISTOGRAM = "histogram"
@@ -29,6 +29,7 @@ class MetricType(str, Enum):
 @dataclass
 class MetricValue:
     """A single metric measurement."""
+
     value: float
     timestamp: float = field(default_factory=time.time)
     labels: dict[str, str] = field(default_factory=dict)
@@ -37,6 +38,7 @@ class MetricValue:
 @dataclass
 class Metric:
     """A metric with its metadata and values."""
+
     name: str
     type: MetricType
     description: str = ""
@@ -44,11 +46,13 @@ class Metric:
 
     def record(self, value: float, labels: dict[str, str] | None = None):
         """Record a new value."""
-        self.values.append(MetricValue(
-            value=value,
-            timestamp=time.time(),
-            labels=labels or {},
-        ))
+        self.values.append(
+            MetricValue(
+                value=value,
+                timestamp=time.time(),
+                labels=labels or {},
+            )
+        )
         # Keep only last 1000 values
         if len(self.values) > 1000:
             self.values = self.values[-1000:]
@@ -98,6 +102,7 @@ class Counter:
 
 class _LabeledCounter:
     """Counter with pre-set labels."""
+
     def __init__(self, counter: Counter, labels: dict[str, str]):
         self._counter = counter
         self._labels = labels
@@ -146,6 +151,7 @@ class Gauge:
 
 class _LabeledGauge:
     """Gauge with pre-set labels."""
+
     def __init__(self, gauge: Gauge, labels: dict[str, str]):
         self._gauge = gauge
         self._labels = labels
@@ -209,6 +215,7 @@ class Histogram:
 
 class _LabeledHistogram:
     """Histogram with pre-set labels."""
+
     def __init__(self, histogram: Histogram, labels: dict[str, str]):
         self._histogram = histogram
         self._labels = labels
@@ -222,6 +229,7 @@ class _LabeledHistogram:
 
 class _HistogramTimer:
     """Context manager for timing."""
+
     def __init__(self, histogram: Histogram, labels: dict[str, str] = None):
         self._histogram = histogram
         self._labels = labels

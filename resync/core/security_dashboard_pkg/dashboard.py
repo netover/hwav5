@@ -60,12 +60,8 @@ class SecurityDashboard:
 
         return {
             "audit_complete": True,
-            "soc2_score": self.compliance_checker.get_compliance_score(
-                ComplianceFramework.SOC2
-            ),
-            "gdpr_score": self.compliance_checker.get_compliance_score(
-                ComplianceFramework.GDPR
-            ),
+            "soc2_score": self.compliance_checker.get_compliance_score(ComplianceFramework.SOC2),
+            "gdpr_score": self.compliance_checker.get_compliance_score(ComplianceFramework.GDPR),
             "threats_detected": len(self.threat_detector.get_recent_threats()),
         }
 

@@ -57,9 +57,7 @@ class LLMFactory:
                 raise ImportError("No models available in LiteLLM router")
         except ImportError:
             # Fallback to simple mock response for development
-            logger.warning(
-                "LiteLLM not available or no models configured, using mock response"
-            )
+            logger.warning("LiteLLM not available or no models configured, using mock response")
             return "LLM service is currently unavailable. This is a mock response for development purposes."
 
         # Use LiteLLM's acompletion for enhanced functionality with timeout
@@ -112,28 +110,28 @@ class LLMFactory:
 
         except asyncio.TimeoutError:
             logger.error("llm_timeout", timeout_seconds=timeout)
-            raise LLMError(f"LLM call timed out after {timeout} seconds")
+            raise LLMError(f"LLM call timed out after {timeout} seconds") from None
         except ContentPolicyViolationError as e:
             logger.warning("llm_content_policy_violation", error=str(e))
-            raise LLMError(f"Content policy violation: {str(e)}")
+            raise LLMError(f"Content policy violation: {str(e)}") from e
         except ContextWindowExceededError as e:
             logger.error("llm_context_window_exceeded", error=str(e))
-            raise LLMError(f"Context window exceeded: {str(e)}")
+            raise LLMError(f"Context window exceeded: {str(e)}") from e
         except AuthenticationError as e:
             logger.error("llm_authentication_error", error=str(e))
-            raise LLMError(f"Authentication error: {str(e)}")
+            raise LLMError(f"Authentication error: {str(e)}") from e
         except RateLimitError as e:
             logger.warning("llm_rate_limit_exceeded", error=str(e))
-            raise LLMError(f"Rate limit exceeded: {str(e)}")
+            raise LLMError(f"Rate limit exceeded: {str(e)}") from e
         except InvalidRequestError as e:
             logger.error("llm_invalid_request", error=str(e))
-            raise LLMError(f"Invalid request: {str(e)}")
+            raise LLMError(f"Invalid request: {str(e)}") from e
         except APIError as e:
             logger.error("llm_api_error", error=str(e))
-            raise LLMError(f"API error: {str(e)}")
+            raise LLMError(f"API error: {str(e)}") from e
         except Exception as e:
             logger.error("llm_unexpected_error", error=str(e))
-            raise LLMError(f"Unexpected error: {str(e)}")
+            raise LLMError(f"Unexpected error: {str(e)}") from e
 
 
 class LLMProviderFactory:
@@ -170,7 +168,7 @@ class LLMProvider:
             temperature=self.temperature,
             api_key=self.api_key,
             api_base=self.api_base,
-            **kwargs
+            **kwargs,
         )
 
 

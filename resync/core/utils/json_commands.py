@@ -22,7 +22,13 @@ MAX_TEXT_SIZE = 10 * 1024 * 1024  # 10MB limit for input text
 class JSONParseCommand:
     """Base command class for parsing JSON responses."""
 
-    def __init__(self, text: str, required_keys: list[str], max_size: int = MAX_JSON_SIZE, strict: bool = True):
+    def __init__(
+        self,
+        text: str,
+        required_keys: list[str],
+        max_size: int = MAX_JSON_SIZE,
+        strict: bool = True,
+    ):
         self.text = text
         self.required_keys = required_keys
         self.max_size = max_size
@@ -70,7 +76,7 @@ class JSONParseCommand:
             self.result = json.loads(self.json_str)
         except json.JSONDecodeError as e:
             logger.warning("JSON decode error", error=str(e), json_length=len(self.json_str))
-            raise ParsingError(f"Invalid JSON format: {str(e)}")
+            raise ParsingError(f"Invalid JSON format: {str(e)}") from e
 
     def _validate_structure(self) -> None:
         """Validate that result is a dictionary."""
@@ -85,7 +91,7 @@ class JSONParseCommand:
 
         # Optional strict validation: ensure no extra keys
         if self.strict and self.required_keys:
-            extra_keys = [key for key in self.result.keys() if key not in self.required_keys]
+            extra_keys = [key for key in self.result if key not in self.required_keys]
             if extra_keys:
                 raise ParsingError(
                     f"JSON contains unexpected keys in strict mode: {', '.join(extra_keys)}"
@@ -93,6 +99,7 @@ class JSONParseCommand:
 
     def _validate_nesting(self) -> None:
         """Validate JSON nesting depth."""
+
         def check_nesting(obj: Any, max_depth: int = 10, current_depth: int = 0) -> None:
             if current_depth > max_depth:
                 raise ParsingError(f"JSON nesting depth exceeds maximum of {max_depth}")
@@ -111,10 +118,7 @@ class JSONParseCommandFactory:
 
     @staticmethod
     def create_command(
-        text: str,
-        required_keys: list[str],
-        max_size: int = MAX_JSON_SIZE,
-        strict: bool = True
+        text: str, required_keys: list[str], max_size: int = MAX_JSON_SIZE, strict: bool = True
     ) -> JSONParseCommand:
         """Create a JSON parsing command."""
         return JSONParseCommand(text, required_keys, max_size, strict)
@@ -126,10 +130,7 @@ class JSONParseCommandExecutor:
     @staticmethod
     @handle_parsing_errors("Failed to parse LLM JSON response")
     def execute_command(
-        text: str,
-        required_keys: list[str],
-        max_size: int = MAX_JSON_SIZE,
-        strict: bool = True
+        text: str, required_keys: list[str], max_size: int = MAX_JSON_SIZE, strict: bool = True
     ) -> dict[str, Any]:
         """Execute a JSON parsing command."""
         command = JSONParseCommandFactory.create_command(text, required_keys, max_size, strict)

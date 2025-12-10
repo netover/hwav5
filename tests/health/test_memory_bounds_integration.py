@@ -73,8 +73,7 @@ async def test_memory_bounds_integration():
 
     # Verify old entries are removed
     recent_entries = all(
-        entry.timestamp >= datetime.now() - timedelta(days=1)
-        for entry in service.health_history
+        entry.timestamp >= datetime.now() - timedelta(days=1) for entry in service.health_history
     )
     print(f"   All entries recent: {recent_entries}")
 

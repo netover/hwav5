@@ -8,6 +8,7 @@ import sys
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
 from resync.api.middleware.cors_config import CORSPolicy, Environment
 from resync.api.middleware.cors_middleware import (
     add_cors_middleware,
@@ -64,9 +65,7 @@ def test_production_environment():
     # Set production environment with specific allowed origins
     os.environ["APP_ENV"] = "production"
     os.environ["CORS_ENVIRONMENT"] = "production"
-    os.environ["CORS_ALLOWED_ORIGINS"] = (
-        "https://app.example.com,https://api.example.com"
-    )
+    os.environ["CORS_ALLOWED_ORIGINS"] = "https://app.example.com,https://api.example.com"
 
     app = FastAPI()
 

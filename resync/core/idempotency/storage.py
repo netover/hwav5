@@ -2,7 +2,6 @@
 Abstração de armazenamento para o sistema de idempotency.
 """
 
-
 from redis.asyncio import Redis
 
 from resync.core.idempotency.exceptions import IdempotencyStorageError
@@ -32,7 +31,7 @@ class IdempotencyStorage:
 
             return IdempotencyRecord.from_dict(record_dict)
         except Exception as e:
-            raise IdempotencyStorageError(f"Failed to get idempotency record: {str(e)}")
+            raise IdempotencyStorageError(f"Failed to get idempotency record: {str(e)}") from e
 
     async def set(self, key: str, record: IdempotencyRecord, ttl_seconds: int) -> bool:
         """Armazena registro de idempotency"""
@@ -42,14 +41,14 @@ class IdempotencyStorage:
             success = await self.redis.setex(key, ttl_seconds, serialized_data)
             return bool(success)
         except Exception as e:
-            raise IdempotencyStorageError(f"Failed to set idempotency record: {str(e)}")
+            raise IdempotencyStorageError(f"Failed to set idempotency record: {str(e)}") from e
 
     async def exists(self, key: str) -> bool:
         """Verifica se chave existe"""
         try:
             return bool(await self.redis.exists(key))
         except Exception as e:
-            raise IdempotencyStorageError(f"Failed to check existence: {str(e)}")
+            raise IdempotencyStorageError(f"Failed to check existence: {str(e)}") from e
 
     async def delete(self, key: str) -> bool:
         """Remove chave"""
@@ -57,4 +56,4 @@ class IdempotencyStorage:
             deleted = await self.redis.delete(key)
             return deleted > 0
         except Exception as e:
-            raise IdempotencyStorageError(f"Failed to delete key: {str(e)}")
+            raise IdempotencyStorageError(f"Failed to delete key: {str(e)}") from e

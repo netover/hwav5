@@ -65,13 +65,9 @@ async def test_teams_notification_formatting():
 
     # Verify title and message are in the body
     body_items = content["body"]
+    assert any(item.get("text") == "Test Notification" for item in body_items if "text" in item)
     assert any(
-        item.get("text") == "Test Notification" for item in body_items if "text" in item
-    )
-    assert any(
-        item.get("text") == "This is a test message"
-        for item in body_items
-        if "text" in item
+        item.get("text") == "This is a test message" for item in body_items if "text" in item
     )
 
 
@@ -111,9 +107,7 @@ async def test_teams_send_notification_success(mock_session_class):
     mock_session_class.return_value = mock_session
 
     # Setup Teams integration
-    config = TeamsConfig(
-        enabled=True, webhook_url="https://test.webhook.office.com/webhook"
-    )
+    config = TeamsConfig(enabled=True, webhook_url="https://test.webhook.office.com/webhook")
     teams_integration = TeamsIntegration(config)
 
     # Create notification
@@ -137,9 +131,7 @@ async def test_teams_send_notification_failure(mock_session_class):
     mock_session_class.return_value = mock_session
 
     # Setup Teams integration
-    config = TeamsConfig(
-        enabled=True, webhook_url="https://test.webhook.office.com/webhook"
-    )
+    config = TeamsConfig(enabled=True, webhook_url="https://test.webhook.office.com/webhook")
     teams_integration = TeamsIntegration(config)
 
     # Create notification

@@ -86,9 +86,7 @@ class PerformanceBenchmark:
                     func(*args, **kwargs)
             except Exception as e:
                 errors += 1
-                self.logger.error(
-                    "benchmark_error_in_iteration", iteration=i, error=str(e)
-                )
+                self.logger.error("benchmark_error_in_iteration", iteration=i, error=str(e))
             finally:
                 end_time = time.perf_counter()
                 times.append(end_time - start_time)
@@ -141,29 +139,18 @@ class PerformanceBenchmark:
         Returns:
             Dictionary with comparison metrics
         """
-        comparison = {
-            "avg_time_improvement": (
-                (baseline.avg_time - result.avg_time) / baseline.avg_time
-            )
+        return {
+            "avg_time_improvement": ((baseline.avg_time - result.avg_time) / baseline.avg_time)
             * 100,
-            "p95_time_improvement": (
-                (baseline.p95_time - result.p95_time) / baseline.p95_time
-            )
+            "p95_time_improvement": ((baseline.p95_time - result.p95_time) / baseline.p95_time)
             * 100,
-            "p99_time_improvement": (
-                (baseline.p99_time - result.p99_time) / baseline.p99_time
-            )
+            "p99_time_improvement": ((baseline.p99_time - result.p99_time) / baseline.p99_time)
             * 100,
-            "error_rate_improvement": (
-                (baseline.errors - result.errors) / baseline.iterations
-            )
+            "error_rate_improvement": ((baseline.errors - result.errors) / baseline.iterations)
             * 100,
         }
-        return comparison
 
-    def get_historical_performance(
-        self, operation: str, days: int = 7
-    ) -> list[BenchmarkResult]:
+    def get_historical_performance(self, operation: str, days: int = 7) -> list[BenchmarkResult]:
         """
         Get historical performance data for an operation
 
@@ -181,9 +168,7 @@ class PerformanceBenchmark:
             if result.operation == operation and result.timestamp > cutoff_time
         ]
 
-    def get_performance_trend(
-        self, operation: str, days: int = 7
-    ) -> dict[str, list[float]]:
+    def get_performance_trend(self, operation: str, days: int = 7) -> dict[str, list[float]]:
         """
         Get performance trend data for an operation
 
@@ -261,8 +246,7 @@ class SystemBenchmarkRunner:
     async def _benchmark_tws_status(self):
         """Benchmark TWS status check operation"""
         # This is a placeholder - implement based on actual TWS client logic
-        status = await self.tws_client.get_system_status()
-        return status
+        return await self.tws_client.get_system_status()
 
     async def _benchmark_ai_query(self, query: str):
         """Benchmark AI query operation"""

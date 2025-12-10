@@ -33,21 +33,28 @@ class ActiveLearner:
         """Close the learner."""
         self._initialized = False
 
-    async def add_candidate(self, query_text: str, uncertainty_score: float,
-                           response_text: str | None = None,
-                           metadata: dict | None = None) -> ActiveLearningCandidate:
+    async def add_candidate(
+        self,
+        query_text: str,
+        uncertainty_score: float,
+        response_text: str | None = None,
+        metadata: dict | None = None,
+    ) -> ActiveLearningCandidate:
         """Add a candidate for review."""
         return await self._store.active_learning.add_candidate(
-            query_text=query_text, uncertainty_score=uncertainty_score,
-            response_text=response_text, metadata=metadata
+            query_text=query_text,
+            uncertainty_score=uncertainty_score,
+            response_text=response_text,
+            metadata=metadata,
         )
 
     async def get_top_candidates(self, limit: int = 10) -> list[ActiveLearningCandidate]:
         """Get top uncertain candidates for review."""
         return await self._store.active_learning.get_top_candidates(limit)
 
-    async def review_candidate(self, candidate_id: int, selected_label: str,
-                              reviewer_id: str) -> ActiveLearningCandidate | None:
+    async def review_candidate(
+        self, candidate_id: int, selected_label: str, reviewer_id: str
+    ) -> ActiveLearningCandidate | None:
         """Mark candidate as reviewed."""
         return await self._store.active_learning.review_candidate(
             candidate_id, selected_label, reviewer_id
@@ -59,13 +66,13 @@ class ActiveLearner:
             {"status": "reviewed"}, limit=limit, order_by="reviewed_at", desc=True
         )
 
-    async def should_request_label(self, uncertainty_score: float,
-                                   threshold: float = 0.7) -> bool:
+    async def should_request_label(self, uncertainty_score: float, threshold: float = 0.7) -> bool:
         """Check if we should request a label based on uncertainty."""
         return uncertainty_score >= threshold
 
 
 _instance: ActiveLearner | None = None
+
 
 def get_active_learner() -> ActiveLearner:
     """Get the singleton ActiveLearner instance."""

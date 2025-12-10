@@ -12,10 +12,11 @@ Performance optimizations applied:
 from __future__ import annotations
 
 import asyncio
-import os
 import gc
-import pytest
+import os
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 # Set minimal required environment variables
 os.environ["ADMIN_USERNAME"] = "test_admin"
@@ -117,22 +118,13 @@ async def test_pool_manager_creation() -> None:
 
         # Comprehensive mocking to prevent real resource allocation
         with (
-            patch.object(
-                ConnectionPoolManager, "initialize", new_callable=AsyncMock
-            ) as mock_init,
+            patch.object(ConnectionPoolManager, "initialize", new_callable=AsyncMock) as mock_init,
             patch.object(ConnectionPoolManager, "close_all", new_callable=AsyncMock),
             patch("resync.core.pools.pool_manager.settings") as mock_settings,
-            patch(
-                "resync.core.pools.pool_manager.DatabaseConnectionPool"
-            ) as mock_db_pool,
-            patch(
-                "resync.core.pools.pool_manager.RedisConnectionPool"
-            ) as mock_redis_pool,
-            patch(
-                "resync.core.pools.pool_manager.HTTPConnectionPool"
-            ) as mock_http_pool,
+            patch("resync.core.pools.pool_manager.DatabaseConnectionPool") as mock_db_pool,
+            patch("resync.core.pools.pool_manager.RedisConnectionPool") as mock_redis_pool,
+            patch("resync.core.pools.pool_manager.HTTPConnectionPool") as mock_http_pool,
         ):
-
             # Configure mocks to prevent real initialization
             mock_init.return_value = None
             mock_db_pool.return_value = AsyncMock()
@@ -187,14 +179,9 @@ async def test_websocket_pool_manager() -> None:
 
         # Simple approach: patch initialization to prevent background tasks
         with (
-            patch.object(
-                WebSocketPoolManager, "initialize", new_callable=AsyncMock
-            ) as mock_init,
-            patch.object(
-                WebSocketPoolManager, "shutdown", new_callable=AsyncMock
-            ) as mock_shutdown,
+            patch.object(WebSocketPoolManager, "initialize", new_callable=AsyncMock) as mock_init,
+            patch.object(WebSocketPoolManager, "shutdown", new_callable=AsyncMock) as mock_shutdown,
         ):
-
             # Configure mocks
             mock_init.return_value = None
             mock_shutdown.return_value = None
@@ -212,7 +199,7 @@ async def test_websocket_pool_manager() -> None:
             assert manager._shutdown is False
 
             # Test basic WebSocket operations by directly manipulating state
-            mock_websocket = AsyncMock()
+            AsyncMock()
 
             # Simulate connection
             manager.connections["test_client"] = AsyncMock()
@@ -279,11 +266,10 @@ async def main() -> None:
         # Force final garbage collection
         gc.collect()
         return 0
-    else:
-        print("ERROR: Some tests failed.")
-        # Force garbage collection even on failure
-        gc.collect()
-        return 1
+    print("ERROR: Some tests failed.")
+    # Force garbage collection even on failure
+    gc.collect()
+    return 1
 
 
 if __name__ == "__main__":

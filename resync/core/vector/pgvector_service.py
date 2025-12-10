@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 class DistanceMetric(str, Enum):
     """Supported distance metrics for similarity search."""
+
     COSINE = "cosine"
     L2 = "l2"
     INNER_PRODUCT = "inner_product"
@@ -131,14 +132,12 @@ class PgVectorService:
 
         async with self._pool.acquire() as conn:
             # Check if pgvector extension is available
-            ext_check = await conn.fetchval(
-                "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
-            )
+            ext_check = await conn.fetchval("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
 
             if not ext_check:
                 logger.warning(
                     "pgvector_extension_not_found",
-                    message="Install pgvector extension: CREATE EXTENSION vector"
+                    message="Install pgvector extension: CREATE EXTENSION vector",
                 )
                 # Try to create it (requires superuser)
                 try:
@@ -222,7 +221,8 @@ class PgVectorService:
                 # Convert embedding to pgvector format
                 embedding_str = f"[{','.join(str(x) for x in doc.embedding)}]"
 
-                await conn.execute("""
+                await conn.execute(
+                    """
                     INSERT INTO document_embeddings
                     (collection_name, document_id, chunk_id, content, embedding, metadata)
                     VALUES ($1, $2, $3, $4, $5::vector, $6::jsonb)
@@ -318,13 +318,15 @@ class PgVectorService:
 
         results = []
         for row in rows:
-            results.append(SearchResult(
-                document_id=row["document_id"],
-                content=row["content"],
-                score=float(row["distance"]),
-                metadata=dict(row["metadata"]) if row["metadata"] else {},
-                chunk_id=row["chunk_id"],
-            ))
+            results.append(
+                SearchResult(
+                    document_id=row["document_id"],
+                    content=row["content"],
+                    score=float(row["distance"]),
+                    metadata=dict(row["metadata"]) if row["metadata"] else {},
+                    chunk_id=row["chunk_id"],
+                )
+            )
 
         logger.debug(
             "search_completed",
@@ -359,7 +361,9 @@ class PgVectorService:
         param_idx = 2
 
         if document_ids:
-            placeholders = ",".join(f"${i}" for i in range(param_idx, param_idx + len(document_ids)))
+            placeholders = ",".join(
+                f"${i}" for i in range(param_idx, param_idx + len(document_ids))
+            )
             query += f" AND document_id IN ({placeholders})"
             params.extend(document_ids)
             param_idx += len(document_ids)
@@ -393,13 +397,16 @@ class PgVectorService:
         collection = collection or self._default_collection
 
         async with self._pool.acquire() as conn:
-            stats = await conn.fetchrow("""
+            stats = await conn.fetchrow(
+                """
                 SELECT
                     COUNT(DISTINCT document_id) as doc_count,
                     COUNT(*) as total_chunks
                 FROM document_embeddings
                 WHERE collection_name = $1
-            """, collection)
+            """,
+                collection,
+            )
 
         return CollectionStats(
             name=collection,
@@ -453,10 +460,13 @@ class PgVectorService:
             True if collection existed and was deleted
         """
         async with self._pool.acquire() as conn:
-            result = await conn.execute("""
+            result = await conn.execute(
+                """
                 DELETE FROM document_embeddings
                 WHERE collection_name = $1
-            """, name)
+            """,
+                name,
+            )
             count = int(result.split()[-1])
 
         logger.info("collection_deleted", name=name, documents=count)
@@ -482,11 +492,16 @@ class PgVectorService:
         collection = collection or self._default_collection
 
         async with self._pool.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT document_id, chunk_id, content, metadata
                 FROM document_embeddings
                 WHERE collection_name = $1 AND document_id = $2 AND chunk_id = $3
-            """, collection, document_id, chunk_id)
+            """,
+                collection,
+                document_id,
+                chunk_id,
+            )
 
         if not row:
             return None

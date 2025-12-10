@@ -10,7 +10,6 @@ Quando o IA Auditor identifica erros, este pipeline:
 4. Cria knowledge entries para evitar erros futuros
 """
 
-
 import hashlib
 import re
 from dataclasses import dataclass, field
@@ -26,6 +25,7 @@ logger = get_logger(__name__)
 
 class ErrorRelationType(str, Enum):
     """Types of error relationships in the KG."""
+
     INCORRECT_ASSOCIATION = "INCORRECT_ASSOCIATION"
     COMMON_ERROR = "COMMON_ERROR"
     CONFUSION_WITH = "CONFUSION_WITH"
@@ -36,6 +36,7 @@ class ErrorRelationType(str, Enum):
 @dataclass
 class AuditResult:
     """Result from IA Auditor analysis."""
+
     memory_id: str
     user_query: str
     agent_response: str
@@ -51,6 +52,7 @@ class AuditResult:
 @dataclass
 class ErrorTriplet:
     """Triplet representing an error pattern."""
+
     subject: str
     subject_type: str
     predicate: ErrorRelationType
@@ -121,10 +123,11 @@ class AuditToKGPipeline:
         """Get or create Knowledge Graph instance."""
         if self._kg is None:
             from resync.core.knowledge_graph.graph import get_knowledge_graph
+
             # get_knowledge_graph may or may not be async
             kg = get_knowledge_graph()
             # If it's a coroutine, await it
-            if hasattr(kg, '__await__'):
+            if hasattr(kg, "__await__"):
                 self._kg = await kg
             else:
                 self._kg = kg
@@ -157,7 +160,10 @@ class AuditToKGPipeline:
         if any(w in reason_lower for w in ["confus", "mix", "wrong", "errado"]):
             return ErrorRelationType.CONFUSION_WITH
 
-        if any(w in reason_lower for w in ["deprecated", "obsolete", "obsoleto", "old", "antigo", "outdated"]):
+        if any(
+            w in reason_lower
+            for w in ["deprecated", "obsolete", "obsoleto", "old", "antigo", "outdated"]
+        ):
             return ErrorRelationType.DEPRECATED_INFO
 
         if any(w in reason_lower for w in ["mislead", "enganos", "context"]):
@@ -247,62 +253,72 @@ class AuditToKGPipeline:
         for job in query_jobs:
             # Job incorrectly associated with resources
             for resource in response_resources:
-                triplets.append(ErrorTriplet(
-                    subject=job,
-                    subject_type="job",
-                    predicate=error_type,
-                    object=resource,
-                    object_type="resource",
-                    confidence=audit_result.confidence,
-                    error_reason=audit_result.reason,
-                    source_query=audit_result.user_query,
-                    source_memory_id=audit_result.memory_id,
-                ))
+                triplets.append(
+                    ErrorTriplet(
+                        subject=job,
+                        subject_type="job",
+                        predicate=error_type,
+                        object=resource,
+                        object_type="resource",
+                        confidence=audit_result.confidence,
+                        error_reason=audit_result.reason,
+                        source_query=audit_result.user_query,
+                        source_memory_id=audit_result.memory_id,
+                    )
+                )
 
             # Job incorrectly associated with workstations
             for ws in response_workstations:
-                triplets.append(ErrorTriplet(
-                    subject=job,
-                    subject_type="job",
-                    predicate=error_type,
-                    object=ws,
-                    object_type="workstation",
+                triplets.append(
+                    ErrorTriplet(
+                        subject=job,
+                        subject_type="job",
+                        predicate=error_type,
+                        object=ws,
+                        object_type="workstation",
+                        confidence=audit_result.confidence,
+                        error_reason=audit_result.reason,
+                        source_query=audit_result.user_query,
+                        source_memory_id=audit_result.memory_id,
+                    )
+                )
+
+        # Pattern 2: Error code with wrong resolution
+        error_codes = query_entities.get("error_code", []) or response_entities.get(
+            "error_code", []
+        )
+
+        for error_code in error_codes:
+            triplets.append(
+                ErrorTriplet(
+                    subject=error_code,
+                    subject_type="error_code",
+                    predicate=ErrorRelationType.INCORRECT_ASSOCIATION,
+                    object=self._summarize_response(audit_result.agent_response),
+                    object_type="resolution",
                     confidence=audit_result.confidence,
                     error_reason=audit_result.reason,
                     source_query=audit_result.user_query,
                     source_memory_id=audit_result.memory_id,
-                ))
-
-        # Pattern 2: Error code with wrong resolution
-        error_codes = query_entities.get("error_code", []) or response_entities.get("error_code", [])
-
-        for error_code in error_codes:
-            triplets.append(ErrorTriplet(
-                subject=error_code,
-                subject_type="error_code",
-                predicate=ErrorRelationType.INCORRECT_ASSOCIATION,
-                object=self._summarize_response(audit_result.agent_response),
-                object_type="resolution",
-                confidence=audit_result.confidence,
-                error_reason=audit_result.reason,
-                source_query=audit_result.user_query,
-                source_memory_id=audit_result.memory_id,
-            ))
+                )
+            )
 
         # Pattern 3: General error pattern (if no specific entities found)
         if not triplets:
             # Create a general error triplet
-            triplets.append(ErrorTriplet(
-                subject=self._normalize_query(audit_result.user_query),
-                subject_type="query_pattern",
-                predicate=error_type,
-                object=self._summarize_response(audit_result.agent_response),
-                object_type="response_pattern",
-                confidence=audit_result.confidence,
-                error_reason=audit_result.reason,
-                source_query=audit_result.user_query,
-                source_memory_id=audit_result.memory_id,
-            ))
+            triplets.append(
+                ErrorTriplet(
+                    subject=self._normalize_query(audit_result.user_query),
+                    subject_type="query_pattern",
+                    predicate=error_type,
+                    object=self._summarize_response(audit_result.agent_response),
+                    object_type="response_pattern",
+                    confidence=audit_result.confidence,
+                    error_reason=audit_result.reason,
+                    source_query=audit_result.user_query,
+                    source_memory_id=audit_result.memory_id,
+                )
+            )
 
         return triplets
 
@@ -310,14 +326,14 @@ class AuditToKGPipeline:
         """Normalize query for pattern matching."""
         # Remove specific values, keep structure
         normalized = query.lower()
-        normalized = re.sub(r'\b[A-Z][A-Z0-9_]{2,}\b', '<ENTITY>', normalized)
-        normalized = re.sub(r'\d+', '<NUM>', normalized)
+        normalized = re.sub(r"\b[A-Z][A-Z0-9_]{2,}\b", "<ENTITY>", normalized)
+        normalized = re.sub(r"\d+", "<NUM>", normalized)
         return normalized[:100]
 
     def _summarize_response(self, response: str) -> str:
         """Create a short summary of response."""
         # Take first sentence or first 100 chars
-        sentences = response.split('.')
+        sentences = response.split(".")
         if sentences:
             return sentences[0][:100]
         return response[:100]
@@ -333,7 +349,7 @@ class AuditToKGPipeline:
         for triplet in triplets:
             try:
                 # Create unique ID for the error relationship
-                edge_id = hashlib.sha256(
+                hashlib.sha256(
                     f"{triplet.subject}:{triplet.predicate}:{triplet.object}:{triplet.source_memory_id}".encode()
                 ).hexdigest()[:16]
 
@@ -430,10 +446,12 @@ class AuditToKGPipeline:
 
             # For now, return basic stats about error knowledge
             # Full implementation would query the graph for error edges
-            patterns.append({
-                "total_error_patterns": stats.get("edges", 0),
-                "error_types": error_edge_types,
-            })
+            patterns.append(
+                {
+                    "total_error_patterns": stats.get("edges", 0),
+                    "error_types": error_edge_types,
+                }
+            )
 
         except Exception as e:
             logger.warning("failed_to_get_error_patterns", error=str(e))
@@ -456,10 +474,10 @@ class AuditToKGPipeline:
             return False, None
 
         # Check if any entity has known error associations
-        kg = await self._get_kg()
+        await self._get_kg()
 
-        for entity_type, entity_list in entities.items():
-            for entity in entity_list:
+        for _entity_type, entity_list in entities.items():
+            for _entity in entity_list:
                 # Check if entity has INCORRECT_ASSOCIATION edges
                 try:
                     # This would query the graph for error edges

@@ -237,6 +237,7 @@ for value in values[-MAX_PROMETHEUS_VALUES_PER_METRIC:]:
 | 5.3.5 | 2025-12-10 | Remoção de 8 arquivos mortos/duplicados, consolidação |
 | 5.3.6 | 2025-12-10 | Correção de AttributeError em grafana_url/api_key |
 | 5.3.7 | 2025-12-10 | Security hardening, Alembic fix, código morto Grafana removido |
+| 5.3.8 | 2025-12-10 | TWS validation, Alembic config centralizado, pyproject.toml |
 
 ---
 
@@ -340,3 +341,100 @@ def __init__(
 | Validadores de produção adicionados | 2 |
 | Correções de segurança | 3 |
 | Redução em metrics_collector.py | 27% |
+
+---
+
+## Correções v5.3.8 (Configuration Consistency)
+
+### 16. Validação TWS em Produção ✅
+
+**Problema**: Credenciais TWS (twsuser/twspass) usadas em produção sem aviso.
+
+**Solução**: Adicionado `@model_validator` que emite warning se credenciais default em produção:
+
+```python
+@model_validator(mode="after")
+def validate_tws_credentials(self) -> "Settings":
+    if self.environment == "production":
+        if self.tws_user == _DEFAULT_TWS_USER:
+            warnings.warn("TWS_USER is using default value...")
+        if self.tws_password.get_secret_value() == _DEFAULT_TWS_PASSWORD:
+            warnings.warn("TWS_PASSWORD is using default value...")
+    return self
+```
+
+### 17. Consistência Redis URL ✅
+
+**Problema**: `redis_url` e `redis_host/port/db` podiam ficar dessincronizados.
+
+**Solução**: Adicionada propriedade `redis_connection_url` como single source of truth:
+
+```python
+@property
+def redis_connection_url(self) -> str:
+    if self.redis_url:
+        return self.redis_url
+    return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+```
+
+### 18. Alembic Centralizado ✅
+
+**Problema**: `alembic/env.py` lia `os.environ.get("DATABASE_URL")` diretamente.
+
+**Solução**: Usa `get_database_config()` centralizado:
+
+```python
+# ANTES - dessincronizado da aplicação
+database_url = os.environ.get("DATABASE_URL")
+
+# DEPOIS - usa mesma fonte que a aplicação
+from resync.core.database.config import get_database_config
+db_config = get_database_config()
+database_url = db_config.alembic_url
+```
+
+### 19. pyproject.toml Criado ✅
+
+**Problema**: Sem `pyproject.toml` para packaging moderno.
+
+**Solução**: Criado `pyproject.toml` com:
+- `requires-python = ">=3.10"`
+- Configurações de ruff, pytest, mypy
+- Metadados do projeto
+
+### 20. Documentação de Versão Python ✅
+
+**Problema**: `setup.cfg` tinha `python_requires = >=3.10` mas README não mencionava.
+
+**Solução**: Adicionada seção Requirements no README:
+
+```markdown
+## Requirements
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| **Python** | **≥3.10** | Required for type hints |
+```
+
+---
+
+## Falsos Positivos Identificados
+
+| Observação | Análise | Resultado |
+|------------|---------|-----------|
+| Race condition `_LabeledCounter.inc()` | Lock está no Counter pai | ❌ Falso positivo |
+| Buffer cleanup O(n) | `deque.popleft()` é O(1) | ❌ Falso positivo |
+| `get_percentile()` O(n log n) | Válido mas aceitável com 10k items | ⏭️ Otimização futura |
+
+---
+
+## Resumo v5.3.8
+
+| Métrica | Valor |
+|---------|-------|
+| Validadores adicionados | 1 (TWS credentials) |
+| Propriedades de consistência | 1 (redis_connection_url) |
+| Configuração centralizada | 1 (Alembic) |
+| Arquivos criados | 1 (pyproject.toml) |
+| Documentação atualizada | 1 (README Requirements) |
+| Falsos positivos identificados | 2 |

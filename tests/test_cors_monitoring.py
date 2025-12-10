@@ -1,10 +1,11 @@
-import pytest
 from unittest.mock import patch
+
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from resync.api.cors_monitoring import cors_monitor_router
-from resync.core.rate_limiter import limiter, CustomRateLimitMiddleware
+from resync.core.rate_limiter import CustomRateLimitMiddleware, limiter
 from resync.models.validation import (
     CorsConfigResponse,
     CorsTestResponse,
@@ -21,9 +22,7 @@ def client() -> TestClient:
     app.add_middleware(CustomRateLimitMiddleware, limiter=limiter)
 
     # Include the CORS monitoring router
-    app.include_router(
-        cors_monitor_router, prefix="/api/cors", tags=["CORS Monitoring"]
-    )
+    app.include_router(cors_monitor_router, prefix="/api/cors", tags=["CORS Monitoring"])
 
     return TestClient(app)
 
@@ -89,9 +88,7 @@ class TestCORSMonitoring:
         """Test that production environment rejects wildcard origins."""
         with patch("resync.api.cors_monitoring.settings") as mock_settings:
             mock_settings.ENV_FOR_DYNACONF = "production"
-            response = client.post(
-                "/api/cors/validate-origins", json={"origins": ["*"]}
-            )
+            response = client.post("/api/cors/validate-origins", json={"origins": ["*"]})
             assert response.status_code == 200
             data = OriginValidationResponse(**response.json())
             assert data.validated_origins["*"] == "invalid_in_production"
@@ -104,9 +101,7 @@ class TestCORSMonitoring:
 
     def test_cors_violations_endpoint_with_params(self, client: TestClient):
         """Test CORS violations endpoint with query parameters."""
-        response = client.get(
-            "/api/cors/violations", params={"limit": 10, "hours": 1}
-        )
+        response = client.get("/api/cors/violations", params={"limit": 10, "hours": 1})
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 

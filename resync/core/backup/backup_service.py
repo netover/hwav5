@@ -25,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import json
 import os
@@ -44,6 +45,7 @@ logger = get_logger(__name__)
 
 class BackupType(str, Enum):
     """Type of backup."""
+
     DATABASE = "database"
     CONFIG = "config"
     FULL = "full"
@@ -51,6 +53,7 @@ class BackupType(str, Enum):
 
 class BackupStatus(str, Enum):
     """Backup status."""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -225,7 +228,9 @@ class BackupService:
                         size_bytes=backup_data.get("size_bytes", 0),
                         size_human=backup_data.get("size_human", ""),
                         created_at=datetime.fromisoformat(backup_data["created_at"]),
-                        completed_at=datetime.fromisoformat(backup_data["completed_at"]) if backup_data.get("completed_at") else None,
+                        completed_at=datetime.fromisoformat(backup_data["completed_at"])
+                        if backup_data.get("completed_at")
+                        else None,
                         duration_seconds=backup_data.get("duration_seconds", 0),
                         checksum_sha256=backup_data.get("checksum_sha256", ""),
                         metadata=backup_data.get("metadata", {}),
@@ -241,12 +246,20 @@ class BackupService:
                         cron_expression=schedule_data["cron_expression"],
                         enabled=schedule_data.get("enabled", True),
                         retention_days=schedule_data.get("retention_days", 30),
-                        last_run=datetime.fromisoformat(schedule_data["last_run"]) if schedule_data.get("last_run") else None,
-                        next_run=datetime.fromisoformat(schedule_data["next_run"]) if schedule_data.get("next_run") else None,
+                        last_run=datetime.fromisoformat(schedule_data["last_run"])
+                        if schedule_data.get("last_run")
+                        else None,
+                        next_run=datetime.fromisoformat(schedule_data["next_run"])
+                        if schedule_data.get("next_run")
+                        else None,
                     )
                     self._schedules[schedule.id] = schedule
 
-                logger.debug("backup_metadata_loaded", backups=len(self._backups), schedules=len(self._schedules))
+                logger.debug(
+                    "backup_metadata_loaded",
+                    backups=len(self._backups),
+                    schedules=len(self._schedules),
+                )
             except Exception as e:
                 logger.warning("backup_metadata_load_failed", error=str(e))
 
@@ -313,10 +326,14 @@ class BackupService:
 
             pg_dump_cmd = [
                 "pg_dump",
-                "-h", db_config.host,
-                "-p", str(db_config.port),
-                "-U", db_config.user,
-                "-d", db_config.name,
+                "-h",
+                db_config.host,
+                "-p",
+                str(db_config.port),
+                "-U",
+                db_config.user,
+                "-d",
+                db_config.name,
                 "--format=plain",
                 "--no-owner",
                 "--no-privileges",
@@ -334,7 +351,8 @@ class BackupService:
                         env=env,
                     )
                     gzip_proc = await asyncio.create_subprocess_exec(
-                        "gzip", "-9",
+                        "gzip",
+                        "-9",
                         stdin=pg_dump.stdout,
                         stdout=f,
                         stderr=subprocess.PIPE,
@@ -521,8 +539,12 @@ class BackupService:
 
         try:
             # Create individual backups
-            db_backup = await self.create_database_backup(description=f"Part of full backup {backup_id}")
-            config_backup = await self.create_config_backup(description=f"Part of full backup {backup_id}")
+            db_backup = await self.create_database_backup(
+                description=f"Part of full backup {backup_id}"
+            )
+            config_backup = await self.create_config_backup(
+                description=f"Part of full backup {backup_id}"
+            )
 
             # Package together
             with zipfile.ZipFile(filepath, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -538,8 +560,12 @@ class BackupService:
                     "type": "full",
                     "created_at": datetime.utcnow().isoformat(),
                     "components": {
-                        "database": db_backup.to_dict() if db_backup.status == BackupStatus.COMPLETED else None,
-                        "config": config_backup.to_dict() if config_backup.status == BackupStatus.COMPLETED else None,
+                        "database": db_backup.to_dict()
+                        if db_backup.status == BackupStatus.COMPLETED
+                        else None,
+                        "config": config_backup.to_dict()
+                        if config_backup.status == BackupStatus.COMPLETED
+                        else None,
                     },
                 }
                 zf.writestr("MANIFEST.json", json.dumps(manifest, indent=2))
@@ -792,10 +818,8 @@ class BackupService:
         """Stop the backup scheduler."""
         if self._scheduler_task:
             self._scheduler_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._scheduler_task
-            except asyncio.CancelledError:
-                pass
             self._scheduler_task = None
             logger.info("backup_scheduler_stopped")
 

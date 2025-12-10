@@ -6,7 +6,6 @@ with Redis backend, including tiered rate limiting strategies and custom
 rate limit exceeded responses.
 """
 
-
 from collections.abc import Callable
 from datetime import datetime, timedelta
 
@@ -151,9 +150,7 @@ def create_rate_limit_exceeded_response(
 # Decorator functions for different endpoint categories
 def public_rate_limit(func: Callable) -> Callable:
     """Decorator for public endpoints with standard rate limiting."""
-    return limiter.limit(
-        f"{getattr(settings, 'RATE_LIMIT_PUBLIC_PER_MINUTE', 100)}/minute"
-    )(func)
+    return limiter.limit(f"{getattr(settings, 'RATE_LIMIT_PUBLIC_PER_MINUTE', 100)}/minute")(func)
 
 
 def authenticated_rate_limit(func: Callable) -> Callable:
@@ -174,23 +171,19 @@ def critical_rate_limit(func: Callable) -> Callable:
 
 def error_handler_rate_limit(func: Callable) -> Callable:
     """Decorator for error handler endpoints."""
-    return limiter.limit(
-        f"{getattr(settings, 'RATE_LIMIT_ERROR_HANDLER_PER_MINUTE', 15)}/minute"
-    )(func)
+    return limiter.limit(f"{getattr(settings, 'RATE_LIMIT_ERROR_HANDLER_PER_MINUTE', 15)}/minute")(
+        func
+    )
 
 
 def websocket_rate_limit(func: Callable) -> Callable:
     """Decorator for WebSocket endpoints."""
-    return limiter.limit(
-        f"{getattr(settings, 'RATE_LIMIT_WEBSOCKET_PER_MINUTE', 30)}/minute"
-    )(func)
+    return limiter.limit(f"{getattr(settings, 'RATE_LIMIT_WEBSOCKET_PER_MINUTE', 30)}/minute")(func)
 
 
 def dashboard_rate_limit(func: Callable) -> Callable:
     """Decorator for dashboard endpoints."""
-    return limiter.limit(
-        f"{getattr(settings, 'RATE_LIMIT_DASHBOARD_PER_MINUTE', 10)}/minute"
-    )(func)
+    return limiter.limit(f"{getattr(settings, 'RATE_LIMIT_DASHBOARD_PER_MINUTE', 10)}/minute")(func)
 
 
 # Custom rate limit middleware for adding headers to all responses
@@ -208,20 +201,12 @@ class CustomRateLimitMiddleware:
         if hasattr(request.state, "rate_limit"):
             rate_limit_info = request.state.rate_limit
 
-            response.headers["X-RateLimit-Limit"] = str(
-                rate_limit_info.get("limit", "")
-            )
-            response.headers["X-RateLimit-Remaining"] = str(
-                rate_limit_info.get("remaining", "")
-            )
-            response.headers["X-RateLimit-Reset"] = str(
-                rate_limit_info.get("reset", "")
-            )
+            response.headers["X-RateLimit-Limit"] = str(rate_limit_info.get("limit", ""))
+            response.headers["X-RateLimit-Remaining"] = str(rate_limit_info.get("remaining", ""))
+            response.headers["X-RateLimit-Reset"] = str(rate_limit_info.get("reset", ""))
 
             # Add custom headers for better client visibility
-            response.headers["X-RateLimit-Policy"] = rate_limit_info.get(
-                "policy", "default"
-            )
+            response.headers["X-RateLimit-Policy"] = rate_limit_info.get("policy", "default")
 
         return response
 

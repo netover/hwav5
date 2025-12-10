@@ -39,8 +39,9 @@ class ThresholdTuner:
         value = await self._store.thresholds.get_threshold(name)
         return value if value is not None else default
 
-    async def set_threshold(self, name: str, value: float,
-                           min_value: float = 0.0, max_value: float = 1.0) -> LearningThreshold:
+    async def set_threshold(
+        self, name: str, value: float, min_value: float = 0.0, max_value: float = 1.0
+    ) -> LearningThreshold:
         """Set or update threshold."""
         return await self._store.thresholds.set_threshold(name, value, min_value, max_value)
 
@@ -75,14 +76,11 @@ class ThresholdTuner:
             # Very positive, can lower threshold
             await self.adjust_threshold("confidence", -0.02)
 
-        return {
-            "adjusted": True,
-            "positive_rate": positive_rate,
-            "total_feedback": total
-        }
+        return {"adjusted": True, "positive_rate": positive_rate, "total_feedback": total}
 
 
 _instance: ThresholdTuner | None = None
+
 
 def get_threshold_tuner() -> ThresholdTuner:
     """Get the singleton ThresholdTuner instance."""

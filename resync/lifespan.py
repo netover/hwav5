@@ -10,7 +10,6 @@ managing the lifecycle of critical application components including:
 - Resource cleanup and graceful shutdown
 """
 
-
 import asyncio
 import os
 import sys
@@ -44,6 +43,7 @@ logger = get_logger(__name__)
 _EAGER = os.getenv("RESYNC_EAGER_BOOT") == "1"
 _BOOTED = False
 
+
 def boot_if_needed():
     """Boot lifespan components if needed, preventing multiple initializations."""
     global _BOOTED
@@ -54,11 +54,13 @@ def boot_if_needed():
     _BOOTED = True
     logger.info("Lifespan booted lazily.")
 
+
 if _EAGER:
     boot_if_needed()
 
 # Create a global RedisInitializer instance - lazy initialization
 _redis_initializer = None
+
 
 def get_redis_initializer() -> RedisInitializer:
     """Get the global Redis initializer instance with lazy initialization."""
@@ -67,8 +69,8 @@ def get_redis_initializer() -> RedisInitializer:
         _redis_initializer = RedisInitializer()
     return _redis_initializer
 
-# Create a global RedisInitializer instance
 
+# Create a global RedisInitializer instance
 
 
 @asynccontextmanager
@@ -134,9 +136,7 @@ async def redis_connection_manager() -> AsyncIterator:
                 await client.connection_pool.disconnect()
                 logger.debug("redis_connection_closed")
             except Exception as e:
-                logger.warning(
-                    "redis_cleanup_warning", error=type(e).__name__, message=str(e)
-                )
+                logger.warning("redis_cleanup_warning", error=type(e).__name__, message=str(e))
 
 
 async def initialize_redis_with_retry(
@@ -180,9 +180,7 @@ async def initialize_redis_with_retry(
 
                 await initialize_idempotency_manager(redis_client)
 
-                logger.info(
-                    "redis_initialized", attempt=attempt + 1, max_retries=max_retries
-                )
+                logger.info("redis_initialized", attempt=attempt + 1, max_retries=max_retries)
                 return
 
         except RedisAuthError:
@@ -195,9 +193,7 @@ async def initialize_redis_with_retry(
 
             if attempt >= max_retries - 1:
                 # Última tentativa falhou
-                logger.critical(
-                    "redis_initialization_failed", attempts=max_retries, error=str(e)
-                )
+                logger.critical("redis_initialization_failed", attempts=max_retries, error=str(e))
                 raise
 
             # Calcular backoff exponencial
@@ -250,16 +246,12 @@ async def initialize_redis_with_retry(
                 ) from e
 
             backoff = min(max_backoff, base_backoff * (2**attempt))
-            logger.warning(
-                "redis_busy_retry", attempt=attempt + 1, backoff_seconds=backoff
-            )
+            logger.warning("redis_busy_retry", attempt=attempt + 1, backoff_seconds=backoff)
             await asyncio.sleep(backoff)
 
         except Exception as e:
             # Erro inesperado - fail fast
-            logger.critical(
-                "redis_unexpected_error", error_type=type(e).__name__, error=str(e)
-            )
+            logger.critical("redis_unexpected_error", error_type=type(e).__name__, error=str(e))
             raise RedisInitializationError(
                 f"Erro inesperado ao inicializar Redis: {type(e).__name__}",
                 details={

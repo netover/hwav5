@@ -11,9 +11,11 @@ This module provides cryptographically secure audit trails including:
 - Compliance-ready audit reporting
 """
 
+from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import gzip
 import hashlib
 import hmac
@@ -362,10 +364,8 @@ class EncryptedAuditTrail:
         for task in [self._flush_task, self._archival_task, self._verification_task]:
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         logger.info("Encrypted audit trail system stopped")
 
@@ -430,9 +430,7 @@ class EncryptedAuditTrail:
     def _calculate_signature(self, entry: AuditEntry) -> str:
         """Calculate HMAC signature for the entry."""
         content = f"{entry.entry_id}:{entry.hash_value}:{entry.chain_hash}"
-        signature = hmac.new(
-            self.key_manager.hmac_key, content.encode(), hashlib.sha256
-        )
+        signature = hmac.new(self.key_manager.hmac_key, content.encode(), hashlib.sha256)
         return signature.hexdigest()
 
     async def search_events(
@@ -449,9 +447,7 @@ class EncryptedAuditTrail:
 
         # Search in current pending entries
         for entry in self.pending_entries:
-            if self._matches_filters(
-                entry, start_time, end_time, event_type, user_id, resource_id
-            ):
+            if self._matches_filters(entry, start_time, end_time, event_type, user_id, resource_id):
                 results.append(entry)
                 if len(results) >= limit:
                     break
@@ -482,9 +478,7 @@ class EncryptedAuditTrail:
             return False
         if user_id and entry.user_id != user_id:
             return False
-        if resource_id and entry.resource_id != resource_id:
-            return False
-        return True
+        return not (resource_id and entry.resource_id != resource_id)
 
     async def verify_integrity(self, full_chain_check: bool = False) -> dict[str, Any]:
         """
@@ -641,9 +635,7 @@ class EncryptedAuditTrail:
             "performance": {
                 "total_entries_logged": self.total_entries,
                 "pending_entries": len(self.pending_entries),
-                "current_chain_hash": (
-                    self.chain_hash[:16] + "..." if self.chain_hash else ""
-                ),
+                "current_chain_hash": (self.chain_hash[:16] + "..." if self.chain_hash else ""),
                 "active_encryption_key": self.key_manager.active_key_id,
             },
             "security": {
@@ -734,9 +726,7 @@ class EncryptedAuditTrail:
             "entries_count": len(block.entries),
             "block_hash": block.block_hash,
             "previous_block_hash": block.previous_block_hash,
-            "encryption_key_id": (
-                block.entries[0].encryption_key_id if block.entries else ""
-            ),
+            "encryption_key_id": (block.entries[0].encryption_key_id if block.entries else ""),
             "compressed": self.config.compression_enabled,
         }
 
@@ -808,7 +798,7 @@ class EncryptedAuditTrail:
         if old_blocks:
             # Create archive
             archive_name = f"archive_{int(time.time())}.tar.gz"
-            archive_path = self.audit_log_dir / archive_name
+            self.audit_log_dir / archive_name
 
             # This would create a compressed archive of old blocks
             # Implementation would use tarfile or similar
@@ -824,9 +814,7 @@ class EncryptedAuditTrail:
                 if self.config.chain_verification_enabled:
                     integrity = await self.verify_integrity(full_chain_check=False)
                     if integrity["integrity_status"] != "valid":
-                        logger.warning(
-                            "Periodic integrity check failed", results=integrity
-                        )
+                        logger.warning("Periodic integrity check failed", results=integrity)
 
             except asyncio.CancelledError:
                 break

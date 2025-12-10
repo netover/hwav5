@@ -1,4 +1,3 @@
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -10,6 +9,7 @@ def client():
     """Create a TestClient for the FastAPI app"""
     with TestClient(main_module.app) as c:
         yield c
+
 
 @pytest.fixture(scope="module")
 def auth_headers():

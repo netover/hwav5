@@ -20,7 +20,6 @@ Warning:
     made with caution and only during application initialization.
 """
 
-
 from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:

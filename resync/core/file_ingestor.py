@@ -78,9 +78,7 @@ def is_path_in_knowledge_base(file_path: Path) -> bool:
 # --- Text Chunking --- #
 
 
-def chunk_text(
-    text: str, chunk_size: int = 1000, chunk_overlap: int = 200
-) -> Iterator[str]:
+def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> Iterator[str]:
     """Splits a long text into smaller chunks with overlap."""
     if not text:
         return
@@ -100,17 +98,12 @@ def read_pdf(file_path: Path) -> str:
     logger.info("reading_pdf_file", file_path=str(file_path))
     try:
         reader = pypdf.PdfReader(file_path)
-        text = "".join(
-            page.extract_text() for page in reader.pages if page.extract_text()
-        )
-        return text
+        return "".join(page.extract_text() for page in reader.pages if page.extract_text())
     except FileNotFoundError as e:
         logger.error("pdf_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
-        logger.error(
-            "permission_denied_reading_pdf", file_path=str(file_path), error=str(e)
-        )
+        logger.error("permission_denied_reading_pdf", file_path=str(file_path), error=str(e))
         return ""
     except pypdf.errors.PdfReadError as e:
         logger.error("pdf_read_error", file_path=str(file_path), error=str(e))
@@ -153,17 +146,13 @@ def read_json(file_path: Path) -> str:
         logger.error("json_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
-        logger.error(
-            "permission_denied_reading_json", file_path=str(file_path), error=str(e)
-        )
+        logger.error("permission_denied_reading_json", file_path=str(file_path), error=str(e))
         return ""
     except json.JSONDecodeError as e:
         logger.error("invalid_json_format", file_path=str(file_path), error=str(e))
         return ""
     except UnicodeDecodeError as e:
-        logger.error(
-            "encoding_error_reading_json", file_path=str(file_path), error=str(e)
-        )
+        logger.error("encoding_error_reading_json", file_path=str(file_path), error=str(e))
         return ""
     except Exception as e:  # Catch other potential OS or parsing errors
         logger.critical(
@@ -179,8 +168,7 @@ def read_txt(file_path: Path) -> str:
     """Extracts text from a plain text file."""
     logger.info("reading_text_file", file_path=str(file_path))
     try:
-        text = file_path.read_text(encoding="utf-8")
-        return text
+        return file_path.read_text(encoding="utf-8")
     except FileNotFoundError as e:
         logger.error("text_file_not_found", file_path=str(file_path), error=str(e))
         return ""
@@ -192,9 +180,7 @@ def read_txt(file_path: Path) -> str:
         )
         return ""
     except UnicodeDecodeError as e:
-        logger.error(
-            "encoding_error_reading_text_file", file_path=str(file_path), error=str(e)
-        )
+        logger.error("encoding_error_reading_text_file", file_path=str(file_path), error=str(e))
         return ""
     except OSError as e:
         logger.critical(
@@ -229,9 +215,7 @@ def read_doc(file_path: Path) -> str:
         logger.error("doc_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
-        logger.error(
-            "permission_denied_reading_doc_file", file_path=str(file_path), error=str(e)
-        )
+        logger.error("permission_denied_reading_doc_file", file_path=str(file_path), error=str(e))
         return ""
     except Exception as e:  # Catch other potential library or system errors
         logger.critical(
@@ -286,9 +270,7 @@ def read_xls(file_path: Path) -> str:
                     row = sheet.row_values(row_idx)
                     # Convert row to text, filtering out None values
                     row_text = " | ".join(
-                        str(cell)
-                        for cell in row
-                        if cell is not None and str(cell).strip()
+                        str(cell) for cell in row if cell is not None and str(cell).strip()
                     )
                     if row_text.strip():
                         text_parts.append(row_text)
@@ -301,18 +283,14 @@ def read_xls(file_path: Path) -> str:
             logger.warning("xls_file_requires_xlrd_library", file_path=str(file_path))
             return f"[XLS file: {file_path.name} - Install xlrd for better support]"
         except Exception as e:
-            logger.error(
-                "error_processing_xls_file", file_path=str(file_path), error=str(e)
-            )
+            logger.error("error_processing_xls_file", file_path=str(file_path), error=str(e))
             return f"[XLS file: {file_path.name} - Processing error: {e}]"
 
     except FileNotFoundError as e:
         logger.error("xls_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
-        logger.error(
-            "permission_denied_reading_xls_file", file_path=str(file_path), error=str(e)
-        )
+        logger.error("permission_denied_reading_xls_file", file_path=str(file_path), error=str(e))
         return ""
     except Exception as e:  # Catch other potential library or system errors
         logger.critical(
@@ -328,8 +306,7 @@ def read_md(file_path: Path) -> str:
     """Extracts text from a Markdown file."""
     logger.info("reading_markdown_file", file_path=str(file_path))
     try:
-        text = file_path.read_text(encoding="utf-8")
-        return text
+        return file_path.read_text(encoding="utf-8")
     except FileNotFoundError as e:
         logger.error("markdown_file_not_found", file_path=str(file_path), error=str(e))
         return ""
@@ -379,15 +356,29 @@ def read_html(file_path: Path) -> str:
 
             # Remove navigation elements
             nav_selectors = [
-                "nav", "header", "footer",
-                ".navigation", ".nav", ".navbar",
-                ".sidebar", ".side-nav", ".sidenav",
-                ".toc", ".table-of-contents",
-                ".breadcrumb", ".breadcrumbs",
-                "#header", "#footer", "#nav", "#sidebar",
-                "[role='navigation']", "[role='banner']",
-                ".ibm-masthead", ".ibm-footer",
-                ".hcl-header", ".hcl-footer",
+                "nav",
+                "header",
+                "footer",
+                ".navigation",
+                ".nav",
+                ".navbar",
+                ".sidebar",
+                ".side-nav",
+                ".sidenav",
+                ".toc",
+                ".table-of-contents",
+                ".breadcrumb",
+                ".breadcrumbs",
+                "#header",
+                "#footer",
+                "#nav",
+                "#sidebar",
+                "[role='navigation']",
+                "[role='banner']",
+                ".ibm-masthead",
+                ".ibm-footer",
+                ".hcl-header",
+                ".hcl-footer",
             ]
 
             for selector in nav_selectors:
@@ -397,10 +388,16 @@ def read_html(file_path: Path) -> str:
             # Try to find main content
             main_content = None
             main_selectors = [
-                "main", "article",
-                ".content", ".main-content", ".doc-content",
-                "#content", "#main-content", "#article",
-                ".ibm-content", ".hcl-content",
+                "main",
+                "article",
+                ".content",
+                ".main-content",
+                ".doc-content",
+                "#content",
+                "#main-content",
+                "#article",
+                ".ibm-content",
+                ".hcl-content",
                 "[role='main']",
             ]
 
@@ -431,17 +428,14 @@ def read_html(file_path: Path) -> str:
             logger.warning(
                 "beautifulsoup4_not_installed",
                 file_path=str(file_path),
-                message="Install beautifulsoup4 for better HTML parsing"
+                message="Install beautifulsoup4 for better HTML parsing",
             )
 
             html_content = file_path.read_text(encoding="utf-8")
 
             # Remove script and style tags
             html_content = re.sub(
-                r"<(script|style)[^>]*>.*?</\1>",
-                "",
-                html_content,
-                flags=re.DOTALL | re.IGNORECASE
+                r"<(script|style)[^>]*>.*?</\1>", "", html_content, flags=re.DOTALL | re.IGNORECASE
             )
 
             # Remove HTML tags
@@ -449,6 +443,7 @@ def read_html(file_path: Path) -> str:
 
             # Decode HTML entities
             import html
+
             text = html.unescape(text)
 
             # Clean up whitespace
@@ -495,8 +490,7 @@ def read_html(file_path: Path) -> str:
         raise FileProcessingError(f"Failed to process HTML file {file_path}") from e
     logger.info("reading_markdown_file", file_path=str(file_path))
     try:
-        text = file_path.read_text(encoding="utf-8")
-        return text
+        return file_path.read_text(encoding="utf-8")
     except FileNotFoundError as e:
         logger.error("markdown_file_not_found", file_path=str(file_path), error=str(e))
         return ""
@@ -529,8 +523,7 @@ def read_docx(file_path: Path) -> str:
     logger.info("reading_docx_file", file_path=str(file_path))
     try:
         doc = docx.Document(file_path)
-        text = "\n".join(para.text for para in doc.paragraphs if para.text)
-        return text
+        return "\n".join(para.text for para in doc.paragraphs if para.text)
     except FileNotFoundError as e:
         logger.error("docx_file_not_found", file_path=str(file_path), error=str(e))
         return ""
@@ -671,9 +664,7 @@ class FileIngestor(IFileIngestor):
                 error=str(e),
                 exc_info=True,
             )
-            raise FileProcessingError(
-                f"Could not save file due to OS error: {e}"
-            ) from e
+            raise FileProcessingError(f"Could not save file due to OS error: {e}") from e
 
     async def ingest_file(self, file_path: Path) -> bool:
         """
@@ -691,9 +682,7 @@ class FileIngestor(IFileIngestor):
 
         # Check if file is in knowledge base directories
         if not is_path_in_knowledge_base(file_path):
-            logger.warning(
-                "file_not_in_knowledge_base_directories", file_path=str(file_path)
-            )
+            logger.warning("file_not_in_knowledge_base_directories", file_path=str(file_path))
             return False
 
         # Check if file is in protected directories (should not be deleted during processing)
@@ -785,14 +774,10 @@ async def load_existing_rag_documents(file_ingestor: IFileIngestor) -> int:
         knowledge_path = settings.BASE_DIR / knowledge_dir
 
         if not knowledge_path.exists():
-            logger.warning(
-                "knowledge_base_directory_not_found", knowledge_path=str(knowledge_path)
-            )
+            logger.warning("knowledge_base_directory_not_found", knowledge_path=str(knowledge_path))
             continue
 
-        logger.info(
-            "processing_knowledge_base_directory", knowledge_path=str(knowledge_path)
-        )
+        logger.info("processing_knowledge_base_directory", knowledge_path=str(knowledge_path))
 
         # Walk through all files in the directory tree
         for file_path in knowledge_path.rglob("*"):
@@ -800,9 +785,7 @@ async def load_existing_rag_documents(file_ingestor: IFileIngestor) -> int:
                 # Check if file is in protected directories (should be processed)
                 if is_path_in_knowledge_base(file_path):
                     try:
-                        logger.info(
-                            "loading_existing_document", filename=file_path.name
-                        )
+                        logger.info("loading_existing_document", filename=file_path.name)
                         await file_ingestor.ingest_file(file_path)
                         processed_count += 1
                     except FileProcessingError as e:

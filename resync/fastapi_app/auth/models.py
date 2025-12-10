@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 class UserRole(str, Enum):
     """User roles in the system."""
+
     ADMIN = "admin"
     USER = "user"
     READONLY = "readonly"
@@ -18,6 +19,7 @@ class UserRole(str, Enum):
 
 class UserBase(BaseModel):
     """Base user model with common fields."""
+
     username: str = Field(..., min_length=3, max_length=50)
     email: str | None = None
     full_name: str | None = None
@@ -27,11 +29,13 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Model for creating a new user."""
+
     password: str = Field(..., min_length=8)
 
 
 class UserUpdate(BaseModel):
     """Model for updating a user."""
+
     email: str | None = None
     full_name: str | None = None
     role: UserRole | None = None
@@ -41,6 +45,7 @@ class UserUpdate(BaseModel):
 
 class UserInDB(UserBase):
     """User model as stored in database."""
+
     id: str
     hashed_password: str
     created_at: datetime
@@ -54,6 +59,7 @@ class UserInDB(UserBase):
 
 class User(UserBase):
     """User model returned to clients (no password)."""
+
     id: str
     created_at: datetime
     permissions: list[str] = []
@@ -64,6 +70,7 @@ class User(UserBase):
 
 class Token(BaseModel):
     """JWT token response model."""
+
     access_token: str
     token_type: str = "bearer"
     expires_in: int
@@ -71,6 +78,7 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     """JWT token payload."""
+
     sub: str  # User ID
     username: str
     role: str

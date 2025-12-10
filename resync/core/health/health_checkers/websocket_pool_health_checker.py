@@ -4,7 +4,6 @@ WebSocket Pool Health Checker
 This module provides health checking functionality for WebSocket pool.
 """
 
-
 import time
 from datetime import datetime
 from typing import Any

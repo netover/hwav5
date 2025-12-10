@@ -6,14 +6,13 @@ This script checks if the installed packages match the requirements
 and identifies potential security issues.
 """
 
+import json
 import subprocess
 import sys
-import json
 from pathlib import Path
-from typing import Dict, List
 
 
-def get_installed_packages() -> Dict[str, str]:
+def get_installed_packages() -> dict[str, str]:
     """Get dict of installed packages {name: version}."""
     # Comando específico e seguro - elimina risco de command injection
     result = subprocess.run(
@@ -34,20 +33,18 @@ def get_installed_packages() -> Dict[str, str]:
         return {}
 
 
-def parse_requirements_file(filepath: str) -> Dict[str, str]:
+def parse_requirements_file(filepath: str) -> dict[str, str]:
     """Parse requirements file and return {name: version_spec}."""
     requirements = {}
     try:
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#") and not line.startswith("-r"):
                     # Extract package name and version spec
                     parts = line.split("==")
                     if len(parts) == 2:
-                        name = (
-                            parts[0].lower().split("[")[0]
-                        )  # Remove extras like [bcrypt]
+                        name = parts[0].lower().split("[")[0]  # Remove extras like [bcrypt]
                         version = parts[1]
                         requirements[name] = version
     except FileNotFoundError:
@@ -55,9 +52,7 @@ def parse_requirements_file(filepath: str) -> Dict[str, str]:
     return requirements
 
 
-def check_requirements_match(
-    installed: Dict[str, str], required: Dict[str, str]
-) -> List[str]:
+def check_requirements_match(installed: dict[str, str], required: dict[str, str]) -> list[str]:
     """Check if installed versions match requirements."""
     issues = []
 
@@ -72,7 +67,7 @@ def check_requirements_match(
     return issues
 
 
-def check_security_issues() -> List[str]:
+def check_security_issues() -> list[str]:
     """Check for security issues using safety."""
     issues = []
 
@@ -157,9 +152,8 @@ def main():
     if all_issues:
         print(f"[X] Found {len(all_issues)} issues")
         return 1
-    else:
-        print("[OK] All requirements validated successfully!")
-        return 0
+    print("[OK] All requirements validated successfully!")
+    return 0
 
 
 if __name__ == "__main__":

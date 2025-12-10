@@ -24,7 +24,7 @@ from datetime import datetime
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import yaml
 from pydantic import BaseModel, Field
@@ -37,6 +37,7 @@ logger = get_logger(__name__)
 # Try to import langfuse (optional dependency)
 try:
     from langfuse import Langfuse
+
     LANGFUSE_AVAILABLE = True
 except ImportError:
     LANGFUSE_AVAILABLE = False
@@ -47,8 +48,10 @@ except ImportError:
 # MODELS
 # =============================================================================
 
+
 class PromptType(str, Enum):
     """Types of prompts in the system."""
+
     SYSTEM = "system"
     USER = "user"
     AGENT = "agent"
@@ -76,7 +79,9 @@ class PromptConfig(BaseModel):
 
     # Variables
     variables: list[str] = Field(default_factory=list, description="Required variables in template")
-    default_values: dict[str, str] = Field(default_factory=dict, description="Default values for variables")
+    default_values: dict[str, str] = Field(
+        default_factory=dict, description="Default values for variables"
+    )
 
     # Status
     is_active: bool = Field(default=True, description="Whether prompt is active")
@@ -147,10 +152,7 @@ class PromptTemplate:
         Returns:
             Dict with 'role' and 'content' keys
         """
-        return {
-            "role": role,
-            "content": self.compile(**variables)
-        }
+        return {"role": role, "content": self.compile(**variables)}
 
     @property
     def id(self) -> str:
@@ -168,6 +170,7 @@ class PromptTemplate:
 # =============================================================================
 # PROMPT MANAGER
 # =============================================================================
+
 
 class PromptManager:
     """
@@ -226,9 +229,9 @@ class PromptManager:
             if LANGFUSE_AVAILABLE and self._should_use_langfuse():
                 try:
                     self._langfuse_client = Langfuse(
-                        public_key=getattr(settings, 'langfuse_public_key', None),
-                        secret_key=getattr(settings, 'langfuse_secret_key', None),
-                        host=getattr(settings, 'langfuse_host', "https://cloud.langfuse.com"),
+                        public_key=getattr(settings, "langfuse_public_key", None),
+                        secret_key=getattr(settings, "langfuse_secret_key", None),
+                        host=getattr(settings, "langfuse_host", "https://cloud.langfuse.com"),
                     )
                     logger.info("langfuse_client_initialized")
                 except Exception as e:
@@ -244,15 +247,15 @@ class PromptManager:
             logger.info(
                 "prompt_manager_initialized",
                 prompt_count=len(self._prompts),
-                langfuse_enabled=self._langfuse_client is not None
+                langfuse_enabled=self._langfuse_client is not None,
             )
 
     def _should_use_langfuse(self) -> bool:
         """Check if LangFuse should be used."""
         return (
-            getattr(settings, 'langfuse_enabled', False) and
-            getattr(settings, 'langfuse_public_key', None) and
-            getattr(settings, 'langfuse_secret_key', None)
+            getattr(settings, "langfuse_enabled", False)
+            and getattr(settings, "langfuse_public_key", None)
+            and getattr(settings, "langfuse_secret_key", None)
         )
 
     async def _load_default_prompts(self) -> None:
@@ -282,7 +285,6 @@ Se não tiver certeza sobre algo, indique claramente.""",
                 temperature_hint=0.7,
                 is_default=True,
             ),
-
             PromptConfig(
                 id="tws-rag-system-v1",
                 name="TWS RAG System Prompt",
@@ -306,7 +308,6 @@ Instruções adicionais:
                 temperature_hint=0.3,
                 is_default=True,
             ),
-
             PromptConfig(
                 id="intent-router-v1",
                 name="Intent Router Prompt",
@@ -331,7 +332,6 @@ Responda APENAS com o nome da categoria em maiúsculas.""",
                 max_tokens_hint=10,
                 is_default=True,
             ),
-
             PromptConfig(
                 id="tws-status-report-v1",
                 name="TWS Status Report Prompt",
@@ -354,7 +354,6 @@ Seja conciso e priorize informações críticas.""",
                 default_values={"system_data": "{}"},
                 is_default=True,
             ),
-
             PromptConfig(
                 id="tool-response-formatter-v1",
                 name="Tool Response Formatter",
@@ -398,7 +397,9 @@ Se houver erros, explique o que pode ter acontecido.""",
                         config = PromptConfig(**prompt_data)
                         self._prompts[config.id] = config
                         self._templates[config.id] = PromptTemplate(config)
-                        logger.debug("prompt_loaded_from_yaml", prompt_id=config.id, file=yaml_file.name)
+                        logger.debug(
+                            "prompt_loaded_from_yaml", prompt_id=config.id, file=yaml_file.name
+                        )
                     except Exception as e:
                         logger.warning("invalid_prompt_in_yaml", file=yaml_file.name, error=str(e))
 
@@ -426,11 +427,7 @@ Se houver erros, explique o que pode ter acontecido.""",
     # PUBLIC API
     # =========================================================================
 
-    async def get_prompt(
-        self,
-        prompt_id: str,
-        version: str | None = None
-    ) -> PromptTemplate | None:
+    async def get_prompt(self, prompt_id: str, version: str | None = None) -> PromptTemplate | None:
         """
         Get a prompt template by ID.
 
@@ -469,9 +466,7 @@ Se houver erros, explique o que pode ter acontecido.""",
         return None
 
     async def list_prompts(
-        self,
-        prompt_type: PromptType | None = None,
-        active_only: bool = True
+        self, prompt_type: PromptType | None = None, active_only: bool = True
     ) -> list[PromptConfig]:
         """
         List all prompts, optionally filtered.
@@ -524,11 +519,7 @@ Se houver erros, explique o que pode ter acontecido.""",
         logger.info("prompt_created", prompt_id=config.id)
         return config
 
-    async def update_prompt(
-        self,
-        prompt_id: str,
-        updates: dict[str, Any]
-    ) -> PromptConfig | None:
+    async def update_prompt(self, prompt_id: str, updates: dict[str, Any]) -> PromptConfig | None:
         """
         Update an existing prompt.
 
@@ -592,7 +583,7 @@ Se houver erros, explique o que pode ter acontecido.""",
         """Save a prompt to its YAML file."""
         yaml_file = self._prompts_dir / f"{config.id}.yaml"
 
-        data = config.model_dump(mode='json')
+        data = config.model_dump(mode="json")
 
         with open(yaml_file, "w", encoding="utf-8") as f:
             yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
@@ -613,9 +604,7 @@ Se houver erros, explique o que pode ter acontecido.""",
     # =========================================================================
 
     async def get_ab_test_prompt(
-        self,
-        base_prompt_id: str,
-        user_id: str | None = None
+        self, base_prompt_id: str, user_id: str | None = None
     ) -> PromptTemplate | None:
         """
         Get a prompt for A/B testing.
@@ -632,7 +621,8 @@ Se houver erros, explique o que pode ter acontecido.""",
         """
         # Find all variants
         variants = [
-            config for config in self._prompts.values()
+            config
+            for config in self._prompts.values()
             if config.id.startswith(base_prompt_id) and config.is_active
         ]
 

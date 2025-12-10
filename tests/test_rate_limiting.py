@@ -61,8 +61,7 @@ def mock_authenticated_request():
 @pytest.fixture
 def test_app():
     """Create a test FastAPI application."""
-    app = FastAPI()
-    return app
+    return FastAPI()
 
 
 class TestRateLimitConfiguration:
@@ -101,16 +100,12 @@ class TestUserIdentifierFunctions:
         identifier = get_user_identifier(mock_request)
         assert identifier == "127.0.0.1"
 
-    def test_get_user_identifier_with_authenticated_user(
-        self, mock_authenticated_request
-    ):
+    def test_get_user_identifier_with_authenticated_user(self, mock_authenticated_request):
         """Test getting user identifier from authenticated user."""
         identifier = get_user_identifier(mock_authenticated_request)
         assert identifier == "user:test_user"
 
-    def test_get_authenticated_user_identifier_with_user(
-        self, mock_authenticated_request
-    ):
+    def test_get_authenticated_user_identifier_with_user(self, mock_authenticated_request):
         """Test getting authenticated user identifier with user."""
         identifier = get_authenticated_user_identifier(mock_authenticated_request)
         assert identifier == "auth_user:test_user"

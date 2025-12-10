@@ -20,9 +20,11 @@ import pytest
 import pytest_asyncio
 import structlog
 
-from resync.core.connection_pool_manager import (ConnectionPoolConfig,
-                                                 ConnectionPoolManager,
-                                                 DatabaseConnectionPool)
+from resync.core.connection_pool_manager import (
+    ConnectionPoolConfig,
+    ConnectionPoolManager,
+    DatabaseConnectionPool,
+)
 from resync.core.exceptions import PoolExhaustedError, TimeoutError
 
 # Configure structured logging for tests
@@ -45,19 +47,14 @@ class TestConnectionPoolMetrics:
     def mock_db_pool_dependencies(self):
         """A class-scoped fixture to mock database pool dependencies once per test class."""
         with (
-            patch(
-                "resync.core.pools.db_pool.create_async_engine"
-            ) as mock_create_engine,
+            patch("resync.core.pools.db_pool.create_async_engine") as mock_create_engine,
             patch("resync.core.pools.db_pool.async_sessionmaker") as mock_sessionmaker,
         ):
-
             mock_engine = AsyncMock()
             mock_create_engine.return_value = mock_engine
 
             mock_session_instance = AsyncMock()
-            mock_session_instance.__aenter__ = AsyncMock(
-                return_value=mock_session_instance
-            )
+            mock_session_instance.__aenter__ = AsyncMock(return_value=mock_session_instance)
             mock_session_instance.__aexit__ = AsyncMock(return_value=None)
             mock_session_maker_instance = Mock()
             mock_session_maker_instance.return_value = mock_session_instance
@@ -76,9 +73,7 @@ class TestConnectionPoolMetrics:
             health_check_interval=10,
         )
 
-        pool = DatabaseConnectionPool(
-            config, "postgresql://test:test@localhost:5432/test"
-        )
+        pool = DatabaseConnectionPool(config, "postgresql://test:test@localhost:5432/test")
 
         try:
             await asyncio.wait_for(pool.initialize(), timeout=10.0)
@@ -171,9 +166,9 @@ class TestConnectionPoolMetrics:
 
         # The pool might reuse connections, so we expect creations to be <= num_operations
         # and > 0 since the pool started empty.
-        assert (
-            0 < post_stats["connection_creations"] <= num_operations
-        ), f"Expected between 1 and {num_operations} connection creations, but got {post_stats['connection_creations']}"
+        assert 0 < post_stats["connection_creations"] <= num_operations, (
+            f"Expected between 1 and {num_operations} connection creations, but got {post_stats['connection_creations']}"
+        )
 
         # Validação de métricas de performance
         assert execution_time < 1.0, f"Test took too long: {execution_time}s"
@@ -182,8 +177,7 @@ class TestConnectionPoolMetrics:
             "test_validation_complete",
             total_connections=len(connections),
             total_hits=post_stats["pool_hits"],
-            performance_ratio=post_stats["pool_hits"]
-            / max(post_stats["connection_creations"], 1),
+            performance_ratio=post_stats["pool_hits"] / max(post_stats["connection_creations"], 1),
         )
 
     @pytest.mark.asyncio
@@ -196,7 +190,7 @@ class TestConnectionPoolMetrics:
             start_time = time.perf_counter()
 
             try:
-                async with monitored_pool.get_connection() as engine:
+                async with monitored_pool.get_connection():
                     # Simulate work
                     await asyncio.sleep(0.001 * operation_id)
 
@@ -231,7 +225,7 @@ class TestConnectionPoolMetrics:
         # Run timed operations
         num_operations = 10
         tasks = [timed_operation(i) for i in range(num_operations)]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks, return_exceptions=True)
 
         # Analyze metrics
         successful_metrics = [m for m in metrics if "error" not in m]
@@ -259,7 +253,7 @@ class TestConnectionPoolMetrics:
         async def exhaust_pool_operation(operation_id: int):
             """Operation that might exhaust the pool."""
             try:
-                async with monitored_pool.get_connection() as engine:
+                async with monitored_pool.get_connection():
                     # Hold connection to exhaust pool
                     await asyncio.sleep(0.1)
                     return f"success_{operation_id}"
@@ -286,7 +280,7 @@ class TestConnectionPoolMetrics:
         # Create more operations than pool can handle
         num_operations = 5
         tasks = [exhaust_pool_operation(i) for i in range(num_operations)]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks, return_exceptions=True)
 
         # Should have some exhaustion events
         assert len(exhaustion_events) > 0
@@ -297,13 +291,9 @@ class TestConnectionPoolMetrics:
 
         # Verify exhaustion events are recorded properly
         timeout_events = [e for e in exhaustion_events if e["type"] == "timeout"]
-        pool_exhausted_events = [
-            e for e in exhaustion_events if e["type"] == "pool_exhausted"
-        ]
+        pool_exhausted_events = [e for e in exhaustion_events if e["type"] == "pool_exhausted"]
 
-        assert len(timeout_events) + len(pool_exhausted_events) == len(
-            exhaustion_events
-        )
+        assert len(timeout_events) + len(pool_exhausted_events) == len(exhaustion_events)
 
 
 class TestConnectionLeakDetection:
@@ -313,19 +303,14 @@ class TestConnectionLeakDetection:
     def mock_db_pool_dependencies(self):
         """A class-scoped fixture to mock database pool dependencies once per test class."""
         with (
-            patch(
-                "resync.core.pools.db_pool.create_async_engine"
-            ) as mock_create_engine,
+            patch("resync.core.pools.db_pool.create_async_engine") as mock_create_engine,
             patch("resync.core.pools.db_pool.async_sessionmaker") as mock_sessionmaker,
         ):
-
             mock_engine = AsyncMock()
             mock_create_engine.return_value = mock_engine
 
             mock_session_instance = AsyncMock()
-            mock_session_instance.__aenter__ = AsyncMock(
-                return_value=mock_session_instance
-            )
+            mock_session_instance.__aenter__ = AsyncMock(return_value=mock_session_instance)
             mock_session_instance.__aexit__ = AsyncMock(return_value=None)
             mock_session_maker_instance = Mock()
             mock_session_maker_instance.return_value = mock_session_instance
@@ -345,9 +330,7 @@ class TestConnectionLeakDetection:
             health_check_interval=5,
         )
 
-        pool = DatabaseConnectionPool(
-            config, "postgresql://test:test@localhost:5432/test"
-        )
+        pool = DatabaseConnectionPool(config, "postgresql://test:test@localhost:5432/test")
         await pool.initialize()
         yield pool
         await pool.close()
@@ -370,10 +353,9 @@ class TestConnectionLeakDetection:
                 # In some cases, we "forget" to close the connection
                 if operation_id % 3 == 0:
                     return f"leaked_{operation_id}"
-                else:
-                    await leaky_pool._close_connection(engine)
-                    leaked_connections.remove(engine)
-                    return f"clean_{operation_id}"
+                await leaky_pool._close_connection(engine)
+                leaked_connections.remove(engine)
+                return f"clean_{operation_id}"
 
             except Exception as e:
                 return f"error_{operation_id}_{str(e)}"
@@ -390,7 +372,7 @@ class TestConnectionLeakDetection:
         await asyncio.sleep(0.2)  # Allow cleanup time
 
         # Should detect potential leaks
-        stats = leaky_pool.get_stats()
+        leaky_pool.get_stats()
 
         # Some connections might be leaked
         potential_leaks = sum(1 for r in results if r.startswith("leaked"))
@@ -431,7 +413,7 @@ class TestConnectionLeakDetection:
 
         # Use connections
         async def tracked_operation(operation_id: int):
-            async with leaky_pool.get_connection() as engine:
+            async with leaky_pool.get_connection():
                 await asyncio.sleep(0.01)
                 return f"success_{operation_id}"
 
@@ -466,16 +448,14 @@ class TestConnectionLeakDetection:
         # Simulate connection health issues
         async def unhealthy_operation(operation_id: int):
             """Operation that might create unhealthy connections."""
-            async with leaky_pool.get_connection() as engine:
+            async with leaky_pool.get_connection():
                 # Simulate work
                 await asyncio.sleep(0.01)
 
                 # Simulate health check failure for some connections
                 if operation_id % 4 == 0:
                     # Mock a health check failure
-                    with patch.object(
-                        leaky_pool, "_validate_connection", return_value=False
-                    ):
+                    with patch.object(leaky_pool, "_validate_connection", return_value=False):
                         health_events.append(
                             {
                                 "operation_id": operation_id,
@@ -545,7 +525,6 @@ class TestPoolManagerMonitoring:
     @pytest.mark.asyncio
     async def test_manager_performance_metrics(self, monitored_manager):
         """Test manager-level performance metrics."""
-        performance_metrics = []
 
         # Add mock pools with performance data
         for i in range(3):
@@ -571,7 +550,7 @@ class TestPoolManagerMonitoring:
         total_active = 0
         total_errors = 0
 
-        for pool_name, pool in all_pools.items():
+        for _pool_name, pool in all_pools.items():
             stats = pool.get_stats()
             total_hits += stats.pool_hits
             total_misses += stats.pool_misses
@@ -646,9 +625,7 @@ class TestPoolManagerMonitoring:
 
         # Verify alert details
         error_alerts = [a for a in alerts_triggered if a["type"] == "connection_errors"]
-        exhaust_alerts = [
-            a for a in alerts_triggered if a["type"] == "pool_exhaustions"
-        ]
+        exhaust_alerts = [a for a in alerts_triggered if a["type"] == "pool_exhaustions"]
         time_alerts = [a for a in alerts_triggered if a["type"] == "response_time"]
 
         assert len(error_alerts) >= 1
@@ -712,7 +689,5 @@ class TestWebSocketPoolMonitoring:
         await asyncio.gather(*tasks)
 
         # Analyze metrics
-        connect_events = [m for m in connection_metrics if m["event"] == "connected"]
-        disconnect_events = [
-            m for m in connection_metrics if m["event"] == "disconnected"
-        ]
+        [m for m in connection_metrics if m["event"] == "connected"]
+        [m for m in connection_metrics if m["event"] == "disconnected"]

@@ -11,7 +11,8 @@ import sys
 from datetime import datetime
 
 # Add the project root to Python path
-sys.path.insert(0, '/d/Python/GITHUB/hwa-new')
+sys.path.insert(0, "/d/Python/GITHUB/hwa-new")
+
 
 async def test_health_models():
     """Test health models functionality."""
@@ -20,11 +21,11 @@ async def test_health_models():
 
     try:
         from resync.core.health_models import (
-            HealthStatus,
-            ComponentType,
             ComponentHealth,
+            ComponentType,
             HealthCheckConfig,
             HealthCheckResult,
+            HealthStatus,
         )
 
         # Test health status
@@ -62,7 +63,9 @@ async def test_health_models():
             components={"test": comp_health},
             summary={"healthy": 1},
         )
-        print(f"   ✅ HealthCheckResult: {result.overall_status}, {len(result.components)} components")
+        print(
+            f"   ✅ HealthCheckResult: {result.overall_status}, {len(result.components)} components"
+        )
 
         print("   ✅ Health models test completed")
         print()
@@ -72,6 +75,7 @@ async def test_health_models():
     except Exception as e:
         print(f"❌ Health models test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -87,7 +91,9 @@ async def test_observer_pattern_standalone():
 
         # Define the classes inline to avoid import issues
         class HealthMonitoringEvent:
-            def __init__(self, event_type, component_name, health_status, timestamp=None, metadata=None):
+            def __init__(
+                self, event_type, component_name, health_status, timestamp=None, metadata=None
+            ):
                 self.event_type = event_type
                 self.component_name = component_name
                 self.health_status = health_status
@@ -100,7 +106,9 @@ async def test_observer_pattern_standalone():
 
             async def on_health_status_changed(self, event):
                 self.events_received.append(("status_changed", event))
-                print(f"      📝 Observer received status change: {event.component_name} -> {event.health_status}")
+                print(
+                    f"      📝 Observer received status change: {event.component_name} -> {event.health_status}"
+                )
 
             async def on_component_check_completed(self, event):
                 self.events_received.append(("check_completed", event))
@@ -125,10 +133,14 @@ async def test_observer_pattern_standalone():
                     self._observers.remove(observer)
                     print(f"      ➖ Detached observer: {len(self._observers)} remaining")
 
-            async def notify_status_changed(self, component_name, old_status, new_status, component_health):
+            async def notify_status_changed(
+                self, component_name, old_status, new_status, component_health
+            ):
                 event = HealthMonitoringEvent(
-                    "status_changed", component_name, new_status,
-                    metadata={"old_status": old_status, "component_health": component_health}
+                    "status_changed",
+                    component_name,
+                    new_status,
+                    metadata={"old_status": old_status, "component_health": component_health},
                 )
 
                 for observer in self._observers:
@@ -153,7 +165,9 @@ async def test_observer_pattern_standalone():
             "test_component", HealthStatus.HEALTHY, HealthStatus.DEGRADED, None
         )
 
-        print(f"   ✅ Events received: observer1={len(observer1.events_received)}, observer2={len(observer2.events_received)}")
+        print(
+            f"   ✅ Events received: observer1={len(observer1.events_received)}, observer2={len(observer2.events_received)}"
+        )
 
         print("   📋 Testing detach...")
         await subject.detach(observer1)
@@ -167,6 +181,7 @@ async def test_observer_pattern_standalone():
     except Exception as e:
         print(f"❌ Observer pattern test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -197,7 +212,9 @@ async def test_complexity_reduction():
             print(f"   ✅ Complexity reduction target achieved: {reduction_percentage:.1f}% >= 50%")
         else:
             print(f"   ⚠️  Complexity reduction below target: {reduction_percentage:.1f}% < 50%")
-            print("   ℹ️  Note: This is expected as we still need to integrate with existing health checkers")
+            print(
+                "   ℹ️  Note: This is expected as we still need to integrate with existing health checkers"
+            )
 
         print()
 
@@ -205,18 +222,21 @@ async def test_complexity_reduction():
         print("   🔧 Testing functionality preservation...")
 
         # Test health models (basic functionality)
-        from resync.core.health_models import HealthStatus, ComponentType, ComponentHealth
+        from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
 
         # Test key enums and classes exist and work
         test_cases = [
             ("HealthStatus", HealthStatus.HEALTHY),
             ("ComponentType", ComponentType.DATABASE),
-            ("ComponentHealth", ComponentHealth(
-                name="test", component_type=ComponentType.DATABASE, status=HealthStatus.HEALTHY
-            )),
+            (
+                "ComponentHealth",
+                ComponentHealth(
+                    name="test", component_type=ComponentType.DATABASE, status=HealthStatus.HEALTHY
+                ),
+            ),
         ]
 
-        for name, obj in test_cases:
+        for name, _obj in test_cases:
             print(f"      ✅ {name} class works correctly")
 
         print("   ✅ Functionality preservation test completed")
@@ -247,7 +267,7 @@ async def test_refactored_service_structure():
         total_lines = 0
         for file_path in files_to_check:
             if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, encoding="utf-8") as f:
                     lines = len(f.readlines())
                     total_lines += lines
                     print(f"   ✅ {file_path}: {lines} lines")
@@ -260,7 +280,7 @@ async def test_refactored_service_structure():
         print("   🔍 Checking class definitions...")
 
         # Check health_service_refactored.py
-        with open("resync/core/health_service_refactored.py", 'r') as f:
+        with open("resync/core/health_service_refactored.py") as f:
             content = f.read()
             if "class HealthCheckServiceRefactored:" in content:
                 print("      ✅ HealthCheckServiceRefactored class found")
@@ -270,7 +290,7 @@ async def test_refactored_service_structure():
                 print("      ✅ Global service getter found")
 
         # Check health_service_facade.py
-        with open("resync/core/health/health_service_facade.py", 'r') as f:
+        with open("resync/core/health/health_service_facade.py") as f:
             content = f.read()
             if "class HealthServiceFacade:" in content:
                 print("      ✅ HealthServiceFacade class found")
@@ -278,7 +298,7 @@ async def test_refactored_service_structure():
                 print("      ✅ Observer pattern integration found")
 
         # Check observer file
-        with open("resync/core/health/health_monitoring_observer.py", 'r') as f:
+        with open("resync/core/health/health_monitoring_observer.py") as f:
             content = f.read()
             if "class HealthMonitorObserver:" in content:
                 print("      ✅ HealthMonitorObserver class found")
@@ -293,6 +313,7 @@ async def test_refactored_service_structure():
     except Exception as e:
         print(f"❌ Refactored service structure test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -337,9 +358,8 @@ async def main():
         print("   ✅ Backward compatibility layer implemented")
         print("   ✅ All core functionality preserved")
         return 0
-    else:
-        print("⚠️  Some tests failed. Please review the issues above.")
-        return 1
+    print("⚠️  Some tests failed. Please review the issues above.")
+    return 1
 
 
 if __name__ == "__main__":
@@ -352,5 +372,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n💥 Test suite failed with error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

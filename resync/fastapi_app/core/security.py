@@ -1,4 +1,3 @@
-
 """
 Security utilities for FastAPI application.
 
@@ -48,23 +47,21 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
         )
 
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
+    return jwt.encode(
         to_encode,
         settings.secret_key.get_secret_value(),
         algorithm=settings.algorithm,
     )
-    return encoded_jwt
 
 
 def verify_token(token: str) -> dict | None:
     """Verify JWT token and return payload."""
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             token,
             settings.secret_key.get_secret_value(),
             algorithms=[settings.algorithm],
         )
-        return payload
     except JWTError:
         return None
 
@@ -179,6 +176,7 @@ def check_permissions(required_permissions: list, user_permissions: list) -> boo
 
 def require_permissions(required_permissions: list):
     """Dependency to check user permissions."""
+
     def permission_checker(current_user: dict = Depends(get_current_user)):
         if not check_permissions(required_permissions, current_user.get("permissions", [])):
             raise HTTPException(
@@ -186,11 +184,13 @@ def require_permissions(required_permissions: list):
                 detail="Insufficient permissions",
             )
         return current_user
+
     return permission_checker
 
 
 def require_role(required_roles: list):
     """Dependency to check user role."""
+
     def role_checker(current_user: dict = Depends(get_current_user)):
         user_role = current_user.get("role", "")
         if user_role not in required_roles:
@@ -199,4 +199,5 @@ def require_role(required_roles: list):
                 detail=f"Role '{user_role}' not authorized",
             )
         return current_user
+
     return role_checker

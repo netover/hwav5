@@ -40,6 +40,7 @@ try:
         CheckpointMetadata,
         CheckpointTuple,
     )
+
     LANGGRAPH_AVAILABLE = True
 except ImportError:
     LANGGRAPH_AVAILABLE = False
@@ -52,6 +53,7 @@ except ImportError:
 # =============================================================================
 # MODELS
 # =============================================================================
+
 
 class CheckpointRecord:
     """
@@ -89,6 +91,7 @@ class CheckpointRecord:
 # =============================================================================
 # CHECKPOINTER
 # =============================================================================
+
 
 class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else object):
     """
@@ -178,19 +181,15 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
         json_str = json.dumps(data, default=str, ensure_ascii=False)
 
         if len(json_str) > self.compress_threshold:
-            compressed = gzip.compress(json_str.encode('utf-8'))
+            compressed = gzip.compress(json_str.encode("utf-8"))
             return None, compressed
 
         return json_str, None
 
-    def _deserialize(
-        self,
-        json_str: str | None,
-        compressed: bytes | None
-    ) -> dict[str, Any]:
+    def _deserialize(self, json_str: str | None, compressed: bytes | None) -> dict[str, Any]:
         """Deserialize checkpoint data."""
         if compressed:
-            json_str = gzip.decompress(compressed).decode('utf-8')
+            json_str = gzip.decompress(compressed).decode("utf-8")
 
         if json_str:
             return json.loads(json_str)
@@ -242,8 +241,10 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
                 checkpoint_id, parent_id, checkpoint_json, compressed, metadata = row
 
                 checkpoint_data = self._deserialize(
-                    checkpoint_json if isinstance(checkpoint_json, str) else json.dumps(checkpoint_json),
-                    compressed
+                    checkpoint_json
+                    if isinstance(checkpoint_json, str)
+                    else json.dumps(checkpoint_json),
+                    compressed,
                 )
 
                 if LANGGRAPH_AVAILABLE:
@@ -251,7 +252,11 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
                         config=config,
                         checkpoint=checkpoint_data,
                         metadata=metadata or {},
-                        parent_config={"configurable": {"thread_id": thread_id, "checkpoint_id": parent_id}} if parent_id else None,
+                        parent_config={
+                            "configurable": {"thread_id": thread_id, "checkpoint_id": parent_id}
+                        }
+                        if parent_id
+                        else None,
                     )
                 return (config, checkpoint_data, metadata or {}, parent_id)
 
@@ -285,6 +290,7 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
 
         if not checkpoint_id:
             import uuid
+
             checkpoint_id = str(uuid.uuid4())
 
         from sqlalchemy import text
@@ -311,15 +317,18 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
 
         try:
             async with get_db_session() as session:
-                await session.execute(query, {
-                    "thread_id": thread_id,
-                    "checkpoint_id": checkpoint_id,
-                    "parent_id": parent_id,
-                    "checkpoint": json_str or "{}",
-                    "compressed": compressed,
-                    "metadata": json.dumps(metadata or {}),
-                    "expires_at": expires_at,
-                })
+                await session.execute(
+                    query,
+                    {
+                        "thread_id": thread_id,
+                        "checkpoint_id": checkpoint_id,
+                        "parent_id": parent_id,
+                        "checkpoint": json_str or "{}",
+                        "compressed": compressed,
+                        "metadata": json.dumps(metadata or {}),
+                        "expires_at": expires_at,
+                    },
+                )
                 await session.commit()
 
             logger.debug(
@@ -385,27 +394,52 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
 
                 checkpoints = []
                 for row in rows:
-                    checkpoint_id, parent_id, checkpoint_json, compressed, metadata, created_at = row
+                    checkpoint_id, parent_id, checkpoint_json, compressed, metadata, created_at = (
+                        row
+                    )
 
                     checkpoint_data = self._deserialize(
-                        checkpoint_json if isinstance(checkpoint_json, str) else json.dumps(checkpoint_json),
-                        compressed
+                        checkpoint_json
+                        if isinstance(checkpoint_json, str)
+                        else json.dumps(checkpoint_json),
+                        compressed,
                     )
 
                     if LANGGRAPH_AVAILABLE:
-                        checkpoints.append(CheckpointTuple(
-                            config={"configurable": {"thread_id": thread_id, "checkpoint_id": checkpoint_id}},
-                            checkpoint=checkpoint_data,
-                            metadata=metadata or {},
-                            parent_config={"configurable": {"thread_id": thread_id, "checkpoint_id": parent_id}} if parent_id else None,
-                        ))
+                        checkpoints.append(
+                            CheckpointTuple(
+                                config={
+                                    "configurable": {
+                                        "thread_id": thread_id,
+                                        "checkpoint_id": checkpoint_id,
+                                    }
+                                },
+                                checkpoint=checkpoint_data,
+                                metadata=metadata or {},
+                                parent_config={
+                                    "configurable": {
+                                        "thread_id": thread_id,
+                                        "checkpoint_id": parent_id,
+                                    }
+                                }
+                                if parent_id
+                                else None,
+                            )
+                        )
                     else:
-                        checkpoints.append((
-                            {"configurable": {"thread_id": thread_id, "checkpoint_id": checkpoint_id}},
-                            checkpoint_data,
-                            metadata or {},
-                            parent_id,
-                        ))
+                        checkpoints.append(
+                            (
+                                {
+                                    "configurable": {
+                                        "thread_id": thread_id,
+                                        "checkpoint_id": checkpoint_id,
+                                    }
+                                },
+                                checkpoint_data,
+                                metadata or {},
+                                parent_id,
+                            )
+                        )
 
                 return checkpoints
 

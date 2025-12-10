@@ -33,12 +33,8 @@ class CreateResourceRequest(BaseModel):
     """Request para criar um recurso."""
 
     name: str = Field(..., description="Nome do recurso", min_length=1, max_length=100)
-    description: str | None = Field(
-        None, description="Descrição do recurso", max_length=500
-    )
-    metadata: dict | None = Field(
-        default_factory=dict, description="Metadados adicionais"
-    )
+    description: str | None = Field(None, description="Descrição do recurso", max_length=500)
+    metadata: dict | None = Field(default_factory=dict, description="Metadados adicionais")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -213,7 +209,9 @@ async def create_resource(
 
     # Execute with idempotency
     return await manager.execute_idempotent(
-        key=idempotency_key, func=_create_resource, ttl_seconds=86400  # 24 hours
+        key=idempotency_key,
+        func=_create_resource,
+        ttl_seconds=86400,  # 24 hours
     )
 
 
@@ -305,7 +303,9 @@ async def create_transaction(
 
     # Execute with idempotency
     return await manager.execute_idempotent(
-        key=idempotency_key, func=_create_transaction, ttl_seconds=86400  # 24 hours
+        key=idempotency_key,
+        func=_create_transaction,
+        ttl_seconds=86400,  # 24 hours
     )
 
 

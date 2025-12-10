@@ -1,28 +1,30 @@
 """Testes para o módulo de exceções customizadas."""
 
-import pytest
 from datetime import datetime
+
+import pytest
+
 from resync.core.exceptions import (
-    BaseAppException,
-    ErrorCode,
-    ErrorSeverity,
-    ValidationError,
     AuthenticationError,
     AuthorizationError,
-    ResourceNotFoundError,
-    ResourceConflictError,
+    BaseAppException,
     BusinessError,
-    RateLimitError,
-    InternalError,
-    IntegrationError,
-    ServiceUnavailableError,
-    CircuitBreakerError,
-    TimeoutError,
-    ConfigurationError,
-    TWSConnectionError,
-    LLMError,
-    DatabaseError,
     CacheError,
+    CircuitBreakerError,
+    ConfigurationError,
+    DatabaseError,
+    ErrorCode,
+    ErrorSeverity,
+    IntegrationError,
+    InternalError,
+    LLMError,
+    RateLimitError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+    ServiceUnavailableError,
+    TimeoutError,
+    TWSConnectionError,
+    ValidationError,
     get_exception_by_error_code,
 )
 
@@ -32,9 +34,7 @@ class TestBaseAppException:
 
     def test_basic_initialization(self):
         """Testa inicialização básica."""
-        exc = BaseAppException(
-            message="Test error", error_code=ErrorCode.INTERNAL_ERROR
-        )
+        exc = BaseAppException(message="Test error", error_code=ErrorCode.INTERNAL_ERROR)
 
         assert exc.message == "Test error"
         assert exc.error_code == ErrorCode.INTERNAL_ERROR
@@ -120,9 +120,7 @@ class TestClientErrors:
 
     def test_authentication_error(self):
         """Testa AuthenticationError."""
-        exc = AuthenticationError(
-            message="Invalid credentials", correlation_id="test-id"
-        )
+        exc = AuthenticationError(message="Invalid credentials", correlation_id="test-id")
 
         assert exc.status_code == 401
         assert exc.error_code == ErrorCode.AUTHENTICATION_FAILED
@@ -130,9 +128,7 @@ class TestClientErrors:
 
     def test_authorization_error(self):
         """Testa AuthorizationError."""
-        exc = AuthorizationError(
-            message="Insufficient permissions", correlation_id="test-id"
-        )
+        exc = AuthorizationError(message="Insufficient permissions", correlation_id="test-id")
 
         assert exc.status_code == 403
         assert exc.error_code == ErrorCode.AUTHORIZATION_FAILED
@@ -155,9 +151,7 @@ class TestClientErrors:
 
     def test_resource_conflict_error(self):
         """Testa ResourceConflictError."""
-        exc = ResourceConflictError(
-            message="Resource already exists", correlation_id="test-id"
-        )
+        exc = ResourceConflictError(message="Resource already exists", correlation_id="test-id")
 
         assert exc.status_code == 409
         assert exc.error_code == ErrorCode.RESOURCE_CONFLICT
@@ -173,9 +167,7 @@ class TestClientErrors:
 
     def test_rate_limit_error(self):
         """Testa RateLimitError."""
-        exc = RateLimitError(
-            message="Too many requests", retry_after=60, correlation_id="test-id"
-        )
+        exc = RateLimitError(message="Too many requests", retry_after=60, correlation_id="test-id")
 
         assert exc.status_code == 429
         assert exc.error_code == ErrorCode.RATE_LIMIT_EXCEEDED
@@ -263,9 +255,7 @@ class TestDomainSpecificErrors:
 
     def test_tws_connection_error(self):
         """Testa TWSConnectionError."""
-        exc = TWSConnectionError(
-            message="TWS connection failed", correlation_id="test-id"
-        )
+        exc = TWSConnectionError(message="TWS connection failed", correlation_id="test-id")
 
         assert exc.status_code == 502
         assert exc.error_code == ErrorCode.TWS_CONNECTION_ERROR
@@ -274,9 +264,7 @@ class TestDomainSpecificErrors:
 
     def test_llm_error(self):
         """Testa LLMError."""
-        exc = LLMError(
-            message="LLM request failed", model_name="gpt-4", correlation_id="test-id"
-        )
+        exc = LLMError(message="LLM request failed", model_name="gpt-4", correlation_id="test-id")
 
         assert exc.status_code == 502
         assert exc.error_code == ErrorCode.LLM_ERROR
@@ -316,33 +304,16 @@ class TestUtilities:
 
     def test_get_exception_by_error_code(self):
         """Testa get_exception_by_error_code."""
-        assert (
-            get_exception_by_error_code(ErrorCode.VALIDATION_ERROR) == ValidationError
-        )
-        assert (
-            get_exception_by_error_code(ErrorCode.AUTHENTICATION_FAILED)
-            == AuthenticationError
-        )
-        assert (
-            get_exception_by_error_code(ErrorCode.RESOURCE_NOT_FOUND)
-            == ResourceNotFoundError
-        )
-        assert (
-            get_exception_by_error_code(ErrorCode.RATE_LIMIT_EXCEEDED) == RateLimitError
-        )
-        assert (
-            get_exception_by_error_code(ErrorCode.INTEGRATION_ERROR) == IntegrationError
-        )
-        assert (
-            get_exception_by_error_code(ErrorCode.CIRCUIT_BREAKER_OPEN)
-            == CircuitBreakerError
-        )
+        assert get_exception_by_error_code(ErrorCode.VALIDATION_ERROR) == ValidationError
+        assert get_exception_by_error_code(ErrorCode.AUTHENTICATION_FAILED) == AuthenticationError
+        assert get_exception_by_error_code(ErrorCode.RESOURCE_NOT_FOUND) == ResourceNotFoundError
+        assert get_exception_by_error_code(ErrorCode.RATE_LIMIT_EXCEEDED) == RateLimitError
+        assert get_exception_by_error_code(ErrorCode.INTEGRATION_ERROR) == IntegrationError
+        assert get_exception_by_error_code(ErrorCode.CIRCUIT_BREAKER_OPEN) == CircuitBreakerError
         assert get_exception_by_error_code(ErrorCode.DATABASE_ERROR) == DatabaseError
 
         # Código não mapeado deve retornar InternalError
-        assert (
-            get_exception_by_error_code(ErrorCode.UNHANDLED_EXCEPTION) == InternalError
-        )
+        assert get_exception_by_error_code(ErrorCode.UNHANDLED_EXCEPTION) == InternalError
 
 
 class TestExceptionChaining:

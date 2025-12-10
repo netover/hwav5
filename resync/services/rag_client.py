@@ -19,6 +19,7 @@ logger = get_logger(__name__)
 
 class RAGJobStatus(BaseModel):
     """Model for RAG job status response"""
+
     job_id: str
     status: str  # queued, processing, completed, failed
     progress: int | None = None
@@ -27,6 +28,7 @@ class RAGJobStatus(BaseModel):
 
 class RAGUploadResponse(BaseModel):
     """Model for RAG upload response"""
+
     job_id: str
     filename: str
     status: str
@@ -52,10 +54,7 @@ class RAGServiceClient:
         # Initialize HTTP client
         self.http_client = httpx.AsyncClient(
             timeout=httpx.Timeout(timeout=30.0, connect=10.0),
-            limits=httpx.Limits(
-                max_connections=10,
-                max_keepalive_connections=5
-            )
+            limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
         )
 
         # Centralized circuit breaker manager
@@ -83,7 +82,7 @@ class RAGServiceClient:
         async def _once():
             return await self.http_client.post(
                 f"{self.rag_service_url}/api/v1/upload",
-                files={"file": (file.filename, file.file, file.content_type)}
+                files={"file": (file.filename, file.file, file.content_type)},
             )
 
         async def _call():
@@ -97,7 +96,7 @@ class RAGServiceClient:
             base_delay=self.retry_backoff,
             cap=5.0,
             jitter=True,
-            retry_on=(httpx.RequestError, httpx.TimeoutException)
+            retry_on=(httpx.RequestError, httpx.TimeoutException),
         )
         data = resp.json()
         return data["job_id"]
@@ -125,23 +124,20 @@ class RAGServiceClient:
             resp = await self.cbm.call("rag_service", _once)
             if resp.status_code == 404:
                 return RAGJobStatus(
-                    job_id=job_id,
-                    status="not_found",
-                    progress=0,
-                    message="Job ID not found"
+                    job_id=job_id, status="not_found", progress=0, message="Job ID not found"
                 )
             resp.raise_for_status()
             return RAGJobStatus(**resp.json())
 
-        job_status = await retry_with_backoff_async(
+        return await retry_with_backoff_async(
             _call,
             retries=self.max_retries,
             base_delay=self.retry_backoff,
             cap=5.0,
             jitter=True,
-            retry_on=(httpx.RequestError, httpx.TimeoutException)
+            retry_on=(httpx.RequestError, httpx.TimeoutException),
         )
-        return job_status
+
 
 # Global instance
 rag_client = RAGServiceClient()

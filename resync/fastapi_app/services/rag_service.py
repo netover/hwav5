@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RAGDocument:
     """Represents a document in the RAG system."""
+
     file_id: str
     filename: str
     content: str
@@ -40,6 +41,7 @@ class RAGDocument:
 @dataclass
 class RAGSearchResult:
     """Represents a search result from RAG."""
+
     chunk_id: str
     doc_id: str
     content: str
@@ -211,13 +213,15 @@ class RAGIntegrationService:
 
             results = []
             for hit in hits:
-                results.append(RAGSearchResult(
-                    chunk_id=hit.get("chunk_id", ""),
-                    doc_id=hit.get("doc_id", ""),
-                    content=hit.get("payload", {}).get("text", ""),
-                    score=hit.get("score", 0.0),
-                    metadata=hit.get("payload", {}),
-                ))
+                results.append(
+                    RAGSearchResult(
+                        chunk_id=hit.get("chunk_id", ""),
+                        doc_id=hit.get("doc_id", ""),
+                        content=hit.get("payload", {}).get("text", ""),
+                        score=hit.get("score", 0.0),
+                        metadata=hit.get("payload", {}),
+                    )
+                )
 
             return results
         except Exception as e:
@@ -238,22 +242,26 @@ class RAGIntegrationService:
 
             if current_size >= chunk_size:
                 chunk_text = " ".join(current_chunk)
-                chunks.append({
-                    "id": hashlib.sha256(chunk_text.encode()).hexdigest()[:16],
-                    "text": chunk_text,
-                    "size": len(chunk_text),
-                })
+                chunks.append(
+                    {
+                        "id": hashlib.sha256(chunk_text.encode()).hexdigest()[:16],
+                        "text": chunk_text,
+                        "size": len(chunk_text),
+                    }
+                )
                 current_chunk = []
                 current_size = 0
 
         # Add remaining text
         if current_chunk:
             chunk_text = " ".join(current_chunk)
-            chunks.append({
-                "id": hashlib.sha256(chunk_text.encode()).hexdigest()[:16],
-                "text": chunk_text,
-                "size": len(chunk_text),
-            })
+            chunks.append(
+                {
+                    "id": hashlib.sha256(chunk_text.encode()).hexdigest()[:16],
+                    "text": chunk_text,
+                    "size": len(chunk_text),
+                }
+            )
 
         return chunks
 
@@ -278,16 +286,18 @@ class RAGIntegrationService:
 
                 if overlap > 0:
                     score = overlap / max(len(query_words), 1)
-                    results.append(RAGSearchResult(
-                        chunk_id=chunk["id"],
-                        doc_id=file_id,
-                        content=chunk["text"][:200] + "...",
-                        score=score,
-                        metadata={
-                            "filename": doc.filename,
-                            "source": doc.filename,
-                        },
-                    ))
+                    results.append(
+                        RAGSearchResult(
+                            chunk_id=chunk["id"],
+                            doc_id=file_id,
+                            content=chunk["text"][:200] + "...",
+                            score=score,
+                            metadata={
+                                "filename": doc.filename,
+                                "source": doc.filename,
+                            },
+                        )
+                    )
 
         # Sort by score and return top_k
         results.sort(key=lambda x: x.score, reverse=True)
@@ -336,7 +346,9 @@ class RAGIntegrationService:
             "total_chunks": total_chunks,
             "documents_by_status": {
                 "pending": len([d for d in self._documents.values() if d.status == "pending"]),
-                "processing": len([d for d in self._documents.values() if d.status == "processing"]),
+                "processing": len(
+                    [d for d in self._documents.values() if d.status == "processing"]
+                ),
                 "completed": len([d for d in self._documents.values() if d.status == "completed"]),
                 "failed": len([d for d in self._documents.values() if d.status == "failed"]),
             },

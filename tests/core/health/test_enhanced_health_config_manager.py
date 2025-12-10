@@ -5,12 +5,11 @@ This module contains unit tests for the EnhancedHealthConfigurationManager class
 """
 
 import os
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-
-from resync.core.health_models import HealthCheckConfig
 from resync.core.health.enhanced_health_config_manager import EnhancedHealthConfigurationManager
 from resync.core.health.health_checkers.health_checker_factory import HealthCheckerFactory
+from resync.core.health_models import HealthCheckConfig
 
 
 class TestEnhancedHealthConfigurationManager:
@@ -170,7 +169,7 @@ class TestEnhancedHealthConfigurationManager:
         config = HealthCheckConfig(
             check_interval_seconds=-1,
             timeout_seconds=60,
-            database_connection_threshold_percent=150  # Invalid: > 100
+            database_connection_threshold_percent=150,  # Invalid: > 100
         )
         config_manager = EnhancedHealthConfigurationManager(config)
 

@@ -129,9 +129,7 @@ class CORSMonitor:
             method=method,
         )
 
-        logger.warning(
-            f"CORS violation: {origin} -> {path} ({method}). Details: {details}"
-        )
+        logger.warning(f"CORS violation: {origin} -> {path} ({method}). Details: {details}")
 
     def get_violations(self, limit: int = 100) -> list[dict[str, Any]]:
         """
@@ -162,9 +160,7 @@ class CORSMonitor:
             "total_violations": total_violations,
             "unique_origins": unique_origins,
             "blocked_origins_count": blocked_origins_count,
-            "violation_rate": (
-                total_violations / total_requests if total_requests > 0 else 0
-            ),
+            "violation_rate": (total_violations / total_requests if total_requests > 0 else 0),
             "last_violation": self.violations[-1] if self.violations else None,
         }
 
@@ -229,9 +225,7 @@ class CORSMonitoringMiddleware:
                     access_method = request.headers.get("access-control-request-method")
                     if origin:
                         # Log preflight request
-                        self.cors_monitor.monitor_request(
-                            request, CORSOperation.PREFLIGHT
-                        )
+                        self.cors_monitor.monitor_request(request, CORSOperation.PREFLIGHT)
 
                         # Check if origin is allowed
                         # For preflight requests, we'll check against our allowed origins

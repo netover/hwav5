@@ -50,9 +50,7 @@ async def test_teams_integration_multiple_resolutions():
     async def teams_factory():
         nonlocal factory_call_count
         factory_call_count += 1
-        config = TeamsConfig(
-            enabled=True, webhook_url="https://test.webhook.office.com/webhook"
-        )
+        config = TeamsConfig(enabled=True, webhook_url="https://test.webhook.office.com/webhook")
         return TeamsIntegration(config)
 
     container.register_factory(TeamsIntegration, teams_factory, ServiceScope.SINGLETON)
@@ -74,9 +72,7 @@ async def test_teams_integration_multiple_resolutions():
 async def test_teams_integration_shutdown():
     """Test Teams integration shutdown."""
     # Create Teams integration
-    config = TeamsConfig(
-        enabled=True, webhook_url="https://test.webhook.office.com/webhook"
-    )
+    config = TeamsConfig(enabled=True, webhook_url="https://test.webhook.office.com/webhook")
     teams_integration = TeamsIntegration(config)
 
     # Mock the aiohttp session

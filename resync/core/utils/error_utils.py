@@ -248,7 +248,7 @@ def extract_validation_errors(
     """Extract validation error details from FastAPI or Pydantic validation errors."""
     errors = []
 
-    if isinstance(validation_error, RequestValidationError) or isinstance(validation_error, ValidationError):
+    if isinstance(validation_error, (RequestValidationError, ValidationError)):
         for error in validation_error.errors():
             errors.append(
                 {
@@ -437,9 +437,7 @@ def register_exception_handlers(app):
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         correlation_id = generate_correlation_id()
         builder = (
-            ErrorResponseBuilder()
-            .with_correlation_id(correlation_id)
-            .with_request_context(request)
+            ErrorResponseBuilder().with_correlation_id(correlation_id).with_request_context(request)
         )
 
         # Map HTTP status codes to appropriate error types
@@ -459,9 +457,7 @@ def register_exception_handlers(app):
             error_response = builder.build_system_error("internal_server_error")
 
         error_response.error_code = f"HTTP_{exc.status_code}"
-        error_response.message = (
-            exc.detail if exc.detail else f"HTTP Error {exc.status_code}"
-        )
+        error_response.message = exc.detail if exc.detail else f"HTTP Error {exc.status_code}"
 
         log_error_response(error_response)
 
@@ -498,4 +494,5 @@ def create_error_response_from_exception(
     """Create standardized error response from any exception with security considerations."""
     # Lazy import to avoid circular dependency
     from .error_factories import ErrorFactory
+
     return ErrorFactory.create_error_response(exception, request, correlation_id)

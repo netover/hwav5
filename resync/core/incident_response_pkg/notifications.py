@@ -56,7 +56,7 @@ class NotificationManager:
             extra={
                 "channel": channel,
                 "incident_id": incident.id,
-            }
+            },
         )
 
         # In production, implement actual channel integrations

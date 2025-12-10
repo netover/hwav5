@@ -42,14 +42,12 @@ __all__ = [
     "Embedder",
     "VectorStore",
     "Retriever",
-
     # Embedding Service (LiteLLM multi-provider)
     "EmbeddingService",
     "MultiProviderEmbeddingService",
     "EmbeddingProvider",
     "EmbeddingConfig",
     "create_embedding_service",
-
     # Document Parsing (PDF/HTML/Markdown)
     "DocumentParser",
     "PDFParser",
@@ -61,14 +59,11 @@ __all__ = [
     "create_document_parser",
     "create_pdf_parser",
     "create_html_parser",
-
     # Vector Store (pgvector)
     "PgVectorStore",
     "get_default_store",
-
     # Retrieval
     "RagRetriever",
-
     # Ingestion
     "IngestService",
 ]

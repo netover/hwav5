@@ -3,7 +3,6 @@ Connection pool base classes and configuration for the Resync project.
 Separated to follow Single Responsibility Principle.
 """
 
-
 import asyncio
 import dataclasses
 import logging
@@ -38,7 +37,7 @@ class ConnectionPoolStats:
     pool_misses: int = 0
     pool_exhaustions: int = 0
     acquisition_attempts: int = 0  # Nova métrica para contagem de tentativas de aquisição
-    session_acquisitions: int = 0   # Nova métrica para contagem de sessões adquiridas com sucesso
+    session_acquisitions: int = 0  # Nova métrica para contagem de sessões adquiridas com sucesso
     last_health_check: datetime | None = None
     average_wait_time: float = 0.0
     peak_connections: int = 0
@@ -85,9 +84,7 @@ class ConnectionPool(ABC, Generic[T]):
                 self._initialized = True
                 logger.info(f"Initialized {self.config.pool_name} connection pool")
             except Exception as e:
-                logger.error(
-                    f"Failed to initialize {self.config.pool_name} connection pool: {e}"
-                )
+                logger.error(f"Failed to initialize {self.config.pool_name} connection pool: {e}")
                 raise
 
     async def _setup_pool(self) -> None:
@@ -112,9 +109,7 @@ class ConnectionPool(ABC, Generic[T]):
                 self._shutdown = True
                 logger.info(f"Closed {self.config.pool_name} connection pool")
             except Exception as e:
-                logger.error(
-                    f"Error closing {self.config.pool_name} connection pool: {e}"
-                )
+                logger.error(f"Error closing {self.config.pool_name} connection pool: {e}")
                 raise
 
     async def _close_pool(self) -> None:

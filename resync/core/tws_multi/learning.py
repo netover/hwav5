@@ -33,8 +33,9 @@ class TWSLearningStore:
         """Close the store."""
         self._initialized = False
 
-    async def record_outcome(self, job_name: str, action: str, outcome: str,
-                            details: dict | None = None) -> Feedback:
+    async def record_outcome(
+        self, job_name: str, action: str, outcome: str, details: dict | None = None
+    ) -> Feedback:
         """Record an action outcome for learning."""
         return await self._store.feedback.add_feedback(
             session_id=f"tws_{job_name}",
@@ -42,14 +43,15 @@ class TWSLearningStore:
             query_text=action,
             response_text=outcome,
             is_positive=outcome == "success",
-            metadata={"job_name": job_name, "details": details or {}}
+            metadata={"job_name": job_name, "details": details or {}},
         )
 
     async def get_job_outcomes(self, job_name: str, limit: int = 100) -> list[Feedback]:
         """Get outcomes for a job."""
         all_feedback = await self._store.feedback.get_all(limit=limit * 2)
-        return [f for f in all_feedback
-                if f.metadata_ and f.metadata_.get("job_name") == job_name][:limit]
+        return [f for f in all_feedback if f.metadata_ and f.metadata_.get("job_name") == job_name][
+            :limit
+        ]
 
     async def get_success_rate(self, job_name: str, window: int = 100) -> float:
         """Get success rate for a job."""
@@ -61,6 +63,7 @@ class TWSLearningStore:
 
 
 _instance: TWSLearningStore | None = None
+
 
 def get_tws_learning_store() -> TWSLearningStore:
     """Get the singleton TWSLearningStore instance."""

@@ -66,9 +66,7 @@ async def test_ingest_with_deduplication(ingest_service, mock_embedder, mock_vec
     # Simulate one chunk already exists
     def mock_exists(sha, collection):
         # First chunk (hash of "This is a test") is duplicate
-        if sha == hashlib.sha256(b"This is a test").hexdigest():
-            return True
-        return False
+        return sha == hashlib.sha256(b"This is a test").hexdigest()
 
     mock_vector_store.exists_by_sha256.side_effect = mock_exists
 

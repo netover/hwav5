@@ -35,11 +35,7 @@ class BaseRepository(Generic[ModelT]):
                 super().__init__(TWSJobStatus, session_factory)
     """
 
-    def __init__(
-        self,
-        model: type[ModelT],
-        session_factory: async_sessionmaker | None = None
-    ):
+    def __init__(self, model: type[ModelT], session_factory: async_sessionmaker | None = None):
         """
         Initialize repository.
 
@@ -107,17 +103,11 @@ class BaseRepository(Generic[ModelT]):
             Model instance or None
         """
         async with self._get_session() as session:
-            result = await session.execute(
-                select(self.model).where(self.model.id == id)
-            )
+            result = await session.execute(select(self.model).where(self.model.id == id))
             return result.scalar_one_or_none()
 
     async def get_all(
-        self,
-        limit: int = 100,
-        offset: int = 0,
-        order_by: str | None = None,
-        desc: bool = True
+        self, limit: int = 100, offset: int = 0, order_by: str | None = None, desc: bool = True
     ) -> list[ModelT]:
         """
         Get all records with pagination.
@@ -148,7 +138,7 @@ class BaseRepository(Generic[ModelT]):
         limit: int = 100,
         offset: int = 0,
         order_by: str | None = None,
-        desc: bool = True
+        desc: bool = True,
     ) -> list[ModelT]:
         """
         Find records matching filters.
@@ -209,19 +199,12 @@ class BaseRepository(Generic[ModelT]):
         """
         async with self._get_session() as session:
             result = await session.execute(
-                update(self.model)
-                .where(self.model.id == id)
-                .values(**kwargs)
-                .returning(self.model)
+                update(self.model).where(self.model.id == id).values(**kwargs).returning(self.model)
             )
             await session.commit()
             return result.scalar_one_or_none()
 
-    async def update_many(
-        self,
-        filters: dict[str, Any],
-        values: dict[str, Any]
-    ) -> int:
+    async def update_many(self, filters: dict[str, Any], values: dict[str, Any]) -> int:
         """
         Update multiple records matching filters.
 
@@ -242,9 +225,7 @@ class BaseRepository(Generic[ModelT]):
                 return 0
 
             result = await session.execute(
-                update(self.model)
-                .where(and_(*conditions))
-                .values(**values)
+                update(self.model).where(and_(*conditions)).values(**values)
             )
             await session.commit()
             return result.rowcount
@@ -260,9 +241,7 @@ class BaseRepository(Generic[ModelT]):
             True if deleted, False if not found
         """
         async with self._get_session() as session:
-            result = await session.execute(
-                delete(self.model).where(self.model.id == id)
-            )
+            result = await session.execute(delete(self.model).where(self.model.id == id))
             await session.commit()
             return result.rowcount > 0
 
@@ -285,9 +264,7 @@ class BaseRepository(Generic[ModelT]):
             if not conditions:
                 return 0
 
-            result = await session.execute(
-                delete(self.model).where(and_(*conditions))
-            )
+            result = await session.execute(delete(self.model).where(and_(*conditions)))
             await session.commit()
             return result.rowcount
 
@@ -329,9 +306,7 @@ class BaseRepository(Generic[ModelT]):
         return count > 0
 
     async def execute_raw(
-        self,
-        query: str,
-        params: dict[str, Any] | None = None
+        self, query: str, params: dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
         """
         Execute a raw SQL query.
@@ -349,9 +324,9 @@ class BaseRepository(Generic[ModelT]):
             # Try to fetch results if it's a SELECT
             try:
                 rows = result.fetchall()
-                if rows and hasattr(result, 'keys'):
+                if rows and hasattr(result, "keys"):
                     keys = result.keys()
-                    return [dict(zip(keys, row)) for row in rows]
+                    return [dict(zip(keys, row, strict=False)) for row in rows]
                 return []
             except Exception:
                 await session.commit()
@@ -371,7 +346,7 @@ class TimestampedRepository(BaseRepository[ModelT]):
         end: datetime,
         timestamp_field: str = "timestamp",
         filters: dict[str, Any] | None = None,
-        limit: int = 1000
+        limit: int = 1000,
     ) -> list[ModelT]:
         """
         Find records within a time range.
@@ -405,9 +380,7 @@ class TimestampedRepository(BaseRepository[ModelT]):
             return list(result.scalars().all())
 
     async def get_latest(
-        self,
-        filters: dict[str, Any] | None = None,
-        timestamp_field: str = "timestamp"
+        self, filters: dict[str, Any] | None = None, timestamp_field: str = "timestamp"
     ) -> ModelT | None:
         """
         Get the most recent record.
@@ -434,11 +407,7 @@ class TimestampedRepository(BaseRepository[ModelT]):
             result = await session.execute(query)
             return result.scalar_one_or_none()
 
-    async def delete_older_than(
-        self,
-        cutoff: datetime,
-        timestamp_field: str = "timestamp"
-    ) -> int:
+    async def delete_older_than(self, cutoff: datetime, timestamp_field: str = "timestamp") -> int:
         """
         Delete records older than cutoff.
 
@@ -454,8 +423,6 @@ class TimestampedRepository(BaseRepository[ModelT]):
                 return 0
 
             ts_field = getattr(self.model, timestamp_field)
-            result = await session.execute(
-                delete(self.model).where(ts_field < cutoff)
-            )
+            result = await session.execute(delete(self.model).where(ts_field < cutoff))
             await session.commit()
             return result.rowcount

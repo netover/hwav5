@@ -1,4 +1,3 @@
-
 from datetime import datetime
 
 from passlib.context import CryptContext
@@ -10,6 +9,7 @@ password_hasher = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class LoginRequest(BaseModel):
     """Request model for login operations."""
+
     username: str = Field(..., min_length=3, max_length=32)
     password: str = Field(..., min_length=8)
 
@@ -27,17 +27,17 @@ class LoginRequest(BaseModel):
 
 class UserCreate(BaseModel):
     """User create."""
+
     username: str = Field(
         ..., min_length=3, max_length=32, json_schema_extra={"example": "johndoe"}
     )
     email: EmailStr = Field(...)
-    password: str = Field(
-        ..., min_length=8, json_schema_extra={"example": "securepassword123!"}
-    )
+    password: str = Field(..., min_length=8, json_schema_extra={"example": "securepassword123!"})
 
 
 class UserResponse(BaseModel):
     """Response model for user operations."""
+
     id: str
     username: str
     email: EmailStr
@@ -46,11 +46,13 @@ class UserResponse(BaseModel):
 
 class TokenRequest(BaseModel):
     """Request model for token operations."""
+
     refresh_token: str = Field(...)
 
 
 class OAuthToken(BaseModel):
     """Token model for authentication."""
+
     access_token: str
     token_type: str = "bearer"
     refresh_token: str

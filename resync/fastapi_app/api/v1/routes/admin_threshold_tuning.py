@@ -48,21 +48,19 @@ router = APIRouter(prefix="/threshold-tuning", tags=["Threshold Tuning"])
 # Pydantic Models
 # =============================================================================
 
+
 class ModeRequest(BaseModel):
     """Request to set auto-tuning mode."""
+
     mode: str = Field(
-        ...,
-        description="Mode: 'off', 'low', 'mid', or 'high'",
-        pattern="^(off|low|mid|high)$"
+        ..., description="Mode: 'off', 'low', 'mid', or 'high'", pattern="^(off|low|mid|high)$"
     )
-    admin_user: str = Field(
-        default="admin",
-        description="User making the change"
-    )
+    admin_user: str = Field(default="admin", description="User making the change")
 
 
 class ThresholdRequest(BaseModel):
     """Request to set a threshold value."""
+
     value: float = Field(..., description="New threshold value")
     admin_user: str = Field(default="admin", description="User making the change")
     reason: str = Field(default="Manual adjustment via API", description="Reason for change")
@@ -70,12 +68,14 @@ class ThresholdRequest(BaseModel):
 
 class ApprovalRequest(BaseModel):
     """Request to approve/reject a recommendation."""
+
     admin_user: str = Field(default="admin", description="User performing action")
     reason: str = Field(default="", description="Optional reason")
 
 
 class ResetRequest(BaseModel):
     """Request for reset operations."""
+
     admin_user: str = Field(default="admin", description="User performing action")
 
 
@@ -83,23 +83,25 @@ class ResetRequest(BaseModel):
 # Helper Functions
 # =============================================================================
 
+
 async def _get_manager():
     """Get the ThresholdTuningManager instance."""
     try:
         from resync.core.continual_learning.threshold_tuning import get_threshold_tuning_manager
-        manager = await get_threshold_tuning_manager()
-        return manager
+
+        return await get_threshold_tuning_manager()
     except ImportError as e:
         logger.error(f"Failed to import threshold_tuning module: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Threshold tuning module not available"
-        )
+            detail="Threshold tuning module not available",
+        ) from e
 
 
 # =============================================================================
 # Status Endpoints
 # =============================================================================
+
 
 @router.get("/status")
 async def get_status() -> dict[str, Any]:
@@ -122,6 +124,7 @@ async def get_status() -> dict[str, Any]:
 # =============================================================================
 # Mode Endpoints
 # =============================================================================
+
 
 @router.get("/mode")
 async def get_mode() -> dict[str, Any]:
@@ -148,21 +151,22 @@ async def set_mode(request: ModeRequest) -> dict[str, Any]:
     """
     try:
         from resync.core.continual_learning.threshold_tuning import AutoTuningMode
+
         mode = AutoTuningMode(request.mode.lower())
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid mode: {request.mode}. Must be one of: off, low, mid, high"
-        )
+            detail=f"Invalid mode: {request.mode}. Must be one of: off, low, mid, high",
+        ) from None
 
     manager = await _get_manager()
-    result = await manager.set_mode(mode, request.admin_user)
-    return result
+    return await manager.set_mode(mode, request.admin_user)
 
 
 # =============================================================================
 # Threshold Endpoints
 # =============================================================================
+
 
 @router.get("/thresholds")
 async def get_thresholds() -> dict[str, Any]:
@@ -180,8 +184,7 @@ async def get_threshold(name: str) -> dict[str, Any]:
 
     if not threshold:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Threshold not found: {name}"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Threshold not found: {name}"
         )
 
     return {"status": "success", "threshold": threshold.to_dict()}
@@ -203,10 +206,7 @@ async def set_threshold(name: str, request: ThresholdRequest) -> dict[str, Any]:
     )
 
     if result["status"] == "error":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=result["message"]
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
 
     return result
 
@@ -215,8 +215,7 @@ async def set_threshold(name: str, request: ThresholdRequest) -> dict[str, Any]:
 async def reset_to_defaults(request: ResetRequest) -> dict[str, Any]:
     """Reset all thresholds to default values."""
     manager = await _get_manager()
-    result = await manager.reset_to_defaults(request.admin_user)
-    return result
+    return await manager.reset_to_defaults(request.admin_user)
 
 
 @router.post("/rollback")
@@ -226,10 +225,7 @@ async def rollback_to_last_good(request: ResetRequest) -> dict[str, Any]:
     result = await manager.rollback_to_last_good(request.admin_user)
 
     if result["status"] == "error":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=result["message"]
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
 
     return result
 
@@ -238,9 +234,10 @@ async def rollback_to_last_good(request: ResetRequest) -> dict[str, Any]:
 # Metrics Endpoints
 # =============================================================================
 
+
 @router.get("/metrics")
 async def get_metrics(
-    days: int = Query(default=30, ge=1, le=365, description="Number of days to aggregate")
+    days: int = Query(default=30, ge=1, le=365, description="Number of days to aggregate"),
 ) -> dict[str, Any]:
     """
     Get metrics summary for the specified period.
@@ -262,7 +259,7 @@ async def get_metrics(
 
 @router.get("/metrics/daily")
 async def get_daily_metrics(
-    days: int = Query(default=30, ge=1, le=365, description="Number of days to retrieve")
+    days: int = Query(default=30, ge=1, le=365, description="Number of days to retrieve"),
 ) -> dict[str, Any]:
     """
     Get daily metrics for charting.
@@ -281,6 +278,7 @@ async def get_daily_metrics(
 # =============================================================================
 # Recommendation Endpoints
 # =============================================================================
+
 
 @router.get("/recommendations")
 async def get_recommendations() -> dict[str, Any]:
@@ -321,10 +319,7 @@ async def approve_recommendation(
     result = await manager.approve_recommendation(recommendation_id, request.admin_user)
 
     if result["status"] == "error":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=result["message"]
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
 
     return result
 
@@ -343,10 +338,7 @@ async def reject_recommendation(
     )
 
     if result["status"] == "error":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=result["message"]
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
 
     return result
 
@@ -354,6 +346,7 @@ async def reject_recommendation(
 # =============================================================================
 # Auto-Adjustment Endpoints
 # =============================================================================
+
 
 @router.post("/auto-adjust")
 async def run_auto_adjustment() -> dict[str, Any]:
@@ -364,8 +357,7 @@ async def run_auto_adjustment() -> dict[str, Any]:
     minimum data point requirements.
     """
     manager = await _get_manager()
-    result = await manager.run_auto_adjustment_cycle()
-    return result
+    return await manager.run_auto_adjustment_cycle()
 
 
 @router.post("/circuit-breaker/reset")
@@ -380,10 +372,7 @@ async def reset_circuit_breaker(request: ResetRequest) -> dict[str, Any]:
     result = await manager.reset_circuit_breaker(request.admin_user)
 
     if result["status"] == "error":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=result["message"]
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
 
     return result
 
@@ -401,13 +390,14 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
             "activated_at": status_data["circuit_breaker_activated_at"],
             "baseline_f1": status_data["baseline_f1"],
             "cooldown_hours": manager.CIRCUIT_BREAKER_COOLDOWN_HOURS,
-        }
+        },
     }
 
 
 # =============================================================================
 # Audit Log Endpoints
 # =============================================================================
+
 
 @router.get("/audit-log")
 async def get_audit_log(

@@ -11,7 +11,6 @@ Key Features:
 - Maintains backward compatibility with base retriever
 """
 
-
 import math
 from dataclasses import dataclass
 from typing import Any
@@ -33,6 +32,7 @@ logger = get_logger(__name__)
 @dataclass
 class RetrievalResult:
     """Enhanced retrieval result with feedback information."""
+
     doc_id: str
     content: str
     metadata: dict[str, Any]
@@ -148,9 +148,7 @@ class FeedbackAwareRetriever(Retriever):
 
         # Apply feedback-based reranking
         if apply_feedback:
-            hits = await self._apply_feedback_reranking(
-                hits, query, query_embedding, user_id
-            )
+            hits = await self._apply_feedback_reranking(hits, query, query_embedding, user_id)
             self._feedback_applied_count += 1
 
         # Apply traditional reranking if enabled
@@ -194,7 +192,9 @@ class FeedbackAwareRetriever(Retriever):
 
             # Calculate boost (clamped)
             feedback_boost = self.feedback_weight * feedback_score
-            feedback_boost = max(self.min_feedback_boost, min(self.max_feedback_boost, feedback_boost))
+            feedback_boost = max(
+                self.min_feedback_boost, min(self.max_feedback_boost, feedback_boost)
+            )
 
             # Apply boost to score
             final_score = base_score * (1 + feedback_boost)
@@ -213,7 +213,7 @@ class FeedbackAwareRetriever(Retriever):
             "feedback_reranking_applied",
             query_len=len(query),
             hits_count=len(hits),
-            docs_with_feedback=sum(1 for h in hits if h.get("has_feedback"))
+            docs_with_feedback=sum(1 for h in hits if h.get("has_feedback")),
         )
 
         return hits
@@ -224,10 +224,11 @@ class FeedbackAwareRetriever(Retriever):
         query_embedding: list[float],
     ) -> list[dict[str, Any]]:
         """Apply cosine similarity reranking."""
+
         def cosine(a: list[float], b: list[float]) -> float:
             if not a or not b or len(a) != len(b):
                 return 0.0
-            dot = sum(x * y for x, y in zip(a, b))
+            dot = sum(x * y for x, y in zip(a, b, strict=False))
             norm_a = math.sqrt(sum(x * x for x in a))
             norm_b = math.sqrt(sum(x * x for x in b))
             if norm_a == 0 or norm_b == 0:
@@ -299,7 +300,7 @@ class FeedbackAwareRetriever(Retriever):
         Returns:
             Number of feedback records created
         """
-        query_embedding = await self.embedder.embed(query)
+        await self.embedder.embed(query)
 
         feedback_pairs = []
         for i, doc_id in enumerate(shown_doc_ids):
@@ -328,7 +329,8 @@ class FeedbackAwareRetriever(Retriever):
             "feedback_applied_count": self._feedback_applied_count,
             "feedback_application_rate": (
                 self._feedback_applied_count / self._retrieval_count
-                if self._retrieval_count > 0 else 0.0
+                if self._retrieval_count > 0
+                else 0.0
             ),
             "feedback_weight": self.feedback_weight,
             "min_boost": self.min_feedback_boost,
@@ -388,17 +390,12 @@ class AdaptiveFeedbackRetriever(FeedbackAwareRetriever):
             self.feedback_weight = self.base_feedback_weight
 
         # Use parent's reranking logic
-        return await super()._apply_feedback_reranking(
-            hits, query, query_embedding, user_id
-        )
+        return await super()._apply_feedback_reranking(hits, query, query_embedding, user_id)
 
 
 # Factory function
 def create_feedback_aware_retriever(
-    embedder: Embedder,
-    store: VectorStore,
-    adaptive: bool = True,
-    **kwargs
+    embedder: Embedder, store: VectorStore, adaptive: bool = True, **kwargs
 ) -> FeedbackAwareRetriever:
     """
     Create a feedback-aware retriever.
@@ -413,13 +410,5 @@ def create_feedback_aware_retriever(
         Configured retriever instance
     """
     if adaptive:
-        return AdaptiveFeedbackRetriever(
-            embedder=embedder,
-            store=store,
-            **kwargs
-        )
-    return FeedbackAwareRetriever(
-        embedder=embedder,
-        store=store,
-        **kwargs
-    )
+        return AdaptiveFeedbackRetriever(embedder=embedder, store=store, **kwargs)
+    return FeedbackAwareRetriever(embedder=embedder, store=store, **kwargs)

@@ -1,4 +1,3 @@
-
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -172,13 +171,17 @@ class DatabaseHealthMonitor:
             # Determine health status based on utilization
             if connection_utilization > 95:
                 status = HealthStatus.UNHEALTHY
-                message = f"Database connection pool critically utilized: {connection_utilization:.1f}%"
+                message = (
+                    f"Database connection pool critically utilized: {connection_utilization:.1f}%"
+                )
             elif connection_utilization > 85:
                 status = HealthStatus.DEGRADED
                 message = f"Database connection pool highly utilized: {connection_utilization:.1f}%"
             else:
                 status = HealthStatus.HEALTHY
-                message = f"Database connection pool healthy: {connection_utilization:.1f}% utilized"
+                message = (
+                    f"Database connection pool healthy: {connection_utilization:.1f}% utilized"
+                )
 
             response_time_ms = (time.time() - start_time) * 1000
 
@@ -237,9 +240,7 @@ class DatabaseHealthMonitor:
             metrics = PerformanceMetrics()
 
             if not self.connection_pool_manager:
-                logger.warning(
-                    "No connection pool manager available for performance metrics"
-                )
+                logger.warning("No connection pool manager available for performance metrics")
                 return metrics
 
             # Get pool statistics for performance analysis
@@ -254,9 +255,7 @@ class DatabaseHealthMonitor:
 
                     metrics.total_connections = total_connections
                     metrics.active_connections = active_connections
-                    metrics.idle_connections = getattr(
-                        db_pool_stats, "idle_connections", 0
-                    )
+                    metrics.idle_connections = getattr(db_pool_stats, "idle_connections", 0)
                     metrics.connection_utilization_percent = (
                         active_connections / max(1, total_connections)
                     ) * 100
@@ -305,9 +304,7 @@ class DatabaseHealthMonitor:
                     pool_stats = self.connection_pool_manager.get_pool_stats()
                     if pool_stats:
                         # Check if we have multiple database nodes indicating replication
-                        db_pools = [
-                            k for k in pool_stats.keys() if "database" in k.lower()
-                        ]
+                        db_pools = [k for k in pool_stats if "database" in k.lower()]
                         if len(db_pools) > 1:
                             replication_status.is_enabled = True
                             replication_status.replica_nodes = db_pools
@@ -338,9 +335,7 @@ class DatabaseHealthMonitor:
         if len(self._metrics_history) > self._max_history_size:
             self._metrics_history = self._metrics_history[-self._max_history_size :]
 
-    def get_metrics_history(
-        self, limit: int | None = None
-    ) -> list[PerformanceMetrics]:
+    def get_metrics_history(self, limit: int | None = None) -> list[PerformanceMetrics]:
         """
         Get historical performance metrics.
 

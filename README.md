@@ -3,6 +3,16 @@
 ## Overview
 Resync is an AI-powered interface for HCL Workload Automation (HWA), formerly known as IBM Tivoli Workload Scheduler (TWS). It transforms complex TWS operations into an intuitive chat interface powered by artificial intelligence, providing real-time monitoring, status queries, and diagnostic capabilities in natural language.
 
+## Requirements
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| **Python** | **≥3.10** | Required for type hints (`list[str]`, `dict[str, Any]`) and `match` statement |
+| PostgreSQL | ≥14 | With pgvector and Apache AGE extensions |
+| Redis | ≥6.0 | Optional, for caching and rate limiting |
+
+> **Note**: Python 3.10+ is mandatory. The codebase uses modern type hints syntax (`list[str]` instead of `List[str]`) which requires Python 3.10 or later.
+
 ## Portabilidade de Encoding no Windows
 
 ### Guia Rápido

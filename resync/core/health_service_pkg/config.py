@@ -31,17 +31,17 @@ class HealthCheckConfig:
     circuit_recovery_timeout: int = 60
 
     # Components to check
-    enabled_checks: list[str] = field(default_factory=lambda: [
-        "database",
-        "redis",
-        "cache",
-        "filesystem",
-        "memory",
-        "cpu",
-        "tws",
-    ])
+    enabled_checks: list[str] = field(
+        default_factory=lambda: [
+            "database",
+            "redis",
+            "cache",
+            "filesystem",
+            "memory",
+            "cpu",
+            "tws",
+        ]
+    )
 
     # Custom thresholds per component
-    component_thresholds: dict[str, dict[str, float]] = field(
-        default_factory=dict
-    )
+    component_thresholds: dict[str, dict[str, float]] = field(default_factory=dict)

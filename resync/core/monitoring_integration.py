@@ -8,7 +8,6 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-
 from typing import Any
 
 import structlog
@@ -55,17 +54,27 @@ async def initialize_proactive_monitoring(app: FastAPI) -> None:
             "polling_mode": getattr(settings, "tws_polling_mode", "fixed"),
             "job_stuck_threshold_minutes": getattr(settings, "tws_job_stuck_threshold_minutes", 60),
             "job_late_threshold_minutes": getattr(settings, "tws_job_late_threshold_minutes", 30),
-            "anomaly_failure_rate_threshold": getattr(settings, "tws_anomaly_failure_rate_threshold", 0.1),
+            "anomaly_failure_rate_threshold": getattr(
+                settings, "tws_anomaly_failure_rate_threshold", 0.1
+            ),
             "retention_days_full": getattr(settings, "tws_retention_days_full", 7),
             "retention_days_summary": getattr(settings, "tws_retention_days_summary", 30),
             "retention_days_patterns": getattr(settings, "tws_retention_days_patterns", 90),
             "pattern_detection_enabled": getattr(settings, "tws_pattern_detection_enabled", True),
-            "pattern_detection_interval_minutes": getattr(settings, "tws_pattern_detection_interval_minutes", 60),
+            "pattern_detection_interval_minutes": getattr(
+                settings, "tws_pattern_detection_interval_minutes", 60
+            ),
             "pattern_min_confidence": getattr(settings, "tws_pattern_min_confidence", 0.5),
-            "solution_correlation_enabled": getattr(settings, "tws_solution_correlation_enabled", True),
+            "solution_correlation_enabled": getattr(
+                settings, "tws_solution_correlation_enabled", True
+            ),
             "solution_min_success_rate": getattr(settings, "tws_solution_min_success_rate", 0.6),
-            "browser_notifications_enabled": getattr(settings, "tws_browser_notifications_enabled", True),
-            "teams_notifications_enabled": getattr(settings, "tws_teams_notifications_enabled", False),
+            "browser_notifications_enabled": getattr(
+                settings, "tws_browser_notifications_enabled", True
+            ),
+            "teams_notifications_enabled": getattr(
+                settings, "tws_teams_notifications_enabled", False
+            ),
             "teams_webhook_url": getattr(settings, "tws_teams_webhook_url", None),
             "dashboard_theme": getattr(settings, "tws_dashboard_theme", "auto"),
             "dashboard_refresh_seconds": getattr(settings, "tws_dashboard_refresh_seconds", 5),
@@ -198,13 +207,13 @@ def register_dashboard_route(app: FastAPI) -> None:
 # HELPER FUNCTIONS
 # =============================================================================
 
+
 async def _get_tws_client() -> Any | None:
     """Obtém cliente TWS do container de dependências."""
     try:
         from resync.core.container import app_container
 
-        tws_client = app_container.tws_client()
-        return tws_client
+        return app_container.tws_client()
 
     except Exception as e:
         logger.warning("failed_to_get_tws_client", error=str(e))
@@ -216,8 +225,7 @@ async def _get_llm_client() -> Any | None:
     try:
         from resync.core.container import app_container
 
-        llm_client = app_container.llm_client()
-        return llm_client
+        return app_container.llm_client()
 
     except Exception as e:
         logger.warning("failed_to_get_llm_client", error=str(e))
@@ -237,7 +245,7 @@ def _create_mock_tws_client() -> Any:
             workstations = []
             for i in range(5):
                 ws = {
-                    "name": f"WS{i+1:03d}",
+                    "name": f"WS{i + 1:03d}",
                     "status": random.choice(["LINKED", "LINKED", "LINKED", "UNLINKED"]),
                     "agentStatus": "RUNNING",
                     "jobsRunning": random.randint(0, 10),
@@ -269,10 +277,16 @@ def _create_mock_tws_client() -> Any:
                     "jobStream": f"STREAM_{random.randint(1, 5)}",
                     "workstation": f"WS{random.randint(1, 5):03d}",
                     "status": job_status,
-                    "returnCode": 0 if job_status == "SUCC" else (8 if job_status == "ABEND" else None),
+                    "returnCode": 0
+                    if job_status == "SUCC"
+                    else (8 if job_status == "ABEND" else None),
                     "startTime": start_time.isoformat(),
-                    "endTime": (start_time + timedelta(minutes=random.randint(1, 30))).isoformat() if job_status in ["SUCC", "ABEND"] else None,
-                    "errorMessage": "Erro de conexão com banco de dados" if job_status == "ABEND" else None,
+                    "endTime": (start_time + timedelta(minutes=random.randint(1, 30))).isoformat()
+                    if job_status in ["SUCC", "ABEND"]
+                    else None,
+                    "errorMessage": "Erro de conexão com banco de dados"
+                    if job_status == "ABEND"
+                    else None,
                 }
                 jobs.append(job)
 
@@ -284,6 +298,7 @@ def _create_mock_tws_client() -> Any:
 # =============================================================================
 # CONVENIENCE FUNCTION FOR APP FACTORY
 # =============================================================================
+
 
 async def setup_monitoring_system(app: FastAPI) -> None:
     """
@@ -312,6 +327,7 @@ def get_monitoring_startup_handler(app: FastAPI):
     Returns:
         Coroutine para inicialização
     """
+
     async def startup():
         await initialize_proactive_monitoring(app)
 
@@ -328,6 +344,7 @@ def get_monitoring_shutdown_handler(app: FastAPI):
     Returns:
         Coroutine para finalização
     """
+
     async def shutdown():
         await shutdown_proactive_monitoring(app)
 

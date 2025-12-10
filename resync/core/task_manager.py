@@ -71,9 +71,7 @@ class TaskManager:
     def __init__(self, max_workers: int = 10):
         self.max_workers = max_workers
         self.tasks: dict[str, Task] = {}
-        self.task_queue: asyncio.PriorityQueue[tuple[int, str]] = (
-            asyncio.PriorityQueue()
-        )
+        self.task_queue: asyncio.PriorityQueue[tuple[int, str]] = asyncio.PriorityQueue()
         self.running_tasks: dict[str, asyncio.Task[Any]] = {}
         self.semaphore = asyncio.Semaphore(max_workers)
         self._shutdown = False
@@ -259,9 +257,7 @@ class TaskManager:
                 loop.run_in_executor(None, task.func, *task.args, **task.kwargs),
                 timeout=task.timeout,
             )
-        return await loop.run_in_executor(
-            None, task.func, *task.args, **task.kwargs
-        )
+        return await loop.run_in_executor(None, task.func, *task.args, **task.kwargs)
 
     async def _handle_task_success(self, task: Task, result: Any) -> None:
         """Handle successful task completion."""
@@ -314,9 +310,7 @@ class TaskManager:
             "queued_tasks": self.task_queue.qsize(),
             "max_workers": self.max_workers,
             "available_workers": (
-                self.semaphore._value
-                if hasattr(self.semaphore, "_value")
-                else "unknown"
+                self.semaphore._value if hasattr(self.semaphore, "_value") else "unknown"
             ),
             "status_counts": status_counts,
         }

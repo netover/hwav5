@@ -39,7 +39,6 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
         r"(?i)(\bdrop\b.*\btable\b)",
         r"(?i)(\bcreate\b.*\btable\b)",
         r"(?i)(\balter\b.*\btable\b)",
-
         # Advanced injection patterns
         r"(?i)(\bexec\b.*\()",
         r"(?i)(\bexecute\b.*\()",
@@ -47,22 +46,17 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
         r"(?i)(\bxp_\w+\b)",
         r"(?i)(\bwaitfor\b.*\bdelay\b)",
         r"(?i)(\bconvert\b.*\bint\b)",
-
         # Comment-based attacks
         r"(?i)(--|\#|/\*|\*/)",
-
         # Quote-based attacks
         r"(?i)(').*(')",
         r"(?i)(\').*(\|)*(\|)*(')",
-
         # Time-based attacks
         r"(?i)(\bsleep\b.*\()",
         r"(?i)(\bbenchmark\b.*\()",
-
         # Boolean-based attacks
         r"(?i)(\band\b.*\=.*\bor\b)",
         r"(?i)(\bor\b.*\=.*\band\b)",
-
         # Error-based attacks
         r"(?i)(\bconvert\b.*\bchar\b)",
         r"(?i)(\bcast\b.*\bas\b)",
@@ -118,9 +112,8 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
             # Log failed request
             self._log_request_outcome(request, False, str(e))
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Internal server error"
-            )
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
+            ) from e
 
     async def _analyze_request_for_sql_injection(self, request: Request) -> None:
         """
@@ -139,9 +132,9 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
         for key, value in request_data.items():
             if self._contains_sql_injection(value):
                 DatabaseAuditor.log_security_violation(
-                    'sql_injection_detected',
+                    "sql_injection_detected",
                     f"{key}={value}",
-                    getattr(request.state, 'user_id', None)
+                    getattr(request.state, "user_id", None),
                 )
 
                 self.blocked_requests += 1
@@ -150,12 +143,12 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
                     "sql_injection_blocked",
                     key=key,
                     value_preview=str(value)[:100],
-                    client_host=request.client.host if request.client else "unknown"
+                    client_host=request.client.host if request.client else "unknown",
                 )
 
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Potential SQL injection detected. Request blocked."
+                    detail="Potential SQL injection detected. Request blocked.",
                 )
 
     async def _extract_request_data(self, request: Request) -> dict[str, Any]:
@@ -179,17 +172,17 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
             data[f"path.{key}"] = value
 
         # Add headers that might contain SQL
-        suspicious_headers = ['user-agent', 'referer', 'x-forwarded-for']
+        suspicious_headers = ["user-agent", "referer", "x-forwarded-for"]
         for header in suspicious_headers:
             if header in request.headers:
                 data[f"header.{header}"] = request.headers[header]
 
         # Try to get body data for POST/PUT requests
         try:
-            if request.method in ['POST', 'PUT', 'PATCH']:
-                content_type = request.headers.get('content-type', '')
+            if request.method in ["POST", "PUT", "PATCH"]:
+                content_type = request.headers.get("content-type", "")
 
-                if 'application/json' in content_type:
+                if "application/json" in content_type:
                     body = await request.json()
                     if isinstance(body, dict):
                         for key, value in body.items():
@@ -197,7 +190,7 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
                     else:
                         data["body"] = body
 
-                elif 'application/x-www-form-urlencoded' in content_type:
+                elif "application/x-www-form-urlencoded" in content_type:
                     form = await request.form()
                     for key, value in form.items():
                         data[f"form.{key}"] = value
@@ -225,17 +218,14 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
 
         # Check against all injection patterns
         import re
+
         for pattern in self.SQL_INJECTION_PATTERNS:
             if re.search(pattern, str_value):
                 return True
 
         # Additional checks for common attack vectors
-        dangerous_chars = ["'", '"', ';', '--', '/*', '*/', 'xp_', 'sp_']
-        for char in dangerous_chars:
-            if char.lower() in str_value.lower():
-                return True
-
-        return False
+        dangerous_chars = ["'", '"', ";", "--", "/*", "*/", "xp_", "sp_"]
+        return any(char.lower() in str_value.lower() for char in dangerous_chars)
 
     def _log_request_outcome(self, request: Request, success: bool, error: str = None) -> None:
         """
@@ -253,8 +243,8 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
                 operation=operation,
                 table="unknown",  # Table might not be known at middleware level
                 success=success,
-                user_id=getattr(request.state, 'user_id', None),
-                error=error
+                user_id=getattr(request.state, "user_id", None),
+                error=error,
             )
         except Exception as e:
             logger.error("failed_to_log_request_outcome", error=str(e))
@@ -266,14 +256,16 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
         Returns:
             Dictionary of security statistics
         """
-        block_rate = (self.blocked_requests / self.total_requests * 100) if self.total_requests > 0 else 0
+        block_rate = (
+            (self.blocked_requests / self.total_requests * 100) if self.total_requests > 0 else 0
+        )
 
         return {
-            'total_requests': self.total_requests,
-            'blocked_requests': self.blocked_requests,
-            'block_rate_percent': round(block_rate, 2),
-            'middleware_enabled': self.enabled,
-            'patterns_monitored': len(self.SQL_INJECTION_PATTERNS)
+            "total_requests": self.total_requests,
+            "blocked_requests": self.blocked_requests,
+            "block_rate_percent": round(block_rate, 2),
+            "middleware_enabled": self.enabled,
+            "patterns_monitored": len(self.SQL_INJECTION_PATTERNS),
         }
 
 
@@ -285,13 +277,7 @@ class DatabaseConnectionSecurityMiddleware(BaseHTTPMiddleware):
     """
 
     # Database operation endpoints that require extra scrutiny
-    DATABASE_ENDPOINTS = [
-        '/admin/audit',
-        '/admin/logs',
-        '/api/v1/database/',
-        '/api/db/',
-        '/sql/'
-    ]
+    DATABASE_ENDPOINTS = ["/admin/audit", "/admin/logs", "/api/v1/database/", "/api/db/", "/sql/"]
 
     def __init__(self, app: Callable, enabled: bool = True):
         """
@@ -322,8 +308,8 @@ class DatabaseConnectionSecurityMiddleware(BaseHTTPMiddleware):
         if self._is_database_endpoint(request.url.path):
             # Add security headers
             response = await call_next(request)
-            response.headers['X-Database-Security-Enabled'] = 'true'
-            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers["X-Database-Security-Enabled"] = "true"
+            response.headers["X-Content-Type-Options"] = "nosniff"
             return response
 
         return await call_next(request)
@@ -342,7 +328,9 @@ class DatabaseConnectionSecurityMiddleware(BaseHTTPMiddleware):
 
 
 # Factory functions for easy middleware setup
-def create_database_security_middleware(app: Callable, enabled: bool = True) -> DatabaseSecurityMiddleware:
+def create_database_security_middleware(
+    app: Callable, enabled: bool = True
+) -> DatabaseSecurityMiddleware:
     """
     Creates database security middleware instance.
 
@@ -356,7 +344,9 @@ def create_database_security_middleware(app: Callable, enabled: bool = True) -> 
     return DatabaseSecurityMiddleware(app, enabled=enabled)
 
 
-def create_database_connection_security_middleware(app: Callable, enabled: bool = True) -> DatabaseConnectionSecurityMiddleware:
+def create_database_connection_security_middleware(
+    app: Callable, enabled: bool = True
+) -> DatabaseConnectionSecurityMiddleware:
     """
     Creates database connection security middleware instance.
 

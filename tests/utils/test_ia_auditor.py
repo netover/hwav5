@@ -42,9 +42,7 @@ async def test_analyze_memory_returns_none_on_llm_failure(
 
 
 @patch("resync.core.ia_auditor.audit_lock")
-async def test_analyze_memory_returns_none_on_lock_timeout(
-    mock_lock, sample_memory, caplog
-):
+async def test_analyze_memory_returns_none_on_lock_timeout(mock_lock, sample_memory, caplog):
     """
     Ensures analyze_memory handles AuditError (lock timeout) gracefully.
     """
@@ -76,9 +74,7 @@ async def test_analyze_memory_returns_none_on_database_error(
 
     # Assert
     assert result is None
-    assert (
-        "Database or KnowledgeGraph error analyzing memory test-mem-123" in caplog.text
-    )
+    assert "Database or KnowledgeGraph error analyzing memory test-mem-123" in caplog.text
 
 
 @patch("resync.core.ia_auditor._fetch_recent_memories", new_callable=AsyncMock)

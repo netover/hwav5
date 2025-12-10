@@ -50,13 +50,9 @@ class TestDatabaseConnectionThreshold:
         mock_stats.idle_connections = 4
         mock_stats.__dict__.update(vars(self.mock_pool_stats))
 
-        with patch(
-            "resync.core.health_service.get_connection_pool_manager"
-        ) as mock_get_manager:
+        with patch("resync.core.health_service.get_connection_pool_manager") as mock_get_manager:
             mock_manager = AsyncMock()
-            mock_manager.acquire_connection.return_value.__aenter__.return_value = (
-                MagicMock()
-            )
+            mock_manager.acquire_connection.return_value.__aenter__.return_value = MagicMock()
             mock_manager.get_pool_stats.return_value = {"database": mock_stats}
             mock_get_manager.return_value = mock_manager
 
@@ -80,13 +76,9 @@ class TestDatabaseConnectionThreshold:
         mock_stats.idle_connections = 2
         mock_stats.__dict__.update(vars(self.mock_pool_stats))
 
-        with patch(
-            "resync.core.health_service.get_connection_pool_manager"
-        ) as mock_get_manager:
+        with patch("resync.core.health_service.get_connection_pool_manager") as mock_get_manager:
             mock_manager = AsyncMock()
-            mock_manager.acquire_connection.return_value.__aenter__.return_value = (
-                MagicMock()
-            )
+            mock_manager.acquire_connection.return_value.__aenter__.return_value = MagicMock()
             mock_manager.get_pool_stats.return_value = {"database": mock_stats}
             mock_get_manager.return_value = mock_manager
 
@@ -110,13 +102,9 @@ class TestDatabaseConnectionThreshold:
         mock_stats.idle_connections = 8
         mock_stats.__dict__.update(vars(self.mock_pool_stats))
 
-        with patch(
-            "resync.core.health_service.get_connection_pool_manager"
-        ) as mock_get_manager:
+        with patch("resync.core.health_service.get_connection_pool_manager") as mock_get_manager:
             mock_manager = AsyncMock()
-            mock_manager.acquire_connection.return_value.__aenter__.return_value = (
-                MagicMock()
-            )
+            mock_manager.acquire_connection.return_value.__aenter__.return_value = MagicMock()
             mock_manager.get_pool_stats.return_value = {"database": mock_stats}
             mock_get_manager.return_value = mock_manager
 
@@ -140,13 +128,9 @@ class TestDatabaseConnectionThreshold:
         mock_stats.idle_connections = 1
         mock_stats.__dict__.update(vars(self.mock_pool_stats))
 
-        with patch(
-            "resync.core.health_service.get_connection_pool_manager"
-        ) as mock_get_manager:
+        with patch("resync.core.health_service.get_connection_pool_manager") as mock_get_manager:
             mock_manager = AsyncMock()
-            mock_manager.acquire_connection.return_value.__aenter__.return_value = (
-                MagicMock()
-            )
+            mock_manager.acquire_connection.return_value.__aenter__.return_value = MagicMock()
             mock_manager.get_pool_stats.return_value = {"database": mock_stats}
             mock_get_manager.return_value = mock_manager
 
@@ -159,9 +143,7 @@ class TestDatabaseConnectionThreshold:
     @pytest.mark.asyncio
     async def test_alert_generation_for_threshold_breach(self):
         """Test that alerts are generated when threshold is breached."""
-        config = HealthCheckConfig(
-            database_connection_threshold_percent=75.0, alert_enabled=True
-        )
+        config = HealthCheckConfig(database_connection_threshold_percent=75.0, alert_enabled=True)
         service = HealthCheckService(config)
 
         # Create components with database at 80% usage (above 75% threshold)
@@ -177,17 +159,13 @@ class TestDatabaseConnectionThreshold:
         alerts = service._check_alerts(components)
 
         assert len(alerts) > 0
-        assert any(
-            "Database connection pool usage at 80.0%" in alert for alert in alerts
-        )
+        assert any("Database connection pool usage at 80.0%" in alert for alert in alerts)
         assert any("threshold: 75.0%" in alert for alert in alerts)
 
     @pytest.mark.asyncio
     async def test_no_alerts_when_below_threshold(self):
         """Test no specific database alerts when below threshold."""
-        config = HealthCheckConfig(
-            database_connection_threshold_percent=90.0, alert_enabled=True
-        )
+        config = HealthCheckConfig(database_connection_threshold_percent=90.0, alert_enabled=True)
         service = HealthCheckService(config)
 
         # Create components with database at 85% usage (below 90% threshold)
@@ -203,9 +181,7 @@ class TestDatabaseConnectionThreshold:
         alerts = service._check_alerts(components)
 
         # Should not have specific database threshold alerts
-        database_alerts = [
-            alert for alert in alerts if "Database connection pool usage" in alert
-        ]
+        database_alerts = [alert for alert in alerts if "Database connection pool usage" in alert]
         assert len(database_alerts) == 0
 
     @pytest.mark.asyncio
@@ -221,13 +197,9 @@ class TestDatabaseConnectionThreshold:
         mock_stats.idle_connections = 0
         mock_stats.__dict__.update(vars(self.mock_pool_stats))
 
-        with patch(
-            "resync.core.health_service.get_connection_pool_manager"
-        ) as mock_get_manager:
+        with patch("resync.core.health_service.get_connection_pool_manager") as mock_get_manager:
             mock_manager = AsyncMock()
-            mock_manager.acquire_connection.return_value.__aenter__.return_value = (
-                MagicMock()
-            )
+            mock_manager.acquire_connection.return_value.__aenter__.return_value = MagicMock()
             mock_manager.get_pool_stats.return_value = {"database": mock_stats}
             mock_get_manager.return_value = mock_manager
 
@@ -244,14 +216,10 @@ class TestDatabaseConnectionThreshold:
         service = HealthCheckService(config)
 
         mock_pool_stats_dict = {
-            "database": MagicMock(
-                active_connections=17, total_connections=20, idle_connections=3
-            )
+            "database": MagicMock(active_connections=17, total_connections=20, idle_connections=3)
         }
 
-        with patch(
-            "resync.core.health_service.get_connection_pool_manager"
-        ) as mock_get_manager:
+        with patch("resync.core.health_service.get_connection_pool_manager") as mock_get_manager:
             mock_manager = AsyncMock()
             mock_manager.get_pool_stats.return_value = mock_pool_stats_dict
             mock_get_manager.return_value = mock_manager

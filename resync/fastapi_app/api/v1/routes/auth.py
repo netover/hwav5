@@ -1,4 +1,3 @@
-
 """
 Authentication routes for FastAPI
 
@@ -8,6 +7,7 @@ Provides JWT-based authentication with:
 - User info retrieval
 - Logout with token invalidation (in-memory blacklist for demo)
 """
+
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status

@@ -5,7 +5,6 @@ This refactored version separates the complex report generation logic into
 individual strategies, making the code more modular, testable, and maintainable.
 """
 
-
 import asyncio
 import hashlib
 import time
@@ -20,6 +19,8 @@ logger = get_logger(__name__)
 
 
 # Import shared types to avoid circular dependency
+import contextlib
+
 from resync.core.compliance.types import SOC2ComplianceManager as BaseSOC2ComplianceManager
 from resync.core.compliance.types import SOC2TrustServiceCriteria
 
@@ -96,9 +97,7 @@ class SOC2Control:
             self.failure_count += 1
             if self.failure_count >= 3:
                 self.status = ControlStatus.NOT_IMPLEMENTED
-                logger.warning(
-                    f"Control {self.control_id} marked as failed after 3 failures"
-                )
+                logger.warning(f"Control {self.control_id} marked as failed after 3 failures")
 
 
 @dataclass
@@ -271,6 +270,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
 
         # Initialize report generator (lazy import to avoid circular dependency)
         from resync.core.compliance.report_strategies import ReportGenerator
+
         self.report_generator = ReportGenerator()
 
     async def start(self) -> None:
@@ -295,10 +295,8 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
         for task in [self._testing_task, self._monitoring_task, self._reporting_task]:
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         logger.info("SOC 2 compliance manager stopped")
 
@@ -685,7 +683,9 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
         report["evidence_summary"] = EvidenceSummaryStrategy().execute(self)
         report["availability_summary"] = AvailabilitySummaryStrategy().execute(self)
         report["processing_integrity_summary"] = ProcessingIntegritySummaryStrategy().execute(self)
-        report["confidentiality_incidents"] = ConfidentialityIncidentsSummaryStrategy().execute(self)
+        report["confidentiality_incidents"] = ConfidentialityIncidentsSummaryStrategy().execute(
+            self
+        )
         report["recommendations"] = RecommendationsStrategy().execute(self, report)
 
         # Store report
@@ -717,7 +717,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             }
 
         # Return all controls
-        return [self.get_control_status(cid) for cid in self.controls.keys()]
+        return [self.get_control_status(cid) for cid in self.controls]
 
     async def _run_automated_test(self, control: SOC2Control) -> dict[str, Any]:
         """Run automated test for a control."""
@@ -757,9 +757,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             return {"success": False, "details": "No availability metrics available"}
 
         recent_metrics = list(self.availability_metrics)[-10:]  # Last 10 metrics
-        avg_availability = sum(m.availability_score for m in recent_metrics) / len(
-            recent_metrics
-        )
+        avg_availability = sum(m.availability_score for m in recent_metrics) / len(recent_metrics)
 
         success = avg_availability >= self.config.target_availability_percentage
 
@@ -888,9 +886,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
 
         # Check control implementation
         not_implemented = [
-            cid
-            for cid, c in self.controls.items()
-            if c.status == ControlStatus.NOT_IMPLEMENTED
+            cid for cid, c in self.controls.items() if c.status == ControlStatus.NOT_IMPLEMENTED
         ]
         if not_implemented:
             recommendations.append(

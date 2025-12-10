@@ -1,6 +1,7 @@
 import subprocess
-import schedule
 from datetime import datetime
+
+import schedule
 
 
 class SecurityConfigurer:
@@ -11,16 +12,14 @@ class SecurityConfigurer:
 
     def _setup_logger(self):
         """Configura o logger estruturado."""
-        import logging
         import json
+        import logging
 
         logger = logging.getLogger("security_logger")
         logger.setLevel(logging.INFO)
 
         formatter = logging.Formatter(
-            json.dumps(
-                {"timestamp": datetime.utcnow().isoformat(), "message": "%(message)s"}
-            )
+            json.dumps({"timestamp": datetime.utcnow().isoformat(), "message": "%(message)s"})
         )
 
         handler = logging.StreamHandler()
@@ -43,9 +42,7 @@ class SecurityConfigurer:
     def schedule_security_audit(self):
         """Agenda auditorias de segurança."""
         self.logger.info("Agendando auditorias")
-        schedule.every(1).days.at("08:00").do(
-            self.run_bandit
-        )  # Executar diariamente às 8h
+        schedule.every(1).days.at("08:00").do(self.run_bandit)  # Executar diariamente às 8h
 
     def run_bandit(self):
         """Executa Bandit para análise de segurança."""

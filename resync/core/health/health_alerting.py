@@ -6,7 +6,6 @@ health monitoring, including alert generation, summary creation, and health
 status reporting.
 """
 
-
 from datetime import datetime, timedelta
 
 import structlog
@@ -94,9 +93,7 @@ class HealthAlerting:
         if len(self.alert_history) > self.max_alert_history:
             self.alert_history = self.alert_history[-self.max_alert_history :]
 
-    def get_alert_history(
-        self, hours: int = 24, limit: int | None = None
-    ) -> list[dict[str, any]]:
+    def get_alert_history(self, hours: int = 24, limit: int | None = None) -> list[dict[str, any]]:
         """
         Get alert history for the specified time period.
 
@@ -131,9 +128,7 @@ class HealthAlerting:
 
         # Calculate alerts per hour over the last 24 hours
         cutoff_time = datetime.now() - timedelta(hours=24)
-        recent_alerts = [
-            entry for entry in self.alert_history if entry["timestamp"] >= cutoff_time
-        ]
+        recent_alerts = [entry for entry in self.alert_history if entry["timestamp"] >= cutoff_time]
 
         recent_total = sum(len(entry["alerts"]) for entry in recent_alerts)
         alert_rate = recent_total / 24.0  # alerts per hour
@@ -162,9 +157,7 @@ class HealthReporting:
         self._last_report_time: datetime | None = None
         self.cache_duration_seconds = 30  # Cache reports for 30 seconds
 
-    def generate_summary(
-        self, components: dict[str, ComponentHealth]
-    ) -> dict[str, int]:
+    def generate_summary(self, components: dict[str, ComponentHealth]) -> dict[str, int]:
         """
         Generate a summary of health status counts.
 
@@ -227,9 +220,7 @@ class HealthReporting:
                     "status": comp.status.value,
                     "message": comp.message,
                     "response_time_ms": comp.response_time_ms,
-                    "last_check": (
-                        comp.last_check.isoformat() if comp.last_check else None
-                    ),
+                    "last_check": (comp.last_check.isoformat() if comp.last_check else None),
                     "error_count": getattr(comp, "error_count", 0),
                 }
             )
@@ -334,9 +325,7 @@ class HealthStatusAggregator:
         self._aggregation_cache: dict[str, any] | None = None
         self._last_aggregation: datetime | None = None
 
-    def aggregate_health_status(
-        self, health_results: list[dict[str, any]]
-    ) -> dict[str, any]:
+    def aggregate_health_status(self, health_results: list[dict[str, any]]) -> dict[str, any]:
         """
         Aggregate health status from multiple health check results.
 
@@ -384,9 +373,7 @@ class HealthStatusAggregator:
 
         return aggregation
 
-    def _calculate_aggregated_status(
-        self, components: dict[str, ComponentHealth]
-    ) -> str:
+    def _calculate_aggregated_status(self, components: dict[str, ComponentHealth]) -> str:
         """Calculate overall status from component health results."""
         if not components:
             return "unknown"
@@ -401,18 +388,14 @@ class HealthStatusAggregator:
         # Find the worst status
         worst_status = HealthStatus.HEALTHY
         for comp in components.values():
-            if status_priority.get(comp.status, 0) > status_priority.get(
-                worst_status, 0
-            ):
+            if status_priority.get(comp.status, 0) > status_priority.get(worst_status, 0):
                 worst_status = comp.status
 
         return worst_status.value
 
-    def _calculate_health_trends(
-        self, components: dict[str, ComponentHealth]
-    ) -> dict[str, any]:
+    def _calculate_health_trends(self, components: dict[str, ComponentHealth]) -> dict[str, any]:
         """Calculate health trends and patterns."""
-        trends = {
+        return {
             "improving": 0,
             "degrading": 0,
             "stable": 0,
@@ -421,7 +404,6 @@ class HealthStatusAggregator:
 
         # This would implement trend analysis based on historical data
         # For now, return basic structure
-        return trends
 
     def get_aggregation_cache(self) -> dict[str, any] | None:
         """Get cached aggregation if available."""

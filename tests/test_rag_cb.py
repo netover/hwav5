@@ -1,7 +1,8 @@
-import pytest
 import httpx
-from resync.services.rag_client import RAGServiceClient
+import pytest
+
 from resync.core.resilience import CircuitBreakerError
+from resync.services.rag_client import RAGServiceClient
 
 
 @pytest.mark.asyncio
@@ -10,6 +11,7 @@ async def test_cb_opens(monkeypatch):
 
     async def always_fails(*a, **k):
         raise httpx.RequestError("boom")
+
     monkeypatch.setattr(client.http_client, "post", always_fails)
     monkeypatch.setattr(client.http_client, "get", always_fails)
 
@@ -30,10 +32,16 @@ async def test_retry_with_jitter(monkeypatch):
         calls["n"] += 1
         if calls["n"] < 3:
             raise httpx.TimeoutException("timeout")
+
         class Resp:
             status_code = 200
-            def raise_for_status(self): pass
-            def json(self): return {"job_id": "x", "status": "done"}
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"job_id": "x", "status": "done"}
+
         return Resp()
 
     client = RAGServiceClient()
@@ -52,14 +60,24 @@ async def test_enqueue_file_retry(monkeypatch):
         calls["n"] += 1
         if calls["n"] < 3:
             raise httpx.TimeoutException("timeout")
+
         class Resp:
             status_code = 200
-            def raise_for_status(self): pass
-            def json(self): return {"job_id": "x"}
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"job_id": "x"}
+
         return Resp()
 
     client = RAGServiceClient()
     monkeypatch.setattr(client.http_client, "post", flaky)
-    job_id = await client.enqueue_file(type("File", (), {"filename": "test.txt", "file": "content", "content_type": "text/plain"})())
+    job_id = await client.enqueue_file(
+        type(
+            "File", (), {"filename": "test.txt", "file": "content", "content_type": "text/plain"}
+        )()
+    )
     assert job_id == "x"
     assert calls["n"] == 3

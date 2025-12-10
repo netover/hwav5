@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 class ComplianceFramework(str, Enum):
     """Supported compliance frameworks."""
+
     SOC2 = "soc2"
     GDPR = "gdpr"
     HIPAA = "hipaa"
@@ -20,6 +21,7 @@ class ComplianceFramework(str, Enum):
 
 class ComplianceStatus(str, Enum):
     """Compliance check status."""
+
     COMPLIANT = "compliant"
     NON_COMPLIANT = "non_compliant"
     NEEDS_REVIEW = "needs_review"
@@ -116,10 +118,7 @@ class ComplianceChecker:
         if not checks:
             return 0.0
 
-        compliant = sum(
-            1 for c in checks
-            if c.status == ComplianceStatus.COMPLIANT
-        )
+        compliant = sum(1 for c in checks if c.status == ComplianceStatus.COMPLIANT)
 
         return (compliant / len(checks)) * 100
 

@@ -5,8 +5,8 @@ This module provides continuous health monitoring coordination and lifecycle man
 for the health check service, including monitoring loops and service lifecycle management.
 """
 
-
 import asyncio
+import contextlib
 
 import structlog
 
@@ -47,9 +47,7 @@ class HealthMonitoringCoordinator:
                 return
 
             self._is_monitoring = True
-            self._monitoring_task = asyncio.create_task(
-                self._monitoring_loop(health_check_func)
-            )
+            self._monitoring_task = asyncio.create_task(self._monitoring_loop(health_check_func))
             logger.info("health_monitoring_coordinator_started")
 
     async def stop_monitoring(self) -> None:
@@ -58,10 +56,8 @@ class HealthMonitoringCoordinator:
             self._is_monitoring = False
             if self._monitoring_task:
                 self._monitoring_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await self._monitoring_task
-                except asyncio.CancelledError:
-                    pass
                 self._monitoring_task = None
             logger.info("health_monitoring_coordinator_stopped")
 

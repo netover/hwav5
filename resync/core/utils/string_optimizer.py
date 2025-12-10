@@ -11,11 +11,11 @@ from typing import Any
 
 # Pre-compiled regex patterns for reuse
 COMMON_PATTERNS: dict[str, Pattern] = {
-    "email": re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
-    "alphanumeric": re.compile(r'^[a-zA-Z0-9]+$'),
-    "safe_chars": re.compile(r'^[a-zA-Z0-9_.-]+$'),
-    "url_safe": re.compile(r'^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/[a-zA-Z0-9._-]*)*$'),
-    "api_endpoint": re.compile(r'^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/[a-zA-Z0-9._-]*)*$'),
+    "email": re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"),
+    "alphanumeric": re.compile(r"^[a-zA-Z0-9]+$"),
+    "safe_chars": re.compile(r"^[a-zA-Z0-9_.-]+$"),
+    "url_safe": re.compile(r"^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/[a-zA-Z0-9._-]*)*$"),
+    "api_endpoint": re.compile(r"^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/[a-zA-Z0-9._-]*)*$"),
 }
 
 
@@ -46,7 +46,7 @@ class StringProcessor:
             return text
 
         # Create regex pattern for all replacements
-        pattern = re.compile('|'.join(map(re.escape, replacements.keys())))
+        pattern = re.compile("|".join(map(re.escape, replacements.keys())))
 
         # Single pass replacement
         def _replacer(match):
@@ -55,7 +55,7 @@ class StringProcessor:
         return pattern.sub(_replacer, text)
 
     @staticmethod
-    def join_efficient(parts: list[str], separator: str = ' ') -> str:
+    def join_efficient(parts: list[str], separator: str = " ") -> str:
         """
         Efficient string joining that handles edge cases.
 
@@ -81,9 +81,9 @@ class StringProcessor:
         Returns:
             Sanitized filename
         """
-        basename = filename.split('/')[-1].split('\\')[-1]
+        basename = filename.split("/")[-1].split("\\")[-1]
         # Use pre-compiled pattern for alphanumeric check
-        return re.sub(r'[^\w\-_.]', '', basename)
+        return re.sub(r"[^\w\-_.]", "", basename)
 
     @staticmethod
     def validate_email(email: str) -> bool:
@@ -153,7 +153,7 @@ class StringProcessor:
         return ".".join(str(loc) for loc in field_path)
 
     @staticmethod
-    def mask_sensitive_data(data: str, mask_char: str = '*') -> str:
+    def mask_sensitive_data(data: str, mask_char: str = "*") -> str:
         """
         Mask sensitive data efficiently.
 
@@ -220,7 +220,7 @@ class StringBuilder:
         """Add multiple text parts."""
         self.parts.extend(parts)
 
-    def build(self, separator: str = '') -> str:
+    def build(self, separator: str = "") -> str:
         """Build final string."""
         return separator.join(self.parts)
 

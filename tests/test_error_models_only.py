@@ -58,9 +58,7 @@ def test_authentication_error_response_factories():
     assert unauthorized.category == ErrorCategory.AUTHENTICATION
     assert unauthorized.correlation_id == "test-123"
 
-    invalid_creds = AuthenticationErrorResponse.invalid_credentials(
-        correlation_id="test-456"
-    )
+    invalid_creds = AuthenticationErrorResponse.invalid_credentials(correlation_id="test-456")
     assert invalid_creds.error_code == "INVALID_CREDENTIALS"
     assert invalid_creds.category == ErrorCategory.AUTHENTICATION
     assert len(invalid_creds.troubleshooting_hints) >= 1
@@ -103,9 +101,7 @@ def test_business_logic_error_response_factories():
 
 def test_system_error_response_factories():
     """Test system error response factory methods."""
-    internal_error = SystemErrorResponse.internal_error(
-        "database", correlation_id="test-123"
-    )
+    internal_error = SystemErrorResponse.internal_error("database", correlation_id="test-123")
     assert internal_error.error_code == "INTERNAL_SERVER_ERROR"
     assert internal_error.category == ErrorCategory.SYSTEM
     assert internal_error.component == "database"

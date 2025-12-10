@@ -2,14 +2,15 @@
 Testes para o TWS Client Factory.
 """
 
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+
 from resync.services.tws_client_factory import (
-    TWSClientFactory,
-    TWSConfig,
     ProductionTWSClient,
     TestTWSClient,
+    TWSClientFactory,
+    TWSConfig,
 )
 
 
@@ -35,9 +36,7 @@ class TestTWSConfig:
 
     def test_invalid_port(self):
         """Testa porta inválida."""
-        config = TWSConfig(
-            hostname="localhost", port=70000, username="user", password="password"
-        )
+        config = TWSConfig(hostname="localhost", port=70000, username="user", password="password")
         with pytest.raises(ValueError, match="TWS port must be between 1 and 65535"):
             config.validate()
 

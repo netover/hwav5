@@ -4,7 +4,6 @@ Este módulo fornece funções de dependência para injeção em endpoints,
 incluindo gerenciamento de idempotência, autenticação, e obtenção de IDs de contexto.
 """
 
-
 from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -43,15 +42,14 @@ async def get_idempotency_manager() -> IdempotencyManager:
 
     # Fallback to DI container
     try:
-        manager = await app_container.get(IdempotencyManager)
-        return manager
+        return await app_container.get(IdempotencyManager)
     except Exception as e:
         logger.error("idempotency_manager_unavailable", error=str(e), exc_info=True)
-        raise ServiceUnavailableError("Idempotency service is not available.")
+        raise ServiceUnavailableError("Idempotency service is not available.") from None
 
 
 async def get_idempotency_key(
-    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key")
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
 ) -> str | None:
     """Extrai idempotency key do header.
 
@@ -65,7 +63,7 @@ async def get_idempotency_key(
 
 
 async def require_idempotency_key(
-    x_idempotency_key: str = Header(..., alias="X-Idempotency-Key")
+    x_idempotency_key: str = Header(..., alias="X-Idempotency-Key"),
 ) -> str:
     """Extrai e valida idempotency key obrigatória.
 
@@ -255,7 +253,7 @@ async def check_rate_limit(request: Request) -> None:
     RATE_LIMIT_WINDOW = 60  # seconds
 
     # In-memory store (use Redis in production)
-    if not hasattr(check_rate_limit, '_store'):
+    if not hasattr(check_rate_limit, "_store"):
         check_rate_limit._store = defaultdict(list)
 
     client_ip = request.client.host if request.client else "unknown"
@@ -264,8 +262,7 @@ async def check_rate_limit(request: Request) -> None:
 
     # Clean old entries
     check_rate_limit._store[client_ip] = [
-        ts for ts in check_rate_limit._store[client_ip]
-        if ts > window_start
+        ts for ts in check_rate_limit._store[client_ip] if ts > window_start
     ]
 
     # Check limit

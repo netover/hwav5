@@ -9,7 +9,6 @@ This module provides specialized caching for database queries with:
 - Prepared statement result caching
 """
 
-
 import asyncio
 import hashlib
 import time
@@ -137,9 +136,7 @@ class TableChangeTracker:
     table_name: str
     last_change_timestamp: float = 0.0
     change_count: int = 0
-    tracked_queries: set[str] = field(
-        default_factory=set
-    )  # Query fingerprints affected
+    tracked_queries: set[str] = field(default_factory=set)  # Query fingerprints affected
 
     def record_change(self) -> None:
         """Record a table change."""
@@ -257,9 +254,7 @@ class QueryCacheManager:
 
         except Exception as e:
             logger.error(f"Query execution failed: {e}")
-            self._update_cache_stats(
-                hit=False, execution_time=time.time() - start_time, error=True
-            )
+            self._update_cache_stats(hit=False, execution_time=time.time() - start_time, error=True)
             raise
 
     async def execute_batch(
@@ -278,10 +273,7 @@ class QueryCacheManager:
         if len(queries) <= self.max_batch_size:
             # Execute individually with caching
             return await asyncio.gather(
-                *[
-                    self.execute_query(sql, params, connection_id)
-                    for sql, params in queries
-                ]
+                *[self.execute_query(sql, params, connection_id) for sql, params in queries]
             )
 
         # For larger batches, optimize execution
@@ -312,16 +304,12 @@ class QueryCacheManager:
                                 query_key, cascade=False
                             )
 
-                logger.info(
-                    f"Invalidated {invalidated} queries dependent on table {table_name}"
-                )
+                logger.info(f"Invalidated {invalidated} queries dependent on table {table_name}")
                 return invalidated
 
         return 0
 
-    async def record_table_change(
-        self, table_name: str, change_type: str = "update"
-    ) -> None:
+    async def record_table_change(self, table_name: str, change_type: str = "update") -> None:
         """
         Record that a table has changed for cache invalidation.
 
@@ -360,9 +348,7 @@ class QueryCacheManager:
             "tables": {
                 "tracked_tables": len(self.table_trackers),
                 "tables_with_changes": sum(
-                    1
-                    for tracker in self.table_trackers.values()
-                    if tracker.change_count > 0
+                    1 for tracker in self.table_trackers.values() if tracker.change_count > 0
                 ),
             },
             "ttl_distribution": self._calculate_ttl_distribution(),
@@ -464,9 +450,7 @@ class QueryCacheManager:
                 if table_name not in self.table_trackers:
                     self.table_trackers[table_name] = TableChangeTracker(table_name)
 
-                self.table_trackers[table_name].tracked_queries.add(
-                    fingerprint.cache_key
-                )
+                self.table_trackers[table_name].tracked_queries.add(fingerprint.cache_key)
 
     async def _setup_change_tracking(self) -> None:
         """Set up database change tracking."""
@@ -475,9 +459,7 @@ class QueryCacheManager:
         # For now, this is a placeholder
         logger.info("Database change tracking setup completed")
 
-    async def _simulate_query_execution(
-        self, sql: str, parameters: tuple[Any, ...]
-    ) -> Any:
+    async def _simulate_query_execution(self, sql: str, parameters: tuple[Any, ...]) -> Any:
         """Simulate query execution (replace with actual database calls)."""
         # Simulate execution time based on query complexity
         complexity_factor = len(sql.split()) / 10
@@ -565,9 +547,7 @@ class QueryCacheManager:
 
         return ttl_ranges
 
-    def _update_cache_stats(
-        self, hit: bool, execution_time: float, error: bool = False
-    ) -> None:
+    def _update_cache_stats(self, hit: bool, execution_time: float, error: bool = False) -> None:
         """Update cache performance statistics."""
         if hit:
             self.total_queries_cached += 1

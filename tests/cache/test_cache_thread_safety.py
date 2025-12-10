@@ -52,9 +52,7 @@ async def simulate_concurrent_cache_access():
         """Simulate cache reads from multiple tasks."""
         for _i in range(5):
             cache_contents = await service._get_all_cached_components()
-            logger.info(
-                f"Task {task_id} read cache with {len(cache_contents)} components"
-            )
+            logger.info(f"Task {task_id} read cache with {len(cache_contents)} components")
             await asyncio.sleep(0.01)
 
     # Run concurrent operations
@@ -70,9 +68,7 @@ async def simulate_concurrent_cache_access():
     await asyncio.gather(*all_tasks)
 
     end_time = time.time()
-    logger.info(
-        f"All concurrent operations completed in {end_time - start_time:.3f} seconds"
-    )
+    logger.info(f"All concurrent operations completed in {end_time - start_time:.3f} seconds")
 
     # Verify final state
     final_cache = await service._get_all_cached_components()
@@ -82,9 +78,7 @@ async def simulate_concurrent_cache_access():
     for i in range(3):
         component = await service._get_cached_component(f"component_{i}")
         if component:
-            logger.info(
-                f"Component {i}: {component.status.value} - {component.message}"
-            )
+            logger.info(f"Component {i}: {component.status.value} - {component.message}")
 
     return True
 

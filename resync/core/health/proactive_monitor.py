@@ -5,7 +5,6 @@ This module provides proactive health monitoring functionality for
 predictive analysis and automated recovery of system components.
 """
 
-
 import time
 from datetime import datetime, timedelta
 from typing import Any
@@ -152,9 +151,7 @@ class ProactiveHealthMonitor:
                     "total_connections": metrics.get("auto_scaling", {}).get(
                         "current_connections", 0
                     ),
-                    "scaling_recommended": metrics.get("smart_pool", {}).get(
-                        "scaling_signals", {}
-                    ),
+                    "scaling_recommended": metrics.get("smart_pool", {}).get("scaling_signals", {}),
                 }
             # Fallback to basic pool manager
             # Use pool manager from pools.pool_manager (connection_manager does not define this)
@@ -210,9 +207,7 @@ class ProactiveHealthMonitor:
                         "successes": stats.get("successes", 0),
                         "error_rate": stats.get("failure_rate", 0),
                         "last_failure": stats.get("last_failure_time"),
-                        "latency_p95": stats.get("latency_percentiles", {}).get(
-                            "p95", 0
-                        ),
+                        "latency_p95": stats.get("latency_percentiles", {}).get("p95", 0),
                     }
                 except Exception as e:
                     logger.error("exception_caught", error=str(e), exc_info=True)
@@ -258,9 +253,7 @@ class ProactiveHealthMonitor:
 
             # Analyze circuit breaker patterns
             circuit_health = await self._check_circuit_breaker_health()
-            open_breakers = sum(
-                1 for cb in circuit_health.values() if cb.get("state") == "open"
-            )
+            open_breakers = sum(1 for cb in circuit_health.values() if cb.get("state") == "open")
 
             if open_breakers > 0:
                 alerts.append(
@@ -331,26 +324,18 @@ class ProactiveHealthMonitor:
             "baseline_available": False,
             "deviations": [],
             "trend": "stable",
-            "recommendations": [
-                "Implement baseline metrics storage for future comparisons"
-            ],
+            "recommendations": ["Implement baseline metrics storage for future comparisons"],
         }
 
     async def _add_to_monitoring_history(self, results: dict[str, Any]) -> None:
         """Add proactive monitoring results to history."""
-        self._monitoring_history.append(
-            {"timestamp": datetime.now(), "results": results.copy()}
-        )
+        self._monitoring_history.append({"timestamp": datetime.now(), "results": results.copy()})
 
         # Cleanup old entries if needed
         if len(self._monitoring_history) > self._max_history_entries:
-            self._monitoring_history = self._monitoring_history[
-                -self._max_history_entries :
-            ]
+            self._monitoring_history = self._monitoring_history[-self._max_history_entries :]
 
-    def get_monitoring_history(
-        self, hours: int = 24, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    def get_monitoring_history(self, hours: int = 24, limit: int = 100) -> list[dict[str, Any]]:
         """
         Get proactive monitoring history.
 
@@ -364,9 +349,7 @@ class ProactiveHealthMonitor:
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
         filtered_history = [
-            entry
-            for entry in self._monitoring_history
-            if entry["timestamp"] >= cutoff_time
+            entry for entry in self._monitoring_history if entry["timestamp"] >= cutoff_time
         ]
 
         # Sort by timestamp (most recent first)
@@ -385,8 +368,7 @@ class ProactiveHealthMonitor:
 
         total_checks = len(self._monitoring_history)
         total_issues = sum(
-            len(entry["results"].get("issues_detected", []))
-            for entry in self._monitoring_history
+            len(entry["results"].get("issues_detected", [])) for entry in self._monitoring_history
         )
 
         return {

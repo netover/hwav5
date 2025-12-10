@@ -25,22 +25,19 @@ class OptimizedExecutors:
         # CPU-bound operations: JSON parsing, crypto, data processing
         # Limited workers to avoid context switching overhead
         self.cpu_pool = ThreadPoolExecutor(
-            max_workers=min(8, cpu_count),
-            thread_name_prefix="cpu_worker"
+            max_workers=min(8, cpu_count), thread_name_prefix="cpu_worker"
         )
 
         # I/O-bound operations: file reading, network calls
         # More workers to handle concurrent I/O operations
         self.io_pool = ThreadPoolExecutor(
-            max_workers=min(32, cpu_count + 16),
-            thread_name_prefix="io_worker"
+            max_workers=min(32, cpu_count + 16), thread_name_prefix="io_worker"
         )
 
         # Large file processing: sequential to avoid memory pressure
         # Very limited workers to prevent memory exhaustion
         self.large_file_pool = ThreadPoolExecutor(
-            max_workers=2,
-            thread_name_prefix="large_file_worker"
+            max_workers=2, thread_name_prefix="large_file_worker"
         )
 
     def get_cpu_executor(self):

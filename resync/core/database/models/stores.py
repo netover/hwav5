@@ -34,8 +34,10 @@ class Base(DeclarativeBase):
 # ENUMS
 # =============================================================================
 
+
 class JobStatusEnum(str, enum.Enum):
     """TWS Job status enumeration."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -48,6 +50,7 @@ class JobStatusEnum(str, enum.Enum):
 
 class EventSeverity(str, enum.Enum):
     """Event severity levels."""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -56,6 +59,7 @@ class EventSeverity(str, enum.Enum):
 
 class ContentType(str, enum.Enum):
     """Content types for context store."""
+
     CONVERSATION = "conversation"
     DOCUMENT = "document"
     SOLUTION = "solution"
@@ -66,13 +70,12 @@ class ContentType(str, enum.Enum):
 # TWS STATUS STORE MODELS (from tws_status_store.py)
 # =============================================================================
 
+
 class TWSSnapshot(Base):
     """Snapshot of TWS status at a point in time."""
+
     __tablename__ = "tws_snapshots"
-    __table_args__ = (
-        Index("idx_tws_snapshots_timestamp", "timestamp"),
-        {"schema": "tws"}
-    )
+    __table_args__ = (Index("idx_tws_snapshots_timestamp", "timestamp"), {"schema": "tws"})
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
@@ -86,6 +89,7 @@ class TWSSnapshot(Base):
 
 class TWSJobStatus(Base):
     """Individual job status record."""
+
     __tablename__ = "tws_job_status"
     __table_args__ = (
         Index("idx_tws_job_status_job_name", "job_name"),
@@ -93,7 +97,7 @@ class TWSJobStatus(Base):
         Index("idx_tws_job_status_timestamp", "timestamp"),
         Index("idx_tws_job_status_workstation", "workstation"),
         UniqueConstraint("job_name", "run_number", "timestamp", name="uq_job_run_time"),
-        {"schema": "tws"}
+        {"schema": "tws"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -115,11 +119,12 @@ class TWSJobStatus(Base):
 
 class TWSWorkstationStatus(Base):
     """Workstation status record."""
+
     __tablename__ = "tws_workstation_status"
     __table_args__ = (
         Index("idx_tws_ws_name", "workstation_name"),
         Index("idx_tws_ws_timestamp", "timestamp"),
-        {"schema": "tws"}
+        {"schema": "tws"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -134,13 +139,14 @@ class TWSWorkstationStatus(Base):
 
 class TWSEvent(Base):
     """TWS events and alerts."""
+
     __tablename__ = "tws_events"
     __table_args__ = (
         Index("idx_tws_events_type", "event_type"),
         Index("idx_tws_events_severity", "severity"),
         Index("idx_tws_events_timestamp", "timestamp"),
         Index("idx_tws_events_job", "job_name"),
-        {"schema": "tws"}
+        {"schema": "tws"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -158,11 +164,12 @@ class TWSEvent(Base):
 
 class TWSPattern(Base):
     """Detected patterns in TWS data."""
+
     __tablename__ = "tws_patterns"
     __table_args__ = (
         Index("idx_tws_patterns_type", "pattern_type"),
         Index("idx_tws_patterns_job", "job_name"),
-        {"schema": "tws"}
+        {"schema": "tws"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -179,11 +186,12 @@ class TWSPattern(Base):
 
 class TWSProblemSolution(Base):
     """Known problems and their solutions."""
+
     __tablename__ = "tws_problem_solutions"
     __table_args__ = (
         Index("idx_tws_ps_problem_type", "problem_type"),
         Index("idx_tws_ps_job", "job_name"),
-        {"schema": "tws"}
+        {"schema": "tws"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -202,14 +210,16 @@ class TWSProblemSolution(Base):
 # CONTEXT STORE MODELS (from context_store.py)
 # =============================================================================
 
+
 class Conversation(Base):
     """Conversation history for context."""
+
     __tablename__ = "conversations"
     __table_args__ = (
         Index("idx_conversations_session", "session_id"),
         Index("idx_conversations_timestamp", "timestamp"),
         Index("idx_conversations_user", "user_id"),
-        {"schema": "context"}
+        {"schema": "context"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -226,11 +236,12 @@ class Conversation(Base):
 
 class ContextContent(Base):
     """General content for context retrieval."""
+
     __tablename__ = "context_content"
     __table_args__ = (
         Index("idx_context_content_type", "content_type"),
         Index("idx_context_content_source", "source"),
-        {"schema": "context"}
+        {"schema": "context"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -240,7 +251,9 @@ class ContextContent(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
+    )
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB)
     embedding_id: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -250,15 +263,17 @@ class ContextContent(Base):
 # AUDIT MODELS (from audit_db.py, audit_queue.py)
 # =============================================================================
 
+
 class AuditEntry(Base):
     """Audit log entries."""
+
     __tablename__ = "audit_entries"
     __table_args__ = (
         Index("idx_audit_entries_action", "action"),
         Index("idx_audit_entries_user", "user_id"),
         Index("idx_audit_entries_timestamp", "timestamp"),
         Index("idx_audit_entries_entity", "entity_type", "entity_id"),
-        {"schema": "audit"}
+        {"schema": "audit"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -276,18 +291,21 @@ class AuditEntry(Base):
 
 class AuditQueueItem(Base):
     """Pending audit items queue."""
+
     __tablename__ = "audit_queue"
     __table_args__ = (
         Index("idx_audit_queue_status", "status"),
         Index("idx_audit_queue_priority", "priority"),
         Index("idx_audit_queue_created", "created_at"),
-        {"schema": "audit"}
+        {"schema": "audit"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="pending")  # pending, processing, completed, failed
+    status: Mapped[str] = mapped_column(
+        String(50), default="pending"
+    )  # pending, processing, completed, failed
     priority: Mapped[int] = mapped_column(Integer, default=0)
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
     max_retries: Mapped[int] = mapped_column(Integer, default=3)
@@ -301,13 +319,12 @@ class AuditQueueItem(Base):
 # USER BEHAVIOR MODELS (from user_behavior.py)
 # =============================================================================
 
+
 class UserProfile(Base):
     """User profile and preferences."""
+
     __tablename__ = "user_profiles"
-    __table_args__ = (
-        Index("idx_user_profiles_user", "user_id"),
-        {"schema": "analytics"}
-    )
+    __table_args__ = (Index("idx_user_profiles_user", "user_id"), {"schema": "analytics"})
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -318,17 +335,20 @@ class UserProfile(Base):
     total_queries: Mapped[int] = mapped_column(Integer, default=0)
     last_active: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
+    )
 
 
 class SessionHistory(Base):
     """User session history."""
+
     __tablename__ = "session_history"
     __table_args__ = (
         Index("idx_session_history_user", "user_id"),
         Index("idx_session_history_session", "session_id"),
         Index("idx_session_history_start", "started_at"),
-        {"schema": "analytics"}
+        {"schema": "analytics"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -346,14 +366,16 @@ class SessionHistory(Base):
 # FEEDBACK & LEARNING MODELS (from feedback_store.py, active_learning.py)
 # =============================================================================
 
+
 class Feedback(Base):
     """User feedback on responses."""
+
     __tablename__ = "feedback"
     __table_args__ = (
         Index("idx_feedback_session", "session_id"),
         Index("idx_feedback_rating", "rating"),
         Index("idx_feedback_timestamp", "created_at"),
-        {"schema": "learning"}
+        {"schema": "learning"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -362,7 +384,9 @@ class Feedback(Base):
     query_text: Mapped[str | None] = mapped_column(Text)
     response_text: Mapped[str | None] = mapped_column(Text)
     rating: Mapped[int | None] = mapped_column(Integer)  # 1-5
-    feedback_type: Mapped[str] = mapped_column(String(50), default="general")  # general, accuracy, helpfulness
+    feedback_type: Mapped[str] = mapped_column(
+        String(50), default="general"
+    )  # general, accuracy, helpfulness
     feedback_text: Mapped[str | None] = mapped_column(Text)
     is_positive: Mapped[bool | None] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
@@ -371,10 +395,11 @@ class Feedback(Base):
 
 class LearningThreshold(Base):
     """Dynamic learning thresholds."""
+
     __tablename__ = "learning_thresholds"
     __table_args__ = (
         Index("idx_learning_thresholds_name", "threshold_name"),
-        {"schema": "learning"}
+        {"schema": "learning"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -386,23 +411,28 @@ class LearningThreshold(Base):
     last_adjusted: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     adjustment_history: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
+    )
 
 
 class ActiveLearningCandidate(Base):
     """Candidates for active learning."""
+
     __tablename__ = "active_learning_candidates"
     __table_args__ = (
         Index("idx_al_candidates_status", "status"),
         Index("idx_al_candidates_uncertainty", "uncertainty_score"),
-        {"schema": "learning"}
+        {"schema": "learning"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     query_text: Mapped[str] = mapped_column(Text, nullable=False)
     response_text: Mapped[str | None] = mapped_column(Text)
     uncertainty_score: Mapped[float] = mapped_column(Float, nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="pending")  # pending, reviewed, incorporated
+    status: Mapped[str] = mapped_column(
+        String(50), default="pending"
+    )  # pending, reviewed, incorporated
     selected_label: Mapped[str | None] = mapped_column(String(255))
     reviewer_id: Mapped[str | None] = mapped_column(String(255))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -414,14 +444,16 @@ class ActiveLearningCandidate(Base):
 # METRICS MODELS (from lightweight_store.py)
 # =============================================================================
 
+
 class MetricDataPoint(Base):
     """Time-series metric data points."""
+
     __tablename__ = "metric_data_points"
     __table_args__ = (
         Index("idx_metrics_name", "metric_name"),
         Index("idx_metrics_timestamp", "timestamp"),
         Index("idx_metrics_name_time", "metric_name", "timestamp"),
-        {"schema": "metrics"}
+        {"schema": "metrics"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -434,17 +466,20 @@ class MetricDataPoint(Base):
 
 class MetricAggregation(Base):
     """Pre-aggregated metrics for faster queries."""
+
     __tablename__ = "metric_aggregations"
     __table_args__ = (
         Index("idx_metric_agg_name", "metric_name"),
         Index("idx_metric_agg_period", "period_start", "period_end"),
         UniqueConstraint("metric_name", "aggregation_type", "period_start", name="uq_metric_agg"),
-        {"schema": "metrics"}
+        {"schema": "metrics"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     metric_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    aggregation_type: Mapped[str] = mapped_column(String(50), nullable=False)  # hourly, daily, weekly
+    aggregation_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # hourly, daily, weekly
     period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     min_value: Mapped[float] = mapped_column(Float)
@@ -459,19 +494,31 @@ class MetricAggregation(Base):
 # HELPER FUNCTION TO GET ALL MODELS
 # =============================================================================
 
+
 def get_all_models():
     """Return all model classes for migration/schema creation."""
     return [
         # TWS
-        TWSSnapshot, TWSJobStatus, TWSWorkstationStatus, TWSEvent, TWSPattern, TWSProblemSolution,
+        TWSSnapshot,
+        TWSJobStatus,
+        TWSWorkstationStatus,
+        TWSEvent,
+        TWSPattern,
+        TWSProblemSolution,
         # Context
-        Conversation, ContextContent,
+        Conversation,
+        ContextContent,
         # Audit
-        AuditEntry, AuditQueueItem,
+        AuditEntry,
+        AuditQueueItem,
         # Analytics
-        UserProfile, SessionHistory,
+        UserProfile,
+        SessionHistory,
         # Learning
-        Feedback, LearningThreshold, ActiveLearningCandidate,
+        Feedback,
+        LearningThreshold,
+        ActiveLearningCandidate,
         # Metrics
-        MetricDataPoint, MetricAggregation,
+        MetricDataPoint,
+        MetricAggregation,
     ]

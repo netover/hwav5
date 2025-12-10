@@ -48,7 +48,7 @@ async def test_retrieve_basic(retriever, mock_embedder, mock_vector_store):
 
 @pytest.mark.asyncio
 async def test_retrieve_with_ef_search(retriever, mock_embedder, mock_vector_store):
-    results = await retriever.retrieve("query", top_k=50)
+    await retriever.retrieve("query", top_k=50)
 
     # ef_search = base + log2(50) * 8 ≈ 64 + 5.6 * 8 ≈ 109 → capped at 128
     args, kwargs = mock_vector_store.query.call_args

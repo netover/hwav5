@@ -46,21 +46,19 @@ class OptimizedValidator:
         self._compiled_patterns: dict[str, re.Pattern] = {}
 
         # Pre-compile additional patterns
-        self._compiled_patterns.update({
-            'email_extended': re.compile(
-                r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            ),
-            'username': re.compile(r'^[a-zA-Z0-9_.-]+$'),
-            'api_key_name': re.compile(r'^[a-zA-Z0-9_-]+$'),
-            'tool_name': re.compile(r'^[a-zA-Z0-9_-]+$'),
-            'tag_name': re.compile(r'^[a-zA-Z0-9_-]+$'),
-            'mime_type': re.compile(
-                r'^[a-zA-Z0-9\-]+\/[a-zA-Z0-9\-\+]+(;.*)?$'
-            ),
-            'metadata_key': re.compile(r'^[a-zA-Z0-9_.-]+$'),
-            'config_key': re.compile(r'^[a-zA-Z0-9_.-]+$'),
-            'json_web_key': re.compile(r'^[a-zA-Z0-9_.-]+$'),
-        })
+        self._compiled_patterns.update(
+            {
+                "email_extended": re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"),
+                "username": re.compile(r"^[a-zA-Z0-9_.-]+$"),
+                "api_key_name": re.compile(r"^[a-zA-Z0-9_-]+$"),
+                "tool_name": re.compile(r"^[a-zA-Z0-9_-]+$"),
+                "tag_name": re.compile(r"^[a-zA-Z0-9_-]+$"),
+                "mime_type": re.compile(r"^[a-zA-Z0-9\-]+\/[a-zA-Z0-9\-\+]+(;.*)?$"),
+                "metadata_key": re.compile(r"^[a-zA-Z0-9_.-]+$"),
+                "config_key": re.compile(r"^[a-zA-Z0-9_.-]+$"),
+                "json_web_key": re.compile(r"^[a-zA-Z0-9_.-]+$"),
+            }
+        )
 
     @lru_cache(maxsize=128)
     def validate_email(self, email: str) -> bool:
@@ -80,7 +78,7 @@ class OptimizedValidator:
             return cached_result
 
         # Use pre-compiled pattern
-        result = bool(self._compiled_patterns['email_extended'].match(email))
+        result = bool(self._compiled_patterns["email_extended"].match(email))
         self.cache.set(cache_key, result)
         return result
 
@@ -94,7 +92,7 @@ class OptimizedValidator:
         if cached_result is not None:
             return cached_result
 
-        result = bool(self._compiled_patterns['username'].match(username))
+        result = bool(self._compiled_patterns["username"].match(username))
         self.cache.set(cache_key, result)
         return result
 
@@ -108,7 +106,7 @@ class OptimizedValidator:
         if cached_result is not None:
             return cached_result
 
-        result = bool(self._compiled_patterns['api_key_name'].match(name))
+        result = bool(self._compiled_patterns["api_key_name"].match(name))
         self.cache.set(cache_key, result)
         return result
 
@@ -122,7 +120,7 @@ class OptimizedValidator:
         if cached_result is not None:
             return cached_result
 
-        result = bool(self._compiled_patterns['tool_name'].match(tool))
+        result = bool(self._compiled_patterns["tool_name"].match(tool))
         self.cache.set(cache_key, result)
         return result
 
@@ -136,7 +134,7 @@ class OptimizedValidator:
         if cached_result is not None:
             return cached_result
 
-        result = bool(self._compiled_patterns['tag_name'].match(tag))
+        result = bool(self._compiled_patterns["tag_name"].match(tag))
         self.cache.set(cache_key, result)
         return result
 
@@ -150,7 +148,7 @@ class OptimizedValidator:
         if cached_result is not None:
             return cached_result
 
-        result = bool(self._compiled_patterns['mime_type'].match(mime_type))
+        result = bool(self._compiled_patterns["mime_type"].match(mime_type))
         self.cache.set(cache_key, result)
         return result
 
@@ -164,7 +162,7 @@ class OptimizedValidator:
         if cached_result is not None:
             return cached_result
 
-        result = bool(self._compiled_patterns['metadata_key'].match(key))
+        result = bool(self._compiled_patterns["metadata_key"].match(key))
         self.cache.set(cache_key, result)
         return result
 
@@ -178,7 +176,7 @@ class OptimizedValidator:
         if cached_result is not None:
             return cached_result
 
-        result = bool(self._compiled_patterns['config_key'].match(key))
+        result = bool(self._compiled_patterns["config_key"].match(key))
         self.cache.set(cache_key, result)
         return result
 
@@ -226,9 +224,10 @@ class DataStructureValidator:
         self.validator = OptimizedValidator()
 
     def validate_dict_structure(
-        self, data: dict[str, Any],
+        self,
+        data: dict[str, Any],
         required_keys: set[str] | None = None,
-        key_validator: str | None = None
+        key_validator: str | None = None,
     ) -> list[str]:
         """
         Validate dictionary structure efficiently.
@@ -253,7 +252,14 @@ class DataStructureValidator:
         if key_validator:
             invalid_keys = []
             for key in data:
-                if key_validator == "metadata" and not self.validator.validate_metadata_key(key) or key_validator == "config" and not self.validator.validate_config_key(key) or key_validator == "json_web" and not self.validator.validate_json_web_key(key):
+                if (
+                    key_validator == "metadata"
+                    and not self.validator.validate_metadata_key(key)
+                    or key_validator == "config"
+                    and not self.validator.validate_config_key(key)
+                    or key_validator == "json_web"
+                    and not self.validator.validate_json_web_key(key)
+                ):
                     invalid_keys.append(key)
 
             if invalid_keys:
@@ -262,9 +268,7 @@ class DataStructureValidator:
         return errors
 
     def validate_list_structure(
-        self, data: list[Any],
-        item_validator: str | None = None,
-        max_length: int | None = None
+        self, data: list[Any], item_validator: str | None = None, max_length: int | None = None
     ) -> list[str]:
         """
         Validate list structure efficiently.
@@ -287,7 +291,9 @@ class DataStructureValidator:
         if item_validator:
             invalid_items = []
             for i, item in enumerate(data):
-                if item_validator == "tool_name" and not self.validator.validate_tool_name(str(item)):
+                if item_validator == "tool_name" and not self.validator.validate_tool_name(
+                    str(item)
+                ):
                     invalid_items.append(f"item[{i}]")
 
             if invalid_items:

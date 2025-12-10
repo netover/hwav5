@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 _LAZY_API_EXPORTS: dict[str, tuple[str, str]] = {
     "create_app": ("resync.api.app_factory", "create_app"),
@@ -6,6 +6,7 @@ _LAZY_API_EXPORTS: dict[str, tuple[str, str]] = {
     "register_routes": ("resync.api.routes", "register_routes"),
 }
 _LOADED: dict[str, Any] = {}
+
 
 def __getattr__(name: str):
     if name in _LAZY_API_EXPORTS:

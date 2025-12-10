@@ -13,7 +13,7 @@ Version: 5.2.3.29
 
 import asyncio
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import structlog
 
@@ -56,6 +56,7 @@ except ImportError:
     # Mock classes for development/testing
     class Agent:
         """Mock Agent when Agno is not available."""
+
         def __init__(self, **kwargs):
             self.name = kwargs.get("name", "MockAgent")
             self.instructions = kwargs.get("instructions", [])
@@ -66,6 +67,7 @@ except ImportError:
 
     class Team:
         """Mock Team when Agno is not available."""
+
         def __init__(self, **kwargs):
             self.name = kwargs.get("name", "MockTeam")
             self.members = kwargs.get("members", [])
@@ -79,6 +81,7 @@ except ImportError:
 
     class LiteLLM:
         """Mock LiteLLM model."""
+
         def __init__(self, id: str = "gpt-4o", **kwargs):
             self.id = id
 
@@ -86,6 +89,7 @@ except ImportError:
 # ============================================================================
 # QUERY CLASSIFIER
 # ============================================================================
+
 
 class QueryClassifier:
     """
@@ -159,7 +163,7 @@ class QueryClassifier:
 
         # Determine recommended specialists
         recommended = []
-        for intent, count in sorted_matches:
+        for intent, _count in sorted_matches:
             specialist = self.SPECIALIST_MAPPING.get(intent)
             if specialist:
                 recommended.append(specialist)
@@ -209,10 +213,9 @@ class QueryClassifier:
         # Error/ABEND codes
         abend_pattern = r"\b([SU]\d{3}[A-Z]?)\b"
         rc_pattern = r"(?:rc|return\s*code)\s*=?\s*(\d+)"
-        entities["error_codes"] = (
-            re.findall(abend_pattern, query, re.IGNORECASE) +
-            [f"RC={rc}" for rc in re.findall(rc_pattern, query, re.IGNORECASE)]
-        )
+        entities["error_codes"] = re.findall(abend_pattern, query, re.IGNORECASE) + [
+            f"RC={rc}" for rc in re.findall(rc_pattern, query, re.IGNORECASE)
+        ]
 
         return entities
 
@@ -220,6 +223,7 @@ class QueryClassifier:
 # ============================================================================
 # SPECIALIST AGENT CLASSES
 # ============================================================================
+
 
 class BaseSpecialist:
     """Base class for specialist agents."""
@@ -232,8 +236,7 @@ class BaseSpecialist:
         model: Any | None = None,
     ):
         self.config = config or DEFAULT_SPECIALIST_CONFIGS.get(
-            self.specialist_type,
-            SpecialistConfig(specialist_type=self.specialist_type)
+            self.specialist_type, SpecialistConfig(specialist_type=self.specialist_type)
         )
         self.model = model or LiteLLM(id=self.config.model_name)
         self._agent: Agent | None = None
@@ -524,6 +527,7 @@ class KnowledgeSpecialist(BaseSpecialist):
 # TEAM ORCHESTRATOR
 # ============================================================================
 
+
 class TWSSpecialistTeam:
     """
     Orchestrates the 4 specialist agents as a coordinated team.
@@ -569,8 +573,7 @@ class TWSSpecialistTeam:
 
         for spec_type, spec_class in specialist_classes.items():
             spec_config = self.config.specialists.get(
-                spec_type,
-                DEFAULT_SPECIALIST_CONFIGS.get(spec_type)
+                spec_type, DEFAULT_SPECIALIST_CONFIGS.get(spec_type)
             )
 
             if spec_config and spec_config.enabled:
@@ -655,18 +658,14 @@ class TWSSpecialistTeam:
 
         # Execute specialists
         if self.config.parallel_execution:
-            specialist_responses = await self._execute_parallel(
-                specialists_to_use, query, context
-            )
+            specialist_responses = await self._execute_parallel(specialists_to_use, query, context)
         else:
             specialist_responses = await self._execute_sequential(
                 specialists_to_use, query, context
             )
 
         # Synthesize responses
-        synthesized = await self._synthesize_responses(
-            query, specialist_responses, classification
-        )
+        synthesized = await self._synthesize_responses(query, specialist_responses, classification)
 
         total_time = int((time.time() - start_time) * 1000)
 
@@ -690,7 +689,7 @@ class TWSSpecialistTeam:
         """Execute specialists in parallel."""
         tasks = [
             spec.process(query, context)
-            for spec in specialists[:self.config.max_parallel_specialists]
+            for spec in specialists[: self.config.max_parallel_specialists]
         ]
 
         responses = await asyncio.gather(*tasks, return_exceptions=True)
@@ -698,12 +697,14 @@ class TWSSpecialistTeam:
         result = []
         for i, resp in enumerate(responses):
             if isinstance(resp, Exception):
-                result.append(SpecialistResponse(
-                    specialist_type=specialists[i].specialist_type,
-                    response="",
-                    confidence=0.0,
-                    error=str(resp),
-                ))
+                result.append(
+                    SpecialistResponse(
+                        specialist_type=specialists[i].specialist_type,
+                        response="",
+                        confidence=0.0,
+                        error=str(resp),
+                    )
+                )
             else:
                 result.append(resp)
 
@@ -722,12 +723,14 @@ class TWSSpecialistTeam:
                 resp = await spec.process(query, context)
                 responses.append(resp)
             except Exception as e:
-                responses.append(SpecialistResponse(
-                    specialist_type=spec.specialist_type,
-                    response="",
-                    confidence=0.0,
-                    error=str(e),
-                ))
+                responses.append(
+                    SpecialistResponse(
+                        specialist_type=spec.specialist_type,
+                        response="",
+                        confidence=0.0,
+                        error=str(e),
+                    )
+                )
         return responses
 
     async def _synthesize_responses(

@@ -1,6 +1,5 @@
 """RAG (Retrieval-Augmented Generation) models."""
 
-
 from pydantic import BaseModel
 
 from .base import BaseModelWithTime
@@ -29,25 +28,3 @@ class RAGFileDetail(RAGFileCreate):
     id: str
     file_size: int
     ingestion_status: str
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,7 +1,8 @@
+import asyncio
 import tempfile
 from pathlib import Path
+
 from resync.core.async_cache import AsyncTTLCache
-import asyncio
 
 
 async def test_wal_simple():

@@ -38,9 +38,7 @@ class CachedStaticFiles(StarletteStaticFiles):
 
         if response.status_code == 200:
             # Set cache headers
-            cache_max_age = getattr(
-                settings, "static_cache_max_age", 86400
-            )  # Default 1 day
+            cache_max_age = getattr(settings, "static_cache_max_age", 86400)  # Default 1 day
             response.headers["Cache-Control"] = f"public, max-age={cache_max_age}"
 
             # Generate ETag for cache validation
@@ -49,9 +47,7 @@ class CachedStaticFiles(StarletteStaticFiles):
                 if full_path.exists():
                     stat_result = os.stat(full_path)
                     file_metadata = f"{stat_result.st_size}-{int(stat_result.st_mtime)}"
-                    etag_value = (
-                        f'"{hashlib.sha256(file_metadata.encode()).hexdigest()[:16]}"'
-                    )
+                    etag_value = f'"{hashlib.sha256(file_metadata.encode()).hexdigest()[:16]}"'
                     response.headers["ETag"] = etag_value
             except Exception as e:
                 logger.warning("failed_to_generate_etag", error=str(e))
@@ -135,9 +131,7 @@ class ApplicationFactory:
                 max_backoff=settings.redis_startup_backoff_max,
             )
 
-            app_logger.info(
-                "application_startup_initiated", component="resync_hwa_dashboard"
-            )
+            app_logger.info("application_startup_initiated", component="resync_hwa_dashboard")
 
             # Outras inicializações...
 
@@ -153,7 +147,7 @@ class ApplicationFactory:
                 app_logger.warning(
                     "proactive_monitoring_init_failed",
                     error=str(e),
-                    hint="Monitoring will be unavailable but app will continue"
+                    hint="Monitoring will be unavailable but app will continue",
                 )
 
             logger.info("application_startup_completed")
@@ -223,6 +217,7 @@ class ApplicationFactory:
                 # Shutdown proactive monitoring first
                 try:
                     from resync.core.monitoring_integration import shutdown_proactive_monitoring
+
                     await shutdown_proactive_monitoring(app)
                     app_logger.info("proactive_monitoring_shutdown_successful")
                 except Exception as e:
@@ -450,9 +445,7 @@ class ApplicationFactory:
             return
 
         # Mount main static directory with caching
-        self.app.mount(
-            "/static", CachedStaticFiles(directory=str(static_dir)), name="static"
-        )
+        self.app.mount("/static", CachedStaticFiles(directory=str(static_dir)), name="static")
 
         # Mount subdirectories if they exist
         subdirs = ["assets", "css", "js", "img", "fonts"]
@@ -489,9 +482,7 @@ class ApplicationFactory:
             try:
                 from resync.core.rate_limiter import dashboard_rate_limit
 
-                return await dashboard_rate_limit(
-                    self._render_template("revisao.html", request)
-                )
+                return await dashboard_rate_limit(self._render_template("revisao.html", request))
             except ImportError:
                 return self._render_template("revisao.html", request)
 
@@ -515,9 +506,7 @@ class ApplicationFactory:
             Rendered HTML response
         """
         if not self.templates:
-            raise HTTPException(
-                status_code=500, detail="Template engine not configured"
-            )
+            raise HTTPException(status_code=500, detail="Template engine not configured")
 
         try:
             from resync.core.csp_template_response import CSPTemplateResponse
@@ -540,10 +529,10 @@ class ApplicationFactory:
             logger.error("template_not_found", template=template_name)
             raise HTTPException(
                 status_code=404, detail=f"Template {template_name} not found"
-            )
+            ) from None
         except Exception as e:
             logger.error("template_render_error", template=template_name, error=str(e))
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail="Internal server error") from None
 
     async def _handle_csp_report(self, request: Request) -> JSONResponse:
         """
@@ -562,9 +551,7 @@ class ApplicationFactory:
 
             # Log violation details
             report = result.get("report", {})
-            csp_report = (
-                report.get("csp-report", report) if isinstance(report, dict) else report
-            )
+            csp_report = report.get("csp-report", report) if isinstance(report, dict) else report
 
             logger.warning(
                 "csp_violation_reported",

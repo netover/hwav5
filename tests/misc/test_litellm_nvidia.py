@@ -1,38 +1,49 @@
 """
 Test script for NVIDIA LLM API using LiteLLM
 """
+
 import asyncio
 import os
+
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
 
 async def test_litellm_nvidia():
     """Test NVIDIA LLM API using LiteLLM"""
     try:
         # Import litellm
         from litellm import acompletion
-        
+
         # Set NVIDIA API key
-        os.environ["NVIDIA_API_KEY"] = "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"
-        
+        os.environ["NVIDIA_API_KEY"] = (
+            "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"
+        )
+
         print("🚀 Testing NVIDIA LLM API with LiteLLM...")
-        print(f"📡 Using model: nvidia/llama-3.3-nemotron-super-49b-v1.5")
+        print("📡 Using model: nvidia/llama-3.3-nemotron-super-49b-v1.5")
         print("=" * 50)
 
         # Create completion request
         response = await acompletion(
             model="nvidia/nemotron-super-49b-v1",  # Using the model prefix for NVIDIA provider
             messages=[
-                {"role": "system", "content": "Você é um assistente útil que responde em português de forma clara e concisa."},
-                {"role": "user", "content": "Olá! Por favor, me diga como está o sistema Resync TWS Integration."}
+                {
+                    "role": "system",
+                    "content": "Você é um assistente útil que responde em português de forma clara e concisa.",
+                },
+                {
+                    "role": "user",
+                    "content": "Olá! Por favor, me diga como está o sistema Resync TWS Integration.",
+                },
             ],
             temperature=0.6,
             top_p=0.95,
             max_tokens=500,
             frequency_penalty=0,
-            presence_penalty=0
+            presence_penalty=0,
         )
 
         # Print response
@@ -46,15 +57,18 @@ async def test_litellm_nvidia():
         print(f"❌ Error testing NVIDIA LLM API with LiteLLM: {e}")
         return False
 
+
 async def test_litellm_streaming():
     """Test streaming response using LiteLLM"""
     try:
         # Import litellm streaming
         from litellm import acompletion
-        
+
         # Set NVIDIA API key
-        os.environ["NVIDIA_API_KEY"] = "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"
-        
+        os.environ["NVIDIA_API_KEY"] = (
+            "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"
+        )
+
         print("\n🌊 Testing streaming response with LiteLLM...")
         print("=" * 50)
 
@@ -62,15 +76,18 @@ async def test_litellm_streaming():
         response = await acompletion(
             model="nvidia/nemotron-super-49b-v1",
             messages=[
-                {"role": "system", "content": "Você é um assistente útil que responde em português."},
-                {"role": "user", "content": "Liste 3 benefícios principais do sistema Resync."}
+                {
+                    "role": "system",
+                    "content": "Você é um assistente útil que responde em português.",
+                },
+                {"role": "user", "content": "Liste 3 benefícios principais do sistema Resync."},
             ],
             temperature=0.6,
             top_p=0.95,
             max_tokens=300,
             frequency_penalty=0,
             presence_penalty=0,
-            stream=True
+            stream=True,
         )
 
         # Print streaming response
@@ -81,7 +98,7 @@ async def test_litellm_streaming():
                 content = chunk.choices[0].delta.content
                 print(content, end="")
                 full_response += content
-        
+
         print("\n" + "=" * 50)
         print("🎉 Streaming response with LiteLLM completed successfully!")
         return True
@@ -90,26 +107,28 @@ async def test_litellm_streaming():
         print(f"❌ Error testing streaming with LiteLLM: {e}")
         return False
 
+
 async def main():
     """Main test function"""
     print("🧪 NVIDIA LLM API Test Suite (LiteLLM)")
     print("=" * 50)
-    
+
     # Test basic completion
     basic_test = await test_litellm_nvidia()
-    
+
     # Test streaming
     streaming_test = await test_litellm_streaming()
-    
+
     # Summary
     print("\n📊 Test Summary:")
     print(f"Basic completion: {'✅ PASS' if basic_test else '❌ FAIL'}")
     print(f"Streaming: {'✅ PASS' if streaming_test else '❌ FAIL'}")
-    
+
     if basic_test and streaming_test:
         print("\n🎯 All tests passed! NVIDIA LLM with LiteLLM is ready for integration.")
     else:
         print("\n⚠️  Some tests failed. Please check the configuration.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

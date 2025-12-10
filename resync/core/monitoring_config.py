@@ -8,7 +8,6 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-
 from enum import Enum
 from typing import Any
 
@@ -18,9 +17,9 @@ from pydantic import BaseModel, Field
 class PollingMode(str, Enum):
     """Modos de polling."""
 
-    FIXED = "fixed"           # Intervalo fixo
-    ADAPTIVE = "adaptive"     # Adapta baseado em atividade
-    SCHEDULED = "scheduled"   # Horários específicos
+    FIXED = "fixed"  # Intervalo fixo
+    ADAPTIVE = "adaptive"  # Adapta baseado em atividade
+    SCHEDULED = "scheduled"  # Horários específicos
 
 
 class MonitoringConfig(BaseModel):
@@ -321,7 +320,9 @@ class MonitoringConfig(BaseModel):
             "polling": {
                 "enabled": True,
                 "interval": self.polling_interval_seconds,
-                "mode": self.polling_mode.value if isinstance(self.polling_mode, PollingMode) else self.polling_mode,
+                "mode": self.polling_mode.value
+                if isinstance(self.polling_mode, PollingMode)
+                else self.polling_mode,
                 "schedule": self.polling_schedule,
             },
             "alerts": {

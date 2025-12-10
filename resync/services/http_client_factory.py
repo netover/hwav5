@@ -33,11 +33,13 @@ except Exception as _e:
     try:
         # Fallback: instantiate settings from the top‑level config
         from config.base import Settings as BaseSettings  # type: ignore
+
         settings = BaseSettings()  # type: ignore[assignment]
     except Exception as _e:
         # Final fallback: define a minimal settings object with no attributes
         class _DummySettings:
             """_ dummy settings."""
+
         settings = _DummySettings()  # type: ignore[assignment]
 
 
@@ -87,21 +89,14 @@ def create_async_http_client(
         verify=verify,
         timeout=httpx.Timeout(
             connect=connect_timeout
-            or getattr(
-                settings, "TWS_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT
-            ),
-            read=read_timeout
-            or getattr(settings, "TWS_READ_TIMEOUT", DEFAULT_READ_TIMEOUT),
-            write=write_timeout
-            or getattr(settings, "TWS_WRITE_TIMEOUT", DEFAULT_WRITE_TIMEOUT),
-            pool=pool_timeout
-            or getattr(settings, "TWS_POOL_TIMEOUT", DEFAULT_POOL_TIMEOUT),
+            or getattr(settings, "TWS_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT),
+            read=read_timeout or getattr(settings, "TWS_READ_TIMEOUT", DEFAULT_READ_TIMEOUT),
+            write=write_timeout or getattr(settings, "TWS_WRITE_TIMEOUT", DEFAULT_WRITE_TIMEOUT),
+            pool=pool_timeout or getattr(settings, "TWS_POOL_TIMEOUT", DEFAULT_POOL_TIMEOUT),
         ),
         limits=httpx.Limits(
             max_connections=max_connections
-            or getattr(
-                settings, "TWS_MAX_CONNECTIONS", DEFAULT_MAX_CONNECTIONS
-            ),
+            or getattr(settings, "TWS_MAX_CONNECTIONS", DEFAULT_MAX_CONNECTIONS),
             max_keepalive_connections=max_keepalive
             or getattr(
                 settings,
@@ -110,6 +105,7 @@ def create_async_http_client(
             ),
         ),
     )
+
 
 logger = logging.getLogger(__name__)
 
@@ -130,18 +126,14 @@ def create_tws_http_client(
 
     # Define timeout values based on settings
     timeout = httpx.Timeout(
-        connect=getattr(
-            settings, "TWS_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT
-        ),
+        connect=getattr(settings, "TWS_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT),
         read=getattr(settings, "TWS_READ_TIMEOUT", DEFAULT_READ_TIMEOUT),
         write=getattr(settings, "TWS_WRITE_TIMEOUT", DEFAULT_WRITE_TIMEOUT),
         pool=getattr(settings, "TWS_POOL_TIMEOUT", DEFAULT_POOL_TIMEOUT),
     )
 
     limits = httpx.Limits(
-        max_connections=getattr(
-            settings, "TWS_MAX_CONNECTIONS", DEFAULT_MAX_CONNECTIONS
-        ),
+        max_connections=getattr(settings, "TWS_MAX_CONNECTIONS", DEFAULT_MAX_CONNECTIONS),
         max_keepalive_connections=getattr(
             settings, "TWS_MAX_KEEPALIVE", DEFAULT_MAX_KEEPALIVE_CONNECTIONS
         ),

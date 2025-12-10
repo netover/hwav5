@@ -6,11 +6,12 @@ usando mocks precisos para simular cenários de sucesso, falha e
 concorrência, seguindo melhores práticas de 2025 para testes assíncronos.
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock
 
+import pytest
+
+from resync.core.pools.base_pool import ConnectionPoolConfig, ConnectionPoolStats
 from resync.core.pools.db_pool import DatabaseConnectionPool
-from resync.core.pools.base_pool import ConnectionPoolStats, ConnectionPoolConfig
 
 
 class TestPoolMetricsIsolation:
@@ -73,7 +74,9 @@ class TestPoolMetricsIsolation:
 
         success_stats = mock_pool.get_stats_copy()
         assert success_stats["connection_creations"] == initial_stats["connection_creations"] + 1
-        assert success_stats["active_connections"] == initial_stats["active_connections"]  # Deve voltar a zero após uso
+        assert (
+            success_stats["active_connections"] == initial_stats["active_connections"]
+        )  # Deve voltar a zero após uso
 
         # Verificar que não há vazamentos - active_connections deve ser 0 após uso
         assert success_stats["active_connections"] == 0

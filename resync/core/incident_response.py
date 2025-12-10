@@ -11,8 +11,8 @@ This module provides intelligent incident response capabilities including:
 - Continuous learning and improvement
 """
 
-
 import asyncio
+import contextlib
 import time
 from collections import deque
 from dataclasses import dataclass, field
@@ -125,9 +125,7 @@ class Incident:
         base_score = 50.0
 
         # Bonus for quick response
-        if (
-            self.contained_at and (self.contained_at - self.detected_at) < 3600
-        ):  # < 1 hour
+        if self.contained_at and (self.contained_at - self.detected_at) < 3600:  # < 1 hour
             base_score += 20
 
         # Bonus for comprehensive response
@@ -226,9 +224,7 @@ class ResponsePlaybook:
     def applies_to(self, incident: Incident) -> bool:
         """Check if playbook applies to incident."""
         severity_ok = (
-            self.severity_range[0].value
-            <= incident.severity.value
-            <= self.severity_range[1].value
+            self.severity_range[0].value <= incident.severity.value <= self.severity_range[1].value
         )
         category_ok = self.category == incident.category
         return severity_ok and category_ok
@@ -266,9 +262,7 @@ class IncidentResponseConfig:
     # Notification settings
     notify_on_detection: bool = True
     notify_on_containment: bool = True
-    escalation_intervals_minutes: list[int] = field(
-        default_factory=lambda: [60, 240, 1440]
-    )
+    escalation_intervals_minutes: list[int] = field(default_factory=lambda: [60, 240, 1440])
 
     # Stakeholder management
     critical_stakeholders: list[str] = field(default_factory=list)
@@ -297,12 +291,8 @@ class IncidentDetector:
                 "category": IncidentCategory.UNAUTHORIZED_ACCESS,
                 "severity": IncidentSeverity.MEDIUM,
                 "condition": lambda events: (
-                    len([e for e in events if e.get("event_type") == "failed_login"])
-                    >= 10
-                    and len(
-                        set(e.get("ip_address") for e in events if e.get("ip_address"))
-                    )
-                    <= 3
+                    len([e for e in events if e.get("event_type") == "failed_login"]) >= 10
+                    and len(set(e.get("ip_address") for e in events if e.get("ip_address"))) <= 3
                 ),
                 "time_window": 300,  # 5 minutes
             },
@@ -323,10 +313,7 @@ class IncidentDetector:
                 "category": IncidentCategory.DATA_BREACH,
                 "severity": IncidentSeverity.CRITICAL,
                 "condition": lambda events: (
-                    any(
-                        e.get("event_type") == "unauthorized_data_access"
-                        for e in events
-                    )
+                    any(e.get("event_type") == "unauthorized_data_access" for e in events)
                     and any(e.get("severity") == "critical" for e in events)
                 ),
                 "time_window": 120,  # 2 minutes
@@ -336,18 +323,8 @@ class IncidentDetector:
                 "category": IncidentCategory.DENIAL_OF_SERVICE,
                 "severity": IncidentSeverity.HIGH,
                 "condition": lambda events: (
-                    len(
-                        [
-                            e
-                            for e in events
-                            if e.get("event_type") == "rate_limit_exceeded"
-                        ]
-                    )
-                    >= 50
-                    and len(
-                        set(e.get("ip_address") for e in events if e.get("ip_address"))
-                    )
-                    <= 5
+                    len([e for e in events if e.get("event_type") == "rate_limit_exceeded"]) >= 50
+                    and len(set(e.get("ip_address") for e in events if e.get("ip_address"))) <= 5
                 ),
                 "time_window": 300,  # 5 minutes
             },
@@ -358,7 +335,9 @@ class IncidentDetector:
         for rule in self.detection_rules:
             if rule["condition"](events):
                 # Create incident
-                incident_id = f"inc_{int(time.time())}_{rule['name']}_{hash(str(events)[:50]) % 10000}"
+                incident_id = (
+                    f"inc_{int(time.time())}_{rule['name']}_{hash(str(events)[:50]) % 10000}"
+                )
 
                 incident = Incident(
                     incident_id=incident_id,
@@ -530,9 +509,7 @@ class IncidentResponder:
 
         return executed_actions
 
-    async def _execute_action(
-        self, action: ResponseAction, incident: Incident
-    ) -> dict[str, Any]:
+    async def _execute_action(self, action: ResponseAction, incident: Incident) -> dict[str, Any]:
         """Execute a specific response action."""
         # This is where you'd integrate with actual systems
         # For now, simulate execution
@@ -598,13 +575,9 @@ class NotificationManager:
             message, ["security_team", "management"], "incident_contained"
         )
 
-    async def send_escalation_notification(
-        self, incident: Incident, level: int
-    ) -> None:
+    async def send_escalation_notification(self, incident: Incident, level: int) -> None:
         """Send escalation notification."""
-        message = self._format_incident_notification(
-            incident, f"ESCALATION LEVEL {level}"
-        )
+        message = self._format_incident_notification(incident, f"ESCALATION LEVEL {level}")
 
         # Escalate to more stakeholders
         stakeholders = ["security_team", "management"]
@@ -613,9 +586,7 @@ class NotificationManager:
         if level >= 3:
             stakeholders.extend(["legal", "compliance"])
 
-        await self._send_notifications(
-            message, stakeholders, f"incident_escalation_level_{level}"
-        )
+        await self._send_notifications(message, stakeholders, f"incident_escalation_level_{level}")
 
     def _format_incident_notification(self, incident: Incident, event_type: str) -> str:
         """Format incident notification message."""
@@ -624,18 +595,18 @@ INCIDENT {event_type}: {incident.incident_id}
 
 Title: {incident.title}
 Severity: {incident.severity.value.upper()}
-Category: {incident.category.value.replace('_', ' ').title()}
-Status: {incident.status.value.replace('_', ' ').title()}
+Category: {incident.category.value.replace("_", " ").title()}
+Status: {incident.status.value.replace("_", " ").title()}
 
 Description: {incident.description}
 
-Detected: {datetime.fromtimestamp(incident.detected_at).strftime('%Y-%m-%d %H:%M:%S')}
+Detected: {datetime.fromtimestamp(incident.detected_at).strftime("%Y-%m-%d %H:%M:%S")}
 Duration: {int(incident.duration)} seconds
 
 Impact:
 - Affected Users: {incident.affected_users}
 - Affected Systems: {incident.affected_systems}
-- Business Impact: {incident.business_impact or 'Under assessment'}
+- Business Impact: {incident.business_impact or "Under assessment"}
 
 Detection Source: {incident.detection_source}
 
@@ -819,10 +790,8 @@ class IncidentResponseEngine:
         for task in [self._detection_task, self._escalation_task, self._cleanup_task]:
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         logger.info("Incident response engine stopped")
 
@@ -968,9 +937,7 @@ class IncidentResponseEngine:
             "category_distribution": category_distribution,
             "automated_responses": self.automated_responses,
             "manual_interventions": self.manual_interventions,
-            "response_effectiveness": sum(
-                i.response_effectiveness for i in self.incident_history
-            )
+            "response_effectiveness": sum(i.response_effectiveness for i in self.incident_history)
             / max(1, len(self.incident_history)),
         }
 
@@ -981,9 +948,7 @@ class IncidentResponseEngine:
 
         # Get recent events within detection window
         cutoff_time = time.time() - self.detection_window
-        recent_events = [
-            e for e in self.event_buffer if e.get("timestamp", 0) > cutoff_time
-        ]
+        recent_events = [e for e in self.event_buffer if e.get("timestamp", 0) > cutoff_time]
 
         if len(recent_events) < 3:  # Need minimum events for pattern detection
             return
@@ -1044,9 +1009,7 @@ class IncidentResponseEngine:
             ],
         }
 
-        logger.info(
-            "incident_post_mortem", incident_id=incident.incident_id, analysis=analysis
-        )
+        logger.info("incident_post_mortem", incident_id=incident.incident_id, analysis=analysis)
 
     async def _incident_detection_worker(self) -> None:
         """Background worker for incident detection."""
@@ -1073,17 +1036,13 @@ class IncidentResponseEngine:
                     # Check escalation intervals
                     age_minutes = (current_time - incident.detected_at) / 60
 
-                    for i, interval in enumerate(
-                        self.config.escalation_intervals_minutes
-                    ):
+                    for i, interval in enumerate(self.config.escalation_intervals_minutes):
                         if age_minutes >= interval:
                             # Check if we already escalated at this level
-                            escalation_tag = f"escalated_level_{i+1}"
+                            escalation_tag = f"escalated_level_{i + 1}"
                             if escalation_tag not in incident.tags:
                                 incident.tags.add(escalation_tag)
-                                await self.notifier.send_escalation_notification(
-                                    incident, i + 1
-                                )
+                                await self.notifier.send_escalation_notification(incident, i + 1)
                                 break
 
             except asyncio.CancelledError:
@@ -1099,9 +1058,7 @@ class IncidentResponseEngine:
 
                 # Close old incidents
                 current_time = time.time()
-                cutoff_time = current_time - (
-                    self.config.review_incidents_after_days * 24 * 3600
-                )
+                cutoff_time = current_time - (self.config.review_incidents_after_days * 24 * 3600)
 
                 to_close = []
                 for incident_id, incident in self.active_incidents.items():
@@ -1109,9 +1066,7 @@ class IncidentResponseEngine:
                         to_close.append(incident_id)
 
                 for incident_id in to_close:
-                    await self.update_incident_status(
-                        incident_id, IncidentStatus.CLOSED
-                    )
+                    await self.update_incident_status(incident_id, IncidentStatus.CLOSED)
 
             except asyncio.CancelledError:
                 break

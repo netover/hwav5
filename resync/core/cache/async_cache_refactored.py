@@ -8,8 +8,8 @@ This is the modernized version of async_cache.py that uses:
 - CacheTransactionMixin: Transaction support
 """
 
-
 import asyncio
+import contextlib
 import logging
 from dataclasses import dataclass
 from time import time
@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CacheEntry:
     """Represents a single entry in the cache with timestamp and TTL."""
+
     data: Any
     timestamp: float
     ttl: float
@@ -77,12 +78,8 @@ class AsyncTTLCacheRefactored(
         self.max_entries = max_entries
 
         # Initialize shards
-        self.shards: list[dict[str, CacheEntry]] = [
-            {} for _ in range(num_shards)
-        ]
-        self.shard_locks: list[asyncio.Lock] = [
-            asyncio.Lock() for _ in range(num_shards)
-        ]
+        self.shards: list[dict[str, CacheEntry]] = [{} for _ in range(num_shards)]
+        self.shard_locks: list[asyncio.Lock] = [asyncio.Lock() for _ in range(num_shards)]
 
         # State
         self.is_running = True
@@ -97,7 +94,7 @@ class AsyncTTLCacheRefactored(
                 "ttl_seconds": ttl_seconds,
                 "num_shards": num_shards,
                 "max_entries": max_entries,
-            }
+            },
         )
 
     def _get_shard_index(self, key: str) -> int:
@@ -226,8 +223,7 @@ class AsyncTTLCacheRefactored(
                 for i, shard in enumerate(self.shards):
                     async with self.shard_locks[i]:
                         expired_keys = [
-                            k for k, v in shard.items()
-                            if current_time > v.timestamp + v.ttl
+                            k for k, v in shard.items() if current_time > v.timestamp + v.ttl
                         ]
                         for key in expired_keys:
                             del shard[key]
@@ -245,19 +241,15 @@ class AsyncTTLCacheRefactored(
     def start_cleanup_task(self) -> None:
         """Start the background cleanup task."""
         if self.cleanup_task is None or self.cleanup_task.done():
-            self.cleanup_task = asyncio.create_task(
-                self._cleanup_expired_entries()
-            )
+            self.cleanup_task = asyncio.create_task(self._cleanup_expired_entries())
 
     async def stop(self) -> None:
         """Stop the cache and cleanup task."""
         self.is_running = False
         if self.cleanup_task:
             self.cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         logger.info("cache_stopped")
 

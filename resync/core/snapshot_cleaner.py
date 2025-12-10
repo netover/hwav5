@@ -17,10 +17,6 @@ class SnapshotCleaner:
             return snapshots
 
         # Sort by timestamp (assuming each snapshot has a 'timestamp' field)
-        sorted_snapshots = sorted(
-            snapshots,
-            key=lambda x: x.get('timestamp', 0),
-            reverse=True
-        )
+        sorted_snapshots = sorted(snapshots, key=lambda x: x.get("timestamp", 0), reverse=True)
 
-        return sorted_snapshots[:self.max_snapshots]
+        return sorted_snapshots[: self.max_snapshots]

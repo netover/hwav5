@@ -3,13 +3,14 @@
 Standalone test for correlation ID functionality that doesn't depend on settings.
 """
 
-import sys
 import os
+import sys
 import uuid
 from contextvars import ContextVar
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 def test_correlation_id_context():
     """Test correlation ID context management without settings dependency."""
@@ -67,11 +68,13 @@ def test_correlation_id_context():
         print(f"❌ Correlation ID context test failed: {e}")
         return False
 
+
 def test_correlation_id_middleware():
     """Test correlation ID middleware creation."""
     try:
-        from resync.api.middleware.correlation_id import CorrelationIdMiddleware
         from starlette.applications import Starlette
+
+        from resync.api.middleware.correlation_id import CorrelationIdMiddleware
 
         # Create a simple ASGI app for testing
         app = Starlette()
@@ -88,6 +91,7 @@ def test_correlation_id_middleware():
         print(f"❌ Middleware creation failed: {e}")
         return False
 
+
 def test_uuid_generation():
     """Test UUID generation for correlation IDs."""
     try:
@@ -102,7 +106,8 @@ def test_uuid_generation():
 
         # Test UUID format
         import re
-        uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+
+        uuid_pattern = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 
         if not re.match(uuid_pattern, correlation_id):
             print(f"❌ Invalid UUID format: {correlation_id}")
@@ -114,6 +119,7 @@ def test_uuid_generation():
     except Exception as e:
         print(f"❌ UUID generation test failed: {e}")
         return False
+
 
 def main():
     """Run all tests."""
@@ -142,9 +148,9 @@ def main():
     if passed == total:
         print("🎉 All correlation ID tests passed!")
         return True
-    else:
-        print("❌ Some tests failed")
-        return False
+    print("❌ Some tests failed")
+    return False
+
 
 if __name__ == "__main__":
     success = main()

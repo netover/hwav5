@@ -103,9 +103,9 @@ class CacheMigrationManager:
                 if result is not None:
                     if self.enable_metrics:
                         migration_new_hits.labels(component="cache").inc()
-                    migration_latency.labels(
-                        component="cache", operation="get"
-                    ).observe(asyncio.get_event_loop().time() - start_time)
+                    migration_latency.labels(component="cache", operation="get").observe(
+                        asyncio.get_event_loop().time() - start_time
+                    )
                     return result
 
                 # Se novo cache não tem o valor, tentar legacy como fallback
@@ -123,18 +123,16 @@ class CacheMigrationManager:
             except Exception as e:
                 logger.warning(f"Error in new cache, falling back to legacy: {e}")
                 if self.enable_metrics:
-                    migration_errors.labels(
-                        component="cache", error_type="new_cache_error"
-                    ).inc()
+                    migration_errors.labels(component="cache", error_type="new_cache_error").inc()
                     migration_fallbacks.labels(component="cache", reason="error").inc()
 
                 # Fallback para cache legado
                 if self.legacy_cache:
                     try:
                         result = await self.legacy_cache.get(key)
-                        migration_latency.labels(
-                            component="cache", operation="get"
-                        ).observe(asyncio.get_event_loop().time() - start_time)
+                        migration_latency.labels(component="cache", operation="get").observe(
+                            asyncio.get_event_loop().time() - start_time
+                        )
                         return result
                     except Exception as e2:
                         logger.error(f"Error in legacy cache fallback: {e2}")
@@ -291,9 +289,7 @@ class TWSMigrationManager:
             except Exception as e:
                 logger.warning(f"Error in new TWS client, falling back: {e}")
                 if self.enable_metrics:
-                    migration_errors.labels(
-                        component="tws", error_type="new_client_error"
-                    ).inc()
+                    migration_errors.labels(component="tws", error_type="new_client_error").inc()
                     migration_fallbacks.labels(component="tws", reason="error").inc()
 
         # Fallback para cliente legado
@@ -307,9 +303,7 @@ class TWSMigrationManager:
             except Exception as e:
                 logger.error(f"Error in legacy TWS client: {e}")
                 if self.enable_metrics:
-                    migration_errors.labels(
-                        component="tws", error_type="legacy_client_error"
-                    ).inc()
+                    migration_errors.labels(component="tws", error_type="legacy_client_error").inc()
 
         return False
 
@@ -320,9 +314,9 @@ class TWSMigrationManager:
         if self.use_new_client and self.new_client:
             try:
                 result = await self.new_client.execute_command(command)
-                migration_latency.labels(
-                    component="tws", operation="execute_command"
-                ).observe(asyncio.get_event_loop().time() - start_time)
+                migration_latency.labels(component="tws", operation="execute_command").observe(
+                    asyncio.get_event_loop().time() - start_time
+                )
                 return result
             except Exception as e:
                 logger.warning(f"Error in new TWS client, falling back: {e}")
@@ -333,14 +327,14 @@ class TWSMigrationManager:
         if self.legacy_client:
             try:
                 result = await self.legacy_client.execute_command(command)
-                migration_latency.labels(
-                    component="tws", operation="execute_command"
-                ).observe(asyncio.get_event_loop().time() - start_time)
+                migration_latency.labels(component="tws", operation="execute_command").observe(
+                    asyncio.get_event_loop().time() - start_time
+                )
                 return result
             except Exception as e:
                 logger.error(f"Error in legacy TWS client: {e}")
 
-        raise RuntimeError("No TWS client available")
+        raise RuntimeError("No TWS client available") from None
 
     async def get_job_status(self, job_id: str) -> dict[str, Any]:
         """Obter status de job."""
@@ -349,9 +343,9 @@ class TWSMigrationManager:
         if self.use_new_client and self.new_client:
             try:
                 result = await self.new_client.get_job_status(job_id)
-                migration_latency.labels(
-                    component="tws", operation="get_job_status"
-                ).observe(asyncio.get_event_loop().time() - start_time)
+                migration_latency.labels(component="tws", operation="get_job_status").observe(
+                    asyncio.get_event_loop().time() - start_time
+                )
                 return result
             except Exception as e:
                 logger.warning(f"Error in new TWS client, falling back: {e}")
@@ -362,14 +356,14 @@ class TWSMigrationManager:
         if self.legacy_client:
             try:
                 result = await self.legacy_client.get_job_status(job_id)
-                migration_latency.labels(
-                    component="tws", operation="get_job_status"
-                ).observe(asyncio.get_event_loop().time() - start_time)
+                migration_latency.labels(component="tws", operation="get_job_status").observe(
+                    asyncio.get_event_loop().time() - start_time
+                )
                 return result
             except Exception as e:
                 logger.error(f"Error in legacy TWS client: {e}")
 
-        raise RuntimeError("No TWS client available")
+        raise RuntimeError("No TWS client available") from None
 
 
 class RateLimitMigrationManager:

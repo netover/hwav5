@@ -3,16 +3,18 @@
 Simple test to verify correlation ID functionality works correctly.
 """
 
-import sys
 import os
+import sys
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 def test_correlation_id_imports():
     """Test that correlation ID modules can be imported."""
     try:
         from resync.api.middleware.correlation_id import CORRELATION_ID_HEADER
+
         print("✅ CorrelationIdMiddleware imported successfully")
         print(f"   Header name: {CORRELATION_ID_HEADER}")
 
@@ -25,14 +27,15 @@ def test_correlation_id_imports():
         print(f"❌ Import failed: {e}")
         return False
 
+
 def test_correlation_id_generation():
     """Test correlation ID generation and context management."""
     try:
         from resync.core.context import (
-            set_correlation_id,
+            clear_correlation_id,
             get_correlation_id,
             get_or_create_correlation_id,
-            clear_correlation_id
+            set_correlation_id,
         )
 
         # Test setting and getting correlation ID
@@ -69,11 +72,13 @@ def test_correlation_id_generation():
         print(f"❌ Correlation ID generation test failed: {e}")
         return False
 
+
 def test_correlation_id_middleware():
     """Test correlation ID middleware creation."""
     try:
-        from resync.api.middleware.correlation_id import CorrelationIdMiddleware
         from starlette.applications import Starlette
+
+        from resync.api.middleware.correlation_id import CorrelationIdMiddleware
 
         # Create a simple ASGI app for testing
         app = Starlette()
@@ -90,11 +95,12 @@ def test_correlation_id_middleware():
         print(f"❌ Middleware creation failed: {e}")
         return False
 
+
 def test_logger_integration():
     """Test that logger includes correlation ID."""
     try:
-        from resync.core.structured_logger import get_logger, add_correlation_id
         from resync.core.context import set_correlation_id
+        from resync.core.structured_logger import add_correlation_id, get_logger
 
         # Set correlation ID in context
         test_id = "logger-test-correlation-id"
@@ -117,6 +123,7 @@ def test_logger_integration():
     except Exception as e:
         print(f"❌ Logger integration test failed: {e}")
         return False
+
 
 def main():
     """Run all tests."""
@@ -146,9 +153,9 @@ def main():
     if passed == total:
         print("🎉 All correlation ID tests passed!")
         return True
-    else:
-        print("❌ Some tests failed")
-        return False
+    print("❌ Some tests failed")
+    return False
+
 
 if __name__ == "__main__":
     success = main()

@@ -34,9 +34,7 @@ def with_monitoring(operation_name: str):
                     request = arg
                     break
 
-            correlation_id = (
-                getattr(request, "correlation_id", None) if request else None
-            )
+            correlation_id = getattr(request, "correlation_id", None) if request else None
             if not correlation_id:
                 correlation_id = runtime_metrics.create_correlation_id(
                     {"component": "api_endpoint", "operation": operation_name}
@@ -46,9 +44,7 @@ def with_monitoring(operation_name: str):
 
             try:
                 # Log the start of the operation
-                log_with_correlation(
-                    logging.INFO, f"Starting {operation_name}", correlation_id
-                )
+                log_with_correlation(logging.INFO, f"Starting {operation_name}", correlation_id)
 
                 # Execute the actual function
                 result = await func(*args, **kwargs)
@@ -58,9 +54,7 @@ def with_monitoring(operation_name: str):
                 runtime_metrics.api_response_time.observe(time.time() - start_time)
 
                 # Log successful completion
-                log_with_correlation(
-                    logging.INFO, f"Completed {operation_name}", correlation_id
-                )
+                log_with_correlation(logging.INFO, f"Completed {operation_name}", correlation_id)
 
                 return result
 
@@ -118,7 +112,7 @@ def handle_endpoint_errors(operation: str):
                 raise HTTPException(
                     status_code=500,
                     detail=error_response.message or str(e),
-                )
+                ) from None
 
         return wrapper
 

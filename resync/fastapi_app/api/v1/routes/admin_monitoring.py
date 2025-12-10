@@ -27,6 +27,7 @@ router = APIRouter()
 # Pydantic models
 class SystemMetrics(BaseModel):
     """System-level metrics."""
+
     cpu_percent: float
     memory_percent: float
     memory_used_gb: float
@@ -41,6 +42,7 @@ class SystemMetrics(BaseModel):
 
 class ApplicationMetrics(BaseModel):
     """Application-level metrics."""
+
     total_requests: int
     requests_per_minute: float
     avg_response_time_ms: float
@@ -51,6 +53,7 @@ class ApplicationMetrics(BaseModel):
 
 class ServiceHealth(BaseModel):
     """Health of a service."""
+
     name: str
     status: str  # healthy, degraded, unhealthy
     latency_ms: float | None
@@ -60,6 +63,7 @@ class ServiceHealth(BaseModel):
 
 class MonitoringDashboard(BaseModel):
     """Complete monitoring dashboard data."""
+
     timestamp: str
     system: SystemMetrics
     application: ApplicationMetrics
@@ -81,7 +85,7 @@ _ws_connections: list[WebSocket] = []
 def _get_system_metrics() -> SystemMetrics:
     """Get current system metrics."""
     memory = psutil.virtual_memory()
-    disk = psutil.disk_usage('/')
+    disk = psutil.disk_usage("/")
     net = psutil.net_io_counters()
 
     return SystemMetrics(
@@ -127,40 +131,48 @@ def _get_services_health() -> list[ServiceHealth]:
     services = []
 
     # TWS Service
-    services.append(ServiceHealth(
-        name="TWS Primary",
-        status="healthy",
-        latency_ms=45.2,
-        last_check=datetime.utcnow().isoformat(),
-        error_message=None,
-    ))
+    services.append(
+        ServiceHealth(
+            name="TWS Primary",
+            status="healthy",
+            latency_ms=45.2,
+            last_check=datetime.utcnow().isoformat(),
+            error_message=None,
+        )
+    )
 
     # Database
-    services.append(ServiceHealth(
-        name="PostgreSQL",
-        status="healthy",
-        latency_ms=12.5,
-        last_check=datetime.utcnow().isoformat(),
-        error_message=None,
-    ))
+    services.append(
+        ServiceHealth(
+            name="PostgreSQL",
+            status="healthy",
+            latency_ms=12.5,
+            last_check=datetime.utcnow().isoformat(),
+            error_message=None,
+        )
+    )
 
     # Redis
-    services.append(ServiceHealth(
-        name="Redis Cache",
-        status="healthy",
-        latency_ms=2.1,
-        last_check=datetime.utcnow().isoformat(),
-        error_message=None,
-    ))
+    services.append(
+        ServiceHealth(
+            name="Redis Cache",
+            status="healthy",
+            latency_ms=2.1,
+            last_check=datetime.utcnow().isoformat(),
+            error_message=None,
+        )
+    )
 
     # RAG Service
-    services.append(ServiceHealth(
-        name="RAG/pgvector",
-        status="healthy",
-        latency_ms=150.0,
-        last_check=datetime.utcnow().isoformat(),
-        error_message=None,
-    ))
+    services.append(
+        ServiceHealth(
+            name="RAG/pgvector",
+            status="healthy",
+            latency_ms=150.0,
+            last_check=datetime.utcnow().isoformat(),
+            error_message=None,
+        )
+    )
 
     return services
 
@@ -172,22 +184,26 @@ def _get_active_alerts() -> list[dict[str, Any]]:
     # Check for high CPU
     cpu = psutil.cpu_percent()
     if cpu > 80:
-        alerts.append({
-            "id": "cpu-high",
-            "severity": "warning",
-            "message": f"CPU usage is high: {cpu}%",
-            "timestamp": datetime.utcnow().isoformat(),
-        })
+        alerts.append(
+            {
+                "id": "cpu-high",
+                "severity": "warning",
+                "message": f"CPU usage is high: {cpu}%",
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        )
 
     # Check for high memory
     memory = psutil.virtual_memory()
     if memory.percent > 85:
-        alerts.append({
-            "id": "memory-high",
-            "severity": "warning",
-            "message": f"Memory usage is high: {memory.percent}%",
-            "timestamp": datetime.utcnow().isoformat(),
-        })
+        alerts.append(
+            {
+                "id": "memory-high",
+                "severity": "warning",
+                "message": f"Memory usage is high: {memory.percent}%",
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        )
 
     return alerts
 

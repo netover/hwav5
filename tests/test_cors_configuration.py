@@ -48,24 +48,18 @@ class TestCORSPolicy:
 
     def test_cors_policy_wildcard_in_production_fails(self):
         """Test that wildcard origins are rejected in production."""
-        with pytest.raises(
-            ValueError, match="Wildcard origins are not allowed in production"
-        ):
+        with pytest.raises(ValueError, match="Wildcard origins are not allowed in production"):
             CORSPolicy(environment=Environment.PRODUCTION, allowed_origins=["*"])
 
     def test_cors_policy_invalid_origin_format(self):
         """Test that invalid origin formats are rejected."""
         with pytest.raises(ValueError, match="Invalid origin format"):
-            CORSPolicy(
-                environment=Environment.DEVELOPMENT, allowed_origins=["invalid-origin"]
-            )
+            CORSPolicy(environment=Environment.DEVELOPMENT, allowed_origins=["invalid-origin"])
 
     def test_cors_policy_invalid_method(self):
         """Test that invalid HTTP methods are rejected."""
         with pytest.raises(ValueError, match="Invalid HTTP method"):
-            CORSPolicy(
-                environment=Environment.DEVELOPMENT, allowed_methods=["INVALID_METHOD"]
-            )
+            CORSPolicy(environment=Environment.DEVELOPMENT, allowed_methods=["INVALID_METHOD"])
 
     def test_cors_policy_invalid_max_age(self):
         """Test that invalid max_age values are rejected."""
@@ -78,9 +72,7 @@ class TestCORSPolicy:
     def test_cors_policy_invalid_regex_pattern(self):
         """Test that invalid regex patterns are rejected."""
         with pytest.raises(ValueError, match="Invalid regex pattern"):
-            CORSPolicy(
-                environment=Environment.DEVELOPMENT, origin_regex_patterns=["[invalid"]
-            )
+            CORSPolicy(environment=Environment.DEVELOPMENT, origin_regex_patterns=["[invalid"])
 
     def test_origin_validation_exact_match(self):
         """Test exact origin matching."""
@@ -200,9 +192,7 @@ class TestCORSConfig:
         config = CORSConfig()
 
         with pytest.raises(ValueError, match="'invalid' is not a valid Environment"):
-            config.update_policy(
-                "invalid", CORSPolicy(environment=Environment.DEVELOPMENT)
-            )
+            config.update_policy("invalid", CORSPolicy(environment=Environment.DEVELOPMENT))
 
 
 class TestCORSMiddleware:
@@ -335,9 +325,7 @@ class TestCORSHelpers:
     def test_get_production_cors_config_custom(self):
         """Test production CORS configuration helper with custom settings."""
         origins = ["https://app.example.com", "https://api.example.com"]
-        config = get_production_cors_config(
-            allowed_origins=origins, allow_credentials=True
-        )
+        config = get_production_cors_config(allowed_origins=origins, allow_credentials=True)
 
         assert config.environment == Environment.PRODUCTION
         assert config.allowed_origins == origins
@@ -360,7 +348,6 @@ class TestCORSHelpers:
 class TestCORSIntegration:
     """Test CORS integration with FastAPI application."""
 
-
     def test_add_cors_middleware_integration(self):
         """Test adding CORS middleware to FastAPI app."""
         app = FastAPI()
@@ -371,9 +358,7 @@ class TestCORSIntegration:
         # Check that middleware was added
         from starlette.middleware.cors import CORSMiddleware as StarletteCORSMiddleware
 
-        assert any(
-            m.cls == StarletteCORSMiddleware for m in app.user_middleware
-        )
+        assert any(m.cls == StarletteCORSMiddleware for m in app.user_middleware)
 
     def test_fastapi_app_with_cors_middleware(self):
         """Test complete FastAPI app with CORS middleware."""

@@ -92,12 +92,8 @@ def configure_container(app_container: DIContainer = container) -> DIContainer:
     try:
         # Register interfaces and implementations
         app_container.register(IAgentManager, AgentManager, ServiceLifetime.SINGLETON)
-        app_container.register(
-            IConnectionManager, ConnectionManager, ServiceLifetime.SINGLETON
-        )
-        app_container.register(
-            IKnowledgeGraph, AsyncKnowledgeGraph, ServiceLifetime.SINGLETON
-        )
+        app_container.register(IConnectionManager, ConnectionManager, ServiceLifetime.SINGLETON)
+        app_container.register(IKnowledgeGraph, AsyncKnowledgeGraph, ServiceLifetime.SINGLETON)
         app_container.register(IAuditQueue, AsyncAuditQueue, ServiceLifetime.SINGLETON)
 
         # Register TWS client with factory
@@ -122,15 +118,9 @@ def configure_container(app_container: DIContainer = container) -> DIContainer:
 
         # Register concrete types (for when the concrete type is requested directly)
         app_container.register(AgentManager, AgentManager, ServiceLifetime.SINGLETON)
-        app_container.register(
-            ConnectionManager, ConnectionManager, ServiceLifetime.SINGLETON
-        )
-        app_container.register(
-            AsyncKnowledgeGraph, AsyncKnowledgeGraph, ServiceLifetime.SINGLETON
-        )
-        app_container.register(
-            AsyncAuditQueue, AsyncAuditQueue, ServiceLifetime.SINGLETON
-        )
+        app_container.register(ConnectionManager, ConnectionManager, ServiceLifetime.SINGLETON)
+        app_container.register(AsyncKnowledgeGraph, AsyncKnowledgeGraph, ServiceLifetime.SINGLETON)
+        app_container.register(AsyncAuditQueue, AsyncAuditQueue, ServiceLifetime.SINGLETON)
         app_container.register_factory(
             OptimizedTWSClient, get_tws_client_factory, ServiceLifetime.SINGLETON
         )
@@ -164,16 +154,14 @@ def get_service(service_type: type[T]) -> Callable[[], T]:
             )
             raise RuntimeError(
                 f"Required service {service_type.__name__} is not available in the DI container"
-            )
+            ) from None
         except Exception as e:
             logger.error(
                 "error_resolving_service",
                 service_type=service_type.__name__,
                 error=str(e),
             )
-            raise RuntimeError(
-                f"Error resolving service {service_type.__name__}: {str(e)}"
-            )
+            raise RuntimeError(f"Error resolving service {service_type.__name__}: {str(e)}") from e
 
     # Set the return annotation for FastAPI to use
     _get_service.__annotations__ = {"return": service_type}
@@ -224,17 +212,14 @@ class DIMiddleware(BaseHTTPMiddleware):
             request.state.container = self.container
 
             # Continue processing the request
-            response = await call_next(request)
-            return response
+            return await call_next(request)
         except Exception as e:
             logger.error("error_in_DIMiddleware_dispatch", error=str(e))
             # Re-raise the exception to be handled by other error handlers
             raise
 
 
-def inject_container(
-    app: FastAPI, container_instance: DIContainer | None = None
-) -> None:
+def inject_container(app: FastAPI, container_instance: DIContainer | None = None) -> None:
     """
     Configure the application to use the DI container.
 

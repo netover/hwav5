@@ -63,12 +63,14 @@ class SecurityMetrics:
                 "successful_logins": self.successful_logins,
                 "failed_logins": self.failed_logins,
                 "active_sessions": self.active_sessions,
-                "failure_rate": self.failed_logins / max(self.successful_logins + self.failed_logins, 1),
+                "failure_rate": self.failed_logins
+                / max(self.successful_logins + self.failed_logins, 1),
             },
             "authorization": {
                 "permission_grants": self.permission_grants,
                 "permission_denials": self.permission_denials,
-                "denial_rate": self.permission_denials / max(self.permission_grants + self.permission_denials, 1),
+                "denial_rate": self.permission_denials
+                / max(self.permission_grants + self.permission_denials, 1),
             },
             "threats": {
                 "detected": self.threats_detected,

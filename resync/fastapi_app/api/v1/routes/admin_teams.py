@@ -30,8 +30,10 @@ router = APIRouter(prefix="/admin/teams", tags=["Teams Integration"])
 # REQUEST/RESPONSE MODELS
 # =============================================================================
 
+
 class TeamsConfigResponse(BaseModel):
     """Teams configuration response."""
+
     enabled: bool
     channel_name: str | None = None
     bot_name: str
@@ -47,6 +49,7 @@ class TeamsConfigResponse(BaseModel):
 
 class TeamsConfigUpdate(BaseModel):
     """Teams configuration update request."""
+
     enabled: bool | None = None
     channel_name: str | None = None
     bot_name: str | None = None
@@ -60,6 +63,7 @@ class TeamsConfigUpdate(BaseModel):
 
 class NotificationRequest(BaseModel):
     """Request to send a Teams notification."""
+
     title: str = Field(..., min_length=1, max_length=200)
     message: str = Field(..., min_length=1, max_length=5000)
     severity: str = Field(default="info", pattern="^(info|success|warning|error|critical)$")
@@ -71,6 +75,7 @@ class NotificationRequest(BaseModel):
 
 class NotificationResponse(BaseModel):
     """Response from notification send."""
+
     success: bool
     message: str
     notification_id: str | None = None
@@ -79,6 +84,7 @@ class NotificationResponse(BaseModel):
 
 class TeamsHealthResponse(BaseModel):
     """Teams integration health check response."""
+
     enabled: bool
     configured: bool
     webhook_accessible: bool | None = None
@@ -93,6 +99,7 @@ class TeamsHealthResponse(BaseModel):
 
 class TeamsStatsResponse(BaseModel):
     """Teams notification statistics."""
+
     notifications_sent: int
     notifications_failed: int
     retries: int
@@ -103,6 +110,7 @@ class TeamsStatsResponse(BaseModel):
 
 class TestNotificationResponse(BaseModel):
     """Response from test notification."""
+
     success: bool
     message: str
     response_time_ms: float
@@ -111,6 +119,7 @@ class TestNotificationResponse(BaseModel):
 # =============================================================================
 # ENDPOINTS
 # =============================================================================
+
 
 @router.get("/config", response_model=TeamsConfigResponse)
 async def get_teams_config():
@@ -192,7 +201,7 @@ async def enable_teams_integration():
     if not integration.config.webhook_url:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot enable Teams integration: webhook URL not configured"
+            detail="Cannot enable Teams integration: webhook URL not configured",
         )
 
     integration.config.enabled = True
@@ -223,13 +232,12 @@ async def send_notification(request: NotificationRequest):
     if not integration.config.enabled:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Teams integration is not enabled"
+            detail="Teams integration is not enabled",
         )
 
     if not integration.config.webhook_url:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Teams webhook URL not configured"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Teams webhook URL not configured"
         )
 
     notification = TeamsNotification(
@@ -255,8 +263,8 @@ async def send_notification(request: NotificationRequest):
         logger.error("notification_send_error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send notification: {str(e)}"
-        )
+            detail=f"Failed to send notification: {str(e)}",
+        ) from e
 
 
 @router.post("/test", response_model=TestNotificationResponse)
@@ -272,8 +280,7 @@ async def send_test_notification():
 
     if not integration.config.webhook_url:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Teams webhook URL not configured"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Teams webhook URL not configured"
         )
 
     # Temporarily enable for test
@@ -298,7 +305,9 @@ async def send_test_notification():
 
         return TestNotificationResponse(
             success=success,
-            message="Test notification sent successfully!" if success else "Test notification failed",
+            message="Test notification sent successfully!"
+            if success
+            else "Test notification failed",
             response_time_ms=round(response_time, 2),
         )
 

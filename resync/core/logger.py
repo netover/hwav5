@@ -56,7 +56,9 @@ def setup_logging() -> None:
 
     # File handler with rotation (10MB max size, 5 backups)
     file_handler = RotatingFileHandler(
-        log_dir / "resync.log", maxBytes=10 * 1024 * 1024, backupCount=5  # 10MB
+        log_dir / "resync.log",
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5,  # 10MB
     )
     file_handler.setLevel(log_level)
     root_logger.addHandler(file_handler)

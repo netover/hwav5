@@ -13,7 +13,6 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -57,35 +56,32 @@ class TWSQueryProcessor:
     TIME_PATTERNS = {
         r"ontem": lambda: (
             datetime.now().replace(hour=0, minute=0, second=0) - timedelta(days=1),
-            datetime.now().replace(hour=0, minute=0, second=0)
-        ),
-        r"hoje": lambda: (
             datetime.now().replace(hour=0, minute=0, second=0),
-            datetime.now()
         ),
+        r"hoje": lambda: (datetime.now().replace(hour=0, minute=0, second=0), datetime.now()),
         r"esta semana|essa semana|semana atual": lambda: (
             datetime.now() - timedelta(days=datetime.now().weekday()),
-            datetime.now()
+            datetime.now(),
         ),
         r"semana passada|última semana": lambda: (
             datetime.now() - timedelta(days=datetime.now().weekday() + 7),
-            datetime.now() - timedelta(days=datetime.now().weekday())
+            datetime.now() - timedelta(days=datetime.now().weekday()),
         ),
         r"este mês|esse mês|mês atual": lambda: (
             datetime.now().replace(day=1, hour=0, minute=0, second=0),
-            datetime.now()
+            datetime.now(),
         ),
         r"últimos? (\d+) dias?": lambda m: (
             datetime.now() - timedelta(days=int(m.group(1))),
-            datetime.now()
+            datetime.now(),
         ),
         r"últimas? (\d+) horas?": lambda m: (
             datetime.now() - timedelta(hours=int(m.group(1))),
-            datetime.now()
+            datetime.now(),
         ),
         r"últimos? (\d+) minutos?": lambda m: (
             datetime.now() - timedelta(minutes=int(m.group(1))),
-            datetime.now()
+            datetime.now(),
         ),
     }
 
@@ -158,10 +154,7 @@ class TWSQueryProcessor:
         logger.info(
             "query_processed",
             intent_type=intent.intent_type,
-            time_range=(
-                intent.time_range[0].isoformat(),
-                intent.time_range[1].isoformat()
-            ),
+            time_range=(intent.time_range[0].isoformat(), intent.time_range[1].isoformat()),
             entities=intent.entities,
         )
 
@@ -208,36 +201,30 @@ class TWSQueryProcessor:
             original_query=query,
         )
 
-    def _extract_time_range(
-        self, query: str
-    ) -> tuple[datetime, datetime]:
+    def _extract_time_range(self, query: str) -> tuple[datetime, datetime]:
         """Extrai range de tempo da query."""
         for pattern, time_func in self.TIME_PATTERNS.items():
             match = re.search(pattern, query)
-            if match:
-                if callable(time_func):
-                    # Verifica se a função precisa do match
-                    try:
-                        return time_func(match)
-                    except TypeError:
-                        return time_func()
+            if match and callable(time_func):
+                # Verifica se a função precisa do match
+                try:
+                    return time_func(match)
+                except TypeError:
+                    return time_func()
 
         # Default: últimas 24 horas
-        return (
-            datetime.now() - timedelta(hours=24),
-            datetime.now()
-        )
+        return (datetime.now() - timedelta(hours=24), datetime.now())
 
     def _extract_entities(self, query: str) -> list[str]:
         """Extrai entidades (nomes de jobs, workstations)."""
         entities = []
 
         # Padrão para nomes de jobs (geralmente uppercase com underscores)
-        job_pattern = r'\b([A-Z][A-Z0-9_]{2,})\b'
+        job_pattern = r"\b([A-Z][A-Z0-9_]{2,})\b"
         entities.extend(re.findall(job_pattern, query))
 
         # Padrão para workstations
-        ws_pattern = r'\b(WS[A-Z0-9]+|[A-Z]+SRV[0-9]+)\b'
+        ws_pattern = r"\b(WS[A-Z0-9]+|[A-Z]+SRV[0-9]+)\b"
         entities.extend(re.findall(ws_pattern, query, re.IGNORECASE))
 
         return list(set(entities))
@@ -319,11 +306,9 @@ class TWSQueryProcessor:
             # Filtra por entidades se especificadas
             if intent.entities:
                 events = [
-                    e for e in events
-                    if any(
-                        ent.lower() in e.get("source", "").lower()
-                        for ent in intent.entities
-                    )
+                    e
+                    for e in events
+                    if any(ent.lower() in e.get("source", "").lower() for ent in intent.entities)
                 ]
 
             # Agrupa por job
@@ -347,7 +332,9 @@ class TWSQueryProcessor:
                 for job, failures in sorted(jobs_failed.items(), key=lambda x: -len(x[1]))[:10]:
                     summary += f"- **{job}**: {len(failures)}x\n"
                     if failures:
-                        last_error = failures[0].get("details", {}).get("job", {}).get("error_message")
+                        last_error = (
+                            failures[0].get("details", {}).get("job", {}).get("error_message")
+                        )
                         if last_error:
                             summary += f"  └ Último erro: {last_error[:100]}\n"
 
@@ -357,18 +344,17 @@ class TWSQueryProcessor:
                 for job in list(jobs_failed.keys())[:3]:
                     solution = await self.status_store.find_solution(
                         "job_abend",
-                        events[0].get("details", {}).get("job", {}).get("error_message", "")
+                        events[0].get("details", {}).get("job", {}).get("error_message", ""),
                     )
                     if solution:
-                        suggestions.append(
-                            f"Para {job}: {solution.get('solution', 'N/A')}"
-                        )
+                        suggestions.append(f"Para {job}: {solution.get('solution', 'N/A')}")
 
             return QueryResult(
                 success=True,
                 summary=summary,
                 details=events[:20],
-                suggestions=suggestions or [
+                suggestions=suggestions
+                or [
                     "Ver histórico do job",
                     "Detectar padrões de falha",
                 ],
@@ -390,14 +376,13 @@ class TWSQueryProcessor:
     async def _handle_patterns_query(self, intent: QueryIntent) -> QueryResult:
         """Processa query de padrões."""
         if self.status_store:
-            patterns = await self.status_store.get_patterns(
-                min_confidence=0.5
-            )
+            patterns = await self.status_store.get_patterns(min_confidence=0.5)
 
             # Filtra por entidades se especificadas
             if intent.entities:
                 patterns = [
-                    p for p in patterns
+                    p
+                    for p in patterns
                     if any(
                         ent.lower() in str(p.get("affected_jobs", [])).lower()
                         for ent in intent.entities
@@ -413,9 +398,9 @@ class TWSQueryProcessor:
 
                 for i, p in enumerate(patterns[:5], 1):
                     summary += f"**{i}. {p.get('pattern_type', 'unknown')}** "
-                    summary += f"({p.get('confidence', 0)*100:.0f}% confiança)\n"
+                    summary += f"({p.get('confidence', 0) * 100:.0f}% confiança)\n"
                     summary += f"   {p.get('description', 'N/A')}\n"
-                    if p.get('suggested_action'):
+                    if p.get("suggested_action"):
                         summary += f"   💡 {p.get('suggested_action')}\n"
                     summary += "\n"
 
@@ -472,8 +457,7 @@ class TWSQueryProcessor:
 
                 # Duração média
                 durations = [
-                    h.get("duration_seconds") for h in history
-                    if h.get("duration_seconds")
+                    h.get("duration_seconds") for h in history if h.get("duration_seconds")
                 ]
                 avg_duration = sum(durations) / len(durations) if durations else 0
 
@@ -481,13 +465,15 @@ class TWSQueryProcessor:
                 summary += f"- Execuções: {total}\n"
                 summary += f"- Sucessos: {success} ({success_rate:.1f}%)\n"
                 summary += f"- Falhas: {failed}\n"
-                summary += f"- Duração média: {avg_duration/60:.1f} min\n"
+                summary += f"- Duração média: {avg_duration / 60:.1f} min\n"
 
                 if failed > 0:
                     summary += "\n**Últimas falhas:**\n"
                     failures = [h for h in history if h.get("status") == "ABEND"][:3]
                     for f in failures:
-                        summary += f"- {f.get('timestamp', 'N/A')}: {f.get('error_message', 'N/A')[:50]}\n"
+                        summary += (
+                            f"- {f.get('timestamp', 'N/A')}: {f.get('error_message', 'N/A')[:50]}\n"
+                        )
 
             return QueryResult(
                 success=True,
@@ -519,18 +505,21 @@ class TWSQueryProcessor:
             events = await self.status_store.get_events_in_range(
                 start_time=start,
                 end_time=end,
-                event_types=["workstation_offline", "workstation_unlinked", "ws_offline", "ws_unlinked"],
+                event_types=[
+                    "workstation_offline",
+                    "workstation_unlinked",
+                    "ws_offline",
+                    "ws_unlinked",
+                ],
                 limit=100,
             )
 
             # Filtra por entidade se especificada
             if intent.entities:
                 events = [
-                    e for e in events
-                    if any(
-                        ent.lower() in e.get("source", "").lower()
-                        for ent in intent.entities
-                    )
+                    e
+                    for e in events
+                    if any(ent.lower() in e.get("source", "").lower() for ent in intent.entities)
                 ]
 
             period = self._format_period(start, end)
@@ -592,8 +581,7 @@ class TWSQueryProcessor:
                 limit=500,
             )
             current_failures = [
-                e for e in current_events
-                if e.get("severity") in ["error", "critical"]
+                e for e in current_events if e.get("severity") in ["error", "critical"]
             ]
 
             # Dados do período anterior
@@ -602,17 +590,26 @@ class TWSQueryProcessor:
                 end_time=prev_end,
                 limit=500,
             )
-            prev_failures = [
-                e for e in prev_events
-                if e.get("severity") in ["error", "critical"]
-            ]
+            prev_failures = [e for e in prev_events if e.get("severity") in ["error", "critical"]]
 
             # Calcula diferenças
             event_diff = len(current_events) - len(prev_events)
             failure_diff = len(current_failures) - len(prev_failures)
 
-            event_trend = "📈 aumentou" if event_diff > 0 else "📉 diminuiu" if event_diff < 0 else "→ estável"
-            failure_trend = "📈 aumentou" if failure_diff > 0 else "📉 diminuiu" if failure_diff < 0 else "→ estável"
+            event_trend = (
+                "📈 aumentou"
+                if event_diff > 0
+                else "📉 diminuiu"
+                if event_diff < 0
+                else "→ estável"
+            )
+            failure_trend = (
+                "📈 aumentou"
+                if failure_diff > 0
+                else "📉 diminuiu"
+                if failure_diff < 0
+                else "→ estável"
+            )
 
             summary = "**Comparação com período anterior:**\n\n"
             summary += f"**Período atual:** {self._format_period(start, end)}\n"
@@ -635,7 +632,10 @@ class TWSQueryProcessor:
                 ],
                 metadata={
                     "current_period": {"start": start.isoformat(), "end": end.isoformat()},
-                    "previous_period": {"start": prev_start.isoformat(), "end": prev_end.isoformat()},
+                    "previous_period": {
+                        "start": prev_start.isoformat(),
+                        "end": prev_end.isoformat(),
+                    },
                     "event_change": event_diff,
                     "failure_change": failure_diff,
                 },
@@ -662,7 +662,7 @@ class TWSQueryProcessor:
             )
 
             if events:
-                summary = f"**Resultados para:** \"{intent.original_query}\"\n\n"
+                summary = f'**Resultados para:** "{intent.original_query}"\n\n'
                 summary += f"Encontrei {len(events)} eventos relacionados:\n\n"
 
                 for e in events[:5]:
@@ -712,6 +712,7 @@ class TWSQueryProcessor:
 # =============================================================================
 # API INTEGRATION
 # =============================================================================
+
 
 async def process_tws_query(query: str) -> QueryResult:
     """

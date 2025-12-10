@@ -52,15 +52,11 @@ DANGEROUS_PATTERNS = [
 
 # Pre-compiled regex patterns for performance
 HTTP_HTTPS_PATTERN = re.compile(r"^https?://")
-PRIVATE_IP_PATTERN = re.compile(
-    r"^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)"
-)
+PRIVATE_IP_PATTERN = re.compile(r"^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)")
 SANITIZE_KEY_PATTERN = re.compile(r"[^\w\-\.]")
 
 # Pre-compile dangerous patterns
-DANGEROUS_PATTERNS_COMPILED = [
-    re.compile(pattern, re.IGNORECASE) for pattern in DANGEROUS_PATTERNS
-]
+DANGEROUS_PATTERNS_COMPILED = [re.compile(pattern, re.IGNORECASE) for pattern in DANGEROUS_PATTERNS]
 
 
 @dataclass
@@ -123,7 +119,7 @@ class CSPReport:
             ("source-file", self.source_file, False),
         ]
 
-        for field_name, uri_value, is_blocked_uri in uri_fields:
+        for _field_name, uri_value, is_blocked_uri in uri_fields:
             if uri_value and not _is_safe_uri(uri_value, is_blocked_uri):
                 return False
 
@@ -145,17 +141,12 @@ class CSPReport:
             ("column-number", self.column_number),
         ]
 
-        for field_name, numeric_value in numeric_fields:
-            if numeric_value is not None and not isinstance(
-                numeric_value, (int, float)
-            ):
+        for _field_name, numeric_value in numeric_fields:
+            if numeric_value is not None and not isinstance(numeric_value, (int, float)):
                 return False
 
         # Validate disposition
-        if self.disposition and self.disposition not in ["enforce", "report"]:
-            return False
-
-        return True
+        return not (self.disposition and self.disposition not in ["enforce", "report"])
 
 
 class CSPValidationError(Exception):
@@ -234,10 +225,7 @@ def _is_safe_uri(uri: str, is_blocked_uri: bool = False) -> bool:
         return False
 
     # Block localhost variations
-    if hostname.lower() in ["localhost", "[::1]"]:
-        return False
-
-    return True
+    return hostname.lower() not in ["localhost", "[::1]"]
 
 
 def _is_safe_directive_value(value: str) -> bool:
@@ -258,11 +246,7 @@ def _is_safe_directive_value(value: str) -> bool:
         return False
 
     # Block dangerous patterns
-    for pattern in DANGEROUS_PATTERNS_COMPILED:
-        if pattern.search(value):
-            return False
-
-    return True
+    return all(not pattern.search(value) for pattern in DANGEROUS_PATTERNS_COMPILED)
 
 
 def sanitize_csp_report(
@@ -313,7 +297,12 @@ def sanitize_csp_report(
                 .replace("'", "&#x27;")
             )
             sanitized[safe_key] = safe_value
-        elif safe_key in int_fields and isinstance(value, (int, float)) or safe_key in enum_fields and value in enum_fields[safe_key]:
+        elif (
+            safe_key in int_fields
+            and isinstance(value, (int, float))
+            or safe_key in enum_fields
+            and value in enum_fields[safe_key]
+        ):
             sanitized[safe_key] = value
         elif safe_key == "csp-report":
             # Handle nested csp-report structure
@@ -369,9 +358,9 @@ async def process_csp_report(request: "Request") -> dict[str, Any]:
         return {"status": "processed", "report": sanitized_data}
 
     except json.JSONDecodeError as e:
-        raise CSPValidationError(f"Invalid JSON in CSP report: {str(e)}")
+        raise CSPValidationError(f"Invalid JSON in CSP report: {str(e)}") from e
     except Exception as e:
-        raise CSPValidationError(f"Error processing CSP report: {str(e)}")
+        raise CSPValidationError(f"Error processing CSP report: {str(e)}") from e
 
 
 # Backward compatibility function

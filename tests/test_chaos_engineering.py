@@ -12,14 +12,15 @@ This module tests the chaos engineering capabilities including:
 """
 
 import asyncio
-import pytest
 import time
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
+
 from resync.core.chaos_engineering import (
     ChaosEngineer,
-    FuzzingEngine,
     ChaosTestResult,
+    FuzzingEngine,
     FuzzingScenario,
     chaos_engineer,
     fuzzing_engine,
@@ -61,6 +62,7 @@ class TestFuzzingScenario:
 
     def test_fuzzing_scenario_creation(self):
         """Test creating a FuzzingScenario instance."""
+
         def dummy_fuzz_function():
             return {"passed": 10, "failed": 0}
 
@@ -361,7 +363,7 @@ class TestChaosEngineeringScenarios:
                             await cache.set(key, value)
                             results.append("set")
                         elif op == 1:
-                            result = await cache.get(key)
+                            await cache.get(key)
                             results.append("get")
                         else:
                             await cache.delete(key)
@@ -408,7 +410,7 @@ class TestChaosEngineeringScenarios:
                 try:
                     await cache.set(f"large_key_{i}", large_obj, ttl_seconds=5)
                     large_objects_created += 1
-                except Exception as e:
+                except Exception:
                     # Some failures are expected under memory pressure
                     break
 
@@ -428,13 +430,14 @@ class TestChaosEngineeringScenarios:
     @pytest.mark.asyncio
     async def test_component_isolation_scenario(self):
         """Test component isolation scenario in detail."""
-        from resync.core.chaos_engineering import AsyncTTLCache, AgentManager
+        from resync.core.chaos_engineering import AgentManager, AsyncTTLCache
 
         # Test cache isolation
         cache = AsyncTTLCache(ttl_seconds=10)
 
         # Mock cache set to fail
         original_set = cache.set
+
         async def failing_set(*args, **kwargs):
             raise Exception("Simulated cache failure")
 

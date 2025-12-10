@@ -92,11 +92,9 @@ __all__ = [
     "FeedbackRecord",
     "DocumentScore",
     "get_feedback_store",
-
     # Feedback-Aware Retriever
     "FeedbackAwareRetriever",
     "create_feedback_aware_retriever",
-
     # Audit-to-KG Pipeline
     "AuditToKGPipeline",
     "AuditResult",
@@ -104,14 +102,12 @@ __all__ = [
     "ErrorRelationType",
     "get_audit_to_kg_pipeline",
     "process_audit_finding",
-
     # Context Enrichment
     "ContextEnricher",
     "EnrichmentResult",
     "EntityContext",
     "get_context_enricher",
     "enrich_query",
-
     # Active Learning
     "ActiveLearningManager",
     "ActiveLearningDecision",
@@ -120,13 +116,11 @@ __all__ = [
     "ReviewStatus",
     "get_active_learning_manager",
     "check_for_review",
-
     # Orchestrator
     "ContinualLearningOrchestrator",
     "ContinualLearningResult",
     "get_continual_learning_orchestrator",
     "process_with_continual_learning",
-
     # Threshold Tuning
     "ThresholdTuningManager",
     "AutoTuningMode",

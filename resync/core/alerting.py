@@ -91,9 +91,7 @@ def _initialize_slo_alerts(alerting_system):
                 description="TWS connection success rate violates SLO",
                 metric_name="tws_connection_success_rate",
                 condition="lt",
-                threshold=KPI_DEFINITIONS["tws_connection_success_rate"][
-                    "critical_threshold"
-                ],
+                threshold=KPI_DEFINITIONS["tws_connection_success_rate"]["critical_threshold"],
                 severity=AlertSeverity.CRITICAL,
                 duration=timedelta(minutes=1),
             )
@@ -119,9 +117,7 @@ class AlertRule:
     condition: str  # "gt", "lt", "eq", "ne", "ge", "le"
     threshold: float
     severity: AlertSeverity
-    duration: timedelta = timedelta(
-        minutes=1
-    )  # Time period over which threshold is checked
+    duration: timedelta = timedelta(minutes=1)  # Time period over which threshold is checked
     enabled: bool = True
 
 
@@ -221,9 +217,7 @@ class AlertingSystem:
                 description="TWS connection success rate below threshold",
                 metric_name="tws_connection_success_rate",
                 condition="lt",
-                threshold=KPI_DEFINITIONS["tws_connection_success_rate"][
-                    "critical_threshold"
-                ],
+                threshold=KPI_DEFINITIONS["tws_connection_success_rate"]["critical_threshold"],
                 severity=AlertSeverity.CRITICAL,
                 duration=timedelta(minutes=1),
             )
@@ -253,14 +247,10 @@ class AlertingSystem:
                 )
                 if rule:
                     metric_value = metrics.get(kpi_name, 0)
-                    existing_alert = self._find_active_alert(
-                        rule.name, rule.metric_name
-                    )
+                    existing_alert = self._find_active_alert(rule.name, rule.metric_name)
 
                     if not existing_alert:
-                        alert = self._create_alert(
-                            rule, metric_value, metrics.get("timestamp")
-                        )
+                        alert = self._create_alert(rule, metric_value, metrics.get("timestamp"))
                         new_alerts.append(alert)
                         self.active_alerts.append(alert)
 
@@ -276,21 +266,15 @@ class AlertingSystem:
                 metric_value = metrics[rule.metric_name]
 
                 # Check if condition is met
-                condition_met = self._check_condition(
-                    metric_value, rule.condition, rule.threshold
-                )
+                condition_met = self._check_condition(metric_value, rule.condition, rule.threshold)
 
                 if condition_met:
                     # Check if this alert is already active
-                    existing_alert = self._find_active_alert(
-                        rule.name, rule.metric_name
-                    )
+                    existing_alert = self._find_active_alert(rule.name, rule.metric_name)
 
                     # If no active alert for this rule, create a new one
                     if not existing_alert:
-                        alert = self._create_alert(
-                            rule, metric_value, metrics.get("timestamp")
-                        )
+                        alert = self._create_alert(rule, metric_value, metrics.get("timestamp"))
                         new_alerts.append(alert)
                         self.active_alerts.append(alert)
 
@@ -371,8 +355,7 @@ class AlertingSystem:
                 "@context": "http://schema.org/extensions",
                 "themeColor": (
                     "ff0000"
-                    if alert.severity
-                    in [AlertSeverity.CRITICAL, AlertSeverity.EMERGENCY]
+                    if alert.severity in [AlertSeverity.CRITICAL, AlertSeverity.EMERGENCY]
                     else "ffa500"
                 ),
                 "summary": f"Alert: {alert.severity.value.upper()}",

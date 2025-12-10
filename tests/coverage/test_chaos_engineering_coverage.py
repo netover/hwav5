@@ -2,8 +2,9 @@
 Coverage tests for chaos_engineering module.
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 
 class TestChaosEngineeringImports:
@@ -13,6 +14,7 @@ class TestChaosEngineeringImports:
         """Test module can be imported."""
         try:
             from resync.core import chaos_engineering
+
             assert chaos_engineering is not None
         except Exception:
             pytest.skip("chaos_engineering module has import issues")
@@ -21,6 +23,7 @@ class TestChaosEngineeringImports:
         """Test ChaosExperiment class exists."""
         try:
             from resync.core.chaos_engineering import ChaosExperiment
+
             assert ChaosExperiment is not None
         except Exception:
             pytest.skip("ChaosExperiment not available")
@@ -29,6 +32,7 @@ class TestChaosEngineeringImports:
         """Test FaultInjection class exists."""
         try:
             from resync.core.chaos_engineering import FaultInjection
+
             assert FaultInjection is not None
         except Exception:
             pytest.skip("FaultInjection not available")
@@ -41,6 +45,7 @@ class TestChaosExperiments:
         """Test experiment types are defined."""
         try:
             from resync.core.chaos_engineering import ExperimentType
+
             assert ExperimentType is not None
         except Exception:
             pytest.skip("ExperimentType not available")
@@ -49,6 +54,7 @@ class TestChaosExperiments:
         """Test creating an experiment."""
         try:
             from resync.core.chaos_engineering import ChaosExperiment
+
             exp = ChaosExperiment(name="test", target="service")
             assert exp.name == "test"
         except Exception:

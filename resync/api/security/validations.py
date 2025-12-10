@@ -1,4 +1,3 @@
-
 from re import match
 
 from passlib.context import CryptContext
@@ -10,6 +9,7 @@ password_hasher = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class SensitiveFieldValidator:
     """Sensitive field validator."""
+
     @staticmethod
     def validate_password(password: str) -> str:
         if len(password) < 8:
@@ -38,12 +38,11 @@ class SensitiveFieldValidator:
 
 class EnhancedLoginRequest(BaseModel):
     """Request model for enhanced login operations."""
+
     username: str = Field(
         ..., min_length=3, max_length=32, json_schema_extra={"example": "johndoe"}
     )
-    password: str = Field(
-        ..., min_length=8, json_schema_extra={"example": "SecureP@ss123!"}
-    )
+    password: str = Field(..., min_length=8, json_schema_extra={"example": "SecureP@ss123!"})
 
     @field_validator("password")
     @classmethod
@@ -53,13 +52,12 @@ class EnhancedLoginRequest(BaseModel):
 
 class UserCreateWithValidation(BaseModel):
     """User create with validation."""
+
     username: str = Field(
         ..., min_length=3, max_length=32, json_schema_extra={"example": "johndoe"}
     )
     email: EmailStr = Field(..., json_schema_extra={"example": "user@example.com"})
-    password: str = Field(
-        ..., min_length=8, json_schema_extra={"example": "SecureP@ss123!"}
-    )
+    password: str = Field(..., min_length=8, json_schema_extra={"example": "SecureP@ss123!"})
 
     @field_validator("email")
     @classmethod
@@ -69,6 +67,7 @@ class UserCreateWithValidation(BaseModel):
 
 class TokenRequestWithValidation(BaseModel):
     """Request model for token with validation operations."""
+
     refresh_token: str = Field(
         min_length=512,
         max_length=2048,

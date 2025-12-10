@@ -70,6 +70,4 @@ async def test_troubleshooting_tool_raises_tool_execution_error_on_unexpected_er
     with pytest.raises(ToolExecutionError) as excinfo:
         await tws_troubleshooting_tool.analyze_failures()
 
-    assert "Ocorreu um erro inesperado ao analisar as falhas do TWS" in str(
-        excinfo.value
-    )
+    assert "Ocorreu um erro inesperado ao analisar as falhas do TWS" in str(excinfo.value)

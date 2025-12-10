@@ -15,8 +15,8 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-
 import asyncio
+import contextlib
 import json
 from collections import deque
 from collections.abc import Callable
@@ -33,11 +33,11 @@ logger = structlog.get_logger(__name__)
 class SubscriptionType(str, Enum):
     """Tipos de assinatura."""
 
-    ALL = "all"           # Recebe todos os eventos
-    JOBS = "jobs"         # Só eventos de jobs
-    WORKSTATIONS = "ws"   # Só eventos de workstations
-    SYSTEM = "system"     # Só eventos de sistema
-    CRITICAL = "critical" # Só eventos críticos
+    ALL = "all"  # Recebe todos os eventos
+    JOBS = "jobs"  # Só eventos de jobs
+    WORKSTATIONS = "ws"  # Só eventos de workstations
+    SYSTEM = "system"  # Só eventos de sistema
+    CRITICAL = "critical"  # Só eventos críticos
 
 
 @dataclass
@@ -134,10 +134,8 @@ class EventBus:
 
         if self._processor_task:
             self._processor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._processor_task
-            except asyncio.CancelledError:
-                pass
             self._processor_task = None
 
         logger.info(
@@ -353,10 +351,13 @@ class EventBus:
         event_type = event_data.get("event_type", "")
 
         # Prepara mensagem
-        message = json.dumps({
-            "type": "event",
-            "event": event_data,
-        }, default=str)
+        message = json.dumps(
+            {
+                "type": "event",
+                "event": event_data,
+            },
+            default=str,
+        )
 
         # Copia lista para evitar modificação durante iteração
         async with self._websocket_lock:
@@ -421,18 +422,12 @@ class EventBus:
         count: int = 50,
     ) -> list[dict[str, Any]]:
         """Retorna eventos de um tipo específico."""
-        events = [
-            e for e in self._event_history
-            if e.get("event_type") == event_type
-        ]
+        events = [e for e in self._event_history if e.get("event_type") == event_type]
         return events[-count:]
 
     def get_critical_events(self, count: int = 20) -> list[dict[str, Any]]:
         """Retorna eventos críticos."""
-        events = [
-            e for e in self._event_history
-            if e.get("severity") in ["critical", "error"]
-        ]
+        events = [e for e in self._event_history if e.get("severity") in ["critical", "error"]]
         return events[-count:]
 
     def get_metrics(self) -> dict[str, Any]:

@@ -46,16 +46,10 @@ class AuditRecordResponse(BaseModel):
     timestamp: str = Field(..., description="ISO format timestamp of the audit event")
     user_id: str = Field(..., description="ID of the user performing the action")
     action: AuditAction = Field(..., description="Type of action being audited")
-    details: dict[str, Any] = Field(
-        ..., description="Additional details about the action"
-    )
-    correlation_id: str | None = Field(
-        None, description="Correlation ID for tracking requests"
-    )
+    details: dict[str, Any] = Field(..., description="Additional details about the action")
+    correlation_id: str | None = Field(None, description="Correlation ID for tracking requests")
     ip_address: str | None = Field(None, description="IP address of the requester")
-    user_agent: str | None = Field(
-        None, description="User agent string of the requester"
-    )
+    user_agent: str | None = Field(None, description="User agent string of the requester")
 
 
 def generate_audit_log(
@@ -109,6 +103,7 @@ def generate_audit_log(
 
 class ReviewAction(BaseModel):
     """Review action."""
+
     memory_id: str
     action: str  # "approve" or "reject"
 
@@ -237,9 +232,7 @@ async def review_memory(
                 )
                 raise HTTPException(status_code=404, detail="Audit record not found.")
 
-            await knowledge_graph.add_observations(
-                review.memory_id, ["MANUALLY_APPROVED_BY_ADMIN"]
-            )
+            await knowledge_graph.add_observations(review.memory_id, ["MANUALLY_APPROVED_BY_ADMIN"])
 
             # Log the successful audit event
             log_audit_event(
@@ -257,9 +250,7 @@ async def review_memory(
                 details={"memory_id": review.memory_id, "error": str(e)},
                 correlation_id=correlation_id,
             )
-            raise HTTPException(
-                status_code=500, detail=f"Error approving memory: {e}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Error approving memory: {e}") from e
 
     elif review.action == "reject":
         try:
@@ -294,11 +285,9 @@ async def review_memory(
                 details={"memory_id": review.memory_id, "error": str(e)},
                 correlation_id=correlation_id,
             )
-            raise HTTPException(
-                status_code=500, detail=f"Error rejecting memory: {e}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Error rejecting memory: {e}") from e
 
-    raise HTTPException(status_code=400, detail="Invalid action")
+    raise HTTPException(status_code=400, detail="Invalid action") from None
 
 
 @router.get("/metrics", response_model=dict[str, int])  # New endpoint for metrics
@@ -340,9 +329,7 @@ def get_audit_metrics(
             details={"error": str(e)},
             correlation_id=correlation_id,
         )
-        raise HTTPException(
-            status_code=500, detail=f"Error retrieving audit metrics: {e}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error retrieving audit metrics: {e}") from e
 
 
 # Additional audit endpoints for enhanced functionality
@@ -395,9 +382,7 @@ def get_audit_logs(
             details={"error": str(e)},
             correlation_id=correlation_id,
         )
-        raise HTTPException(
-            status_code=500, detail=f"Error retrieving audit logs: {e}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error retrieving audit logs: {e}") from e
 
 
 @router.post("/log", response_model=AuditRecordResponse)
@@ -464,9 +449,7 @@ async def create_audit_log(
                 details={"error": str(e), "idempotency_key": idempotency_key},
                 correlation_id=correlation_id,
             )
-            raise HTTPException(
-                status_code=500, detail=f"Error creating audit log: {e}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Error creating audit log: {e}") from e
 
     # Execute with idempotency
     if not idempotency_key:
@@ -487,23 +470,20 @@ class AuditLogger:
 
     def log_action(self, action: AuditAction, details: dict = None):
         """Log an audit action."""
-        record = {
-            "action": action,
-            "details": details or {},
-            "timestamp": "now"
-        }
+        record = {"action": action, "details": details or {}, "timestamp": "now"}
         self.records.append(record)
         return record
 
     def generate_audit_log(self, user_id: str, action: AuditAction, details: dict = None):
         """Generate an audit log entry."""
         import uuid
+
         record = AuditRecordResponse(
             id=str(uuid.uuid4()),
             user_id=user_id,
             action=action,
             details=details or {},
-            timestamp="now"
+            timestamp="now",
         )
         self.records.append(record)
         return record

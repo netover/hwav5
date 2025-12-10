@@ -115,7 +115,9 @@ class Container:
                     if param.default != inspect.Parameter.empty:
                         kwargs[param_name] = param.default
                     else:
-                        raise ValueError(f"No registration found for dependency: {param.annotation}")
+                        raise ValueError(
+                            f"No registration found for dependency: {param.annotation}"
+                        ) from None
 
         return cls(**kwargs)
 
@@ -135,7 +137,9 @@ class Container:
 container = Container()
 
 
-def setup_dependencies(tws_client: ITWSClient, agent_manager: IAgentManager, knowledge_graph: IKnowledgeGraph) -> None:
+def setup_dependencies(
+    tws_client: ITWSClient, agent_manager: IAgentManager, knowledge_graph: IKnowledgeGraph
+) -> None:
     """Setup the dependency injection container with all necessary services."""
     # Register core components
     container.register_singleton(ITWSClient, tws_client)
@@ -143,9 +147,7 @@ def setup_dependencies(tws_client: ITWSClient, agent_manager: IAgentManager, kno
     container.register_singleton(IKnowledgeGraph, knowledge_graph)
 
     # Register services using the factory
-    container.register_singleton(
-        ITWSService, ServiceFactory.create_tws_service(tws_client)
-    )
+    container.register_singleton(ITWSService, ServiceFactory.create_tws_service(tws_client))
     container.register_singleton(
         IAgentService,
         ServiceFactory.create_agent_service(agent_manager),

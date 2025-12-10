@@ -26,6 +26,7 @@ logger = get_logger(__name__)
 @dataclass
 class Triplet:
     """Represents a subject-predicate-object triplet."""
+
     subject: str
     subject_type: str
     predicate: str
@@ -48,11 +49,9 @@ ALLOWED_RELATIONS = {
     "BELONGS_TO": ("job", "job_stream"),
     "USES": ("job", "resource"),
     "FOLLOWS": ("job", "schedule"),
-
     # Hierarchy
     "PART_OF": ("*", "*"),
     "CONTAINS": ("*", "*"),
-
     # Events
     "AFFECTED": ("event", "job"),
     "OCCURRED_ON": ("event", "workstation"),
@@ -98,6 +97,7 @@ class TripletExtractor:
         """Get or create LLM client."""
         if self._llm is None:
             from resync.services.llm_service import get_llm_service
+
             self._llm = get_llm_service()
         return self._llm
 
@@ -106,10 +106,7 @@ class TripletExtractor:
     # =========================================================================
 
     async def extract_from_text(
-        self,
-        text: str,
-        source_document: str | None = None,
-        auto_approve: bool = False
+        self, text: str, source_document: str | None = None, auto_approve: bool = False
     ) -> list[Triplet]:
         """
         Extract triplets from text using LLM.
@@ -145,11 +142,7 @@ class TripletExtractor:
             if not auto_approve:
                 await self._save_to_review_queue(triplets, text, source_document)
 
-            logger.info(
-                "triplets_extracted",
-                count=len(triplets),
-                source=source_document
-            )
+            logger.info("triplets_extracted", count=len(triplets), source=source_document)
 
             return triplets
 
@@ -183,11 +176,7 @@ TEXT:
 
 RELATIONSHIPS:"""
 
-    def _parse_extraction_response(
-        self,
-        response: str,
-        source_text: str
-    ) -> list[Triplet]:
+    def _parse_extraction_response(self, response: str, source_text: str) -> list[Triplet]:
         """Parse LLM response into triplets."""
         triplets = []
 
@@ -214,15 +203,17 @@ RELATIONSHIPS:"""
                 subj_type = self._infer_entity_type(subject)
                 obj_type = self._infer_entity_type(obj)
 
-                triplets.append(Triplet(
-                    subject=subject,
-                    subject_type=subj_type,
-                    predicate=predicate,
-                    object=obj,
-                    object_type=obj_type,
-                    confidence=0.8,  # Default confidence for LLM extraction
-                    source_text=source_text[:500]
-                ))
+                triplets.append(
+                    Triplet(
+                        subject=subject,
+                        subject_type=subj_type,
+                        predicate=predicate,
+                        object=obj,
+                        object_type=obj_type,
+                        confidence=0.8,  # Default confidence for LLM extraction
+                        source_text=source_text[:500],
+                    )
+                )
 
         return triplets
 
@@ -258,7 +249,7 @@ RELATIONSHIPS:"""
             object=obj,
             object_type=triplet.object_type,
             confidence=triplet.confidence,
-            source_text=triplet.source_text
+            source_text=triplet.source_text,
         )
 
     def _normalize_entity_name(self, name: str) -> str:
@@ -269,7 +260,7 @@ RELATIONSHIPS:"""
         # Remove common prefixes
         for prefix in ["job:", "Job:", "JOB:", "ws:", "WS:", "resource:"]:
             if name.startswith(prefix):
-                name = name[len(prefix):]
+                name = name[len(prefix) :]
 
         # Uppercase for consistency
         return name.strip().upper()
@@ -295,10 +286,7 @@ RELATIONSHIPS:"""
         return True
 
     async def _save_to_review_queue(
-        self,
-        triplets: list[Triplet],
-        source_text: str,
-        source_document: str | None
+        self, triplets: list[Triplet], source_text: str, source_document: str | None
     ) -> None:
         """Save extracted triplets to review queue."""
         async with get_async_session() as session:
@@ -311,7 +299,7 @@ RELATIONSHIPS:"""
                     source_document=source_document,
                     model_used="llm_extraction",
                     confidence=t.confidence,
-                    status="pending"
+                    status="pending",
                 )
                 session.add(record)
 
@@ -321,10 +309,7 @@ RELATIONSHIPS:"""
     # RULE-BASED EXTRACTION (for structured data)
     # =========================================================================
 
-    def extract_from_tws_data(
-        self,
-        job_data: dict[str, Any]
-    ) -> list[Triplet]:
+    def extract_from_tws_data(self, job_data: dict[str, Any]) -> list[Triplet]:
         """
         Extract triplets from structured TWS job data.
 
@@ -345,28 +330,32 @@ RELATIONSHIPS:"""
         # Workstation relationship
         workstation = job_data.get("workstation", job_data.get("ws", ""))
         if workstation:
-            triplets.append(Triplet(
-                subject=job_name,
-                subject_type="job",
-                predicate="RUNS_ON",
-                object=workstation,
-                object_type="workstation",
-                confidence=1.0,
-                source_text="TWS API"
-            ))
+            triplets.append(
+                Triplet(
+                    subject=job_name,
+                    subject_type="job",
+                    predicate="RUNS_ON",
+                    object=workstation,
+                    object_type="workstation",
+                    confidence=1.0,
+                    source_text="TWS API",
+                )
+            )
 
         # Job stream relationship
         job_stream = job_data.get("job_stream", job_data.get("stream", ""))
         if job_stream:
-            triplets.append(Triplet(
-                subject=job_name,
-                subject_type="job",
-                predicate="BELONGS_TO",
-                object=job_stream,
-                object_type="job_stream",
-                confidence=1.0,
-                source_text="TWS API"
-            ))
+            triplets.append(
+                Triplet(
+                    subject=job_name,
+                    subject_type="job",
+                    predicate="BELONGS_TO",
+                    object=job_stream,
+                    object_type="job_stream",
+                    confidence=1.0,
+                    source_text="TWS API",
+                )
+            )
 
         # Dependencies
         dependencies = job_data.get("dependencies", job_data.get("deps", []))
@@ -374,15 +363,17 @@ RELATIONSHIPS:"""
             if isinstance(dep, dict):
                 dep = dep.get("job_name", dep.get("name", ""))
             if dep:
-                triplets.append(Triplet(
-                    subject=job_name,
-                    subject_type="job",
-                    predicate="DEPENDS_ON",
-                    object=dep,
-                    object_type="job",
-                    confidence=1.0,
-                    source_text="TWS API"
-                ))
+                triplets.append(
+                    Triplet(
+                        subject=job_name,
+                        subject_type="job",
+                        predicate="DEPENDS_ON",
+                        object=dep,
+                        object_type="job",
+                        confidence=1.0,
+                        source_text="TWS API",
+                    )
+                )
 
         # Resources
         resources = job_data.get("resources", job_data.get("resource_requirements", []))
@@ -392,22 +383,21 @@ RELATIONSHIPS:"""
             if isinstance(res, dict):
                 res = res.get("name", "")
             if res:
-                triplets.append(Triplet(
-                    subject=job_name,
-                    subject_type="job",
-                    predicate="USES",
-                    object=res,
-                    object_type="resource",
-                    confidence=1.0,
-                    source_text="TWS API"
-                ))
+                triplets.append(
+                    Triplet(
+                        subject=job_name,
+                        subject_type="job",
+                        predicate="USES",
+                        object=res,
+                        object_type="resource",
+                        confidence=1.0,
+                        source_text="TWS API",
+                    )
+                )
 
         return triplets
 
-    def extract_from_event(
-        self,
-        event_data: dict[str, Any]
-    ) -> list[Triplet]:
+    def extract_from_event(self, event_data: dict[str, Any]) -> list[Triplet]:
         """
         Extract triplets from event/log data.
 
@@ -426,28 +416,32 @@ RELATIONSHIPS:"""
         # Affected job
         job_id = event_data.get("job_id", event_data.get("job_name", ""))
         if job_id:
-            triplets.append(Triplet(
-                subject=str(event_id),
-                subject_type="event",
-                predicate="AFFECTED",
-                object=job_id,
-                object_type="job",
-                confidence=1.0,
-                source_text="Event log"
-            ))
+            triplets.append(
+                Triplet(
+                    subject=str(event_id),
+                    subject_type="event",
+                    predicate="AFFECTED",
+                    object=job_id,
+                    object_type="job",
+                    confidence=1.0,
+                    source_text="Event log",
+                )
+            )
 
         # Workstation
         workstation = event_data.get("workstation", event_data.get("source", ""))
         if workstation:
-            triplets.append(Triplet(
-                subject=str(event_id),
-                subject_type="event",
-                predicate="OCCURRED_ON",
-                object=workstation,
-                object_type="workstation",
-                confidence=1.0,
-                source_text="Event log"
-            ))
+            triplets.append(
+                Triplet(
+                    subject=str(event_id),
+                    subject_type="event",
+                    predicate="OCCURRED_ON",
+                    object=workstation,
+                    object_type="workstation",
+                    confidence=1.0,
+                    source_text="Event log",
+                )
+            )
 
         return triplets
 
@@ -455,6 +449,7 @@ RELATIONSHIPS:"""
 # =============================================================================
 # REVIEW QUEUE MANAGEMENT
 # =============================================================================
+
 
 async def get_pending_triplets(limit: int = 50) -> list[dict[str, Any]]:
     """Get triplets pending review."""
@@ -496,30 +491,20 @@ async def approve_triplet(triplet_id: int, reviewer: str) -> bool:
         # Add to graph
         kg = get_knowledge_graph()
         await kg.add_node(
-            f"job:{triplet.subject}",
-            NodeType.JOB,
-            triplet.subject,
-            source="llm_extracted"
+            f"job:{triplet.subject}", NodeType.JOB, triplet.subject, source="llm_extracted"
         )
         await kg.add_node(
-            f"job:{triplet.object}",
-            NodeType.JOB,
-            triplet.object,
-            source="llm_extracted"
+            f"job:{triplet.object}", NodeType.JOB, triplet.object, source="llm_extracted"
         )
         await kg.add_edge(
             f"job:{triplet.subject}",
             f"job:{triplet.object}",
             triplet.predicate,
             confidence=triplet.confidence,
-            source="llm_extracted"
+            source="llm_extracted",
         )
 
-        logger.info(
-            "triplet_approved",
-            triplet_id=triplet_id,
-            reviewer=reviewer
-        )
+        logger.info("triplet_approved", triplet_id=triplet_id, reviewer=reviewer)
 
         return True
 
@@ -543,11 +528,7 @@ async def reject_triplet(triplet_id: int, reviewer: str) -> bool:
 
         await session.commit()
 
-        logger.info(
-            "triplet_rejected",
-            triplet_id=triplet_id,
-            reviewer=reviewer
-        )
+        logger.info("triplet_rejected", triplet_id=triplet_id, reviewer=reviewer)
 
         return True
 
@@ -555,6 +536,7 @@ async def reject_triplet(triplet_id: int, reviewer: str) -> bool:
 # =============================================================================
 # CONVENIENCE FUNCTIONS
 # =============================================================================
+
 
 def get_triplet_extractor() -> TripletExtractor:
     """Get a triplet extractor instance."""

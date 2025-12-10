@@ -28,7 +28,7 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, TypeVar, Union
+from typing import Any, Optional, TypeVar, Union
 
 from resync.core.structured_logger import get_logger
 from resync.settings import settings
@@ -39,6 +39,7 @@ logger = get_logger(__name__)
 try:
     from langfuse import Langfuse
     from langfuse.decorators import langfuse_context, observe
+
     LANGFUSE_AVAILABLE = True
 except ImportError:
     LANGFUSE_AVAILABLE = False
@@ -48,12 +49,13 @@ except ImportError:
 
 
 # Type variable for decorated functions
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 # =============================================================================
 # DATA CLASSES
 # =============================================================================
+
 
 @dataclass
 class LLMCallTrace:
@@ -175,11 +177,7 @@ MODEL_COSTS: dict[str, dict[str, float]] = {
 }
 
 
-def estimate_cost(
-    model: str,
-    input_tokens: int,
-    output_tokens: int
-) -> float:
+def estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
     """
     Estimate cost for an LLM call.
 
@@ -202,6 +200,7 @@ def estimate_cost(
 # =============================================================================
 # TRACER
 # =============================================================================
+
 
 class LangFuseTracer:
     """
@@ -238,9 +237,9 @@ class LangFuseTracer:
         if LANGFUSE_AVAILABLE and self._should_use_langfuse():
             try:
                 self._client = Langfuse(
-                    public_key=getattr(settings, 'langfuse_public_key', None),
-                    secret_key=getattr(settings, 'langfuse_secret_key', None),
-                    host=getattr(settings, 'langfuse_host', "https://cloud.langfuse.com"),
+                    public_key=getattr(settings, "langfuse_public_key", None),
+                    secret_key=getattr(settings, "langfuse_secret_key", None),
+                    host=getattr(settings, "langfuse_host", "https://cloud.langfuse.com"),
                 )
                 logger.info("langfuse_tracer_initialized")
             except Exception as e:
@@ -251,9 +250,9 @@ class LangFuseTracer:
     def _should_use_langfuse(self) -> bool:
         """Check if LangFuse should be used."""
         return (
-            getattr(settings, 'langfuse_enabled', False) and
-            getattr(settings, 'langfuse_public_key', None) and
-            getattr(settings, 'langfuse_secret_key', None)
+            getattr(settings, "langfuse_enabled", False)
+            and getattr(settings, "langfuse_public_key", None)
+            and getattr(settings, "langfuse_secret_key", None)
         )
 
     @asynccontextmanager
@@ -328,9 +327,7 @@ class LangFuseTracer:
             )
 
     async def _send_to_langfuse(
-        self,
-        trace: LLMCallTrace,
-        metadata: dict[str, Any] | None = None
+        self, trace: LLMCallTrace, metadata: dict[str, Any] | None = None
     ) -> None:
         """Send trace to LangFuse."""
         if not self._client:
@@ -380,9 +377,7 @@ class LangFuseTracer:
             logger.warning("langfuse_trace_failed", error=str(e), trace_id=trace.trace_id)
 
     def start_session(
-        self,
-        user_id: str | None = None,
-        metadata: dict[str, Any] | None = None
+        self, user_id: str | None = None, metadata: dict[str, Any] | None = None
     ) -> TraceSession:
         """
         Start a new trace session.
@@ -456,6 +451,7 @@ class LangFuseTracer:
 # DECORATOR
 # =============================================================================
 
+
 def trace_llm_call(
     name: str,
     model: str = "",
@@ -474,6 +470,7 @@ def trace_llm_call(
         model: Model being used
         prompt_id: Prompt template ID if using one
     """
+
     def decorator(func: F) -> F:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -483,20 +480,21 @@ def trace_llm_call(
                 result = await func(*args, **kwargs)
 
                 # Try to extract token counts from result
-                if hasattr(result, 'usage'):
+                if hasattr(result, "usage"):
                     usage = result.usage
-                    trace.input_tokens = getattr(usage, 'prompt_tokens', 0)
-                    trace.output_tokens = getattr(usage, 'completion_tokens', 0)
+                    trace.input_tokens = getattr(usage, "prompt_tokens", 0)
+                    trace.output_tokens = getattr(usage, "completion_tokens", 0)
 
                 # Try to extract output
-                if hasattr(result, 'choices') and result.choices:
+                if hasattr(result, "choices") and result.choices:
                     choice = result.choices[0]
-                    if hasattr(choice, 'message'):
-                        trace.output = getattr(choice.message, 'content', '')
+                    if hasattr(choice, "message"):
+                        trace.output = getattr(choice.message, "content", "")
 
                 return result
 
         return wrapper  # type: ignore
+
     return decorator
 
 

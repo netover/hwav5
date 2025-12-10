@@ -29,12 +29,16 @@ logger = get_logger(__name__)
 # Lazy initialization of knowledge graph (Context Store with SQLite)
 _knowledge_graph = None
 
+
 def _get_knowledge_graph():
     global _knowledge_graph
     if _knowledge_graph is None:
         from resync.core.context_store import ContextStore
+
         _knowledge_graph = ContextStore()
     return _knowledge_graph
+
+
 audit_lock = DistributedAuditLock()
 audit_queue = AsyncAuditQueue()
 
@@ -67,9 +71,7 @@ async def _validate_memory_for_analysis(mem: dict[str, Any]) -> bool:
     return True
 
 
-async def _get_llm_analysis(
-    user_query: str, agent_response: str
-) -> dict[str, Any] | None:
+async def _get_llm_analysis(user_query: str, agent_response: str) -> dict[str, Any] | None:
     """Gets the analysis of a memory from the LLM."""
     prompt = f"""
     You are an expert TWS (IBM MQ/Workload Scheduler) auditor.
@@ -89,9 +91,7 @@ async def _get_llm_analysis(
     try:
         # Increased max_tokens from 200 to 500 to allow for more detailed analysis
         # and comprehensive reasoning in the auditor's evaluation of agent responses
-        result = await call_llm(
-            prompt, model=settings.AUDITOR_MODEL_NAME, max_tokens=500
-        )
+        result = await call_llm(prompt, model=settings.AUDITOR_MODEL_NAME, max_tokens=500)
         if not result:
             return None
 
@@ -119,10 +119,7 @@ async def _perform_action_on_memory(
     memory_id = str(mem.get("id", ""))
     confidence = float(analysis.get("confidence", 0))
 
-    if (
-        analysis.get("is_incorrect")
-        and confidence > AUDIT_DELETION_CONFIDENCE_THRESHOLD
-    ):
+    if analysis.get("is_incorrect") and confidence > AUDIT_DELETION_CONFIDENCE_THRESHOLD:
         logger.info(
             "deleting_memory",
             memory_id=memory_id,
@@ -134,6 +131,7 @@ async def _perform_action_on_memory(
         # Convert audit finding to knowledge graph entries
         try:
             from resync.core.continual_learning import process_audit_finding
+
             await process_audit_finding(
                 memory_id=memory_id,
                 user_query=str(mem.get("user_query", "")),
@@ -151,19 +149,15 @@ async def _perform_action_on_memory(
         success = await _get_knowledge_graph().atomic_check_and_delete(memory_id)
         return ("delete", memory_id) if success else None
 
-    if (
-        analysis.get("is_incorrect")
-        and confidence > AUDIT_FLAGGING_CONFIDENCE_THRESHOLD
-    ):
+    if analysis.get("is_incorrect") and confidence > AUDIT_FLAGGING_CONFIDENCE_THRESHOLD:
         reason = str(analysis.get("reason", "N/A"))
-        logger.warning(
-            "flagging_memory", memory_id=memory_id, confidence=confidence, reason=reason
-        )
+        logger.warning("flagging_memory", memory_id=memory_id, confidence=confidence, reason=reason)
 
         # === CONTINUAL LEARNING INTEGRATION ===
         # Convert audit finding to knowledge graph entries (for flagged items too)
         try:
             from resync.core.continual_learning import process_audit_finding
+
             await process_audit_finding(
                 memory_id=memory_id,
                 user_query=str(mem.get("user_query", "")),
@@ -178,9 +172,7 @@ async def _perform_action_on_memory(
             logger.warning("continual_learning_pipeline_error", error=str(e))
         # === END CONTINUAL LEARNING INTEGRATION ===
 
-        success = await _get_knowledge_graph().atomic_check_and_flag(
-            memory_id, reason, confidence
-        )
+        success = await _get_knowledge_graph().atomic_check_and_flag(memory_id, reason, confidence)
         if success:
             mem["ia_audit_reason"] = reason
             mem["ia_audit_confidence"] = confidence
@@ -284,9 +276,7 @@ async def analyze_memory(
         return None
     except AuditError as e:
         # Lock acquisition failure
-        logger.warning(
-            "could_not_acquire_lock_for_memory", memory_id=memory_id, error=str(e)
-        )
+        logger.warning("could_not_acquire_lock_for_memory", memory_id=memory_id, error=str(e))
         return None
     except (KnowledgeGraphError, DatabaseError) as e:
         # Catch specific data access errors
@@ -332,11 +322,7 @@ async def _analyze_memories_concurrently(memories: list[dict[str, Any]]) -> list
     processed_results = []
     for result in results:
         if isinstance(result, Exception):
-            logger.error(
-                "memory_analysis_failed",
-                error=str(result),
-                exc_info=True
-            )
+            logger.error("memory_analysis_failed", error=str(result), exc_info=True)
             processed_results.append(None)
         else:
             processed_results.append(result)
@@ -344,7 +330,9 @@ async def _analyze_memories_concurrently(memories: list[dict[str, Any]]) -> list
     return processed_results
 
 
-async def _process_analysis_results(results: list[tuple[str, Any] | None]) -> tuple[list[str], list[dict[str, Any]]]:
+async def _process_analysis_results(
+    results: list[tuple[str, Any] | None],
+) -> tuple[list[str], list[dict[str, Any]]]:
     """
     Process analysis results, separating memories to delete and flag.
 
@@ -370,7 +358,7 @@ async def _process_analysis_results(results: list[tuple[str, Any] | None]) -> tu
                 resource_type="memory",
                 resource_id=data,
                 details={"reason": "IA audit flagged for deletion"},
-                severity="info"
+                severity="info",
             )
         elif action == "flag" and isinstance(data, dict):
             memories_to_flag.append(data)
@@ -379,7 +367,7 @@ async def _process_analysis_results(results: list[tuple[str, Any] | None]) -> tu
                 resource_type="memory",
                 resource_id=str(data.get("id", "unknown")),
                 details={"reason": "IA audit flagged for review"},
-                severity="warning"
+                severity="warning",
             )
 
     return memories_to_delete, memories_to_flag

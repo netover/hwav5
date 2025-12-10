@@ -213,30 +213,20 @@ class TestHealthCheckService:
                                                 message="WebSocket pool healthy",
                                             ),
                                         ):
-
                                             # Perform health check
-                                            result = (
-                                                await health_service.perform_comprehensive_health_check()
-                                            )
+                                            result = await health_service.perform_comprehensive_health_check()
 
                                             # Verify results
-                                            assert (
-                                                result.overall_status
-                                                == HealthStatus.HEALTHY
-                                            )
+                                            assert result.overall_status == HealthStatus.HEALTHY
                                             assert len(result.components) == 9
                                             assert all(
                                                 comp.status == HealthStatus.HEALTHY
                                                 for comp in result.components.values()
                                             )
                                             assert result.timestamp is not None
+                                            assert result.performance_metrics is not None
                                             assert (
-                                                result.performance_metrics is not None
-                                            )
-                                            assert (
-                                                result.performance_metrics[
-                                                    "total_check_time_ms"
-                                                ]
+                                                result.performance_metrics["total_check_time_ms"]
                                                 > 0
                                             )
 
@@ -244,45 +234,25 @@ class TestHealthCheckService:
         """Test overall status calculation from component statuses."""
         # Test all healthy
         components = {
-            "comp1": ComponentHealth(
-                "comp1", ComponentType.DATABASE, HealthStatus.HEALTHY
-            ),
-            "comp2": ComponentHealth(
-                "comp2", ComponentType.REDIS, HealthStatus.HEALTHY
-            ),
+            "comp1": ComponentHealth("comp1", ComponentType.DATABASE, HealthStatus.HEALTHY),
+            "comp2": ComponentHealth("comp2", ComponentType.REDIS, HealthStatus.HEALTHY),
         }
-        assert (
-            health_service._calculate_overall_status(components) == HealthStatus.HEALTHY
-        )
+        assert health_service._calculate_overall_status(components) == HealthStatus.HEALTHY
 
         # Test with degraded
         components["comp1"] = ComponentHealth(
             "comp1", ComponentType.DATABASE, HealthStatus.DEGRADED
         )
-        assert (
-            health_service._calculate_overall_status(components)
-            == HealthStatus.DEGRADED
-        )
+        assert health_service._calculate_overall_status(components) == HealthStatus.DEGRADED
 
         # Test with unhealthy
-        components["comp2"] = ComponentHealth(
-            "comp2", ComponentType.REDIS, HealthStatus.UNHEALTHY
-        )
-        assert (
-            health_service._calculate_overall_status(components)
-            == HealthStatus.UNHEALTHY
-        )
+        components["comp2"] = ComponentHealth("comp2", ComponentType.REDIS, HealthStatus.UNHEALTHY)
+        assert health_service._calculate_overall_status(components) == HealthStatus.UNHEALTHY
 
         # Test with unknown
-        components["comp1"] = ComponentHealth(
-            "comp1", ComponentType.DATABASE, HealthStatus.UNKNOWN
-        )
-        components["comp2"] = ComponentHealth(
-            "comp2", ComponentType.REDIS, HealthStatus.HEALTHY
-        )
-        assert (
-            health_service._calculate_overall_status(components) == HealthStatus.UNKNOWN
-        )
+        components["comp1"] = ComponentHealth("comp1", ComponentType.DATABASE, HealthStatus.UNKNOWN)
+        components["comp2"] = ComponentHealth("comp2", ComponentType.REDIS, HealthStatus.HEALTHY)
+        assert health_service._calculate_overall_status(components) == HealthStatus.UNKNOWN
 
         # Test empty components
         assert health_service._calculate_overall_status({}) == HealthStatus.UNKNOWN
@@ -325,12 +295,8 @@ class TestHealthCheckService:
         """Test alert checking functionality."""
         # Test degraded components alert
         components = {
-            "comp1": ComponentHealth(
-                "comp1", ComponentType.DATABASE, HealthStatus.DEGRADED
-            ),
-            "comp2": ComponentHealth(
-                "comp2", ComponentType.REDIS, HealthStatus.HEALTHY
-            ),
+            "comp1": ComponentHealth("comp1", ComponentType.DATABASE, HealthStatus.DEGRADED),
+            "comp2": ComponentHealth("comp2", ComponentType.REDIS, HealthStatus.HEALTHY),
         }
 
         alerts = health_service._check_alerts(components)
@@ -339,9 +305,7 @@ class TestHealthCheckService:
         assert "comp1" in alerts[0]["components"]
 
         # Test unhealthy components alert
-        components["comp2"] = ComponentHealth(
-            "comp2", ComponentType.REDIS, HealthStatus.UNHEALTHY
-        )
+        components["comp2"] = ComponentHealth("comp2", ComponentType.REDIS, HealthStatus.UNHEALTHY)
         alerts = health_service._check_alerts(components)
         assert len(alerts) == 2  # degraded + unhealthy
         assert any(alert["type"] == "unhealthy_components" for alert in alerts)
@@ -357,31 +321,16 @@ class TestHealthCheckService:
         """Test component type mapping from names."""
         assert health_service._get_component_type("database") == ComponentType.DATABASE
         assert health_service._get_component_type("redis") == ComponentType.REDIS
-        assert (
-            health_service._get_component_type("cache_hierarchy") == ComponentType.CACHE
-        )
-        assert (
-            health_service._get_component_type("file_system")
-            == ComponentType.FILE_SYSTEM
-        )
+        assert health_service._get_component_type("cache_hierarchy") == ComponentType.CACHE
+        assert health_service._get_component_type("file_system") == ComponentType.FILE_SYSTEM
         assert health_service._get_component_type("memory") == ComponentType.MEMORY
         assert health_service._get_component_type("cpu") == ComponentType.CPU
+        assert health_service._get_component_type("tws_monitor") == ComponentType.EXTERNAL_API
         assert (
-            health_service._get_component_type("tws_monitor")
-            == ComponentType.EXTERNAL_API
+            health_service._get_component_type("connection_pools") == ComponentType.CONNECTION_POOL
         )
-        assert (
-            health_service._get_component_type("connection_pools")
-            == ComponentType.CONNECTION_POOL
-        )
-        assert (
-            health_service._get_component_type("websocket_pool")
-            == ComponentType.WEBSOCKET
-        )
-        assert (
-            health_service._get_component_type("unknown_component")
-            == ComponentType.EXTERNAL_API
-        )
+        assert health_service._get_component_type("websocket_pool") == ComponentType.WEBSOCKET
+        assert health_service._get_component_type("unknown_component") == ComponentType.EXTERNAL_API
 
     def test_health_history_management(self, health_service):
         """Test health history tracking and management."""
@@ -390,9 +339,7 @@ class TestHealthCheckService:
             overall_status=HealthStatus.HEALTHY,
             timestamp=datetime.now(),
             components={
-                "comp1": ComponentHealth(
-                    "comp1", ComponentType.DATABASE, HealthStatus.HEALTHY
-                )
+                "comp1": ComponentHealth("comp1", ComponentType.DATABASE, HealthStatus.HEALTHY)
             },
         )
 
@@ -401,9 +348,7 @@ class TestHealthCheckService:
 
         # Add a change
         health_service.component_cache = {
-            "comp1": ComponentHealth(
-                "comp1", ComponentType.DATABASE, HealthStatus.DEGRADED
-            )
+            "comp1": ComponentHealth("comp1", ComponentType.DATABASE, HealthStatus.DEGRADED)
         }
         result.overall_status = HealthStatus.DEGRADED
         result.components["comp1"] = ComponentHealth(
@@ -412,10 +357,7 @@ class TestHealthCheckService:
 
         health_service._update_health_history(result)
         assert len(health_service.health_history) == 1
-        assert (
-            health_service.health_history[0].component_changes["comp1"]
-            == HealthStatus.HEALTHY
-        )
+        assert health_service.health_history[0].component_changes["comp1"] == HealthStatus.HEALTHY
 
         # Test history retrieval
         history = health_service.get_health_history(limit=5)
@@ -431,9 +373,7 @@ class TestHealthCheckService:
         # Trigger cleanup by adding a new entry
         health_service._update_health_history(result)
         history = health_service.get_health_history(limit=10)
-        assert (
-            len(history) >= 1
-        )  # Should have at least the recent entry (timing may keep both)
+        assert len(history) >= 1  # Should have at least the recent entry (timing may keep both)
 
     def test_is_healthy_method(self, health_service):
         """Test is_healthy method."""
@@ -442,12 +382,8 @@ class TestHealthCheckService:
 
         # Test with healthy components
         health_service.component_cache = {
-            "comp1": ComponentHealth(
-                "comp1", ComponentType.DATABASE, HealthStatus.HEALTHY
-            ),
-            "comp2": ComponentHealth(
-                "comp2", ComponentType.REDIS, HealthStatus.HEALTHY
-            ),
+            "comp1": ComponentHealth("comp1", ComponentType.DATABASE, HealthStatus.HEALTHY),
+            "comp2": ComponentHealth("comp2", ComponentType.REDIS, HealthStatus.HEALTHY),
         }
         assert health_service.is_healthy() is True
 
@@ -491,9 +427,7 @@ class TestComponentSpecificHealthChecks:
         )
 
         # Mock connection pool manager
-        with patch(
-            "resync.core.health_service.get_connection_pool_manager"
-        ) as mock_get_manager:
+        with patch("resync.core.health_service.get_connection_pool_manager") as mock_get_manager:
             mock_manager = Mock()
             mock_manager.get_pool = Mock(return_value=mock_pool)
             mock_get_manager.return_value = mock_manager
@@ -513,9 +447,7 @@ class TestComponentSpecificHealthChecks:
         """Test database health check when pool is not available."""
 
         # Mock connection pool manager returning None
-        with patch(
-            "resync.core.health_service.get_connection_pool_manager"
-        ) as mock_get_manager:
+        with patch("resync.core.health_service.get_connection_pool_manager") as mock_get_manager:
             mock_manager = Mock()
             mock_manager.get_pool = Mock(return_value=None)
             mock_get_manager.return_value = mock_manager

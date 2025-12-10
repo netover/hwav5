@@ -10,14 +10,15 @@ import asyncio
 import sys
 import time
 
-from resync.core.health_models import HealthCheckConfig
 from resync.core.health_service_refactored import (
     get_refactored_health_check_service,
     shutdown_refactored_health_check_service,
 )
 
+from resync.core.health_models import HealthCheckConfig
+
 # Add the project root to Python path
-sys.path.insert(0, '/d/Python/GITHUB/hwa-new')
+sys.path.insert(0, "/d/Python/GITHUB/hwa-new")
 
 
 async def test_health_service_integration():
@@ -56,7 +57,9 @@ async def test_health_service_integration():
 
         # Show component details
         for component_name, component_health in result.components.items():
-            print(f"      • {component_name}: {component_health.status} ({component_health.response_time_ms or 0:.1f}ms)")
+            print(
+                f"      • {component_name}: {component_health.status} ({component_health.response_time_ms or 0:.1f}ms)"
+            )
         print()
 
         # Test 3: Test individual component health
@@ -72,7 +75,7 @@ async def test_health_service_integration():
         # Test 4: Test proactive health checks
         print("📋 Test 4: Test proactive health checks")
         proactive_results = await health_service.perform_proactive_health_checks()
-        print(f"   ✅ Proactive checks completed")
+        print("   ✅ Proactive checks completed")
         print(f"   ✅ Checks performed: {proactive_results['checks_performed']}")
         print(f"   ✅ Recovery actions: {len(proactive_results['recovery_actions'])}")
         print()
@@ -98,7 +101,7 @@ async def test_health_service_integration():
         # Test 7: Test memory usage reporting
         print("📋 Test 7: Test memory usage reporting")
         memory_usage = health_service.get_memory_usage()
-        print(f"   ✅ Memory usage report generated")
+        print("   ✅ Memory usage report generated")
         print(f"   ✅ Facade initialized: {memory_usage['facade_initialized']}")
         print(f"   ✅ Observer count: {memory_usage['observer_count']}")
         print()
@@ -108,13 +111,17 @@ async def test_health_service_integration():
         facade_status = health_service.facade.get_service_status()
         metrics = health_service.facade.get_metrics_summary()
 
-        print(f"   ✅ Facade status: initialized={facade_status['initialized']}, monitoring={facade_status['monitoring_active']}")
+        print(
+            f"   ✅ Facade status: initialized={facade_status['initialized']}, monitoring={facade_status['monitoring_active']}"
+        )
         print(f"   ✅ Observer count: {facade_status['observer_count']}")
         print(f"   ✅ Metrics collected: {len(metrics)}")
         print()
 
         print("🎉 All integration tests passed!")
-        print(f"📊 Summary: {len(result.components)} components checked, {duration:.2f}s total duration")
+        print(
+            f"📊 Summary: {len(result.components)} components checked, {duration:.2f}s total duration"
+        )
         print()
 
         return True
@@ -122,6 +129,7 @@ async def test_health_service_integration():
     except Exception as e:
         print(f"❌ Integration test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -133,11 +141,11 @@ async def test_observer_pattern():
 
     try:
         from resync.core.health.health_monitoring_observer import (
+            AlertingHealthObserver,
+            HealthMonitoringEvent,
             HealthMonitoringSubject,
             LoggingHealthObserver,
-            AlertingHealthObserver,
             MetricsHealthObserver,
-            HealthMonitoringEvent,
         )
         from resync.core.health_models import HealthStatus
 
@@ -155,11 +163,11 @@ async def test_observer_pattern():
         print(f"   ✅ Observers attached: {subject.get_observer_count()}")
 
         # Create test event
-        event = HealthMonitoringEvent(
+        HealthMonitoringEvent(
             event_type="test_event",
             component_name="test_component",
             health_status=HealthStatus.DEGRADED,
-            metadata={"test": True}
+            metadata={"test": True},
         )
 
         # Test notifications
@@ -185,6 +193,7 @@ async def test_observer_pattern():
     except Exception as e:
         print(f"❌ Observer pattern test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -226,12 +235,12 @@ async def test_complexity_reduction():
 
         # Test key methods exist and work
         methods_to_test = [
-            'perform_comprehensive_health_check',
-            'get_component_health',
-            'attempt_recovery',
-            'get_configuration',
-            'update_configuration',
-            'get_service_status',
+            "perform_comprehensive_health_check",
+            "get_component_health",
+            "attempt_recovery",
+            "get_configuration",
+            "update_configuration",
+            "get_service_status",
         ]
 
         for method_name in methods_to_test:
@@ -282,9 +291,8 @@ async def main():
     if passed == total:
         print("🎉 All tests passed! Health service refactoring is successful.")
         return 0
-    else:
-        print("⚠️  Some tests failed. Please review the issues above.")
-        return 1
+    print("⚠️  Some tests failed. Please review the issues above.")
+    return 1
 
 
 if __name__ == "__main__":
@@ -297,6 +305,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n💥 Test suite failed with error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
     finally:

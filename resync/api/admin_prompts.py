@@ -38,6 +38,7 @@ prompt_router = APIRouter(prefix="/admin/prompts", tags=["Admin - Prompts"])
 # REQUEST/RESPONSE MODELS
 # =============================================================================
 
+
 class PromptListResponse(BaseModel):
     """Response for listing prompts."""
 
@@ -100,11 +101,13 @@ class PromptUpdateRequest(BaseModel):
 
 class PromptTestRequest(BaseModel):
     """Request to test a prompt."""
+
     variables: dict[str, str] = Field(default_factory=dict)
 
 
 class PromptTestResponse(BaseModel):
     """Response from testing a prompt."""
+
     compiled: str
     variables_used: dict[str, str]
     missing_variables: list[str]
@@ -113,6 +116,7 @@ class PromptTestResponse(BaseModel):
 # =============================================================================
 # ENDPOINTS
 # =============================================================================
+
 
 @prompt_router.get("", response_model=PromptListResponse, summary="List all prompts")
 async def list_prompts(
@@ -132,16 +136,18 @@ async def list_prompts(
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Invalid prompt type: {prompt_type}",
-                )
+                ) from None
 
-        prompts = await prompt_manager.list_prompts(prompt_type=type_filter, active_only=active_only)
+        prompts = await prompt_manager.list_prompts(
+            prompt_type=type_filter, active_only=active_only
+        )
 
         return PromptListResponse(
             prompts=[
                 {
                     "id": p.id,
                     "name": p.name,
-                    "type": p.type.value if hasattr(p.type, 'value') else p.type,
+                    "type": p.type.value if hasattr(p.type, "value") else p.type,
                     "version": p.version,
                     "is_active": p.is_active,
                     "is_default": p.is_default,
@@ -154,7 +160,7 @@ async def list_prompts(
         raise
     except Exception as e:
         logger.error("list_prompts_error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @prompt_router.get("/{prompt_id}", response_model=PromptDetailResponse, summary="Get a prompt")
@@ -173,7 +179,7 @@ async def get_prompt(
     return PromptDetailResponse(
         id=config.id,
         name=config.name,
-        type=config.type.value if hasattr(config.type, 'value') else config.type,
+        type=config.type.value if hasattr(config.type, "value") else config.type,
         version=config.version,
         content=config.content,
         description=config.description,
@@ -189,7 +195,9 @@ async def get_prompt(
     )
 
 
-@prompt_router.post("", response_model=PromptDetailResponse, status_code=201, summary="Create a prompt")
+@prompt_router.post(
+    "", response_model=PromptDetailResponse, status_code=201, summary="Create a prompt"
+)
 async def create_prompt(
     request: PromptCreateRequest,
     _: str = Depends(verify_admin_credentials),
@@ -198,7 +206,9 @@ async def create_prompt(
     try:
         prompt_type = PromptType(request.type)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid prompt type: {request.type}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid prompt type: {request.type}"
+        ) from None
 
     prompt_manager = get_prompt_manager()
     config = PromptConfig(
@@ -220,12 +230,12 @@ async def create_prompt(
     try:
         created = await prompt_manager.create_prompt(config)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     return PromptDetailResponse(
         id=created.id,
         name=created.name,
-        type=created.type.value if hasattr(created.type, 'value') else created.type,
+        type=created.type.value if hasattr(created.type, "value") else created.type,
         version=created.version,
         content=created.content,
         description=created.description,
@@ -262,7 +272,7 @@ async def update_prompt(
     return PromptDetailResponse(
         id=updated.id,
         name=updated.name,
-        type=updated.type.value if hasattr(updated.type, 'value') else updated.type,
+        type=updated.type.value if hasattr(updated.type, "value") else updated.type,
         version=updated.version,
         content=updated.content,
         description=updated.description,
@@ -316,7 +326,7 @@ async def test_prompt(
     try:
         compiled = template.compile(**final_vars)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     return PromptTestResponse(
         compiled=compiled,

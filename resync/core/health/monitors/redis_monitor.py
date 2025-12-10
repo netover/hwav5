@@ -6,7 +6,6 @@ functionality, including connection testing, performance metrics, and
 detailed health reporting.
 """
 
-
 import asyncio  # Added to support async sleep in retry logic
 import time
 from datetime import datetime

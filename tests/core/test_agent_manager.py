@@ -69,9 +69,7 @@ async def test_load_agents_from_config(
         agent_manager_instance.agents["test-agent-1"] = mock_agent
         mock_create_agent.return_value = mock_agent
 
-        await agent_manager_instance.load_agents_from_config(
-            config_path=mock_config_file
-        )
+        await agent_manager_instance.load_agents_from_config(config_path=mock_config_file)
 
         # Assert
         assert "test-agent-1" in agent_manager_instance.agents
@@ -102,9 +100,7 @@ async def test_load_agents_from_nonexistent_file(
 
 
 @pytest.mark.asyncio
-async def test_load_agents_from_invalid_json(
-    agent_manager_instance: AgentManager, tmp_path: Path
-):
+async def test_load_agents_from_invalid_json(agent_manager_instance: AgentManager, tmp_path: Path):
     """
     Tests that the agent manager handles a malformed JSON file gracefully
     by raising a DataParsingError.
@@ -116,9 +112,7 @@ async def test_load_agents_from_invalid_json(
 
     # Act & Assert
     with patch("json.loads", side_effect=json.JSONDecodeError("msg", "doc", 0)):
-        await agent_manager_instance.load_agents_from_config(
-            config_path=invalid_json_file
-        )
+        await agent_manager_instance.load_agents_from_config(config_path=invalid_json_file)
 
     # Also assert that the internal state remains clean
     assert agent_manager_instance.agents == {}
@@ -175,9 +169,7 @@ async def test_async_agent_loading(mock_config_file: Path):
             mock_agent.name = "Test Agent 1"
             agent_manager.agents["test-agent-1"] = mock_agent
             mock_create_agent.return_value = mock_agent
-            await agent_manager.load_agents_from_config(
-                config_path=mock_config_file
-            )
+            await agent_manager.load_agents_from_config(config_path=mock_config_file)
 
             # Assert
             assert "test-agent-1" in agent_manager.agents

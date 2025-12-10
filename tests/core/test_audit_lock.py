@@ -35,11 +35,9 @@ def mock_redis_client():
     client.eval.return_value = 1
     client.script_load.return_value = "mock_release_script_sha"
     client.exists.return_value = 1
-    client.get.return_value = "mock_uuid".encode("utf-8")
+    client.get.return_value = b"mock_uuid"
     client.delete.return_value = 1
-    client.keys.return_value = [
-        f"audit_lock:expired_key_{i}".encode("utf-8") for i in range(3)
-    ]
+    client.keys.return_value = [f"audit_lock:expired_key_{i}".encode() for i in range(3)]
     client.ttl.return_value = -2
     client.ping.return_value = True
     return client
@@ -60,13 +58,12 @@ async def audit_lock_instance(mock_redis_client):
 @pytest.fixture
 def audit_lock_context(mock_redis_client):
     """Create an AuditLockContext for testing."""
-    context = AuditLockContext(
+    return AuditLockContext(
         client=mock_redis_client,
         lock_key="audit_lock:test_context_key",
         timeout=30,
         release_script_sha="mock_release_script_sha",
     )
-    return context
 
 
 class TestDistributedAuditLock:
@@ -99,9 +96,7 @@ class TestDistributedAuditLock:
         assert await audit_lock_instance.is_locked(memory_id) is False
 
     @pytest.mark.asyncio
-    async def test_concurrent_lock_prevention(
-        self, audit_lock_instance, mock_redis_client
-    ):
+    async def test_concurrent_lock_prevention(self, audit_lock_instance, mock_redis_client):
         """Test that concurrent processes cannot acquire the same lock."""
         memory_id = "test_memory_concurrent"
         results = []
@@ -143,20 +138,14 @@ class TestDistributedAuditLock:
     @pytest.mark.asyncio
     async def test_invalid_lock_key_validation(self, audit_lock_instance):
         """Test that memory_id validation is enforced."""
-        with pytest.raises(
-            ValueError, match="Invalid memory_id - must be a non-empty string"
-        ):
+        with pytest.raises(ValueError, match="Invalid memory_id - must be a non-empty string"):
             audit_lock_instance._get_lock_key(123)
 
-        with pytest.raises(
-            ValueError, match="Invalid memory_id - must be a non-empty string"
-        ):
+        with pytest.raises(ValueError, match="Invalid memory_id - must be a non-empty string"):
             audit_lock_instance._get_lock_key("")
 
     @pytest.mark.asyncio
-    async def test_context_manager_behavior(
-        self, audit_lock_context, mock_redis_client
-    ):
+    async def test_context_manager_behavior(self, audit_lock_context, mock_redis_client):
         """Test the AuditLockContext context manager enter/exit behavior."""
         mock_redis_client.set.return_value = True
         mock_redis_client.evalsha.reset_mock()
@@ -173,9 +162,7 @@ class TestDistributedAuditLock:
         )
 
     @pytest.mark.asyncio
-    async def test_context_exception_handling(
-        self, audit_lock_context, mock_redis_client
-    ):
+    async def test_context_exception_handling(self, audit_lock_context, mock_redis_client):
         """Test that the lock is released even if an exception occurs."""
         mock_redis_client.set.return_value = True
         mock_redis_client.evalsha.reset_mock()

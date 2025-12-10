@@ -9,11 +9,12 @@ Date: October 2025
 
 import json
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, ANY
+from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 from redis.asyncio import Redis
 
+from resync.api.middleware.idempotency import IdempotencyMiddleware
 from resync.core.idempotency import (
     IdempotencyConfig,
     IdempotencyManager,
@@ -21,7 +22,6 @@ from resync.core.idempotency import (
     generate_idempotency_key,
     validate_idempotency_key,
 )
-from resync.api.middleware.idempotency import IdempotencyMiddleware
 
 
 class TestIdempotencyManager:
@@ -260,12 +260,8 @@ class TestIdempotencyRecord:
         assert restored.request_metadata == original.request_metadata
 
         # Verificar timestamps (aproximadamente)
-        time_diff_created = abs(
-            (restored.created_at - original.created_at).total_seconds()
-        )
-        time_diff_expires = abs(
-            (restored.expires_at - original.expires_at).total_seconds()
-        )
+        time_diff_created = abs((restored.created_at - original.created_at).total_seconds())
+        time_diff_expires = abs((restored.expires_at - original.expires_at).total_seconds())
 
         assert time_diff_created < 1  # Menos de 1 segundo de diferença
         assert time_diff_expires < 1
@@ -373,7 +369,7 @@ class TestIdempotencyMiddleware:
         call_next = AsyncMock(return_value=mock_response)
 
         # Executar middleware
-        response = await middleware.dispatch(request, call_next)
+        await middleware.dispatch(request, call_next)
 
         # Verificar que operação foi executada
         call_next.assert_called_once()
@@ -396,16 +392,14 @@ class TestIdempotencyMiddleware:
         call_next = AsyncMock(return_value=MagicMock())
 
         # Executar middleware
-        response = await middleware.dispatch(request, call_next)
+        await middleware.dispatch(request, call_next)
 
         # Verificar que idempotency não foi aplicada
         call_next.assert_called_once()
         manager_mock.get_cached_response.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_dispatch_requires_idempotency_key_for_post(
-        self, middleware, manager_mock
-    ):
+    async def test_dispatch_requires_idempotency_key_for_post(self, middleware, manager_mock):
         """Testa que POST requer idempotency key"""
 
         request = MagicMock()

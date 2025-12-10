@@ -67,7 +67,6 @@ class BaseHealthChecker(ABC):
         Returns:
             ComponentHealth: Health status of the component
         """
-        timeout = timeout_seconds or self.config.timeout_seconds
         start_time = time.time()
 
         try:

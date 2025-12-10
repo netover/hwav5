@@ -4,7 +4,6 @@ Cache Metrics Mixin.
 Provides metrics and monitoring functionality for cache implementations.
 """
 
-
 import logging
 import time
 from typing import Any
@@ -66,12 +65,12 @@ class CacheMetricsMixin:
         total_entries = 0
         total_memory_estimate = 0
 
-        if hasattr(self, 'shards'):
+        if hasattr(self, "shards"):
             for shard in self.shards:
                 total_entries += len(shard)
                 # Rough memory estimate
                 for entry in shard.values():
-                    if hasattr(entry, 'data'):
+                    if hasattr(entry, "data"):
                         total_memory_estimate += len(str(entry.data))
 
         uptime = time.time() - self._start_time if self._start_time else 0

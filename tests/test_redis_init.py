@@ -2,8 +2,10 @@
 Unit and integration tests for RedisInitializer.
 """
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
+
 from resync.core.redis_init import RedisInitializer
 from resync.settings import settings
 
@@ -32,10 +34,11 @@ async def test_redis_initializer_basic():
     mock_client.connection_pool.max_connections = 50
 
     initializer = RedisInitializer()
-    with patch("resync.core.redis_init.redis.Redis.from_url", return_value=mock_client), \
-         patch("resync.core.redis_init.os.getenv", return_value=None), \
-         patch.object(initializer, "_initialize_idempotency", return_value=None):
-
+    with (
+        patch("resync.core.redis_init.redis.Redis.from_url", return_value=mock_client),
+        patch("resync.core.redis_init.os.getenv", return_value=None),
+        patch.object(initializer, "_initialize_idempotency", return_value=None),
+    ):
         # Initialize Redis
         client = await initializer.initialize(
             redis_url="redis://mock:6379",
@@ -50,13 +53,13 @@ async def test_redis_initializer_basic():
 
         # Verify mock calls
         mock_client.ping.assert_called_once()
-        assert (
-            mock_client.set.call_count >= 2
-        ), "Set should be called for lock and test key (at least 2 times)"
+        assert mock_client.set.call_count >= 2, (
+            "Set should be called for lock and test key (at least 2 times)"
+        )
         mock_client.get.assert_called_once()
-        assert (
-            mock_client.delete.call_count >= 1
-        ), "Delete should be called for test key (at least 1 time)"
+        assert mock_client.delete.call_count >= 1, (
+            "Delete should be called for test key (at least 1 time)"
+        )
 
 
 @pytest.mark.asyncio
@@ -74,10 +77,11 @@ async def test_redis_initializer_retry_logic():
     mock_client.connection_pool.max_connections = 50
 
     initializer = RedisInitializer()
-    with patch("resync.core.redis_init.redis.Redis.from_url", return_value=mock_client), \
-         patch("resync.core.redis_init.os.getenv", return_value=None), \
-         patch.object(initializer, "_initialize_idempotency", return_value=None):
-
+    with (
+        patch("resync.core.redis_init.redis.Redis.from_url", return_value=mock_client),
+        patch("resync.core.redis_init.os.getenv", return_value=None),
+        patch.object(initializer, "_initialize_idempotency", return_value=None),
+    ):
         # Initialize Redis with different retry parameters
         client = await initializer.initialize(
             redis_url="redis://mock:6379",
@@ -112,9 +116,8 @@ async def test_redis_initializer_health_check():
         patch("resync.core.redis_init.os.getenv", return_value=None),
         patch.object(initializer, "_initialize_idempotency", return_value=None),
     ):
-
         # Initialize Redis
-        client = await initializer.initialize(
+        await initializer.initialize(
             redis_url="redis://mock:6379",
             max_retries=settings.redis_max_startup_retries,
             base_backoff=settings.redis_startup_backoff_base,

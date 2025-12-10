@@ -13,7 +13,7 @@ Author: Resync Team
 Version: 5.2.3.29
 """
 
-
+import contextlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -31,39 +31,30 @@ router = APIRouter(prefix="/ai", tags=["Admin - AI Configuration"])
 # CONFIGURATION FILE PATH
 # ============================================================================
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent.parent.parent.parent / "config" / "ai_config.json"
+CONFIG_PATH = (
+    Path(__file__).resolve().parent.parent.parent.parent.parent / "config" / "ai_config.json"
+)
 
 
 # ============================================================================
 # PYDANTIC MODELS FOR API
 # ============================================================================
 
+
 class ResourceLimitsConfig(BaseModel):
     """Resource limits configuration."""
 
     max_cpu_percent: float = Field(
-        default=25.0,
-        ge=5.0,
-        le=100.0,
-        description="Maximum CPU usage percentage"
+        default=25.0, ge=5.0, le=100.0, description="Maximum CPU usage percentage"
     )
     max_memory_mb: int = Field(
-        default=512,
-        ge=128,
-        le=4096,
-        description="Maximum memory usage in MB"
+        default=512, ge=128, le=4096, description="Maximum memory usage in MB"
     )
     max_execution_time_seconds: int = Field(
-        default=300,
-        ge=30,
-        le=3600,
-        description="Maximum execution time"
+        default=300, ge=30, le=3600, description="Maximum execution time"
     )
     nice_level: int = Field(
-        default=10,
-        ge=0,
-        le=19,
-        description="Process nice level (higher = lower priority)"
+        default=10, ge=0, le=19, description="Process nice level (higher = lower priority)"
     )
 
 
@@ -76,7 +67,9 @@ class SpecialistAgentConfig(BaseModel):
     max_tokens: int = Field(default=2048, ge=100, le=8192, description="Maximum response tokens")
     timeout_seconds: int = Field(default=30, ge=5, le=120, description="Request timeout")
     retry_attempts: int = Field(default=3, ge=0, le=5, description="Retry attempts on failure")
-    custom_instructions: str | None = Field(default=None, description="Additional custom instructions")
+    custom_instructions: str | None = Field(
+        default=None, description="Additional custom instructions"
+    )
 
 
 class SpecialistsConfig(BaseModel):
@@ -86,14 +79,18 @@ class SpecialistsConfig(BaseModel):
     execution_mode: str = Field(
         default="coordinate",
         pattern="^(coordinate|collaborate|route|parallel)$",
-        description="Team execution mode"
+        description="Team execution mode",
     )
     parallel_execution: bool = Field(default=True, description="Run specialists in parallel")
-    max_parallel_specialists: int = Field(default=4, ge=1, le=10, description="Max parallel specialists")
+    max_parallel_specialists: int = Field(
+        default=4, ge=1, le=10, description="Max parallel specialists"
+    )
     timeout_seconds: int = Field(default=45, ge=10, le=180, description="Overall team timeout")
     orchestrator_model: str = Field(default="gpt-4o", description="Orchestrator model")
     synthesizer_model: str = Field(default="gpt-4o", description="Synthesizer model")
-    fallback_to_general: bool = Field(default=True, description="Fallback to general assistant on failure")
+    fallback_to_general: bool = Field(
+        default=True, description="Fallback to general assistant on failure"
+    )
 
     job_analyst: SpecialistAgentConfig = Field(
         default_factory=lambda: SpecialistAgentConfig(temperature=0.2)
@@ -115,18 +112,15 @@ class MonitoringScheduleConfig(BaseModel):
     type: str = Field(
         default="daily",
         pattern="^(hourly|every_4_hours|daily|weekly|manual)$",
-        description="Schedule type"
+        description="Schedule type",
     )
     time: str = Field(
         default="03:00",
         pattern=r"^\d{2}:\d{2}$",
-        description="Time to run (HH:MM) for daily/weekly"
+        description="Time to run (HH:MM) for daily/weekly",
     )
     day_of_week: int | None = Field(
-        default=None,
-        ge=0,
-        le=6,
-        description="Day of week for weekly (0=Monday, 6=Sunday)"
+        default=None, ge=0, le=6, description="Day of week for weekly (0=Monday, 6=Sunday)"
     )
 
 
@@ -136,8 +130,12 @@ class DriftDetectionConfig(BaseModel):
     data_drift_enabled: bool = Field(default=True, description="Monitor data/query drift")
     prediction_drift_enabled: bool = Field(default=True, description="Monitor prediction drift")
     target_drift_enabled: bool = Field(default=True, description="Monitor target/feedback drift")
-    drift_threshold: float = Field(default=0.15, ge=0.01, le=0.5, description="Drift detection threshold")
-    alert_threshold: float = Field(default=0.25, ge=0.05, le=0.5, description="Alert trigger threshold")
+    drift_threshold: float = Field(
+        default=0.15, ge=0.01, le=0.5, description="Drift detection threshold"
+    )
+    alert_threshold: float = Field(
+        default=0.25, ge=0.05, le=0.5, description="Alert trigger threshold"
+    )
     reference_window_days: int = Field(default=7, ge=1, le=90, description="Reference data window")
     current_window_hours: int = Field(default=24, ge=1, le=168, description="Current data window")
 
@@ -285,6 +283,7 @@ DEFAULT_AI_CONFIG: dict[str, Any] = {
 # HELPER FUNCTIONS
 # ============================================================================
 
+
 def _load_config() -> dict[str, Any]:
     """Load configuration from file."""
     if CONFIG_PATH.exists():
@@ -326,6 +325,7 @@ def _get_monitoring_service():
     """Get the monitoring service, lazy import to avoid circular dependency."""
     try:
         from resync.core.monitoring import get_monitoring_service
+
         return get_monitoring_service()
     except ImportError:
         return None
@@ -334,6 +334,7 @@ def _get_monitoring_service():
 # ============================================================================
 # ENDPOINTS - CONFIGURATION
 # ============================================================================
+
 
 @router.get(
     "/config",
@@ -371,7 +372,7 @@ async def update_ai_config(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update configuration: {str(e)}",
-        )
+        ) from e
 
 
 @router.patch(
@@ -415,6 +416,7 @@ async def update_monitoring_config(
 # ENDPOINTS - SPECIALISTS
 # ============================================================================
 
+
 @router.get(
     "/specialists/status",
     summary="Get Specialists Status",
@@ -435,14 +437,16 @@ async def get_specialists_status() -> dict[str, Any]:
     status_list = []
     for spec_name in specialists:
         spec_config = specialists_config.get(spec_name, {})
-        status_list.append({
-            "name": spec_name.replace("_", " ").title(),
-            "type": spec_name,
-            "enabled": spec_config.get("enabled", True),
-            "model": spec_config.get("model_name", "gpt-4o"),
-            "temperature": spec_config.get("temperature", 0.3),
-            "max_tokens": spec_config.get("max_tokens", 2048),
-        })
+        status_list.append(
+            {
+                "name": spec_name.replace("_", " ").title(),
+                "type": spec_name,
+                "enabled": spec_config.get("enabled", True),
+                "model": spec_config.get("model_name", "gpt-4o"),
+                "temperature": spec_config.get("temperature", 0.3),
+                "max_tokens": spec_config.get("max_tokens", 2048),
+            }
+        )
 
     return {
         "team_enabled": specialists_config.get("enabled", True),
@@ -493,6 +497,7 @@ async def toggle_specialist(
 # ============================================================================
 # ENDPOINTS - MONITORING
 # ============================================================================
+
 
 @router.get(
     "/monitoring/status",
@@ -560,14 +565,13 @@ async def run_monitoring_now() -> dict[str, Any]:
         )
 
     try:
-        result = await service.run_monitoring()
-        return result
+        return await service.run_monitoring()
     except Exception as e:
         logger.error("manual_monitoring_error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Monitoring run failed: {str(e)}",
-        )
+        ) from e
 
 
 @router.get(
@@ -596,17 +600,13 @@ async def get_monitoring_alerts(
     # Convert string filters to enums
     drift_filter = None
     if drift_type:
-        try:
+        with contextlib.suppress(ValueError):
             drift_filter = DriftType(drift_type)
-        except ValueError:
-            pass
 
     severity_filter = None
     if severity:
-        try:
+        with contextlib.suppress(ValueError):
             severity_filter = AlertSeverity(severity)
-        except ValueError:
-            pass
 
     alerts = service.get_alerts(
         since=since,
@@ -632,12 +632,14 @@ async def list_monitoring_reports(
     reports = []
     if reports_path.exists():
         for report_file in sorted(reports_path.glob("*.html"), reverse=True)[:limit]:
-            reports.append({
-                "name": report_file.name,
-                "path": str(report_file),
-                "size_kb": report_file.stat().st_size / 1024,
-                "created": datetime.fromtimestamp(report_file.stat().st_ctime).isoformat(),
-            })
+            reports.append(
+                {
+                    "name": report_file.name,
+                    "path": str(report_file),
+                    "size_kb": report_file.stat().st_size / 1024,
+                    "created": datetime.fromtimestamp(report_file.stat().st_ctime).isoformat(),
+                }
+            )
 
     return {
         "reports_path": str(reports_path),
@@ -649,6 +651,7 @@ async def list_monitoring_reports(
 # ============================================================================
 # BACKGROUND TASKS
 # ============================================================================
+
 
 async def _reload_services(config: dict[str, Any]) -> None:
     """Reload services with new configuration."""
@@ -712,8 +715,7 @@ async def _reload_specialists(specialists_config: dict[str, Any]) -> None:
             spec_key = spec_type.value
             if spec_key in specialists_config:
                 team_config.specialists[spec_type] = SpecialistConfig(
-                    specialist_type=spec_type,
-                    **specialists_config[spec_key]
+                    specialist_type=spec_type, **specialists_config[spec_key]
                 )
 
         await create_specialist_team(config=team_config)
@@ -735,6 +737,7 @@ async def _toggle_monitoring_service(enabled: bool) -> None:
         if enabled and not service:
             config = _load_config()
             from resync.core.monitoring import MonitoringConfig
+
             monitoring_config = MonitoringConfig(**config.get("monitoring", {}))
             await init_monitoring_service(monitoring_config)
         elif not enabled and service:

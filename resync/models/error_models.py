@@ -38,20 +38,12 @@ class BaseErrorResponse(BaseModel):
     timestamp: datetime = Field(
         default_factory=datetime.utcnow, description="Timestamp of error occurrence"
     )
-    severity: ErrorSeverity = Field(
-        ErrorSeverity.MEDIUM, description="Error severity level"
-    )
+    severity: ErrorSeverity = Field(ErrorSeverity.MEDIUM, description="Error severity level")
     category: ErrorCategory = Field(..., description="Error category")
     path: str | None = Field(None, description="Request path that caused the error")
-    method: str | None = Field(
-        None, description="HTTP method of the request that caused the error"
-    )
-    user_friendly_message: str | None = Field(
-        None, description="User-friendly error message"
-    )
-    troubleshooting_hints: list[str] | None = Field(
-        None, description="Troubleshooting suggestions"
-    )
+    method: str | None = Field(None, description="HTTP method of the request that caused the error")
+    user_friendly_message: str | None = Field(None, description="User-friendly error message")
+    troubleshooting_hints: list[str] | None = Field(None, description="Troubleshooting suggestions")
     stack_trace: str | None = Field(
         None, description="Stack trace for debugging (production disabled)"
     )
@@ -190,12 +182,8 @@ class AuthorizationErrorResponse(BaseErrorResponse):
     """Error response model for authorization errors."""
 
     category: ErrorCategory = ErrorCategory.AUTHORIZATION
-    required_permissions: list[str] | None = Field(
-        None, description="Required permissions"
-    )
-    user_permissions: list[str] | None = Field(
-        None, description="User's current permissions"
-    )
+    required_permissions: list[str] | None = Field(None, description="Required permissions")
+    user_permissions: list[str] | None = Field(None, description="User's current permissions")
 
     @classmethod
     def forbidden(
@@ -252,7 +240,9 @@ class AuthorizationErrorResponse(BaseErrorResponse):
         # Build contextual message with request information
         message = f"Insufficient permissions. Required: {', '.join(required)}"
         if path and method:
-            message = f"Insufficient permissions for {method} {path}. Required: {', '.join(required)}"
+            message = (
+                f"Insufficient permissions for {method} {path}. Required: {', '.join(required)}"
+            )
 
         return cls(
             error_code="INSUFFICIENT_PERMISSIONS",
@@ -263,9 +253,7 @@ class AuthorizationErrorResponse(BaseErrorResponse):
             method=method,
             severity=ErrorSeverity.MEDIUM,
             user_friendly_message="You don't have the required permissions to perform this action.",
-            troubleshooting_hints=[
-                "Contact your administrator to request additional permissions"
-            ],
+            troubleshooting_hints=["Contact your administrator to request additional permissions"],
             required_permissions=required,
             user_permissions=user,
             stack_trace=None,
@@ -276,9 +264,7 @@ class BusinessLogicErrorResponse(BaseErrorResponse):
     """Error response model for business logic errors."""
 
     category: ErrorCategory = ErrorCategory.BUSINESS_LOGIC
-    business_rule: str | None = Field(
-        None, description="Business rule that was violated"
-    )
+    business_rule: str | None = Field(None, description="Business rule that was violated")
 
     @classmethod
     def resource_not_found(
@@ -301,9 +287,7 @@ class BusinessLogicErrorResponse(BaseErrorResponse):
         # Build contextual message with request information
         message = f"{resource_type} with ID '{resource_id}' not found"
         if path and method:
-            message = (
-                f"{resource_type} with ID '{resource_id}' not found for {method} {path}"
-            )
+            message = f"{resource_type} with ID '{resource_id}' not found for {method} {path}"
 
         return cls(
             error_code="RESOURCE_NOT_FOUND",
@@ -353,9 +337,7 @@ class SystemErrorResponse(BaseErrorResponse):
     """Error response model for system/internal errors."""
 
     category: ErrorCategory = ErrorCategory.SYSTEM
-    error_details: dict[str, Any] | None = Field(
-        None, description="Additional error details"
-    )
+    error_details: dict[str, Any] | None = Field(None, description="Additional error details")
 
     @classmethod
     def internal_server_error(
@@ -399,9 +381,7 @@ class SystemErrorResponse(BaseErrorResponse):
         # Build contextual message with request information
         message = f"Service '{service}' is temporarily unavailable"
         if path and method:
-            message = (
-                f"Service '{service}' is temporarily unavailable for {method} {path}"
-            )
+            message = f"Service '{service}' is temporarily unavailable for {method} {path}"
 
         return cls(
             error_code="SERVICE_UNAVAILABLE",
@@ -424,12 +404,8 @@ class ExternalServiceErrorResponse(BaseErrorResponse):
     """Error response model for external service errors."""
 
     category: ErrorCategory = ErrorCategory.EXTERNAL_SERVICE
-    service_name: str | None = Field(
-        None, description="Name of the external service"
-    )
-    http_status: int | None = Field(
-        None, description="HTTP status code from external service"
-    )
+    service_name: str | None = Field(None, description="Name of the external service")
+    http_status: int | None = Field(None, description="HTTP status code from external service")
 
     @classmethod
     def external_service_error(
@@ -466,9 +442,7 @@ class RateLimitErrorResponse(BaseErrorResponse):
 
     category: ErrorCategory = ErrorCategory.RATE_LIMIT
     limit: int | None = Field(None, description="Rate limit threshold")
-    reset_time: datetime | None = Field(
-        None, description="When the rate limit resets"
-    )
+    reset_time: datetime | None = Field(None, description="When the rate limit resets")
 
     @classmethod
     def rate_limit_exceeded(
@@ -487,16 +461,12 @@ class RateLimitErrorResponse(BaseErrorResponse):
             from datetime import datetime, timedelta
 
             # This is a simplified implementation - in a real scenario, you'd calculate the actual reset time
-            reset_time = datetime.utcnow() + timedelta(
-                seconds=60
-            )  # Default to 1 minute
+            reset_time = datetime.utcnow() + timedelta(seconds=60)  # Default to 1 minute
 
         # Build contextual message with request information
         message = f"Rate limit exceeded. Limit: {limit} requests"
         if path and method:
-            message = (
-                f"Rate limit exceeded for {method} {path}. Limit: {limit} requests"
-            )
+            message = f"Rate limit exceeded for {method} {path}. Limit: {limit} requests"
 
         return cls(
             error_code="RATE_LIMIT_EXCEEDED",

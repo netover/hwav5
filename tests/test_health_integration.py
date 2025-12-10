@@ -45,9 +45,7 @@ class TestHealthCheckIntegration:
                 overall_status=HealthStatus.HEALTHY,
                 timestamp=datetime.now(),
                 components={
-                    "test": ComponentHealth(
-                        "test", ComponentType.DATABASE, HealthStatus.HEALTHY
-                    )
+                    "test": ComponentHealth("test", ComponentType.DATABASE, HealthStatus.HEALTHY)
                 },
                 performance_metrics={"total_check_time_ms": 100},
                 alerts=[],
@@ -75,9 +73,7 @@ class TestHealthCheckIntegration:
                 overall_status=HealthStatus.UNHEALTHY,
                 timestamp=datetime.now(),
                 components={
-                    "test": ComponentHealth(
-                        "test", ComponentType.DATABASE, HealthStatus.UNHEALTHY
-                    )
+                    "test": ComponentHealth("test", ComponentType.DATABASE, HealthStatus.UNHEALTHY)
                 },
                 performance_metrics={"total_check_time_ms": 100},
                 alerts=[],
@@ -98,9 +94,7 @@ class TestHealthCheckIntegration:
     def test_health_check_no_service(self, mock_get_health_service, client):
         """Test health check when service is not available."""
         # Arrange
-        mock_get_health_service.side_effect = Exception(
-            "Health check service not available"
-        )
+        mock_get_health_service.side_effect = Exception("Health check service not available")
 
         # Act
         response = client.get("/health/")

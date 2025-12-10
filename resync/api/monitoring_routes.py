@@ -14,7 +14,6 @@ Autor: Resync Team
 Versão: 5.2
 """
 
-
 import json
 import uuid
 from datetime import datetime, timedelta
@@ -33,6 +32,7 @@ monitoring_router = APIRouter(prefix="/api/v1/monitoring", tags=["Monitoring"])
 # =============================================================================
 # PYDANTIC MODELS
 # =============================================================================
+
 
 class PollingConfigUpdate(BaseModel):
     """Atualização de configuração de polling."""
@@ -63,6 +63,7 @@ class SolutionResultInput(BaseModel):
 # =============================================================================
 # CONFIGURATION ENDPOINTS
 # =============================================================================
+
 
 @monitoring_router.get("/config")
 async def get_monitoring_config():
@@ -110,6 +111,7 @@ async def update_monitoring_config_endpoint(updates: PollingConfigUpdate):
 # =============================================================================
 # STATUS ENDPOINTS
 # =============================================================================
+
 
 @monitoring_router.get("/status")
 async def get_current_status():
@@ -202,6 +204,7 @@ async def get_jobs_status(
 # EVENTS ENDPOINTS
 # =============================================================================
 
+
 @monitoring_router.get("/events")
 async def get_events(
     hours: int = Query(24, ge=1, le=168),
@@ -217,6 +220,7 @@ async def get_events(
     if not store:
         # Fallback para event bus
         from resync.core.event_bus import get_event_bus
+
         bus = get_event_bus()
         if bus:
             events = bus.get_recent_events(limit)
@@ -295,6 +299,7 @@ async def get_critical_events(
 # HISTORY ENDPOINTS
 # =============================================================================
 
+
 @monitoring_router.get("/history/job/{job_name}")
 async def get_job_history(
     job_name: str,
@@ -328,7 +333,7 @@ async def get_daily_summary(date: str):
     try:
         target_date = datetime.strptime(date, "%Y-%m-%d")
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD") from None
 
     store = get_status_store()
 
@@ -346,6 +351,7 @@ async def get_daily_summary(date: str):
 # =============================================================================
 # PATTERNS ENDPOINTS
 # =============================================================================
+
 
 @monitoring_router.get("/patterns")
 async def get_patterns(
@@ -391,6 +397,7 @@ async def trigger_pattern_detection():
 # =============================================================================
 # SOLUTIONS ENDPOINTS
 # =============================================================================
+
 
 @monitoring_router.post("/solutions")
 async def add_solution(input: SolutionInput):
@@ -466,6 +473,7 @@ async def record_solution_result(input: SolutionResultInput):
 # POLLER CONTROL ENDPOINTS
 # =============================================================================
 
+
 @monitoring_router.post("/poller/start")
 async def start_poller():
     """Inicia o poller de background."""
@@ -527,6 +535,7 @@ async def force_poll():
 # STATS ENDPOINTS
 # =============================================================================
 
+
 @monitoring_router.get("/stats")
 async def get_monitoring_stats():
     """Obtém estatísticas do sistema de monitoramento."""
@@ -581,8 +590,10 @@ async def cleanup_old_data():
 # RAG QUERY ENDPOINTS
 # =============================================================================
 
+
 class RAGQueryInput(BaseModel):
     """Input para query RAG."""
+
     query: str = Field(..., min_length=3, max_length=500)
 
 
@@ -648,6 +659,7 @@ async def serve_dashboard():
 # NOTIFICATION MANAGEMENT
 # =============================================================================
 
+
 @monitoring_router.post("/notification-dismissed")
 async def track_notification_dismissed(data: dict):
     """Registra quando usuário dispensa uma notificação."""
@@ -701,6 +713,7 @@ async def send_test_notification():
 # WEBSOCKET ENDPOINT
 # =============================================================================
 
+
 @monitoring_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """
@@ -720,10 +733,12 @@ async def websocket_endpoint(websocket: WebSocket):
     bus = get_event_bus()
 
     if not bus:
-        await websocket.send_json({
-            "type": "error",
-            "message": "Event bus not available",
-        })
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": "Event bus not available",
+            }
+        )
         await websocket.close()
         return
 
@@ -738,13 +753,16 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # Envia config inicial
     from resync.core.monitoring_config import get_monitoring_config
+
     config = get_monitoring_config()
 
-    await websocket.send_json({
-        "type": "connected",
-        "client_id": client_id,
-        "config": config.to_frontend_config(),
-    })
+    await websocket.send_json(
+        {
+            "type": "connected",
+            "client_id": client_id,
+            "config": config.to_frontend_config(),
+        }
+    )
 
     try:
         while True:
@@ -762,33 +780,39 @@ async def websocket_endpoint(websocket: WebSocket):
                     # Atualiza assinaturas
                     types = message.get("types", ["all"])
                     subscription_types = {
-                        SubscriptionType(t) for t in types
+                        SubscriptionType(t)
+                        for t in types
                         if t in [e.value for e in SubscriptionType]
                     }
-                    await bus.update_websocket_subscriptions(
-                        client_id, subscription_types
+                    await bus.update_websocket_subscriptions(client_id, subscription_types)
+                    await websocket.send_json(
+                        {
+                            "type": "subscribed",
+                            "types": list(subscription_types),
+                        }
                     )
-                    await websocket.send_json({
-                        "type": "subscribed",
-                        "types": list(subscription_types),
-                    })
 
                 elif msg_type == "get_status":
                     # Envia status atual
                     from resync.core.tws_background_poller import get_tws_poller
+
                     poller = get_tws_poller()
                     if poller:
                         snapshot = poller.get_current_snapshot()
-                        await websocket.send_json({
-                            "type": "status",
-                            "snapshot": snapshot.to_dict() if snapshot else None,
-                        })
+                        await websocket.send_json(
+                            {
+                                "type": "status",
+                                "snapshot": snapshot.to_dict() if snapshot else None,
+                            }
+                        )
 
             except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": "Invalid JSON",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Invalid JSON",
+                    }
+                )
 
     except WebSocketDisconnect:
         logger.info("websocket_client_disconnected", client_id=client_id)
@@ -801,6 +825,7 @@ async def websocket_endpoint(websocket: WebSocket):
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 async def broadcast_notification(
     title: str,

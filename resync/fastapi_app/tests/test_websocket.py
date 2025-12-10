@@ -1,7 +1,6 @@
-
-
 # Note: WebSocket testing requires special handling
 # This is a placeholder for WebSocket tests
+
 
 def test_websocket_endpoint_exists():
     """Test that WebSocket endpoint is defined"""

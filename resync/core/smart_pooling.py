@@ -8,12 +8,11 @@ This module provides intelligent connection pooling with:
 - Connection lifecycle management
 """
 
-
 import asyncio
 import time
 from collections import deque
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -192,10 +191,8 @@ class SmartConnectionPool:
         # Stop health monitoring
         if self._health_monitor_task:
             self._health_monitor_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await self._health_monitor_task
-            except asyncio.CancelledError:
-                pass
 
         # Close all connections
         await self._close_all_connections()
@@ -280,9 +277,7 @@ class SmartConnectionPool:
 
             # Store connection and stats
             self._connections[connection_id] = connection
-            self._connection_stats[connection_id] = ConnectionStats(
-                connection_id=connection_id
-            )
+            self._connection_stats[connection_id] = ConnectionStats(connection_id=connection_id)
 
             # Add to active set
             self._active_connections.add(connection_id)
@@ -306,16 +301,13 @@ class SmartConnectionPool:
 
         try:
             # Wait with timeout
-            connection_id = await asyncio.wait_for(
-                future, timeout=self.config.connection_timeout
-            )
-            return connection_id
+            return await asyncio.wait_for(future, timeout=self.config.connection_timeout)
 
         except asyncio.TimeoutError:
             # Remove from waiting requests
             self._waiting_requests.discard(future)
             self.metrics.queued_requests += 1
-            raise RuntimeError("Connection timeout")
+            raise RuntimeError("Connection timeout") from None
 
         finally:
             self._waiting_requests.discard(future)
@@ -340,12 +332,8 @@ class SmartConnectionPool:
         # Update pool metrics
         if len(self._latency_history) >= 10:
             sorted_latencies = sorted(self._latency_history)
-            self.metrics.avg_request_latency = sum(sorted_latencies) / len(
-                sorted_latencies
-            )
-            self.metrics.p95_latency = sorted_latencies[
-                int(0.95 * len(sorted_latencies))
-            ]
+            self.metrics.avg_request_latency = sum(sorted_latencies) / len(sorted_latencies)
+            self.metrics.p95_latency = sorted_latencies[int(0.95 * len(sorted_latencies))]
 
         # Return connection to idle pool
         await self._release_connection(connection_id)
@@ -437,9 +425,7 @@ class SmartConnectionPool:
                     self._connection_stats[connection_id].health_check_failures += 1
 
             except Exception as e:
-                logger.warning(
-                    "health_check_failed", connection_id=connection_id, error=str(e)
-                )
+                logger.warning("health_check_failed", connection_id=connection_id, error=str(e))
                 self._connection_stats[connection_id].health_check_failures += 1
 
         # Update health metrics
@@ -484,8 +470,7 @@ class SmartConnectionPool:
                 "turnover_rate": self.metrics.connection_turnover_rate,
             },
             "scaling_signals": {
-                "should_scale_up": self.metrics.get_utilization()
-                > self.config.scale_up_threshold,
+                "should_scale_up": self.metrics.get_utilization() > self.config.scale_up_threshold,
                 "should_scale_down": self.metrics.get_utilization()
                 < self.config.scale_down_threshold,
                 "queue_pressure": self.metrics.get_queue_ratio(),

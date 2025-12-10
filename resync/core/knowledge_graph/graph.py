@@ -51,6 +51,7 @@ logger = get_logger(__name__)
 # READ-WRITE LOCK FOR HIGH CONCURRENCY
 # =============================================================================
 
+
 class ReadWriteLock:
     """
     Async Read-Write Lock for high-concurrency graph access.
@@ -78,10 +79,10 @@ class ReadWriteLock:
     def __init__(self):
         self._read_count = 0
         self._write_waiting = 0
-        self._state_lock = asyncio.Lock()      # Protects counters
-        self._read_allowed = asyncio.Event()   # Readers can proceed
-        self._write_lock = asyncio.Lock()      # Mutual exclusion for writers
-        self._read_allowed.set()               # Initially allowed
+        self._state_lock = asyncio.Lock()  # Protects counters
+        self._read_allowed = asyncio.Event()  # Readers can proceed
+        self._write_lock = asyncio.Lock()  # Mutual exclusion for writers
+        self._read_allowed.set()  # Initially allowed
 
     @asynccontextmanager
     async def read_lock(self):
@@ -151,6 +152,7 @@ class ReadWriteLock:
 # KNOWLEDGE GRAPH
 # =============================================================================
 
+
 class TWSKnowledgeGraph:
     """
     TWS Knowledge Graph with NetworkX for algorithms and PostgreSQL for persistence.
@@ -174,13 +176,13 @@ class TWSKnowledgeGraph:
 
     def __init__(self):
         """Initialize the graph (singleton, so only runs once)."""
-        if not hasattr(self, '_graph'):
+        if not hasattr(self, "_graph"):
             self._graph = nx.DiGraph()
         # Use ReadWriteLock instead of simple Lock
-        if not hasattr(self, '_rw_lock'):
+        if not hasattr(self, "_rw_lock"):
             self._rw_lock = ReadWriteLock()
         # Keep simple lock for initialization only
-        if not hasattr(self, '_init_lock'):
+        if not hasattr(self, "_init_lock"):
             self._init_lock = asyncio.Lock()
 
     # =========================================================================
@@ -202,7 +204,7 @@ class TWSKnowledgeGraph:
                 logger.info(
                     "knowledge_graph_initialized",
                     nodes=self._graph.number_of_nodes(),
-                    edges=self._graph.number_of_edges()
+                    edges=self._graph.number_of_edges(),
                 )
             except Exception as e:
                 logger.error("knowledge_graph_init_failed", error=str(e))
@@ -213,9 +215,7 @@ class TWSKnowledgeGraph:
         """Load all nodes and edges from PostgreSQL."""
         async with get_async_session() as session:
             # Load nodes
-            result = await session.execute(
-                select(GraphNode).where(GraphNode.is_active == True)
-            )
+            result = await session.execute(select(GraphNode).where(GraphNode.is_active))
             nodes = result.scalars().all()
 
             for node in nodes:
@@ -224,13 +224,11 @@ class TWSKnowledgeGraph:
                     type=node.node_type,
                     name=node.name,
                     properties=node.properties,
-                    source=node.source
+                    source=node.source,
                 )
 
             # Load edges
-            result = await session.execute(
-                select(GraphEdge).where(GraphEdge.is_active == True)
-            )
+            result = await session.execute(select(GraphEdge).where(GraphEdge.is_active))
             edges = result.scalars().all()
 
             for edge in edges:
@@ -240,7 +238,7 @@ class TWSKnowledgeGraph:
                     relation=edge.relation_type,
                     weight=edge.weight,
                     properties=edge.properties,
-                    confidence=edge.confidence
+                    confidence=edge.confidence,
                 )
 
     async def reload(self) -> None:
@@ -253,7 +251,7 @@ class TWSKnowledgeGraph:
             logger.info(
                 "knowledge_graph_reloaded",
                 nodes=self._graph.number_of_nodes(),
-                edges=self._graph.number_of_edges()
+                edges=self._graph.number_of_edges(),
             )
 
     # =========================================================================
@@ -266,7 +264,7 @@ class TWSKnowledgeGraph:
         node_type: NodeType | str,
         name: str,
         properties: dict[str, Any] | None = None,
-        source: str = "api"
+        source: str = "api",
     ) -> str:
         """
         Add a node to the graph (WRITE operation - exclusive).
@@ -289,21 +287,12 @@ class TWSKnowledgeGraph:
         async with self._rw_lock.write_lock():
             # Add to NetworkX
             self._graph.add_node(
-                node_id,
-                type=node_type,
-                name=name,
-                properties=properties or {},
-                source=source
+                node_id, type=node_type, name=name, properties=properties or {}, source=source
             )
 
             # Persist to PostgreSQL
             async with get_async_session() as session:
-                node = GraphNode(
-                    id=node_id,
-                    node_type=node_type,
-                    name=name,
-                    source=source
-                )
+                node = GraphNode(id=node_id, node_type=node_type, name=name, source=source)
                 node.properties = properties or {}
 
                 await session.merge(node)  # Upsert
@@ -320,7 +309,7 @@ class TWSKnowledgeGraph:
         weight: float = 1.0,
         properties: dict[str, Any] | None = None,
         confidence: float = 1.0,
-        source: str = "api"
+        source: str = "api",
     ) -> None:
         """
         Add an edge (relationship) to the graph (WRITE operation - exclusive).
@@ -347,7 +336,7 @@ class TWSKnowledgeGraph:
                 relation=relation_type,
                 weight=weight,
                 properties=properties or {},
-                confidence=confidence
+                confidence=confidence,
             )
 
             # Persist to PostgreSQL
@@ -357,7 +346,7 @@ class TWSKnowledgeGraph:
                     select(GraphEdge).where(
                         GraphEdge.source_id == source_id,
                         GraphEdge.target_id == target_id,
-                        GraphEdge.relation_type == relation_type
+                        GraphEdge.relation_type == relation_type,
                     )
                 )
                 existing = result.scalar_one_or_none()
@@ -375,19 +364,14 @@ class TWSKnowledgeGraph:
                         relation_type=relation_type,
                         weight=weight,
                         confidence=confidence,
-                        source=source
+                        source=source,
                     )
                     edge.properties = properties or {}
                     session.add(edge)
 
                 await session.commit()
 
-        logger.debug(
-            "edge_added",
-            source=source_id,
-            relation=relation_type,
-            target=target_id
-        )
+        logger.debug("edge_added", source=source_id, relation=relation_type, target=target_id)
 
     # =========================================================================
     # CONVENIENCE METHODS FOR TWS ENTITIES
@@ -402,7 +386,7 @@ class TWSKnowledgeGraph:
         resources: list[str] | None = None,
         schedule: str | None = None,
         properties: dict[str, Any] | None = None,
-        source: str = "tws_api"
+        source: str = "tws_api",
     ) -> str:
         """
         Add a job with all its relationships.
@@ -423,13 +407,7 @@ class TWSKnowledgeGraph:
         job_id = f"job:{job_name}"
 
         # Add job node
-        await self.add_node(
-            job_id,
-            NodeType.JOB,
-            job_name,
-            properties=properties,
-            source=source
-        )
+        await self.add_node(job_id, NodeType.JOB, job_name, properties=properties, source=source)
 
         # Add workstation relationship
         if workstation:
@@ -476,7 +454,7 @@ class TWSKnowledgeGraph:
         affected_job: str | None = None,
         workstation: str | None = None,
         previous_event: str | None = None,
-        properties: dict[str, Any] | None = None
+        properties: dict[str, Any] | None = None,
     ) -> str:
         """Add an event with its relationships."""
         node_id = f"event:{event_id}"
@@ -485,7 +463,7 @@ class TWSKnowledgeGraph:
             "event_type": event_type,
             "message": message,
             "timestamp": timestamp.isoformat(),
-            **(properties or {})
+            **(properties or {}),
         }
 
         await self.add_node(node_id, NodeType.EVENT, event_type, properties=props)
@@ -513,11 +491,7 @@ class TWSKnowledgeGraph:
     # QUERY OPERATIONS - MULTI-HOP TRAVERSAL (READ - parallel allowed)
     # =========================================================================
 
-    async def get_dependency_chain(
-        self,
-        job_name: str,
-        max_hops: int = 10
-    ) -> list[dict[str, Any]]:
+    async def get_dependency_chain(self, job_name: str, max_hops: int = 10) -> list[dict[str, Any]]:
         """
         Get the full dependency chain for a job (READ operation - parallel).
 
@@ -555,25 +529,18 @@ class TWSKnowledgeGraph:
                             "to": target,
                             "relation": "depends_on",
                             "depth": depth,
-                            "path": path + [target]
+                            "path": path + [target],
                         }
                         chain.append(edge_info)
                         _traverse(target, depth + 1, path + [target])
 
             _traverse(job_id, 0, [job_id])
 
-        logger.debug(
-            "dependency_chain_traced",
-            job=job_name,
-            chain_length=len(chain)
-        )
+        logger.debug("dependency_chain_traced", job=job_name, chain_length=len(chain))
 
         return chain
 
-    async def get_full_lineage(
-        self,
-        job_name: str
-    ) -> dict[str, Any]:
+    async def get_full_lineage(self, job_name: str) -> dict[str, Any]:
         """
         Get the complete ancestry of a job (READ operation - parallel).
 
@@ -599,23 +566,17 @@ class TWSKnowledgeGraph:
                 rel = self._graph[source][target].get("relation", "related")
                 # Only include dependencies (not other edge types like USES)
                 if rel in ("depends_on", RelationType.DEPENDS_ON.value):
-                    ancestors.append({
-                        "node": target,
-                        "relation": rel,
-                        "name": self._graph.nodes[target].get("name", target)
-                    })
+                    ancestors.append(
+                        {
+                            "node": target,
+                            "relation": rel,
+                            "name": self._graph.nodes[target].get("name", target),
+                        }
+                    )
 
-        return {
-            "job": job_name,
-            "ancestors": ancestors,
-            "ancestor_count": len(ancestors)
-        }
+        return {"job": job_name, "ancestors": ancestors, "ancestor_count": len(ancestors)}
 
-    async def get_downstream_jobs(
-        self,
-        job_name: str,
-        max_hops: int = 5
-    ) -> list[str]:
+    async def get_downstream_jobs(self, job_name: str, max_hops: int = 5) -> list[str]:
         """
         Get all jobs that depend on this job (READ operation - parallel).
 
@@ -656,11 +617,7 @@ class TWSKnowledgeGraph:
     # QUERY OPERATIONS - COMMON NEIGHBOR (Resource Conflicts) - READ
     # =========================================================================
 
-    async def find_resource_conflicts(
-        self,
-        job_a: str,
-        job_b: str
-    ) -> list[dict[str, Any]]:
+    async def find_resource_conflicts(self, job_a: str, job_b: str) -> list[dict[str, Any]]:
         """
         Find shared resources between two jobs (READ operation - parallel).
 
@@ -700,18 +657,19 @@ class TWSKnowledgeGraph:
             conflicts = []
             for res_id in shared:
                 res_props = self._graph.nodes[res_id].get("properties", {})
-                conflicts.append({
-                    "resource": res_id,
-                    "name": self._graph.nodes[res_id].get("name", res_id),
-                    "is_exclusive": res_props.get("exclusive", False),
-                    "conflict_type": "exclusive" if res_props.get("exclusive") else "concurrent"
-                })
+                conflicts.append(
+                    {
+                        "resource": res_id,
+                        "name": self._graph.nodes[res_id].get("name", res_id),
+                        "is_exclusive": res_props.get("exclusive", False),
+                        "conflict_type": "exclusive"
+                        if res_props.get("exclusive")
+                        else "concurrent",
+                    }
+                )
 
         logger.debug(
-            "resource_conflicts_checked",
-            job_a=job_a,
-            job_b=job_b,
-            conflicts=len(conflicts)
+            "resource_conflicts_checked", job_a=job_a, job_b=job_b, conflicts=len(conflicts)
         )
 
         return conflicts
@@ -720,7 +678,11 @@ class TWSKnowledgeGraph:
         """Get all jobs that use a specific resource (READ operation - parallel)."""
         await self.initialize()
 
-        res_id = f"resource:{resource_name}" if not resource_name.startswith("resource:") else resource_name
+        res_id = (
+            f"resource:{resource_name}"
+            if not resource_name.startswith("resource:")
+            else resource_name
+        )
 
         async with self._rw_lock.read_lock():
             if res_id not in self._graph:
@@ -756,10 +718,9 @@ class TWSKnowledgeGraph:
 
         async with self._rw_lock.read_lock():
             # Filter to job nodes only
-            job_subgraph = self._graph.subgraph([
-                n for n in self._graph.nodes()
-                if self._graph.nodes[n].get("type") == "job"
-            ])
+            job_subgraph = self._graph.subgraph(
+                [n for n in self._graph.nodes() if self._graph.nodes[n].get("type") == "job"]
+            )
 
             if job_subgraph.number_of_nodes() == 0:
                 return []
@@ -773,18 +734,23 @@ class TWSKnowledgeGraph:
             result = []
             for job_id, score in sorted_jobs:
                 dependents = len(list(self._graph.predecessors(job_id)))
-                dependencies = len([
-                    t for _, t, d in self._graph.out_edges(job_id, data=True)
-                    if d.get("relation") == RelationType.DEPENDS_ON.value
-                ])
+                dependencies = len(
+                    [
+                        t
+                        for _, t, d in self._graph.out_edges(job_id, data=True)
+                        if d.get("relation") == RelationType.DEPENDS_ON.value
+                    ]
+                )
 
-                result.append({
-                    "job": job_id.replace("job:", ""),
-                    "centrality_score": round(score, 4),
-                    "dependents_count": dependents,
-                    "dependencies_count": dependencies,
-                    "risk_level": "high" if score > 0.5 else "medium" if score > 0.1 else "low"
-                })
+                result.append(
+                    {
+                        "job": job_id.replace("job:", ""),
+                        "centrality_score": round(score, 4),
+                        "dependents_count": dependents,
+                        "dependencies_count": dependencies,
+                        "risk_level": "high" if score > 0.5 else "medium" if score > 0.1 else "low",
+                    }
+                )
 
         logger.info("critical_jobs_analyzed", top_job=result[0] if result else None)
 
@@ -825,7 +791,13 @@ class TWSKnowledgeGraph:
             "job": job_name,
             "affected_count": len(affected),
             "affected_jobs": [j.replace("job:", "") for j in affected],
-            "severity": "critical" if len(affected) > 10 else "high" if len(affected) > 5 else "medium" if len(affected) > 0 else "low"
+            "severity": "critical"
+            if len(affected) > 10
+            else "high"
+            if len(affected) > 5
+            else "medium"
+            if len(affected) > 0
+            else "low",
         }
 
     # =========================================================================
@@ -833,10 +805,7 @@ class TWSKnowledgeGraph:
     # =========================================================================
 
     async def get_event_chain(
-        self,
-        event_id: str,
-        direction: str = "backward",
-        max_events: int = 20
+        self, event_id: str, direction: str = "backward", max_events: int = 20
     ) -> list[dict[str, Any]]:
         """
         Get the temporal chain of events.
@@ -868,17 +837,20 @@ class TWSKnowledgeGraph:
             node_data = self._graph.nodes.get(current, {})
             props = node_data.get("properties", {})
 
-            chain.append({
-                "event_id": current.replace("event:", ""),
-                "type": props.get("event_type", "unknown"),
-                "message": props.get("message", ""),
-                "timestamp": props.get("timestamp"),
-            })
+            chain.append(
+                {
+                    "event_id": current.replace("event:", ""),
+                    "type": props.get("event_type", "unknown"),
+                    "message": props.get("message", ""),
+                    "timestamp": props.get("timestamp"),
+                }
+            )
 
             # Find next/previous event
             if direction == "backward":
                 predecessors = [
-                    (s, d) for s, _, d in self._graph.in_edges(current, data=True)
+                    (s, d)
+                    for s, _, d in self._graph.in_edges(current, data=True)
                     if d.get("relation") == RelationType.NEXT.value
                 ]
                 if predecessors:
@@ -887,7 +859,8 @@ class TWSKnowledgeGraph:
                     break
             else:
                 successors = [
-                    (t, d) for _, t, d in self._graph.out_edges(current, data=True)
+                    (t, d)
+                    for _, t, d in self._graph.out_edges(current, data=True)
                     if d.get("relation") == RelationType.NEXT.value
                 ]
                 if successors:
@@ -926,7 +899,7 @@ class TWSKnowledgeGraph:
             undirected = self._graph.to_undirected()
             components = nx.number_connected_components(undirected)
 
-            stats = {
+            return {
                 "node_count": self._graph.number_of_nodes(),
                 "edge_count": self._graph.number_of_edges(),
                 "node_types": dict(node_types),
@@ -936,8 +909,6 @@ class TWSKnowledgeGraph:
                 "connected_components": components,
                 "is_dag": nx.is_directed_acyclic_graph(self._graph),
             }
-
-        return stats
 
     def get_lock_stats(self) -> dict[str, Any]:
         """Get ReadWriteLock statistics for monitoring."""
@@ -949,6 +920,7 @@ class TWSKnowledgeGraph:
 
         async with get_async_session() as session:
             import json
+
             snapshot = GraphSnapshot(
                 node_count=stats["node_count"],
                 edge_count=stats["edge_count"],
@@ -956,7 +928,7 @@ class TWSKnowledgeGraph:
                 edge_types_json=json.dumps(stats["edge_types"]),
                 avg_degree=stats["avg_degree"],
                 max_degree=stats["max_degree"],
-                connected_components=stats["connected_components"]
+                connected_components=stats["connected_components"],
             )
             session.add(snapshot)
             await session.commit()

@@ -1,4 +1,5 @@
 import asyncio
+
 from resync.api.validation.enhanced_security import EnhancedSecurityValidator
 
 
@@ -23,9 +24,7 @@ async def test_password_verification():
 
     # Test with plain text fallback (simulating development environment)
     plain_text_hash = "$plaintext_warning$MyPlainPassword123"
-    result_plain = await validator.verify_password(
-        "MyPlainPassword123", plain_text_hash
-    )
+    result_plain = await validator.verify_password("MyPlainPassword123", plain_text_hash)
     print(f"Verification result (plain text): {result_plain}")
 
     return result and not result_wrong and result_plain

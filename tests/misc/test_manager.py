@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+
 from resync.core.pools.pool_manager import (
     get_connection_pool_manager,
     reset_connection_pool_manager,

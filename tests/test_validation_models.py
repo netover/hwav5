@@ -98,9 +98,7 @@ class TestCommonValidation:
         assert not ValidationPatterns.EMAIL_PATTERN.match("invalid-email")
 
         # Test UUID pattern
-        assert ValidationPatterns.UUID_PATTERN.match(
-            "123e4567-e89b-12d3-a456-426614174000"
-        )
+        assert ValidationPatterns.UUID_PATTERN.match("123e4567-e89b-12d3-a456-426614174000")
         assert not ValidationPatterns.UUID_PATTERN.match("invalid-uuid")
 
         # Test script pattern
@@ -425,11 +423,7 @@ class TestQueryParamValidationModels:
 
     def test_filter_params_invalid_operator(self) -> None:
         """Test filter parameters with invalid operator."""
-        data = {
-            "filters": [
-                {"field": "status", "operator": "invalid_operator", "value": "active"}
-            ]
-        }
+        data = {"filters": [{"field": "status", "operator": "invalid_operator", "value": "active"}]}
 
         with pytest.raises(ValidationError):
             FilterParams(**data)
@@ -770,9 +764,7 @@ class TestEdgeCases:
     def test_nested_object_validation(self) -> None:
         """Test validation with deeply nested objects."""
         # Test deeply nested data
-        nested_data = {
-            "level1": {"level2": {"level3": {"level4": {"level5": {"data": "test"}}}}}
-        }
+        nested_data = {"level1": {"level2": {"level3": {"level4": {"level5": {"data": "test"}}}}}}
 
         # This should be handled gracefully by validation
         result = sanitize_input(str(nested_data))

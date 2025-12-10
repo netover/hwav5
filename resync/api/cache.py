@@ -46,12 +46,14 @@ tws_client_dependency = Depends(get_tws_client)
 
 class CacheInvalidationResponse(BaseModel):
     """Response model for cache invalidation operations."""
+
     status: str
     detail: str
 
 
 class CacheStats(BaseModel):
     """Cache stats."""
+
     hits: int
     misses: int
     hit_rate: float
@@ -291,9 +293,7 @@ async def verify_admin_credentials(
     correct_password = secrets.compare_digest(creds.password, admin_pass)
 
     if not (correct_username and correct_password):
-        logger.warning(
-            f"Failed admin authentication attempt for user: {creds.username}"
-        )
+        logger.warning(f"Failed admin authentication attempt for user: {creds.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciais de administrador inválidas ou ausentes.",
@@ -329,9 +329,7 @@ async def invalidate_tws_cache(
         await verify_admin_credentials(creds)
 
         # Log the cache invalidation request for security auditing
-        logger.info(
-            f"Cache invalidation requested by user '{creds.username}' with scope '{scope}'"
-        )
+        logger.info(f"Cache invalidation requested by user '{creds.username}' with scope '{scope}'")
 
         # Initialize Redis manager if not already done
         global redis_manager

@@ -26,6 +26,7 @@ Usage:
 """
 
 import asyncio
+import contextlib
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -44,8 +45,10 @@ logger = get_logger(__name__)
 # MODELS
 # =============================================================================
 
+
 class ChangeType(str, Enum):
     """Type of change detected."""
+
     ADD = "add"
     UPDATE = "update"
     DELETE = "delete"
@@ -54,6 +57,7 @@ class ChangeType(str, Enum):
 @dataclass
 class SyncChange:
     """Represents a single change from TWS."""
+
     change_type: ChangeType
     entity_type: str  # job, workstation, resource, etc.
     entity_id: str
@@ -72,6 +76,7 @@ class SyncChange:
 @dataclass
 class SyncStats:
     """Statistics for sync operations."""
+
     last_sync: datetime | None = None
     last_sync_duration_ms: float = 0.0
     total_syncs: int = 0
@@ -117,6 +122,7 @@ class SyncStats:
 # SYNC STATE PERSISTENCE
 # =============================================================================
 
+
 class SyncState:
     """
     Persists sync state to database.
@@ -154,7 +160,7 @@ class SyncState:
                     VALUES ('last_sync_timestamp', :ts, :now)
                     ON CONFLICT (key) DO UPDATE SET value = :ts, updated_at = :now
                     """,
-                    {"ts": timestamp.isoformat(), "now": datetime.utcnow()}
+                    {"ts": timestamp.isoformat(), "now": datetime.utcnow()},
                 )
                 await session.commit()
         except Exception as e:
@@ -181,6 +187,7 @@ class SyncState:
 # SYNC MANAGER
 # =============================================================================
 
+
 class TWSSyncManager:
     """
     Manages incremental synchronization with TWS/HWA.
@@ -198,7 +205,7 @@ class TWSSyncManager:
 
     def __init__(self):
         """Initialize sync manager."""
-        if hasattr(self, '_initialized'):
+        if hasattr(self, "_initialized"):
             return
 
         self._initialized = True
@@ -237,9 +244,7 @@ class TWSSyncManager:
         logger.debug("knowledge_graph_set")
 
     def register_handler(
-        self,
-        entity_type: str,
-        handler: Callable[[SyncChange], Awaitable[None]]
+        self, entity_type: str, handler: Callable[[SyncChange], Awaitable[None]]
     ) -> None:
         """
         Register a handler for a specific entity type.
@@ -291,7 +296,7 @@ class TWSSyncManager:
                     "sync_completed",
                     changes=len(changes),
                     duration_ms=round(duration_ms, 2),
-                    incremental=last_sync is not None
+                    incremental=last_sync is not None,
                 )
 
                 return changes
@@ -301,10 +306,7 @@ class TWSSyncManager:
                 logger.error("sync_failed", error=str(e))
                 raise
 
-    async def _fetch_changes(
-        self,
-        since: datetime | None
-    ) -> list[SyncChange]:
+    async def _fetch_changes(self, since: datetime | None) -> list[SyncChange]:
         """
         Fetch changes from TWS since given timestamp.
 
@@ -323,55 +325,53 @@ class TWSSyncManager:
         logger.debug("changes_fetched", count=len(changes), since=since)
         return changes
 
-    async def _fetch_from_tws(
-        self,
-        since: datetime | None
-    ) -> list[SyncChange]:
+    async def _fetch_from_tws(self, since: datetime | None) -> list[SyncChange]:
         """Fetch changes from TWS API."""
         changes = []
 
         try:
             # Get jobs updated since last sync
-            if hasattr(self._tws_client, 'get_jobs_updated_since'):
+            if hasattr(self._tws_client, "get_jobs_updated_since"):
                 jobs = await self._tws_client.get_jobs_updated_since(since)
                 for job in jobs:
-                    changes.append(SyncChange(
-                        change_type=ChangeType.UPDATE if since else ChangeType.ADD,
-                        entity_type="job",
-                        entity_id=job.get("name", job.get("job_name")),
-                        data=job
-                    ))
+                    changes.append(
+                        SyncChange(
+                            change_type=ChangeType.UPDATE if since else ChangeType.ADD,
+                            entity_type="job",
+                            entity_id=job.get("name", job.get("job_name")),
+                            data=job,
+                        )
+                    )
 
             # Get deleted jobs
-            if hasattr(self._tws_client, 'get_jobs_deleted_since') and since:
+            if hasattr(self._tws_client, "get_jobs_deleted_since") and since:
                 deleted = await self._tws_client.get_jobs_deleted_since(since)
                 for job_id in deleted:
-                    changes.append(SyncChange(
-                        change_type=ChangeType.DELETE,
-                        entity_type="job",
-                        entity_id=job_id
-                    ))
+                    changes.append(
+                        SyncChange(
+                            change_type=ChangeType.DELETE, entity_type="job", entity_id=job_id
+                        )
+                    )
 
             # Get workstation changes
-            if hasattr(self._tws_client, 'get_workstations_updated_since'):
+            if hasattr(self._tws_client, "get_workstations_updated_since"):
                 workstations = await self._tws_client.get_workstations_updated_since(since)
                 for ws in workstations:
-                    changes.append(SyncChange(
-                        change_type=ChangeType.UPDATE if since else ChangeType.ADD,
-                        entity_type="workstation",
-                        entity_id=ws.get("name", ws.get("workstation_id")),
-                        data=ws
-                    ))
+                    changes.append(
+                        SyncChange(
+                            change_type=ChangeType.UPDATE if since else ChangeType.ADD,
+                            entity_type="workstation",
+                            entity_id=ws.get("name", ws.get("workstation_id")),
+                            data=ws,
+                        )
+                    )
 
         except Exception as e:
             logger.error("tws_fetch_failed", error=str(e))
 
         return changes
 
-    async def _fetch_from_database(
-        self,
-        since: datetime | None
-    ) -> list[SyncChange]:
+    async def _fetch_from_database(self, since: datetime | None) -> list[SyncChange]:
         """Fetch changes from our own database (fallback)."""
         from resync.core.knowledge_graph.models import GraphNode
 
@@ -388,14 +388,18 @@ class TWSSyncManager:
                 nodes = result.scalars().all()
 
                 for node in nodes:
-                    change_type = ChangeType.ADD if node.created_at == node.updated_at else ChangeType.UPDATE
-                    changes.append(SyncChange(
-                        change_type=change_type,
-                        entity_type=node.node_type,
-                        entity_id=node.id,
-                        data=node.to_dict(),
-                        timestamp=node.updated_at
-                    ))
+                    change_type = (
+                        ChangeType.ADD if node.created_at == node.updated_at else ChangeType.UPDATE
+                    )
+                    changes.append(
+                        SyncChange(
+                            change_type=change_type,
+                            entity_type=node.node_type,
+                            entity_id=node.id,
+                            data=node.to_dict(),
+                            timestamp=node.updated_at,
+                        )
+                    )
 
         except Exception as e:
             logger.warning("database_fetch_failed", error=str(e))
@@ -407,6 +411,7 @@ class TWSSyncManager:
         if not self._kg:
             # Import here to avoid circular import
             from resync.core.knowledge_graph.graph import get_knowledge_graph
+
             self._kg = get_knowledge_graph()
 
         for change in changes:
@@ -419,40 +424,37 @@ class TWSSyncManager:
                     await self._apply_default(change)
 
             except Exception as e:
-                logger.error(
-                    "change_apply_failed",
-                    change=change.to_dict(),
-                    error=str(e)
-                )
+                logger.error("change_apply_failed", change=change.to_dict(), error=str(e))
 
     async def _apply_default(self, change: SyncChange) -> None:
         """Default change application logic."""
         if change.change_type == ChangeType.DELETE:
             # Remove from graph
-            if hasattr(self._kg, 'remove_node'):
+            if hasattr(self._kg, "remove_node"):
                 await self._kg.remove_node(change.entity_id)
 
         elif change.entity_type == "job":
             # Add/update job
-            if hasattr(self._kg, 'add_job'):
+            if hasattr(self._kg, "add_job"):
                 await self._kg.add_job(
                     change.entity_id,
                     workstation=change.data.get("workstation"),
                     job_stream=change.data.get("job_stream"),
                     dependencies=change.data.get("dependencies", []),
-                    resources=change.data.get("resources", [])
+                    resources=change.data.get("resources", []),
                 )
 
         elif change.entity_type == "workstation":
             # Add/update workstation
             from resync.core.knowledge_graph.models import NodeType
-            if hasattr(self._kg, 'add_node'):
+
+            if hasattr(self._kg, "add_node"):
                 await self._kg.add_node(
                     f"ws:{change.entity_id}",
                     NodeType.WORKSTATION,
                     change.entity_id,
                     properties=change.data,
-                    source="tws_sync"
+                    source="tws_sync",
                 )
 
     def get_stats(self) -> dict:
@@ -483,10 +485,8 @@ class TWSSyncManager:
         """Stop background sync task."""
         if self._sync_task is not None:
             self._sync_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._sync_task
-            except asyncio.CancelledError:
-                pass
             self._sync_task = None
             logger.info("background_sync_stopped")
 
@@ -530,9 +530,7 @@ def get_sync_manager() -> TWSSyncManager:
 
 
 async def start_sync_task(
-    interval_seconds: int = 60,
-    tws_client: Any = None,
-    auto_register_kg: bool = True
+    interval_seconds: int = 60, tws_client: Any = None, auto_register_kg: bool = True
 ) -> TWSSyncManager:
     """
     Start the sync background task.
@@ -553,6 +551,7 @@ async def start_sync_task(
 
     if auto_register_kg:
         from resync.core.knowledge_graph.graph import get_knowledge_graph
+
         sync.set_knowledge_graph(get_knowledge_graph())
 
     await sync.start_background_sync()

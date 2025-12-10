@@ -11,9 +11,9 @@ This module provides comprehensive GDPR compliance capabilities including:
 - Breach detection and notification systems
 """
 
-
 import asyncio
 import base64
+import contextlib
 import hashlib
 import json
 import time
@@ -49,8 +49,8 @@ class RetentionPolicy(Enum):
 
     FINANCIAL_RECORDS = 7 * 365  # 7 years for financial records
     HEALTH_RECORDS = 10 * 365  # 10 years for health records
-    CONTRACT_DATA = 7 * 365  # 7 years for contract-related data
-    TAX_RECORDS = 7 * 365  # 7 years for tax-related data
+    CONTRACT_DATA = 7 * 365  # 7 years for contract-related data  # noqa: PIE796
+    TAX_RECORDS = 7 * 365  # 7 years for tax-related data  # noqa: PIE796
     EMPLOYMENT_RECORDS = 5 * 365  # 5 years for employment data
     MARKETING_DATA = 3 * 365  # 3 years for marketing data
     WEB_LOGS = 1 * 365  # 1 year for web server logs
@@ -111,10 +111,7 @@ class UserConsent:
         if self.status != ConsentStatus.GRANTED:
             return False
 
-        if self.expires_at and time.time() > self.expires_at:
-            return False
-
-        return True
+        return not (self.expires_at and time.time() > self.expires_at)
 
     def withdraw(self) -> None:
         """Withdraw user consent."""
@@ -144,9 +141,7 @@ class DataErasureRequest:
 
     def generate_verification_hash(self, deleted_data: list[dict[str, Any]]) -> str:
         """Generate verification hash of deleted data."""
-        data_str = json.dumps(
-            sorted(deleted_data, key=lambda x: str(x)), sort_keys=True
-        )
+        data_str = json.dumps(sorted(deleted_data, key=lambda x: str(x)), sort_keys=True)
         return hashlib.sha256(data_str.encode()).hexdigest()
 
 
@@ -231,9 +226,9 @@ class DataAnonymizer:
             "user_agent",
         ]
 
-        for field in pii_fields:
-            if field in anonymized and anonymized[field]:
-                anonymized[field] = self._anonymize_value(anonymized[field])
+        for field_name in pii_fields:
+            if field_name in anonymized and anonymized[field_name]:
+                anonymized[field_name] = self._anonymize_value(anonymized[field_name])
 
         return anonymized
 
@@ -244,10 +239,10 @@ class DataAnonymizer:
         # Fields to pseudonymize (deterministic hash based on user_id)
         pseudonymize_fields = ["email", "phone_number", "ip_address"]
 
-        for field in pseudonymize_fields:
-            if field in pseudonymized and pseudonymized[field]:
-                pseudonymized[field] = self._pseudonymize_value(
-                    pseudonymized[field], user_id
+        for field_name in pseudonymize_fields:
+            if field_name in pseudonymized and pseudonymized[field_name]:
+                pseudonymized[field_name] = self._pseudonymize_value(
+                    pseudonymized[field_name], user_id
                 )
 
         return pseudonymized
@@ -287,7 +282,9 @@ class GDPRDataEncryptor:
     def _initialize_encryption(self) -> None:
         """Initialize encryption with a new key."""
         # Generate encryption key
-        key_data = f"gdpr_encryption_key_{int(time.time())}_{self.config.encryption_key_rotation_days}"
+        key_data = (
+            f"gdpr_encryption_key_{int(time.time())}_{self.config.encryption_key_rotation_days}"
+        )
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
@@ -383,10 +380,8 @@ class GDPRComplianceManager:
         for task in [self._cleanup_task, self._audit_task, self._breach_monitor_task]:
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         logger.info("GDPR compliance manager stopped")
 
@@ -435,17 +430,11 @@ class GDPRComplianceManager:
             ),
         }
 
-    def set_retention_policy(
-        self, category: DataCategory, retention_days: int, **kwargs
-    ) -> None:
+    def set_retention_policy(self, category: DataCategory, retention_days: int, **kwargs) -> None:
         """Set custom retention policy for a data category."""
-        policy = DataRetentionPolicy(
-            category=category, retention_days=retention_days, **kwargs
-        )
+        policy = DataRetentionPolicy(category=category, retention_days=retention_days, **kwargs)
         self.retention_policies[category] = policy
-        logger.info(
-            f"Updated retention policy for {category.value}: {retention_days} days"
-        )
+        logger.info(f"Updated retention policy for {category.value}: {retention_days} days")
 
     async def record_user_consent(
         self,
@@ -495,16 +484,11 @@ class GDPRComplianceManager:
             return False
 
         for consent in self.consent_records[user_id]:
-            if (
-                consent.consent_id == consent_id
-                and consent.status == ConsentStatus.GRANTED
-            ):
+            if consent.consent_id == consent_id and consent.status == ConsentStatus.GRANTED:
                 consent.withdraw()
 
                 # Audit log
-                await self._audit_event(
-                    "consent_withdrawn", user_id=user_id, consent_id=consent_id
-                )
+                await self._audit_event("consent_withdrawn", user_id=user_id, consent_id=consent_id)
 
                 # Trigger data erasure if necessary
                 await self._handle_consent_withdrawal(user_id, consent.data_categories)
@@ -597,10 +581,7 @@ class GDPRComplianceManager:
             "retention_days": policy.retention_days,
             "days_remaining": max(
                 0,
-                int(
-                    (created_at + policy.retention_days * 24 * 3600 - time.time())
-                    / 86400
-                ),
+                int((created_at + policy.retention_days * 24 * 3600 - time.time()) / 86400),
             ),
             "anonymization_required": policy.anonymization_required,
             "encryption_required": policy.encryption_required,
@@ -660,9 +641,7 @@ class GDPRComplianceManager:
 
     def get_compliance_status(self) -> dict[str, Any]:
         """Get overall GDPR compliance status."""
-        total_consents = sum(
-            len(consents) for consents in self.consent_records.values()
-        )
+        total_consents = sum(len(consents) for consents in self.consent_records.values())
         valid_consents = sum(
             1
             for consents in self.consent_records.values()
@@ -686,17 +665,13 @@ class GDPRComplianceManager:
             "data_erasure": {
                 "pending_requests": pending_erasure,
                 "completed_requests": sum(
-                    1
-                    for req in self.erasure_requests.values()
-                    if req.status == "completed"
+                    1 for req in self.erasure_requests.values() if req.status == "completed"
                 ),
             },
             "data_portability": {
                 "pending_requests": pending_portability,
                 "completed_requests": sum(
-                    1
-                    for req in self.portability_requests.values()
-                    if req.status == "completed"
+                    1 for req in self.portability_requests.values() if req.status == "completed"
                 ),
             },
             "data_breaches": {
@@ -713,9 +688,7 @@ class GDPRComplianceManager:
             },
             "audit_trail": {
                 "total_events": len(self.audit_trail),
-                "recent_events": (
-                    list(self.audit_trail)[-10:] if self.audit_trail else []
-                ),
+                "recent_events": (list(self.audit_trail)[-10:] if self.audit_trail else []),
             },
         }
 
@@ -825,9 +798,7 @@ class GDPRComplianceManager:
             # This would gather all user data and prepare for download
             # For simulation, we'll just mark as completed
             request.data_size_bytes = 1024  # Simulated
-            request.download_url = (
-                f"/api/gdpr/portability/{request.request_id}/download"
-            )
+            request.download_url = f"/api/gdpr/portability/{request.request_id}/download"
             request.completed_at = time.time()
             request.status = "completed"
 

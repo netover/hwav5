@@ -3,7 +3,6 @@ LLM wrapper module that integrates the TWS-optimized LLM functionality
 with the agent system using the LLM optimizer.
 """
 
-
 from typing import Any
 
 from resync.core.llm_optimizer import TWS_LLMOptimizer
@@ -44,10 +43,9 @@ class OptimizedLLMWrapper:
             Optimized LLM response
         """
         try:
-            response = await self.optimizer.get_optimized_response(
+            return await self.optimizer.get_optimized_response(
                 query=query, context=context or {}, use_cache=use_cache, stream=stream
             )
-            return response
         except Exception as e:
             logger.error("llm_optimization_failed", error=str(e), exc_info=True)
             # Fallback to direct LLM call if optimization fails

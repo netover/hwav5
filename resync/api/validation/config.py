@@ -54,13 +54,9 @@ class ValidationConfigModel(BaseModel):
         description="Validation logging level",
     )
 
-    enable_metrics: bool = Field(
-        default=True, description="Enable validation metrics collection"
-    )
+    enable_metrics: bool = Field(default=True, description="Enable validation metrics collection")
 
-    rate_limit_validation: bool = Field(
-        default=True, description="Enable validation rate limiting"
-    )
+    rate_limit_validation: bool = Field(default=True, description="Enable validation rate limiting")
 
     validation_rate_limit: int = Field(
         default=100,
@@ -214,9 +210,7 @@ class ValidationConfigModel(BaseModel):
 class AgentValidationConfig(BaseModel):
     """Agent-specific validation configuration."""
 
-    max_name_length: int = Field(
-        default=100, ge=1, le=500, description="Maximum agent name length"
-    )
+    max_name_length: int = Field(default=100, ge=1, le=500, description="Maximum agent name length")
 
     max_description_length: int = Field(
         default=500, ge=1, le=2000, description="Maximum agent description length"
@@ -231,9 +225,7 @@ class AgentValidationConfig(BaseModel):
         default=20, ge=0, le=100, description="Maximum number of tools per agent"
     )
 
-    require_unique_name: bool = Field(
-        default=True, description="Require unique agent names"
-    )
+    require_unique_name: bool = Field(default=True, description="Require unique agent names")
 
     validate_model_compatibility: bool = Field(
         default=True, description="Validate model compatibility"
@@ -259,9 +251,7 @@ class ChatValidationConfig(BaseModel):
         default=100, ge=1, le=1000, description="Maximum context messages"
     )
 
-    enable_content_filtering: bool = Field(
-        default=True, description="Enable content filtering"
-    )
+    enable_content_filtering: bool = Field(default=True, description="Enable content filtering")
 
     blocked_keywords: list[str] = Field(
         default_factory=list, description="Keywords to block in messages", max_length=100
@@ -275,9 +265,7 @@ class ChatValidationConfig(BaseModel):
 class SecurityValidationConfig(BaseModel):
     """Security-specific validation configuration."""
 
-    enable_xss_protection: bool = Field(
-        default=True, description="Enable XSS protection"
-    )
+    enable_xss_protection: bool = Field(default=True, description="Enable XSS protection")
 
     enable_sql_injection_protection: bool = Field(
         default=True, description="Enable SQL injection protection"
@@ -302,13 +290,9 @@ class SecurityValidationConfig(BaseModel):
         default=100, ge=1, le=1000, description="Requests per minute rate limit"
     )
 
-    max_login_attempts: int = Field(
-        default=5, ge=1, le=20, description="Maximum login attempts"
-    )
+    max_login_attempts: int = Field(default=5, ge=1, le=20, description="Maximum login attempts")
 
-    enable_captcha_validation: bool = Field(
-        default=False, description="Enable CAPTCHA validation"
-    )
+    enable_captcha_validation: bool = Field(default=False, description="Enable CAPTCHA validation")
 
     model_config = ConfigDict(
         extra="forbid",
@@ -320,21 +304,15 @@ class RateLimitConfig(BaseModel):
 
     enabled: bool = Field(default=True, description="Enable rate limiting")
 
-    requests_per_minute: int = Field(
-        default=60, ge=1, le=1000, description="Requests per minute"
-    )
+    requests_per_minute: int = Field(default=60, ge=1, le=1000, description="Requests per minute")
 
-    burst_size: int = Field(
-        default=10, ge=1, le=100, description="Burst size for rate limiting"
-    )
+    burst_size: int = Field(default=10, ge=1, le=100, description="Burst size for rate limiting")
 
     window_size: int = Field(
         default=60, ge=1, le=3600, description="Rate limiting window size in seconds"
     )
 
-    key_prefix: str = Field(
-        default="validation_rate_limit", description="Rate limiting key prefix"
-    )
+    key_prefix: str = Field(default="validation_rate_limit", description="Rate limiting key prefix")
 
     enable_ip_based_limiting: bool = Field(
         default=True, description="Enable IP-based rate limiting"
@@ -402,7 +380,7 @@ class ValidationSettings:
             except Exception as e:
                 raise ValueError(
                     f"Failed to load validation config from {self.config_file}: {e}"
-                )
+                ) from e
         else:
             # Use default configuration
             self._config = ValidationConfigModel()

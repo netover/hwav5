@@ -37,6 +37,7 @@ def register_all_models():
             Session,
             User,
         )
+
         logger.debug("Registered fastapi_app models")
     except ImportError as e:
         logger.warning(f"Could not import fastapi_app models: {e}")
@@ -49,6 +50,7 @@ def register_all_models():
             GraphNode,
             GraphSnapshot,
         )
+
         logger.debug("Registered knowledge_graph models")
     except ImportError as e:
         logger.warning(f"Could not import knowledge_graph models: {e}")

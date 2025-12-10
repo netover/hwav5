@@ -6,7 +6,6 @@ information from the TWS engine, model and current plan. All routes depend on
 an authenticated operator role by default.
 """
 
-
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -167,9 +166,7 @@ async def current_plan_job_joblog(
     return await client.get_current_plan_job_joblog()
 
 
-@router.get(
-    "/plan/current/job/{job_id}", summary="Get current plan job details"
-)
+@router.get("/plan/current/job/{job_id}", summary="Get current plan job details")
 async def get_current_plan_job(
     job_id: str,
     client: OptimizedTWSClient = Depends(get_client),
@@ -275,9 +272,7 @@ async def get_current_plan_jobstream_predecessors(
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Return the predecessors of a job stream in the current plan."""
-    return await client.get_current_plan_jobstream_predecessors(
-        jobstream_id, depth
-    )
+    return await client.get_current_plan_jobstream_predecessors(jobstream_id, depth)
 
 
 @router.get(
@@ -290,9 +285,7 @@ async def get_current_plan_jobstream_successors(
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Return the successors of a job stream in the current plan."""
-    return await client.get_current_plan_jobstream_successors(
-        jobstream_id, depth
-    )
+    return await client.get_current_plan_jobstream_successors(jobstream_id, depth)
 
 
 @router.get(
@@ -304,9 +297,7 @@ async def get_current_plan_jobstream_model_description(
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Return the model description of a job stream in the current plan."""
-    return await client.get_current_plan_jobstream_model_description(
-        jobstream_id
-    )
+    return await client.get_current_plan_jobstream_model_description(jobstream_id)
 
 
 # -------------------------------------------------------------------------

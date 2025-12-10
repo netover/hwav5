@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # Optional imports - defer error until actual usage
 try:
     import asyncpg
+
     ASYNCPG_AVAILABLE = True
 except ImportError:
     asyncpg = None
@@ -50,12 +51,13 @@ class PgVectorStore(VectorStore):
             raise RuntimeError("asyncpg is required. pip install asyncpg")
 
         self._database_url = database_url or os.getenv(
-            "DATABASE_URL",
-            "postgresql://resync:password@localhost:5432/resync"
+            "DATABASE_URL", "postgresql://resync:password@localhost:5432/resync"
         )
         # Clean URL for asyncpg (remove driver prefix)
         if self._database_url.startswith("postgresql+asyncpg://"):
-            self._database_url = self._database_url.replace("postgresql+asyncpg://", "postgresql://")
+            self._database_url = self._database_url.replace(
+                "postgresql+asyncpg://", "postgresql://"
+            )
 
         self._collection_default = collection or CFG.collection_write
         self._dim = dim
@@ -129,7 +131,9 @@ class PgVectorStore(VectorStore):
                 logger.warning("hnsw_index_creation_failed", error=str(e))
 
         self._initialized = True
-        logger.info("pgvector_store_initialized", collection=self._collection_default, dim=self._dim)
+        logger.info(
+            "pgvector_store_initialized", collection=self._collection_default, dim=self._dim
+        )
 
     async def upsert_batch(
         self,
@@ -157,7 +161,7 @@ class PgVectorStore(VectorStore):
 
         # Prepare all records
         records = []
-        for doc_id, vector, payload in zip(ids, vectors, payloads):
+        for doc_id, vector, payload in zip(ids, vectors, payloads, strict=False):
             content = payload.get("text", payload.get("content", ""))
             sha256 = payload.get("sha256", "")
             chunk_id = payload.get("chunk_id", 0)
@@ -166,18 +170,23 @@ class PgVectorStore(VectorStore):
             embedding_str = f"[{','.join(str(x) for x in vector)}]"
 
             # Clean payload (remove fields stored separately)
-            metadata = {k: v for k, v in payload.items()
-                      if k not in ("text", "content", "sha256", "chunk_id")}
+            metadata = {
+                k: v
+                for k, v in payload.items()
+                if k not in ("text", "content", "sha256", "chunk_id")
+            }
 
-            records.append((
-                col,
-                doc_id,
-                chunk_id,
-                content,
-                embedding_str,
-                json.dumps(metadata),
-                sha256,
-            ))
+            records.append(
+                (
+                    col,
+                    doc_id,
+                    chunk_id,
+                    content,
+                    embedding_str,
+                    json.dumps(metadata),
+                    sha256,
+                )
+            )
 
         # Execute all in a single transaction
         async with pool.acquire() as conn, conn.transaction():
@@ -275,7 +284,7 @@ class PgVectorStore(VectorStore):
                 "payload": payload,
             }
 
-            if with_vectors and "embedding" in row.keys():
+            if with_vectors and "embedding" in row:
                 # Parse vector from pgvector format
                 item["vector"] = list(row["embedding"])
 
@@ -297,16 +306,17 @@ class PgVectorStore(VectorStore):
         pool = await self._get_pool()
 
         async with pool.acquire() as conn:
-            count = await conn.fetchval("""
+            count = await conn.fetchval(
+                """
                 SELECT COUNT(*) FROM document_embeddings
                 WHERE collection_name = $1
-            """, col)
+            """,
+                col,
+            )
 
         return int(count or 0)
 
-    async def exists_by_sha256(
-        self, sha256: str, collection: str | None = None
-    ) -> bool:
+    async def exists_by_sha256(self, sha256: str, collection: str | None = None) -> bool:
         """
         Check if document with SHA256 hash exists.
 
@@ -321,17 +331,19 @@ class PgVectorStore(VectorStore):
         pool = await self._get_pool()
 
         async with pool.acquire() as conn:
-            exists = await conn.fetchval("""
+            exists = await conn.fetchval(
+                """
                 SELECT 1 FROM document_embeddings
                 WHERE collection_name = $1 AND sha256 = $2
                 LIMIT 1
-            """, col, sha256)
+            """,
+                col,
+                sha256,
+            )
 
         return exists is not None
 
-    async def delete_by_document_id(
-        self, document_id: str, collection: str | None = None
-    ) -> int:
+    async def delete_by_document_id(self, document_id: str, collection: str | None = None) -> int:
         """
         Delete all chunks for a document.
 
@@ -346,13 +358,15 @@ class PgVectorStore(VectorStore):
         pool = await self._get_pool()
 
         async with pool.acquire() as conn:
-            result = await conn.execute("""
+            result = await conn.execute(
+                """
                 DELETE FROM document_embeddings
                 WHERE collection_name = $1 AND document_id = $2
-            """, col, document_id)
-            count = int(result.split()[-1])
-
-        return count
+            """,
+                col,
+                document_id,
+            )
+            return int(result.split()[-1])
 
     async def close(self) -> None:
         """Close connection pool."""

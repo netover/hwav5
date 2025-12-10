@@ -11,8 +11,8 @@ This module provides comprehensive SIEM integration capabilities including:
 - Performance monitoring and alerting
 """
 
-
 import asyncio
+import contextlib
 import json
 import secrets
 import time
@@ -250,9 +250,7 @@ class SIEMConnector(ABC):
             "events_sent": self.events_sent,
             "last_event_sent": self.last_event_sent,
             "connection_failures": self.connection_failures,
-            "uptime": (
-                time.time() - self.last_connection_attempt if self.is_connected() else 0
-            ),
+            "uptime": (time.time() - self.last_connection_attempt if self.is_connected() else 0),
         }
 
 
@@ -414,9 +412,7 @@ class ELKConnector(SIEMConnector):
             bulk_data = []
             for event in events:
                 # Index metadata
-                index_meta = {
-                    "index": {"_index": "security-events", "_id": event.event_id}
-                }
+                index_meta = {"index": {"_index": "security-events", "_id": event.event_id}}
                 bulk_data.append(json.dumps(index_meta))
                 bulk_data.append(event.to_json())
 
@@ -433,9 +429,7 @@ class ELKConnector(SIEMConnector):
                     self.events_sent += successful
                     self.last_event_sent = time.time()
                     return successful
-                logger.error(
-                    f"ELK bulk send failed: {response.status} - {await response.text()}"
-                )
+                logger.error(f"ELK bulk send failed: {response.status} - {await response.text()}")
                 return 0
 
         except Exception as e:
@@ -533,10 +527,8 @@ class SIEMIntegrator:
         for task in [self._processor_task, self._flusher_task, self._monitor_task]:
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         # Disconnect all connectors
         for connector in self.connectors.values():
@@ -618,9 +610,7 @@ class SIEMIntegrator:
 
     def get_connector_status(self) -> dict[str, dict[str, Any]]:
         """Get status of all connectors."""
-        return {
-            name: connector.get_metrics() for name, connector in self.connectors.items()
-        }
+        return {name: connector.get_metrics() for name, connector in self.connectors.items()}
 
     def get_system_metrics(self) -> dict[str, Any]:
         """Get overall system metrics."""
@@ -639,9 +629,7 @@ class SIEMIntegrator:
                 "connected": sum(
                     1 for c in connector_status.values() if c["status"] == "connected"
                 ),
-                "failed": sum(
-                    1 for c in connector_status.values() if c["status"] == "error"
-                ),
+                "failed": sum(1 for c in connector_status.values() if c["status"] == "error"),
             },
             "performance": {
                 "avg_processing_time": 0.0,  # Would need to track this
@@ -737,9 +725,7 @@ class SIEMIntegrator:
 
         if successful_sends < len(events_to_send):
             failed_count = len(events_to_send) - successful_sends
-            logger.warning(
-                f"Failed to send {failed_count} out of {len(events_to_send)} events"
-            )
+            logger.warning(f"Failed to send {failed_count} out of {len(events_to_send)} events")
 
     async def _health_monitor(self) -> None:
         """Monitor health of SIEM connections."""
@@ -762,9 +748,7 @@ class SIEMIntegrator:
                         # Try to close circuit breaker if enough time has passed
                         if self.circuit_breaker.can_attempt(name):
                             self.circuit_breaker.attempt_reset(name)
-                            logger.info(
-                                f"Attempting to reset circuit breaker for {name}"
-                            )
+                            logger.info(f"Attempting to reset circuit breaker for {name}")
 
             except asyncio.CancelledError:
                 break
@@ -797,14 +781,7 @@ class EventCorrelationEngine:
             {
                 "name": "brute_force_attack",
                 "condition": lambda events: (
-                    len(
-                        [
-                            e
-                            for e in events
-                            if e.event_type == "failed_login" and e.user_id
-                        ]
-                    )
-                    >= 10
+                    len([e for e in events if e.event_type == "failed_login" and e.user_id]) >= 10
                 ),
                 "time_window": 600,  # 10 minutes
                 "severity": "critical",

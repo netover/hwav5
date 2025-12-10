@@ -138,9 +138,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                     correlation_id=correlation_id,
                 )
 
-                raise HTTPException(
-                    status_code=409, detail="Operation already in progress"
-                )
+                raise HTTPException(status_code=409, detail="Operation already in progress")
 
             # Marcar como em processamento
             marked = await self.idempotency_manager.mark_processing(idempotency_key)
@@ -194,10 +192,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             return False
 
         # Excluir métodos específicos
-        if request.method in self.exclude_methods:
-            return False
-
-        return True
+        return request.method not in self.exclude_methods
 
     def _requires_idempotency(self, request: Request) -> bool:
         """
@@ -267,9 +262,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             }
 
         except Exception as e:
-            logger.warning(
-                "Failed to extract request data for idempotency", error=str(e)
-            )
+            logger.warning("Failed to extract request data for idempotency", error=str(e))
             # Em caso de erro, retornar dados mínimos
             return {"method": request.method, "path": str(request.url.path)}
 
@@ -475,7 +468,5 @@ def validate_idempotency_key(key: str) -> bool:
     import re
 
     # UUID v4 pattern
-    uuid_pattern = (
-        r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-    )
+    uuid_pattern = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
     return bool(re.match(uuid_pattern, key, re.IGNORECASE))

@@ -44,6 +44,7 @@ from resync.core.metrics.lightweight_store import (
     record_metric,
     record_timing,
 )
+from resync.core.metrics.runtime_metrics import RuntimeMetricsCollector, runtime_metrics
 
 __all__ = [
     # Store
@@ -57,6 +58,9 @@ __all__ = [
     "record_metric",
     "increment_counter",
     "record_timing",
+    # Runtime metrics
+    "RuntimeMetricsCollector",
+    "runtime_metrics",
     # Continual Learning
     "ContinualLearningMetrics",
     "MetricNames",

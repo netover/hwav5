@@ -2,7 +2,6 @@
 CQRS dispatcher for routing commands and queries to their respective handlers.
 """
 
-
 from resync.cqrs.base import (
     CommandResult,
     ICommand,
@@ -81,9 +80,7 @@ class CQRSDispatcher:
         self.command_handlers: dict[type[ICommand], ICommandHandler] = {}
         self.query_handlers: dict[type[IQuery], IQueryHandler] = {}
 
-    def register_command_handler(
-        self, command_type: type[ICommand], handler: ICommandHandler
-    ):
+    def register_command_handler(self, command_type: type[ICommand], handler: ICommandHandler):
         """Register a command handler for a specific command type."""
         self.command_handlers[command_type] = handler
 
@@ -141,38 +138,28 @@ def initialize_dispatcher(tws_client, tws_monitor):
     dispatcher.register_command_handler(
         UpdateJobStatusCommand, UpdateJobStatusCommandHandler(tws_client)
     )
-    dispatcher.register_command_handler(
-        ExecuteJobCommand, ExecuteJobCommandHandler(tws_client)
-    )
+    dispatcher.register_command_handler(ExecuteJobCommand, ExecuteJobCommandHandler(tws_client))
     dispatcher.register_command_handler(
         GetSystemHealthCommand, GetSystemHealthCommandHandler(tws_client, tws_monitor)
     )
 
     # Register query handlers
-    dispatcher.register_query_handler(
-        GetSystemStatusQuery, GetSystemStatusQueryHandler(tws_client)
-    )
+    dispatcher.register_query_handler(GetSystemStatusQuery, GetSystemStatusQueryHandler(tws_client))
     dispatcher.register_query_handler(
         GetWorkstationsStatusQuery, GetWorkstationsStatusQueryHandler(tws_client)
     )
-    dispatcher.register_query_handler(
-        GetJobsStatusQuery, GetJobsStatusQueryHandler(tws_client)
-    )
+    dispatcher.register_query_handler(GetJobsStatusQuery, GetJobsStatusQueryHandler(tws_client))
     dispatcher.register_query_handler(
         GetCriticalPathStatusQuery, GetCriticalPathStatusQueryHandler(tws_client)
     )
-    dispatcher.register_query_handler(
-        GetJobStatusQuery, GetJobStatusQueryHandler(tws_client)
-    )
+    dispatcher.register_query_handler(GetJobStatusQuery, GetJobStatusQueryHandler(tws_client))
     dispatcher.register_query_handler(
         GetJobStatusBatchQuery, GetJobStatusBatchQueryHandler(tws_client)
     )
     dispatcher.register_query_handler(
         GetSystemHealthQuery, GetSystemHealthQueryHandler(tws_monitor)
     )
-    dispatcher.register_query_handler(
-        SearchJobsQuery, SearchJobsQueryHandler(tws_client)
-    )
+    dispatcher.register_query_handler(SearchJobsQuery, SearchJobsQueryHandler(tws_client))
     dispatcher.register_query_handler(
         GetPerformanceMetricsQuery, GetPerformanceMetricsQueryHandler(tws_monitor)
     )
@@ -181,22 +168,14 @@ def initialize_dispatcher(tws_client, tws_monitor):
     )
 
     # Register new query handlers
-    dispatcher.register_query_handler(
-        GetJobDetailsQuery, GetJobDetailsQueryHandler(tws_client)
-    )
-    dispatcher.register_query_handler(
-        GetJobHistoryQuery, GetJobHistoryQueryHandler(tws_client)
-    )
+    dispatcher.register_query_handler(GetJobDetailsQuery, GetJobDetailsQueryHandler(tws_client))
+    dispatcher.register_query_handler(GetJobHistoryQuery, GetJobHistoryQueryHandler(tws_client))
     dispatcher.register_query_handler(GetJobLogQuery, GetJobLogQueryHandler(tws_client))
-    dispatcher.register_query_handler(
-        GetPlanDetailsQuery, GetPlanDetailsQueryHandler(tws_client)
-    )
+    dispatcher.register_query_handler(GetPlanDetailsQuery, GetPlanDetailsQueryHandler(tws_client))
     dispatcher.register_query_handler(
         GetJobDependenciesQuery, GetJobDependenciesQueryHandler(tws_client)
     )
     dispatcher.register_query_handler(
         GetResourceUsageQuery, GetResourceUsageQueryHandler(tws_client)
     )
-    dispatcher.register_query_handler(
-        GetEventLogQuery, GetEventLogQueryHandler(tws_client)
-    )
+    dispatcher.register_query_handler(GetEventLogQuery, GetEventLogQueryHandler(tws_client))

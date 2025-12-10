@@ -21,7 +21,7 @@ class CSPParser:
 
             # Handle quoted values
             if '"' in part:
-                directive, value = re.split(r"\s+", part, 1)
+                directive, value = re.split(r"\s+", part, maxsplit=1)
                 directive = directive.strip()
                 value = value.strip('"')
                 directives.setdefault(directive, []).append(value)

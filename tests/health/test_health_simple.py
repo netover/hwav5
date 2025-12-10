@@ -3,11 +3,12 @@
 Simple test to validate health check calculations.
 """
 
-import sys
 import enum
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
+
 
 # Define the enums and classes directly to avoid import issues
 class HealthStatus(enum.Enum):
@@ -16,24 +17,27 @@ class HealthStatus(enum.Enum):
     UNHEALTHY = "unhealthy"
     UNKNOWN = "unknown"
 
+
 class ComponentType(enum.Enum):
     DATABASE = "database"
     REDIS = "redis"
+
 
 @dataclass
 class ComponentHealth:
     name: str
     component_type: ComponentType
     status: HealthStatus
-    status_code: Optional[str] = None
-    message: Optional[str] = None
-    response_time_ms: Optional[float] = None
-    last_check: Optional[datetime] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    status_code: str | None = None
+    message: str | None = None
+    response_time_ms: float | None = None
+    last_check: datetime | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
     error_count: int = 0
     warning_count: int = 0
 
-def calculate_overall_status(components: Dict[str, ComponentHealth]) -> HealthStatus:
+
+def calculate_overall_status(components: dict[str, ComponentHealth]) -> HealthStatus:
     """Calculate overall status from component statuses."""
     if not components:
         return HealthStatus.UNKNOWN
@@ -50,6 +54,7 @@ def calculate_overall_status(components: Dict[str, ComponentHealth]) -> HealthSt
         if priority[comp.status] > priority[worst]:
             worst = comp.status
     return worst
+
 
 def test_health_calculations():
     """Test health status calculations."""
@@ -98,6 +103,7 @@ def test_health_calculations():
 
     print("\nAll tests passed successfully!")
     return True
+
 
 if __name__ == "__main__":
     success = test_health_calculations()

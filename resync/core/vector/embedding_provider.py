@@ -98,10 +98,7 @@ class LiteLLMEmbeddingProvider(EmbeddingProvider):
             config: Embedding configuration
         """
         self._config = config or EmbeddingConfig()
-        self._dimension = self.MODEL_DIMENSIONS.get(
-            self._config.model,
-            self._config.dimension
-        )
+        self._dimension = self.MODEL_DIMENSIONS.get(self._config.model, self._config.dimension)
 
     @property
     def dimension(self) -> int:
@@ -140,7 +137,7 @@ class LiteLLMEmbeddingProvider(EmbeddingProvider):
 
         # Process in batches
         for i in range(0, len(texts), self._config.batch_size):
-            batch = texts[i:i + self._config.batch_size]
+            batch = texts[i : i + self._config.batch_size]
 
             for attempt in range(self._config.max_retries):
                 try:
@@ -153,9 +150,7 @@ class LiteLLMEmbeddingProvider(EmbeddingProvider):
                     )
 
                     # Extract embeddings from response
-                    batch_embeddings = [
-                        item["embedding"] for item in response.data
-                    ]
+                    batch_embeddings = [item["embedding"] for item in response.data]
                     all_embeddings.extend(batch_embeddings)
                     break
 
@@ -167,7 +162,7 @@ class LiteLLMEmbeddingProvider(EmbeddingProvider):
                     )
                     if attempt == self._config.max_retries - 1:
                         raise
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(2**attempt)
 
                 except Exception as e:
                     logger.error(
@@ -177,7 +172,7 @@ class LiteLLMEmbeddingProvider(EmbeddingProvider):
                     )
                     if attempt == self._config.max_retries - 1:
                         raise
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(2**attempt)
 
         logger.debug(
             "embeddings_generated",
@@ -230,7 +225,7 @@ class MockEmbeddingProvider(EmbeddingProvider):
             embedding.append(value)
             idx += 1
 
-        return embedding[:self._dimension]
+        return embedding[: self._dimension]
 
     async def embed_batch(self, texts: Sequence[str]) -> list[list[float]]:
         """Generate mock embeddings for batch."""

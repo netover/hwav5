@@ -1,7 +1,7 @@
-
 """
 WebSocket handlers for FastAPI
 """
+
 import json
 import sys
 from pathlib import Path
@@ -15,6 +15,7 @@ project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 logger = None  # Will be injected
+
 
 class ConnectionManager:
     """Manage WebSocket connections"""
@@ -86,8 +87,10 @@ class ConnectionManager:
         for websocket in disconnected:
             self.disconnect(websocket)
 
+
 # Global connection manager instance
 manager = ConnectionManager()
+
 
 async def websocket_handler(websocket: WebSocket, agent_id: str):
     """Handle WebSocket connections for chat agents"""
@@ -117,34 +120,33 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
 
                 if message_type == "chat_message":
                     # Process chat message with AI agent
-                    content = message_data.get('content', data if not is_json else '')
+                    content = message_data.get("content", data if not is_json else "")
 
                     # Send initial streaming response
                     response = {
                         "type": "stream",
                         "message": f"Processando: {content}",
                         "agent_id": agent_id,
-                        "is_final": False
+                        "is_final": False,
                     }
                     await manager.send_personal_message(json.dumps(response), websocket)
 
                     # Generate real AI response using LLM service
                     try:
                         from resync.services.llm_service import get_llm_service
+
                         llm_service = get_llm_service()
 
                         # Agent configuration
                         agent_config = {
                             "name": f"Agente {agent_id}",
                             "type": "general",
-                            "description": "Assistente de IA do sistema Resync TWS"
+                            "description": "Assistente de IA do sistema Resync TWS",
                         }
 
                         # Generate response using real LLM
                         ai_response = await llm_service.generate_agent_response(
-                            agent_id=agent_id,
-                            user_message=content,
-                            agent_config=agent_config
+                            agent_id=agent_id, user_message=content, agent_config=agent_config
                         )
 
                         # Send final response with real AI content
@@ -152,7 +154,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                             "type": "message",
                             "message": ai_response,
                             "agent_id": agent_id,
-                            "is_final": True
+                            "is_final": True,
                         }
 
                     except Exception as e:
@@ -162,7 +164,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                             "type": "message",
                             "message": f"Olá! Recebi sua mensagem: '{content}'. O sistema Resync TWS está funcionando perfeitamente. Como posso ajudar?",
                             "agent_id": agent_id,
-                            "is_final": True
+                            "is_final": True,
                         }
 
                     await manager.send_personal_message(json.dumps(final_response), websocket)
@@ -172,7 +174,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                     response = {
                         "type": "heartbeat_ack",
                         "timestamp": "2025-01-01T00:00:00Z",
-                        "agent_id": agent_id
+                        "agent_id": agent_id,
                     }
                     await manager.send_personal_message(json.dumps(response), websocket)
 
@@ -184,27 +186,26 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                             "type": "stream",
                             "message": f"Processando: {data}",
                             "agent_id": agent_id,
-                            "is_final": False
+                            "is_final": False,
                         }
                         await manager.send_personal_message(json.dumps(response), websocket)
 
                         # Generate real AI response using LLM service
                         try:
                             from resync.services.llm_service import get_llm_service
+
                             llm_service = get_llm_service()
 
                             # Agent configuration
                             agent_config = {
                                 "name": f"Agente {agent_id}",
                                 "type": "general",
-                                "description": "Assistente de IA do sistema Resync TWS"
+                                "description": "Assistente de IA do sistema Resync TWS",
                             }
 
                             # Generate response using real LLM
                             ai_response = await llm_service.generate_agent_response(
-                                agent_id=agent_id,
-                                user_message=data,
-                                agent_config=agent_config
+                                agent_id=agent_id, user_message=data, agent_config=agent_config
                             )
 
                             # Send final response with real AI content
@@ -212,7 +213,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                                 "type": "message",
                                 "message": ai_response,
                                 "agent_id": agent_id,
-                                "is_final": True
+                                "is_final": True,
                             }
 
                         except Exception as e:
@@ -222,7 +223,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                                 "type": "message",
                                 "message": f"Olá! Recebi sua mensagem: '{data}'. O sistema Resync TWS está funcionando perfeitamente. Como posso ajudar?",
                                 "agent_id": agent_id,
-                                "is_final": True
+                                "is_final": True,
                             }
 
                         await manager.send_personal_message(json.dumps(final_response), websocket)
@@ -231,7 +232,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                         error_response = {
                             "type": "error",
                             "message": f"Unknown message type: {message_type}",
-                            "agent_id": agent_id
+                            "agent_id": agent_id,
                         }
                         await manager.send_personal_message(json.dumps(error_response), websocket)
 
@@ -240,7 +241,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                 error_response = {
                     "type": "error",
                     "message": "Internal server error",
-                    "agent_id": agent_id
+                    "agent_id": agent_id,
                 }
                 await manager.send_personal_message(json.dumps(error_response), websocket)
 

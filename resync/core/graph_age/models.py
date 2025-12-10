@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 class NodeType(str, Enum):
     """Types of nodes in the graph."""
+
     JOB = "job"
     WORKSTATION = "workstation"
     EVENT = "event"
@@ -27,6 +28,7 @@ class NodeType(str, Enum):
 
 class RelationType(str, Enum):
     """Types of relationships in the graph."""
+
     DEPENDS_ON = "DEPENDS_ON"
     RUNS_ON = "RUNS_ON"
     PRODUCES = "PRODUCES"
@@ -91,6 +93,7 @@ class JobNode(GraphNode):
 
         # Format as JSON-like string
         import json
+
         return json.dumps(props)
 
 
@@ -167,6 +170,7 @@ class GraphEdge(BaseModel):
         }
 
         import json
+
         props_str = json.dumps(props)
 
         return f"-[:{self.relation_type} {props_str}]->"

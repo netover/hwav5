@@ -50,11 +50,7 @@ class SettingsLegacyProperties:
     def ENVIRONMENT(self) -> str:
         """Legacy alias for environment."""
         env = self.environment
-        return (
-            env.value
-            if hasattr(env, "value")
-            else str(env)
-        )
+        return env.value if hasattr(env, "value") else str(env)
 
     @property
     def DEBUG(self) -> bool:
@@ -306,4 +302,5 @@ class SettingsLegacyProperties:
     def PROTECTED_DIRECTORIES(self) -> list[Path]:
         """Legacy alias for protected_directories."""
         return self.protected_directories
+
     # pylint: enable=invalid-name

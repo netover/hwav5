@@ -41,7 +41,7 @@ def validate_api_key(token: str) -> bool:
         return False
 
     # For now, just do a basic format check
-    return token.startswith("sk-") or token.startswith("pk-")
+    return token.startswith(("sk-", "pk-"))
 
 
 logger = logging.getLogger(__name__)
@@ -60,11 +60,13 @@ class APIRouter:
         self,
         path: str,
         handler: Callable,
-        methods: list[str] = ["GET"],
+        methods: list[str] = None,
         auth_required: bool = False,
         rate_limit: bool = True,
     ) -> None:
         """Add a route with associated metadata."""
+        if methods is None:
+            methods = ["GET"]
         self.routes[path] = {
             "handler": handler,
             "methods": methods,
@@ -141,7 +143,9 @@ class AuthenticationMiddleware:
     def __init__(self, auth_required_paths: dict[str, bool] | None = None) -> None:
         self.auth_required_paths = auth_required_paths or {}
 
-    async def __call__(self, request: Request, call_next: Callable[..., Awaitable[Response]]) -> Response:
+    async def __call__(
+        self, request: Request, call_next: Callable[..., Awaitable[Response]]
+    ) -> Response:
         # Check if the path requires authentication
         path = request.url.path
         if self.auth_required_paths.get(path, False):
@@ -159,24 +163,26 @@ class AuthenticationMiddleware:
                     content={"detail": "Invalid or expired token"},
                 )
 
-        response = await call_next(request)
-        return response
+        return await call_next(request)
 
 
 class RateLimitingMiddleware:
     """Middleware to handle rate limiting uniformly."""
 
-    async def __call__(self, request: Request, call_next: Callable[..., Awaitable[Response]]) -> Response:
+    async def __call__(
+        self, request: Request, call_next: Callable[..., Awaitable[Response]]
+    ) -> Response:
         # In a real implementation, this would apply rate limiting
         # For now, we're just adding a placeholder
-        response = await call_next(request)
-        return response
+        return await call_next(request)
 
 
 class LoggingMiddleware:
     """Middleware to handle logging uniformly."""
 
-    async def __call__(self, request: Request, call_next: Callable[..., Awaitable[Response]]) -> Response:
+    async def __call__(
+        self, request: Request, call_next: Callable[..., Awaitable[Response]]
+    ) -> Response:
         request_id = request.headers.get("x-request-id", "unknown")
 
         log_with_correlation(
@@ -211,7 +217,9 @@ class LoggingMiddleware:
 class MetricsMiddleware:
     """Middleware to collect metrics uniformly."""
 
-    async def __call__(self, request: Request, call_next: Callable[..., Awaitable[Response]]) -> Response:
+    async def __call__(
+        self, request: Request, call_next: Callable[..., Awaitable[Response]]
+    ) -> Response:
         # Increment request counter
         runtime_metrics.api_requests_total.increment()
 
@@ -224,23 +232,21 @@ class MetricsMiddleware:
             response = await call_next(request)
             # Record successful request metrics
             runtime_metrics.api_requests_success.increment()
-            runtime_metrics.api_request_duration_histogram.observe(
-                time.time() - start_time
-            )
+            runtime_metrics.api_request_duration_histogram.observe(time.time() - start_time)
             return response
         except Exception as _e:
             # Record error metrics
             runtime_metrics.api_requests_failed.increment()
-            runtime_metrics.api_request_duration_histogram.observe(
-                time.time() - start_time
-            )
+            runtime_metrics.api_request_duration_histogram.observe(time.time() - start_time)
             raise
 
 
 class AuditMiddleware:
     """Middleware to handle audit logging uniformly."""
 
-    async def __call__(self, request: Request, call_next: Callable[..., Awaitable[Response]]) -> Response:
+    async def __call__(
+        self, request: Request, call_next: Callable[..., Awaitable[Response]]
+    ) -> Response:
         request_id = request.headers.get("x-request-id", "unknown")
         user_id = request.headers.get("x-user-id", "unknown")
 
@@ -272,6 +278,3 @@ class AuditMiddleware:
         )
 
         return response
-
-
-

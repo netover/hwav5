@@ -1,5 +1,7 @@
 """Enhanced security validation with async context managers and improved type hints."""
 
+from __future__ import annotations
+
 import hmac
 import ipaddress
 import re
@@ -16,7 +18,6 @@ from re import Pattern
 from typing import (
     Any,
     TypeVar,
-    Union,
 )
 
 import structlog
@@ -38,7 +39,7 @@ from resync.api.validation.common import SanitizationLevel, sanitize_input
 from resync.settings import settings
 
 # Type aliases for better readability
-IPAddress = Union[IPv4Address, IPv6Address]
+IPAddress = IPv4Address | IPv6Address
 SecurityEvent = dict[str, Any]
 ValidationResult = tuple[bool, str | None]
 
@@ -196,9 +197,7 @@ class InputValidationResult(BaseModel):
     is_valid: bool = Field(..., description="Whether input is valid")
     sanitized_value: str | None = Field(None, description="Sanitized input value")
     error_message: str | None = Field(None, description="Error message if invalid")
-    threat_detected: ThreatType | None = Field(
-        None, description="Detected threat type"
-    )
+    threat_detected: ThreatType | None = Field(None, description="Detected threat type")
     security_context: SecurityContext = Field(default_factory=SecurityContext)
 
 
@@ -217,7 +216,7 @@ class AsyncSecurityContextManager:
         self.context = context
         self.start_time: float | None = None
 
-    async def __aenter__(self) -> "AsyncSecurityContextManager":
+    async def __aenter__(self) -> AsyncSecurityContextManager:
         """Enter the async context."""
         self.start_time = time.time()
         logger.info("security_context_entered", context=self.context.model_dump())
@@ -309,16 +308,13 @@ class EnhancedSecurityValidator:
             has_upper = any(c.isupper() for c in truncated_password)
             has_lower = any(c.islower() for c in truncated_password)
             has_digit = any(c.isdigit() for c in truncated_password)
-            has_special = any(
-                c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in truncated_password
-            )
+            has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in truncated_password)
 
             if not (has_upper and has_lower and has_digit and has_special):
                 return InputValidationResult(
                     is_valid=False,
                     error_message=(
-                        "Password must contain uppercase, lowercase, digit, "
-                        "and special character"
+                        "Password must contain uppercase, lowercase, digit, and special character"
                     ),
                     threat_detected=ThreatType.BRUTE_FORCE,
                     security_context=context,
@@ -483,9 +479,7 @@ class EnhancedSecurityValidator:
                 security_context=context,
             )
 
-        return InputValidationResult(
-            is_valid=True, security_context=context
-        )
+        return InputValidationResult(is_valid=True, security_context=context)
 
     async def validate_jwt_token(
         self, token: str, secret_key: str, algorithms: list[str] = None
@@ -707,7 +701,7 @@ class EnhancedSecurityValidator:
         # In a real implementation, this would use Redis or similar
         # For now, we'll simulate with in-memory storage
         current_time = time.time()
-        window_start = current_time - window_seconds
+        current_time - window_seconds
 
         # Simulate rate limiting logic
         # In production, this would use atomic operations in Redis
@@ -716,9 +710,7 @@ class EnhancedSecurityValidator:
         return RateLimitInfo(
             limit=limit,
             remaining=remaining,
-            reset_time=datetime.fromtimestamp(
-                current_time + window_seconds, tz=timezone.utc
-            ),
+            reset_time=datetime.fromtimestamp(current_time + window_seconds, tz=timezone.utc),
             window_seconds=window_seconds,
         )
 
@@ -738,9 +730,7 @@ class EnhancedSecurityValidator:
                 else str(event.event_type)
             ),
             "severity": (
-                event.severity.value
-                if hasattr(event.severity, "value")
-                else str(event.severity)
+                event.severity.value if hasattr(event.severity, "value") else str(event.severity)
             ),
             "source_ip": event.source_ip,
             "user_id": event.user_id,
@@ -811,9 +801,7 @@ class EnhancedSecurityValidator:
         # CRITICAL: Passwords longer than 72 chars will be truncated - inform user
         truncated_password = password[:72]  # Use 72 to stay within bcrypt limit
         if len(password) > 72:
-            logger.warning(
-                f"Password truncated from {len(password)} to 72 characters for hashing"
-            )
+            logger.warning(f"Password truncated from {len(password)} to 72 characters for hashing")
 
         if HAS_PASSLIB:
             try:
@@ -824,13 +812,11 @@ class EnhancedSecurityValidator:
                 logger.error(f"Password hashing failed: {e}")
                 raise RuntimeError(
                     "Password hashing failed - cannot proceed with insecure storage"
-                )
+                ) from None
         else:
             # CRITICAL SECURITY: Never fall back to plain text in any environment
             logger.error("Passlib not available - secure password hashing is required")
-            raise RuntimeError(
-                "Secure password hashing library required but not available"
-            )
+            raise RuntimeError("Secure password hashing library required but not available")
 
     async def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """

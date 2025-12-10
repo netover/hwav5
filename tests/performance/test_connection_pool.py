@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import psutil
 import pytest
-
+from fastapi.testclient import TestClient
 
 
 class TestConnectionPoolPerformance:
@@ -20,8 +20,9 @@ class TestConnectionPoolPerformance:
     @pytest.fixture
     def client(self):
         """Create a TestClient for the FastAPI app."""
-        from resync.api.endpoints import api_router
         from fastapi import FastAPI
+
+        from resync.api.endpoints import api_router
 
         app = FastAPI()
         app.include_router(api_router)
@@ -42,8 +43,7 @@ class TestConnectionPoolPerformance:
                 task = asyncio.create_task(self._simulate_connection_workload(i))
                 tasks.append(task)
 
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            return results
+            return await asyncio.gather(*tasks, return_exceptions=True)
 
         # Test with various connection counts
         for n_conn in [10, 50, 100]:
@@ -57,9 +57,7 @@ class TestConnectionPoolPerformance:
 
             # Check execution time is reasonable
             execution_time = end_time - start_time
-            assert (
-                execution_time < n_conn * 0.1
-            )  # Should be much faster than sequential
+            assert execution_time < n_conn * 0.1  # Should be much faster than sequential
 
     @pytest.mark.performance
     @pytest.mark.slow
@@ -111,9 +109,7 @@ class TestConnectionPoolPerformance:
 
         # Simulate queue operations
         for i in range(0, queue_operations, batch_size):
-            batch = [
-                f"message_{j}" for j in range(i, min(i + batch_size, queue_operations))
-            ]
+            batch = [f"message_{j}" for j in range(i, min(i + batch_size, queue_operations))]
 
             # Simulate Redis operations
             await self._simulate_redis_batch_operations(batch)
@@ -134,9 +130,7 @@ class TestConnectionPoolPerformance:
         """Test connection pool timeout behavior."""
         with patch("resync.core.connection_manager.ConnectionManager") as mock_manager:
             mock_connection = MagicMock()
-            mock_connection.execute.side_effect = asyncio.TimeoutError(
-                "Connection timeout"
-            )
+            mock_connection.execute.side_effect = asyncio.TimeoutError("Connection timeout")
             mock_manager.return_value.get_connection.return_value = mock_connection
 
             # Test timeout handling
@@ -194,9 +188,7 @@ class TestAuditQueuePerformance:
     async def test_audit_queue_backpressure(self):
         """Test audit queue backpressure handling."""
         # Simulate high load that exceeds processing capacity
-        high_load_records = [
-            {"id": f"record_{i}", "data": "x" * 1000} for i in range(2000)
-        ]
+        high_load_records = [{"id": f"record_{i}", "data": "x" * 1000} for i in range(2000)]
 
         start_time = time.time()
         processed = await self._process_audit_batch(high_load_records)
@@ -336,33 +328,32 @@ class TestMemoryLeakDetection:
 class TestConcurrentLoadHandling:
     """Test handling of concurrent load scenarios."""
 
+    @staticmethod
+    def make_concurrent_requests(n_requests, test_client):
+        """Make multiple concurrent requests."""
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(test_client.get, "/health") for _ in range(n_requests)]
+            return [future.result() for future in futures]
+
     @pytest.mark.performance
     @pytest.mark.slow
     async def test_concurrent_request_handling(self):
         """Test handling of many concurrent requests."""
-
-    @staticmethod
-    async def make_concurrent_requests(n_requests):
-        """Make multiple concurrent requests."""
-        # Use TestClient for FastAPI testing without server
+        from fastapi import FastAPI
         from fastapi.testclient import TestClient
 
+        from resync.api.endpoints import api_router
+
+        app = FastAPI()
+        app.include_router(api_router)
         test_client = TestClient(app)
-
-        # Simulate concurrent requests using thread pool
-        import concurrent.futures
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(test_client.get, "/health") for _ in range(n_requests)
-            ]
-            responses = [future.result() for future in futures]
-        return responses
 
         # Test with increasing concurrency
         for concurrency in [10, 50, 100]:
             start_time = time.time()
-            responses = await self.make_concurrent_requests(concurrency)
+            responses = self.make_concurrent_requests(concurrency, test_client)
             end_time = time.time()
 
             # Calculate success rate
