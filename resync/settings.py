@@ -196,6 +196,85 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
 
     auditor_model_name: str = Field(default="gpt-3.5-turbo")
     agent_model_name: str = Field(default="gpt-4o")
+    
+    llm_model: str = Field(
+        default="meta/llama-3.1-70b-instruct",
+        description="Default LLM model for NVIDIA API",
+    )
+
+    # ============================================================================
+    # LANGFUSE - PROMPT MANAGEMENT & OBSERVABILITY
+    # ============================================================================
+    langfuse_enabled: bool = Field(
+        default=False,
+        description="Enable LangFuse integration for prompt management and tracing",
+    )
+    
+    langfuse_public_key: str = Field(
+        default="",
+        description="LangFuse public key for API authentication",
+    )
+    
+    langfuse_secret_key: SecretStr = Field(
+        default="",
+        description="LangFuse secret key for API authentication",
+        validation_alias="LANGFUSE_SECRET_KEY",
+        exclude=True,
+        repr=False,
+    )
+    
+    langfuse_host: str = Field(
+        default="https://cloud.langfuse.com",
+        description="LangFuse host URL (cloud or self-hosted)",
+    )
+    
+    langfuse_trace_sample_rate: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Sample rate for LLM call tracing (1.0 = trace all)",
+    )
+
+    # ============================================================================
+    # LANGGRAPH - AGENT ORCHESTRATION
+    # ============================================================================
+    langgraph_enabled: bool = Field(
+        default=True,
+        description="Enable LangGraph for state-based agent orchestration",
+    )
+    
+    langgraph_checkpoint_ttl_hours: int = Field(
+        default=24,
+        ge=1,
+        description="Time-to-live for LangGraph checkpoints in hours",
+    )
+    
+    langgraph_max_retries: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="Maximum retries for failed LLM/tool calls in LangGraph",
+    )
+    
+    langgraph_require_approval: bool = Field(
+        default=True,
+        description="Require human approval for TWS action requests",
+    )
+
+    # ============================================================================
+    # APACHE AGE - GRAPH DATABASE
+    # ============================================================================
+    age_graph_name: str = Field(
+        default="tws_graph",
+        description="Name of the Apache AGE graph in PostgreSQL",
+    )
+    
+    age_max_traversal_depth: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Maximum depth for graph traversals (dependency chains)",
+    )
 
     # ============================================================================
     # CACHE CONFIGURATION

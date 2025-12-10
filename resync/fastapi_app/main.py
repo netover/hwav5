@@ -41,6 +41,15 @@ from resync.fastapi_app.api.v1.routes.admin_threshold_tuning import router as th
 # Import AI Monitoring router (Specialist Agents + Evidently drift detection)
 from resync.fastapi_app.api.v1.routes.admin_ai_monitoring import router as ai_monitoring_router
 
+# Import Backup management router
+from resync.fastapi_app.api.v1.routes.admin_backup import router as backup_router
+
+# Import Observability management router (LangFuse + Evidently config)
+from resync.fastapi_app.api.v1.routes.admin_observability import router as observability_router
+
+# Import Teams integration router
+from resync.fastapi_app.api.v1.routes.admin_teams import router as teams_router
+
 import structlog
 logger = structlog.get_logger(__name__)
 
@@ -134,6 +143,27 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error initializing specialist agents: {e}")
     
+    # Initialize Observability (LangFuse + Evidently)
+    try:
+        from resync.core.observability import setup_observability
+        obs_results = await setup_observability()
+        logger.info("observability_initialized", langfuse=obs_results.get("langfuse"), evidently=obs_results.get("evidently"))
+    except ImportError as e:
+        logger.warning(f"Could not initialize observability: {e}")
+    except Exception as e:
+        logger.error(f"Error initializing observability: {e}")
+    
+    # Start Backup Scheduler
+    try:
+        from resync.core.backup import get_backup_service
+        backup_service = get_backup_service()
+        await backup_service.start_scheduler()
+        logger.info("backup_scheduler_started")
+    except ImportError as e:
+        logger.warning(f"Could not start backup scheduler: {e}")
+    except Exception as e:
+        logger.error(f"Error starting backup scheduler: {e}")
+    
     yield  # Application runs here
     
     # Shutdown
@@ -155,6 +185,23 @@ async def lifespan(app: FastAPI):
             logger.info("AI monitoring service stopped")
     except Exception as e:
         logger.error(f"Error stopping AI monitoring: {e}")
+    
+    # Shutdown Backup Scheduler
+    try:
+        from resync.core.backup import get_backup_service
+        backup_service = get_backup_service()
+        await backup_service.stop_scheduler()
+        logger.info("Backup scheduler stopped")
+    except Exception as e:
+        logger.error(f"Error stopping backup scheduler: {e}")
+    
+    # Shutdown Observability
+    try:
+        from resync.core.observability import shutdown_observability
+        await shutdown_observability()
+        logger.info("Observability services stopped")
+    except Exception as e:
+        logger.error(f"Error stopping observability: {e}")
     
     logger.info("Application shutdown complete")
 
@@ -206,6 +253,15 @@ app.include_router(threshold_tuning_router, prefix="/api/v1/admin", tags=["Thres
 
 # Include AI Monitoring router (Specialist Agents + Evidently drift detection)
 app.include_router(ai_monitoring_router, prefix="/api/v1/admin", tags=["AI Monitoring"])
+
+# Include Backup management router
+app.include_router(backup_router, prefix="/api/v1", tags=["Backup Management"])
+
+# Include Observability management router (LangFuse + Evidently config)
+app.include_router(observability_router, prefix="/api/v1", tags=["Observability"])
+
+# Include Teams integration router
+app.include_router(teams_router, prefix="/api/v1", tags=["Teams Integration"])
 
 # WebSocket endpoint
 @app.websocket("/api/v1/ws/{agent_id}")

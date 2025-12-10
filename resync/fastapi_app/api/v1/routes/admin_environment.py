@@ -258,23 +258,11 @@ ENVIRONMENT_SCHEMA: Dict[str, EnvironmentVariable] = {
         validation_pattern=r"^\d+$",
     ),
     
-    # RAG/Qdrant
-    "QDRANT_URL": EnvironmentVariable(
-        name="QDRANT_URL",
+    # RAG/pgvector (uses DATABASE_URL for PostgreSQL connection)
+    "RAG_COLLECTION": EnvironmentVariable(
+        name="RAG_COLLECTION",
         category=VariableCategory.RAG,
-        description="Qdrant vector database URL",
-        default_value="http://localhost:6333",
-    ),
-    "QDRANT_API_KEY": EnvironmentVariable(
-        name="QDRANT_API_KEY",
-        category=VariableCategory.RAG,
-        description="Qdrant API key",
-        is_sensitive=True,
-    ),
-    "QDRANT_COLLECTION": EnvironmentVariable(
-        name="QDRANT_COLLECTION",
-        category=VariableCategory.RAG,
-        description="Qdrant collection name",
+        description="pgvector collection name for RAG documents",
         default_value="resync_documents",
     ),
     "RAG_USE_MOCK": EnvironmentVariable(
@@ -365,6 +353,59 @@ ENVIRONMENT_SCHEMA: Dict[str, EnvironmentVariable] = {
         category=VariableCategory.SYSTEM,
         description="Environment name (development, staging, production)",
         default_value="production",
+    ),
+    
+    # LangFuse - AI Observability
+    "LANGFUSE_ENABLED": EnvironmentVariable(
+        name="LANGFUSE_ENABLED",
+        category=VariableCategory.API,
+        description="Enable LangFuse observability (true/false)",
+        default_value="false",
+    ),
+    "LANGFUSE_PUBLIC_KEY": EnvironmentVariable(
+        name="LANGFUSE_PUBLIC_KEY",
+        category=VariableCategory.API,
+        description="LangFuse public key",
+    ),
+    "LANGFUSE_SECRET_KEY": EnvironmentVariable(
+        name="LANGFUSE_SECRET_KEY",
+        category=VariableCategory.API,
+        description="LangFuse secret key",
+        is_sensitive=True,
+    ),
+    "LANGFUSE_HOST": EnvironmentVariable(
+        name="LANGFUSE_HOST",
+        category=VariableCategory.API,
+        description="LangFuse host URL",
+        default_value="https://cloud.langfuse.com",
+    ),
+    "LANGFUSE_SAMPLE_RATE": EnvironmentVariable(
+        name="LANGFUSE_SAMPLE_RATE",
+        category=VariableCategory.API,
+        description="LangFuse trace sampling rate (0.0-1.0)",
+        default_value="1.0",
+    ),
+    
+    # Evidently - ML Monitoring
+    "EVIDENTLY_ENABLED": EnvironmentVariable(
+        name="EVIDENTLY_ENABLED",
+        category=VariableCategory.SYSTEM,
+        description="Enable Evidently drift monitoring (true/false)",
+        default_value="false",
+    ),
+    "EVIDENTLY_REPORTS_DIR": EnvironmentVariable(
+        name="EVIDENTLY_REPORTS_DIR",
+        category=VariableCategory.SYSTEM,
+        description="Directory for Evidently drift reports",
+        default_value="/var/log/resync/evidently",
+    ),
+    
+    # Backup
+    "BACKUP_DIR": EnvironmentVariable(
+        name="BACKUP_DIR",
+        category=VariableCategory.SYSTEM,
+        description="Directory for storing backups",
+        default_value="/var/backups/resync",
     ),
 }
 

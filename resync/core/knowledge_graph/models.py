@@ -2,12 +2,12 @@
 Knowledge Graph Database Models.
 
 SQLAlchemy models for persisting graph nodes and edges in PostgreSQL.
-The graph is loaded into NetworkX for efficient traversal and algorithms.
+Graph queries are executed via Apache AGE extension using Cypher.
 
 Architecture:
 - PostgreSQL: Persistence layer (nodes, edges, metadata)
-- NetworkX: Runtime graph operations (BFS, centrality, etc.)
-- Qdrant: Semantic search (unchanged)
+- Apache AGE: Graph queries via Cypher
+- pgvector: Semantic search (via RAG)
 """
 
 from datetime import datetime

@@ -1,0 +1,617 @@
+"""
+LangGraph Node Definitions.
+
+This module provides reusable node classes for building agent graphs.
+Each node represents a discrete step in the agent workflow.
+
+Node Types:
+- RouterNode: Intent classification and routing
+- LLMNode: LLM interaction with prompt management
+- ToolNode: Tool execution with validation
+- ValidationNode: Output validation and error handling
+- HumanApprovalNode: Human-in-the-loop approval flow
+"""
+
+from __future__ import annotations
+
+import asyncio
+import uuid
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, List, Optional, Type
+
+from pydantic import BaseModel
+
+from resync.core.structured_logger import get_logger
+
+logger = get_logger(__name__)
+
+
+# =============================================================================
+# BASE NODE
+# =============================================================================
+
+class BaseNode(ABC):
+    """
+    Base class for graph nodes.
+    
+    All nodes must implement the `__call__` method which takes
+    the current state and returns the updated state.
+    """
+    
+    name: str = "base_node"
+    
+    def __init__(self, name: Optional[str] = None):
+        if name:
+            self.name = name
+    
+    @abstractmethod
+    async def __call__(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the node logic."""
+        pass
+    
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}(name={self.name})>"
+
+
+# =============================================================================
+# ROUTER NODE
+# =============================================================================
+
+@dataclass
+class RouterConfig:
+    """Configuration for the router node."""
+    
+    # Classification method
+    use_llm: bool = True
+    fallback_to_keywords: bool = True
+    
+    # LLM settings
+    model: str = "meta/llama-3.1-8b-instruct"
+    temperature: float = 0.1
+    max_tokens: int = 20
+    
+    # Prompt
+    prompt_id: str = "intent-router-v1"
+    
+    # Keyword patterns (for fallback)
+    keyword_patterns: Dict[str, List[str]] = None
+    
+    def __post_init__(self):
+        if self.keyword_patterns is None:
+            self.keyword_patterns = {
+                "status": ["status", "estado", "workstation", "online", "offline"],
+                "troubleshoot": ["erro", "error", "falha", "abend", "problema"],
+                "action": ["cancelar", "reiniciar", "executar", "submit"],
+                "query": ["como", "o que", "qual", "porque", "documentação"],
+            }
+
+
+class RouterNode(BaseNode):
+    """
+    Router node for intent classification.
+    
+    Uses LLM or keyword matching to classify user intent
+    and route to the appropriate handler.
+    
+    Usage:
+        router = RouterNode(config)
+        state = await router(state)
+        next_node = state["_next"]  # e.g., "status_handler"
+    """
+    
+    name = "router"
+    
+    def __init__(self, config: Optional[RouterConfig] = None):
+        super().__init__()
+        self.config = config or RouterConfig()
+    
+    async def __call__(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Classify intent and set routing."""
+        message = state.get("message", "")
+        
+        if self.config.use_llm:
+            try:
+                intent, confidence = await self._classify_with_llm(message)
+            except Exception as e:
+                logger.warning("router_llm_failed", error=str(e))
+                if self.config.fallback_to_keywords:
+                    intent, confidence = self._classify_with_keywords(message)
+                else:
+                    intent, confidence = "general", 0.5
+        else:
+            intent, confidence = self._classify_with_keywords(message)
+        
+        state["intent"] = intent
+        state["confidence"] = confidence
+        state["_next"] = f"{intent}_handler"
+        state["current_node"] = self.name
+        
+        logger.debug(
+            "router_classified",
+            intent=intent,
+            confidence=confidence,
+            next_node=state["_next"],
+        )
+        
+        return state
+    
+    async def _classify_with_llm(self, message: str) -> tuple[str, float]:
+        """Use LLM for classification via LiteLLM (project standard)."""
+        from resync.core.langfuse import get_prompt_manager
+        from resync.core.utils.llm import call_llm
+        
+        prompt_manager = get_prompt_manager()
+        prompt = await prompt_manager.get_prompt(self.config.prompt_id)
+        
+        if not prompt:
+            raise ValueError(f"Prompt {self.config.prompt_id} not found")
+        
+        compiled = prompt.compile(user_message=message)
+        
+        # Use LiteLLM via call_llm (project standard with resilience)
+        response = await call_llm(
+            prompt=compiled,
+            model=self.config.model,
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature,
+        )
+        
+        intent = response.strip().lower()
+        
+        # Map to valid intents
+        valid_intents = ["status", "troubleshoot", "query", "action", "general"]
+        if intent not in valid_intents:
+            intent = "general"
+        
+        return intent, 0.85
+    
+    def _classify_with_keywords(self, message: str) -> tuple[str, float]:
+        """Use keyword matching for classification."""
+        message_lower = message.lower()
+        
+        for intent, keywords in self.config.keyword_patterns.items():
+            if any(kw in message_lower for kw in keywords):
+                return intent, 0.7
+        
+        return "general", 0.5
+
+
+# =============================================================================
+# LLM NODE
+# =============================================================================
+
+@dataclass
+class LLMNodeConfig:
+    """Configuration for LLM nodes."""
+    
+    # Prompt
+    prompt_id: str = ""
+    prompt_variables: Dict[str, str] = None
+    
+    # Model settings
+    model: Optional[str] = None
+    temperature: float = 0.7
+    max_tokens: int = 1000
+    
+    # Context
+    include_history: bool = True
+    max_history_messages: int = 5
+    
+    def __post_init__(self):
+        if self.prompt_variables is None:
+            self.prompt_variables = {}
+
+
+class LLMNode(BaseNode):
+    """
+    LLM interaction node.
+    
+    Handles prompt compilation, LLM calls, and response processing.
+    Uses LangFuse for prompt management and tracing.
+    
+    Usage:
+        llm_node = LLMNode(config)
+        state = await llm_node(state)
+        response = state["llm_response"]
+    """
+    
+    name = "llm"
+    
+    def __init__(self, config: LLMNodeConfig, name: Optional[str] = None):
+        super().__init__(name)
+        self.config = config
+    
+    async def __call__(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute LLM call via project standard (LiteLLM + call_llm with resilience)."""
+        from resync.core.langfuse import get_prompt_manager, get_tracer
+        from resync.core.utils.llm import call_llm
+        from resync.settings import settings
+        
+        message = state.get("message", "")
+        history = state.get("conversation_history", [])
+        
+        # Get prompt
+        prompt_manager = get_prompt_manager()
+        prompt = await prompt_manager.get_prompt(self.config.prompt_id)
+        
+        # Build messages
+        messages = []
+        
+        if prompt:
+            # Compile prompt with variables from state and config
+            variables = {**self.config.prompt_variables}
+            for key in prompt.config.variables:
+                if key in state:
+                    variables[key] = state[key]
+            
+            system_content = prompt.compile(**variables)
+            messages.append({"role": "system", "content": system_content})
+        
+        # Add history
+        if self.config.include_history and history:
+            messages.extend(history[-self.config.max_history_messages:])
+        
+        # Add user message
+        messages.append({"role": "user", "content": message})
+        
+        # Call LLM with tracing via project standard (call_llm with LiteLLM + resilience)
+        tracer = get_tracer()
+        
+        model = self.config.model or (prompt.model_hint if prompt else None) or getattr(settings, "llm_model", "gpt-4o")
+        
+        # Build full prompt from messages for call_llm
+        full_prompt = "\n".join([
+            f"{m['role'].upper()}: {m['content']}" for m in messages
+        ])
+        
+        async with tracer.trace(self.name, model=model, prompt_id=self.config.prompt_id) as trace:
+            # Use call_llm which has circuit breaker, retry, and timeout built-in
+            response = await call_llm(
+                prompt=full_prompt,
+                model=model,
+                max_tokens=self.config.max_tokens,
+                temperature=self.config.temperature,
+            )
+            
+            trace.output = response
+        
+        state["llm_response"] = response
+        state["llm_messages"] = messages
+        state["current_node"] = self.name
+        
+        return state
+
+
+# =============================================================================
+# TOOL NODE
+# =============================================================================
+
+@dataclass
+class ToolNodeConfig:
+    """Configuration for tool nodes."""
+    
+    # Tool settings
+    tool_name: str = ""
+    validate_input: bool = True
+    validate_output: bool = True
+    
+    # Retry
+    max_retries: int = 3
+    retry_delay_ms: int = 500
+    
+    # Timeout
+    timeout_seconds: float = 30.0
+
+
+class ToolNode(BaseNode):
+    """
+    Tool execution node.
+    
+    Executes registered tools with validation and retry logic.
+    
+    Usage:
+        tool_node = ToolNode(config, tool_func)
+        state = await tool_node(state)
+        result = state["tool_output"]
+    """
+    
+    name = "tool"
+    
+    def __init__(
+        self,
+        config: ToolNodeConfig,
+        tool_func: Callable,
+        name: Optional[str] = None,
+    ):
+        super().__init__(name or config.tool_name or "tool")
+        self.config = config
+        self.tool_func = tool_func
+    
+    async def __call__(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the tool."""
+        tool_input = state.get("tool_input", {})
+        retry_count = 0
+        last_error = None
+        
+        while retry_count <= self.config.max_retries:
+            try:
+                # Execute with timeout
+                result = await asyncio.wait_for(
+                    self._execute_tool(tool_input),
+                    timeout=self.config.timeout_seconds,
+                )
+                
+                state["tool_name"] = self.config.tool_name
+                state["tool_output"] = result
+                state["tool_error"] = None
+                state["current_node"] = self.name
+                
+                logger.debug(
+                    "tool_executed",
+                    tool=self.config.tool_name,
+                    success=True,
+                )
+                
+                return state
+                
+            except asyncio.TimeoutError:
+                last_error = f"Tool {self.config.tool_name} timed out after {self.config.timeout_seconds}s"
+            except Exception as e:
+                last_error = str(e)
+            
+            retry_count += 1
+            if retry_count <= self.config.max_retries:
+                await asyncio.sleep(self.config.retry_delay_ms / 1000)
+                logger.warning(
+                    "tool_retry",
+                    tool=self.config.tool_name,
+                    attempt=retry_count,
+                    error=last_error,
+                )
+        
+        # All retries exhausted
+        state["tool_error"] = last_error
+        state["current_node"] = self.name
+        
+        logger.error(
+            "tool_failed",
+            tool=self.config.tool_name,
+            error=last_error,
+        )
+        
+        return state
+    
+    async def _execute_tool(self, tool_input: Dict[str, Any]) -> Any:
+        """Execute the tool function."""
+        if asyncio.iscoroutinefunction(self.tool_func):
+            return await self.tool_func(**tool_input)
+        else:
+            return self.tool_func(**tool_input)
+
+
+# =============================================================================
+# VALIDATION NODE
+# =============================================================================
+
+@dataclass
+class ValidationConfig:
+    """Configuration for validation nodes."""
+    
+    # Validation rules
+    required_fields: List[str] = None
+    min_response_length: int = 1
+    max_response_length: int = 10000
+    
+    # Error handling
+    error_field: str = "error"
+    retry_on_error: bool = True
+    
+    def __post_init__(self):
+        if self.required_fields is None:
+            self.required_fields = ["response"]
+
+
+class ValidationNode(BaseNode):
+    """
+    Validation node for checking outputs.
+    
+    Validates that required fields exist and meet criteria.
+    Sets error state if validation fails.
+    
+    Usage:
+        validator = ValidationNode(config)
+        state = await validator(state)
+        if state.get("validation_error"):
+            # Handle error
+    """
+    
+    name = "validation"
+    
+    def __init__(self, config: Optional[ValidationConfig] = None):
+        super().__init__()
+        self.config = config or ValidationConfig()
+    
+    async def __call__(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate the state."""
+        errors = []
+        
+        # Check required fields
+        for field in self.config.required_fields:
+            if field not in state or state[field] is None:
+                errors.append(f"Missing required field: {field}")
+        
+        # Check response length
+        response = state.get("response", "")
+        if isinstance(response, str):
+            if len(response) < self.config.min_response_length:
+                errors.append(f"Response too short: {len(response)} chars")
+            if len(response) > self.config.max_response_length:
+                errors.append(f"Response too long: {len(response)} chars")
+        
+        # Check for tool errors
+        if state.get("tool_error"):
+            errors.append(f"Tool error: {state['tool_error']}")
+        
+        if errors:
+            state["validation_error"] = "; ".join(errors)
+            state["_should_retry"] = self.config.retry_on_error
+            logger.warning("validation_failed", errors=errors)
+        else:
+            state["validation_error"] = None
+            state["_should_retry"] = False
+        
+        state["current_node"] = self.name
+        return state
+
+
+# =============================================================================
+# HUMAN APPROVAL NODE
+# =============================================================================
+
+@dataclass
+class ApprovalRequest:
+    """A pending approval request."""
+    
+    id: str
+    action: str
+    description: str
+    user_id: Optional[str]
+    created_at: datetime
+    expires_at: datetime
+    status: str = "pending"  # pending, approved, rejected, expired
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+
+
+class HumanApprovalNode(BaseNode):
+    """
+    Human-in-the-loop approval node.
+    
+    Pauses execution and waits for human approval before
+    executing sensitive actions.
+    
+    Usage:
+        approval_node = HumanApprovalNode()
+        state = await approval_node(state)
+        
+        if state["approval_status"] == "pending":
+            # Wait for approval via API
+            pass
+    """
+    
+    name = "human_approval"
+    
+    # In-memory storage (should be moved to Redis/DB in production)
+    _pending_approvals: Dict[str, ApprovalRequest] = {}
+    
+    def __init__(
+        self,
+        timeout_seconds: int = 300,
+        require_reason: bool = False,
+    ):
+        super().__init__()
+        self.timeout_seconds = timeout_seconds
+        self.require_reason = require_reason
+    
+    async def __call__(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Create an approval request."""
+        action = state.get("tool_name", "unknown_action")
+        user_id = state.get("user_id")
+        
+        # Create approval request
+        approval_id = str(uuid.uuid4())
+        now = datetime.utcnow()
+        
+        request = ApprovalRequest(
+            id=approval_id,
+            action=action,
+            description=f"Action: {action} requested by user {user_id}",
+            user_id=user_id,
+            created_at=now,
+            expires_at=now + timedelta(seconds=self.timeout_seconds),
+        )
+        
+        self._pending_approvals[approval_id] = request
+        
+        state["requires_approval"] = True
+        state["approval_id"] = approval_id
+        state["approval_status"] = "pending"
+        state["current_node"] = self.name
+        
+        logger.info(
+            "approval_requested",
+            approval_id=approval_id,
+            action=action,
+            user_id=user_id,
+        )
+        
+        return state
+    
+    @classmethod
+    def approve(cls, approval_id: str, approved_by: str) -> bool:
+        """Approve a pending request."""
+        if approval_id not in cls._pending_approvals:
+            return False
+        
+        request = cls._pending_approvals[approval_id]
+        
+        if request.status != "pending":
+            return False
+        
+        if datetime.utcnow() > request.expires_at:
+            request.status = "expired"
+            return False
+        
+        request.status = "approved"
+        request.approved_by = approved_by
+        request.approved_at = datetime.utcnow()
+        
+        logger.info("approval_granted", approval_id=approval_id, approved_by=approved_by)
+        return True
+    
+    @classmethod
+    def reject(cls, approval_id: str, rejected_by: str, reason: str = "") -> bool:
+        """Reject a pending request."""
+        if approval_id not in cls._pending_approvals:
+            return False
+        
+        request = cls._pending_approvals[approval_id]
+        
+        if request.status != "pending":
+            return False
+        
+        request.status = "rejected"
+        
+        logger.info("approval_rejected", approval_id=approval_id, rejected_by=rejected_by)
+        return True
+    
+    @classmethod
+    def get_status(cls, approval_id: str) -> Optional[str]:
+        """Get the status of an approval request."""
+        if approval_id not in cls._pending_approvals:
+            return None
+        
+        request = cls._pending_approvals[approval_id]
+        
+        # Check expiration
+        if request.status == "pending" and datetime.utcnow() > request.expires_at:
+            request.status = "expired"
+        
+        return request.status
+    
+    @classmethod
+    def list_pending(cls, user_id: Optional[str] = None) -> List[ApprovalRequest]:
+        """List pending approval requests."""
+        now = datetime.utcnow()
+        
+        pending = []
+        for request in cls._pending_approvals.values():
+            if request.status == "pending":
+                if now > request.expires_at:
+                    request.status = "expired"
+                elif user_id is None or request.user_id == user_id:
+                    pending.append(request)
+        
+        return pending

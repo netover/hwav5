@@ -1,17 +1,17 @@
 """
-TWS Knowledge Graph - NetworkX-based graph with PostgreSQL persistence.
+TWS Knowledge Graph - PostgreSQL with Apache AGE graph extension.
 
-This module provides a hybrid knowledge graph that:
-1. Uses NetworkX for fast in-memory graph operations (BFS, centrality, etc.)
-2. Persists data to PostgreSQL for durability
-3. Integrates with Qdrant for semantic search (via HybridRAG)
+This module provides a knowledge graph that:
+1. Uses Apache AGE for graph queries via Cypher
+2. Persists data in PostgreSQL for durability
+3. Integrates with pgvector for semantic search (via HybridRAG)
 
 Key Features:
 - Multi-hop traversal for dependency chains
-- Betweenness centrality to find bottlenecks
+- Impact analysis to find bottlenecks
 - Common neighbor detection for resource conflicts
 - Temporal chains for root cause analysis
-- ReadWriteLock for high-concurrency reads
+- Async operations for high concurrency
 
 Usage:
     kg = TWSKnowledgeGraph()

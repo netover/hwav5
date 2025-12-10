@@ -1,5 +1,5 @@
 """
-Core components of the Qdrant-only RAG microservice.
+Core components of the pgvector-based RAG microservice.
 
 Exports all public interfaces and implementations for easy import.
 
@@ -8,6 +8,7 @@ Components:
 - DocumentParser: PDF/HTML/Markdown parsing for IBM/HCL docs
 - IngestService: Document ingestion with deduplication
 - RagRetriever: Vector search with reranking
+- PgVectorStore: PostgreSQL pgvector-based storage (replaces Qdrant)
 """
 
 from .embedding_service import (
@@ -34,8 +35,10 @@ from .interfaces import Embedder
 from .interfaces import Retriever
 from .interfaces import VectorStore
 from .retriever import RagRetriever
-from .vector_store import QdrantVectorStore
-from .vector_store import get_default_store
+
+# Use pgvector store (PostgreSQL) instead of Qdrant
+from .pgvector_store import PgVectorStore
+from .pgvector_store import get_default_store
 
 __all__ = [
     # Interfaces
@@ -62,8 +65,8 @@ __all__ = [
     "create_pdf_parser",
     "create_html_parser",
     
-    # Vector Store
-    "QdrantVectorStore",
+    # Vector Store (pgvector)
+    "PgVectorStore",
     "get_default_store",
     
     # Retrieval

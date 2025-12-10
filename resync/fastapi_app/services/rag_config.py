@@ -2,7 +2,7 @@
 RAG Service Configuration.
 
 Configures the RAG system including:
-- Qdrant connection settings
+- PostgreSQL/pgvector connection settings
 - Embedding model settings
 - Chunking parameters
 """
@@ -14,17 +14,17 @@ from typing import Optional
 
 @dataclass
 class RAGConfig:
-    """Configuration for RAG service."""
+    """Configuration for RAG service with pgvector."""
     
-    # Qdrant settings
-    qdrant_url: str = field(
-        default_factory=lambda: os.getenv("QDRANT_URL", "http://localhost:6333")
+    # PostgreSQL settings (uses main DATABASE_URL)
+    database_url: str = field(
+        default_factory=lambda: os.getenv(
+            "DATABASE_URL", 
+            "postgresql://resync:password@localhost:5432/resync"
+        )
     )
-    qdrant_api_key: Optional[str] = field(
-        default_factory=lambda: os.getenv("QDRANT_API_KEY")
-    )
-    qdrant_collection: str = field(
-        default_factory=lambda: os.getenv("QDRANT_COLLECTION", "resync_documents")
+    collection_name: str = field(
+        default_factory=lambda: os.getenv("RAG_COLLECTION", "resync_documents")
     )
     
     # Embedding settings
@@ -54,9 +54,9 @@ class RAGConfig:
         """Create configuration from environment variables."""
         return cls()
     
-    def is_qdrant_configured(self) -> bool:
-        """Check if Qdrant is properly configured."""
-        return bool(self.qdrant_url) and not self.use_mock
+    def is_pgvector_configured(self) -> bool:
+        """Check if pgvector is properly configured."""
+        return bool(self.database_url) and not self.use_mock
 
 
 # Global configuration instance

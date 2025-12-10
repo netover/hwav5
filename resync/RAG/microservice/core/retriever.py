@@ -36,7 +36,7 @@ class RagRetriever(Retriever):
         if not CFG.enable_rerank:
             return hits
 
-        # Re-rank leve (cosine com vetor do Qdrant, caso retornado)
+        # Lightweight re-rank (cosine with vector from pgvector, if returned)
         if hits and "vector" in hits[0]:
 
             def cos(a: List[float], b: List[float]) -> float:

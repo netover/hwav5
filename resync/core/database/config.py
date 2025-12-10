@@ -1,8 +1,13 @@
 """
-Database Configuration - PostgreSQL Only.
+Database Configuration - PostgreSQL Unified Stack.
 
 Production-ready database configuration with PostgreSQL as the only backend.
-All SQLite references have been removed as part of the consolidation.
+Supports three PostgreSQL extensions:
+- pgvector: Vector similarity search for RAG
+- Apache AGE: Graph queries via Cypher
+- Standard: Relational data
+
+All operations are async-only (no psycopg2 sync driver).
 
 Environment Variables:
 - DATABASE_URL: Full PostgreSQL connection string
@@ -34,6 +39,7 @@ class DatabaseConfig:
     PostgreSQL database configuration.
     
     PostgreSQL is the only supported database for production and development.
+    All operations use asyncpg for async execution.
     """
     driver: DatabaseDriver = DatabaseDriver.POSTGRESQL
     host: str = "localhost"
@@ -58,10 +64,25 @@ class DatabaseConfig:
         return f"postgresql+asyncpg://{self.user}:{password}@{self.host}:{self.port}/{self.name}"
     
     @property
-    def sync_url(self) -> str:
-        """Get sync database URL for SQLAlchemy."""
+    def alembic_url(self) -> str:
+        """
+        Get database URL for Alembic migrations.
+        
+        Uses asyncpg driver - Alembic must be configured for async mode.
+        See alembic.ini and env.py for async configuration.
+        """
         password = self.password or os.getenv("DATABASE_PASSWORD", "")
-        return f"postgresql+psycopg2://{self.user}:{password}@{self.host}:{self.port}/{self.name}"
+        return f"postgresql+asyncpg://{self.user}:{password}@{self.host}:{self.port}/{self.name}"
+    
+    @property
+    def raw_url(self) -> str:
+        """
+        Get raw PostgreSQL URL (without driver prefix).
+        
+        Useful for direct psql connections or third-party tools.
+        """
+        password = self.password or os.getenv("DATABASE_PASSWORD", "")
+        return f"postgresql://{self.user}:{password}@{self.host}:{self.port}/{self.name}"
     
     def get_pool_options(self) -> dict:
         """Get connection pool options."""

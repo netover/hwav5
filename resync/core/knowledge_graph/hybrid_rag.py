@@ -2,8 +2,8 @@
 Hybrid RAG - Knowledge Graph + Vector Search Query Router.
 
 Routes queries to the appropriate system based on query intent:
-- Graph queries (dependencies, conflicts, impact) → Knowledge Graph (NetworkX)
-- Documentation queries (how-to, explanations) → RAG (Qdrant)
+- Graph queries (dependencies, conflicts, impact) → Knowledge Graph (Apache AGE)
+- Documentation queries (how-to, explanations) → RAG (pgvector)
 - Complex queries → Both systems, then merge results
 
 This solves the core limitation of pure RAG systems: inability to
@@ -12,7 +12,7 @@ perform multi-hop reasoning and relationship traversal.
 Architecture:
     Query → Intent Classifier → Router
                                   ├─→ Knowledge Graph → Graph Facts
-                                  ├─→ RAG (Qdrant) → Semantic Documents
+                                  ├─→ RAG (pgvector) → Semantic Documents
                                   └─→ Context Merger → LLM → Response
 """
 
@@ -482,7 +482,7 @@ class HybridRAG:
         Initialize hybrid RAG.
         
         Args:
-            rag_retriever: Existing RAG retriever (Qdrant-based)
+            rag_retriever: Existing RAG retriever (pgvector-based)
             llm_service: LLM service for response generation
             use_llm_router: Use LLM for query routing when regex fails
         """
@@ -717,7 +717,7 @@ class HybridRAG:
         query_text: str,
         entities: Dict[str, List[str]]
     ) -> Dict[str, Any]:
-        """Execute RAG query using Qdrant."""
+        """Execute RAG query using pgvector."""
         rag = await self._get_rag()
         
         if rag is None:

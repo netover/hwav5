@@ -2,9 +2,9 @@
 Knowledge Graph Module for TWS/HWA.
 
 Provides a hybrid architecture combining:
-- NetworkX: In-memory graph algorithms (BFS, centrality, shortest path)
+- Apache AGE: Graph queries via Cypher in PostgreSQL
 - PostgreSQL: Persistent storage for nodes and edges
-- Qdrant: Semantic search (unchanged, via RAG)
+- pgvector: Semantic search (via RAG)
 
 This module solves 6 critical RAG failures identified in the analysis:
 1. Multi-Hop Disconnection → Graph traversal

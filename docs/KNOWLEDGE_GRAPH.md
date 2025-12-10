@@ -55,12 +55,26 @@ This architecture solves 6 critical RAG failures identified in the analysis:
 
 ## Installation
 
-NetworkX is added as a dependency in `pyproject.toml`:
+Apache AGE is required as a PostgreSQL extension. NetworkX has been removed.
+
+```sql
+-- Install AGE extension (PostgreSQL 12+)
+CREATE EXTENSION IF NOT EXISTS age;
+LOAD 'age';
+SET search_path = ag_catalog, "$user", public;
+
+-- Create the graph
+SELECT create_graph('tws_graph');
+```
+
+Python dependencies in `pyproject.toml`:
 
 ```toml
 dependencies = [
     ...
-    "networkx>=3.2",
+    "langgraph>=0.2.0",
+    "langfuse>=2.0.0",
+    # Note: NetworkX removed - using Apache AGE in PostgreSQL
 ]
 ```
 

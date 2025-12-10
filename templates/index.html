@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resync - TWS Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style-neumorphic.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header com Navegação Global -->
+        <header class="with-nav">
+            <div class="header-brand">
+                <h1><i class="fas fa-robot"></i> Resync</h1>
+                <span style="background: var(--brand-gradient); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">v5.2.1</span>
+            </div>
+            <div class="header-nav">
+                <a href="/" class="btn btn-primary btn-sm">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="/tws-monitor" class="btn btn-success btn-sm">
+                    <i class="fas fa-chart-line"></i> TWS Monitor
+                </a>
+                <a href="/admin" class="btn btn-outline btn-sm">
+                    <i class="fas fa-cog"></i> Admin
+                </a>
+                <a href="/monitoring" class="btn btn-outline btn-sm">
+                    <i class="fas fa-heartbeat"></i> Health
+                </a>
+            </div>
+        </header>
+
+        <!-- Breadcrumb e Quick Actions -->
+        <div class="nav-header">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/"><i class="fas fa-home"></i></a></li>
+                    <li class="breadcrumb-item active">Dashboard</li>
+                </ol>
+            </nav>
+            <div class="quick-actions">
+                <button class="quick-action-btn" id="refreshDashboard" title="Atualizar">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="quick-action-btn" id="toggleTheme" title="Alternar Tema">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="quick-action-btn" title="Notificações">
+                    <i class="fas fa-bell"></i>
+                </button>
+                <a href="/admin" class="quick-action-btn" title="Configurações">
+                    <i class="fas fa-cog"></i>
+                </a>
+            </div>
+        </div>
+
+        <main>
+            <!-- Status Cards Melhorados -->
+            <section id="dashboard" class="card">
+                <h2><i class="fas fa-tachometer-alt" style="color: var(--brand-primary);"></i> Status do Ambiente</h2>
+                <div class="status-grid">
+                    <div class="status-card">
+                        <div class="status-card-icon success">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="status-card-value" id="workstations-total">--</div>
+                        <div class="status-card-label">Workstations</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-card-icon error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="status-card-value" id="jobs-abend">--</div>
+                        <div class="status-card-label">Jobs ABEND</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-card-icon success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="status-card-value" id="jobs-succ">--</div>
+                        <div class="status-card-label">Jobs SUCC</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-card-icon info">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <div class="status-card-value" id="jobs-running">--</div>
+                        <div class="status-card-label">Jobs Running</div>
+                    </div>
+                </div>
+                <div id="tws-connection-status" class="connection-status offline">
+                    <i class="fas fa-plug"></i> Conexão com TWS: <span id="tws-status-text">Indisponível</span>
+                </div>
+            </section>
+
+            <!-- Chat com Agentes -->
+            <section id="chat-interface" class="card">
+                <h2><i class="fas fa-robot" style="color: var(--brand-primary);"></i> Resync AI Assistant</h2>
+                <p style="color: var(--text-muted); margin-bottom: var(--space-md);">
+                    <i class="fas fa-magic"></i> Roteamento automático baseado em intenção - basta perguntar!
+                </p>
+                
+                <!-- TWS Instance Selector (only shown when multiple instances) -->
+                <div class="tws-selector" id="tws-selector-container" style="margin-bottom: var(--space-lg); display: none;">
+                    <label for="tws-instance-select" class="form-label">
+                        <i class="fas fa-server"></i> Servidor TWS:
+                    </label>
+                    <select id="tws-instance-select" class="form-select">
+                        <option value="">Carregando servidores...</option>
+                    </select>
+                </div>
+                
+                <div id="chat-window">
+                    <div id="chat-messages">
+                        <!-- Mensagens do chat aparecerão aqui -->
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="chat-input" class="form-control" placeholder="Digite sua mensagem..." disabled>
+                        <button id="send-button" class="btn btn-primary" disabled>
+                            <i class="fas fa-paper-plane"></i> Enviar
+                        </button>
+                    </div>
+                </div>
+                <div id="websocket-status" class="connection-status offline">
+                    <i class="fas fa-wifi"></i> Conexão do Chat: <span id="ws-status-text">Desconectado</span>
+                </div>
+            </section>
+
+            <!-- Upload de Documentos -->
+            <section id="rag-upload" class="card">
+                <h2><i class="fas fa-file-upload" style="color: var(--brand-primary);"></i> Ingestão de Documentos (RAG)</h2>
+                <p style="color: var(--text-muted);">Envie um documento (.pdf, .docx, .xlsx) para a base de conhecimento.</p>
+                <div class="upload-area">
+                    <input type="file" id="file-input" class="form-control" accept=".pdf,.docx,.xlsx" style="flex: 1;">
+                    <button id="upload-button" class="btn btn-success">
+                        <i class="fas fa-cloud-upload-alt"></i> Enviar Documento
+                    </button>
+                </div>
+                <div id="upload-status"></div>
+            </section>
+
+            <!-- Links Rápidos -->
+            <section class="card">
+                <h2><i class="fas fa-link" style="color: var(--brand-primary);"></i> Acesso Rápido</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
+                    <a href="/tws-monitor" class="btn btn-outline" style="justify-content: flex-start;">
+                        <i class="fas fa-chart-line text-success"></i> TWS Monitor Real-time
+                    </a>
+                    <a href="/admin" class="btn btn-outline" style="justify-content: flex-start;">
+                        <i class="fas fa-cogs text-info"></i> Painel Administrativo
+                    </a>
+                    <a href="/monitoring" class="btn btn-outline" style="justify-content: flex-start;">
+                        <i class="fas fa-heartbeat text-danger"></i> System Health
+                    </a>
+                    <a href="/revisao" class="btn btn-outline" style="justify-content: flex-start;">
+                        <i class="fas fa-clipboard-check text-warning"></i> Revisão
+                    </a>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p><i class="fas fa-robot"></i> Resync v5.2.1 &copy; 2024 - Monitoramento Inteligente para HCL Workload Automation</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/main.js"
+            nonce="{{ request.state.csp_nonce | default('') }}"></script>
+    <script>
+        // Theme Toggle
+        document.getElementById('toggleTheme')?.addEventListener('click', function() {
+            const body = document.body;
+            const icon = this.querySelector('i');
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                icon.className = 'fas fa-moon';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                icon.className = 'fas fa-sun';
+            }
+        });
+        
+        // Refresh Dashboard
+        document.getElementById('refreshDashboard')?.addEventListener('click', function() {
+            this.querySelector('i').classList.add('fa-spin');
+            setTimeout(() => {
+                this.querySelector('i').classList.remove('fa-spin');
+                location.reload();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

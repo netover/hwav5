@@ -154,7 +154,7 @@ def _get_services_health() -> List[ServiceHealth]:
     
     # RAG Service
     services.append(ServiceHealth(
-        name="RAG/Qdrant",
+        name="RAG/pgvector",
         status="healthy",
         latency_ms=150.0,
         last_check=datetime.utcnow().isoformat(),

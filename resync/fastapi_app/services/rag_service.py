@@ -6,7 +6,7 @@ Provides:
 - Semantic search/retrieval
 - File management
 - Background processing support
-- Automatic fallback to mock mode when Qdrant unavailable
+- Automatic fallback to mock mode when pgvector unavailable
 """
 
 from __future__ import annotations
@@ -94,26 +94,26 @@ class RAGIntegrationService:
             from resync.RAG.microservice.core.ingest import IngestService
             from resync.RAG.microservice.core.retriever import RagRetriever
             from resync.RAG.microservice.core.embedding_service import EmbeddingService
-            from resync.RAG.microservice.core.vector_store import QdrantVectorStore, QDRANT_AVAILABLE
+            from resync.RAG.microservice.core.pgvector_store import PgVectorStore, ASYNCPG_AVAILABLE
             
-            if not QDRANT_AVAILABLE:
-                logger.warning("Qdrant client not available, using mock mode")
+            if not ASYNCPG_AVAILABLE:
+                logger.warning("asyncpg not available, using mock mode")
                 self.use_mock = True
                 return
             
             # Initialize embedder and vector store
             embedder = EmbeddingService()
-            store = QdrantVectorStore()
+            store = PgVectorStore()
             
             self._ingest_service = IngestService(embedder=embedder, store=store)
             self._retriever = RagRetriever(embedder=embedder, store=store)
             
-            logger.info("RAG services initialized with Qdrant backend")
+            logger.info("RAG services initialized with pgvector backend")
         except ImportError as e:
             logger.warning(f"RAG microservice not fully available: {e}")
             self.use_mock = True
         except RuntimeError as e:
-            logger.warning(f"Qdrant not configured: {e}")
+            logger.warning(f"pgvector not configured: {e}")
             self.use_mock = True
         except Exception as e:
             logger.error(f"Failed to initialize RAG services: {e}")

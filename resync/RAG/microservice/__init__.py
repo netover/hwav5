@@ -1,3 +1,3 @@
 """
-Microservice core components for Qdrant-based RAG.
+Microservice core components for pgvector-based RAG.
 """

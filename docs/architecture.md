@@ -45,8 +45,9 @@ graph TD
         Service_LLM[LLM Service]
         Data_Settings[Settings]
         Data_AgentsJSON[agents.json]
-        DB_Neo4j[Neo4j]
+        DB_Postgres[PostgreSQL + Apache AGE]
         DB_Redis[Redis]
+        Service_LangFuse[LangFuse Prompts]
     end
 
     UI_Chat --> API_Chat
@@ -60,10 +61,11 @@ graph TD
 
     Core_AgentManager --> Service_TWS
     Core_AgentManager --> Data_AgentsJSON
+    Core_AgentManager --> Service_LangFuse
     Core_IAAuditor --> Core_KnowledgeGraph
     Core_IAAuditor --> Core_AuditQueue
     Core_KnowledgeGraph --> Service_LLM
-    Core_KnowledgeGraph --> DB_Neo4j
+    Core_KnowledgeGraph --> DB_Postgres
     Core_AuditQueue --> DB_Redis
 ```
 
@@ -80,7 +82,7 @@ graph TD
 - **`resync/core/di_container.py`**: Implementa um container de Injeção de Dependência que gerencia o ciclo de vida de todos os serviços principais.
 - **`resync/core/interfaces.py`**: Define os contratos (interfaces abstratas) para os serviços, como `IAgentManager`, `IKnowledgeGraph`, etc.
 - **`resync/core/agent_manager.py`**: Responsável por carregar as configurações dos agentes, criar instâncias de agentes de IA (usando a biblioteca `agno`) e gerenciar suas ferramentas.
-- **`resync/core/knowledge_graph.py`**: Abstrai a comunicação com o banco de dados vetorial (Neo4j). É responsável por armazenar e recuperar conversas, permitindo o aprendizado contínuo.
+- **`resync/core/knowledge_graph.py`**: Abstrai a comunicação com o banco de dados de grafos (PostgreSQL + Apache AGE). É responsável por armazenar e recuperar conversas, gerenciar dependências de jobs e permitir o aprendizado contínuo.
 - **`resync/core/ia_auditor.py`**: Um dos componentes mais críticos. É um serviço de background que analisa proativamente as conversas armazenadas no `KnowledgeGraph` para garantir a qualidade da base de conhecimento.
 - **`resync/core/audit_queue.py`**: Fila baseada em Redis que armazena memórias sinalizadas pelo `IAAuditor` para revisão humana.
 - **`resync/core/audit_lock.py`**: Implementa um lock distribuído usando Redis para evitar que múltiplos processos do `IAAuditor` analisem a mesma memória simultaneamente.
@@ -116,9 +118,12 @@ O sistema utiliza um container de DI sofisticado que gerencia:
 
 - **Framework:** FastAPI
 - **Servidor ASGI:** Uvicorn
-- **Gerenciamento de Configuração:** Dynaconf
+- **Gerenciamento de Configuração:** Pydantic Settings
 - **Cache:** Redis
-- **Banco de Dados Vetorial:** Neo4j
+- **Banco de Dados:** PostgreSQL com Apache AGE (extensão de grafos)
+- **Orquestração de Agentes:** LangGraph (grafos de estado)
+- **Gerenciamento de Prompts:** LangFuse (prompt versioning e observabilidade)
+- **LLM:** NVIDIA API (compatível com OpenAI)
 - **Análise de Código:**
   - `pydeps` para análise de dependências
   - `mypy` para checagem de tipos

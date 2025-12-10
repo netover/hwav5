@@ -387,6 +387,7 @@ class ApplicationFactory:
         """Register all API routers."""
         # Import routers
         from resync.api.admin import admin_router
+        from resync.api.admin_prompts import prompt_router
         from resync.api.agents import agents_router
         from resync.api.audit import router as audit_router
         from resync.api.cache import cache_router
@@ -431,6 +432,8 @@ class ApplicationFactory:
             (admin_router, "/api/v1", ["Admin"]),
             # Also register admin router at root level for /admin access
             (admin_router, "", ["Admin"]),
+            # Prompt management endpoints
+            (prompt_router, "/api/v1", ["Admin - Prompts"]),
         ]
 
         for router, prefix, tags in routers:

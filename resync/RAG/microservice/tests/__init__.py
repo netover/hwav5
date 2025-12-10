@@ -1,3 +1,3 @@
 """
-Unit tests for the Qdrant-only RAG microservice.
+Unit tests for the pgvector-based RAG microservice.
 """

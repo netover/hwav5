@@ -909,46 +909,58 @@ async def get_system_health(request: Request) -> SystemHealthResponse:
         )
         overall_healthy = False
 
-    # 4. Check RAG (Qdrant)
+    # 4. Check RAG (pgvector in PostgreSQL)
     try:
         start = time.perf_counter()
-        rag_url = getattr(settings, "RAG_SERVICE_URL", None) or getattr(
-            settings, "QDRANT_URL", None
-        )
-        if rag_url:
-            import httpx
-
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                try:
-                    # Qdrant health endpoint
-                    resp = await client.get(f"{rag_url}/health")
-                    latency = (time.perf_counter() - start) * 1000
-                    if resp.status_code == 200:
-                        components["rag"] = ComponentHealth(
-                            status="healthy",
-                            latency_ms=round(latency, 2),
-                            message="Qdrant responding",
-                        )
-                    else:
-                        components["rag"] = ComponentHealth(
-                            status="degraded",
-                            latency_ms=round(latency, 2),
-                            message=f"RAG returned status {resp.status_code}",
-                        )
-                except httpx.ConnectError:
-                    components["rag"] = ComponentHealth(
-                        status="unhealthy",
-                        message="Cannot connect to RAG/Qdrant",
-                    )
-        else:
+        # pgvector is now part of PostgreSQL - check vector extension
+        try:
+            from resync.core.vector import get_vector_service
+            
+            vector_service = await get_vector_service()
+            stats = await vector_service.get_collection_stats("tws_docs")
+            latency = (time.perf_counter() - start) * 1000
+            
             components["rag"] = ComponentHealth(
-                status="degraded",
-                message="RAG service not configured",
+                status="healthy",
+                latency_ms=round(latency, 2),
+                message=f"pgvector operational ({stats.document_count} docs)",
             )
+        except ImportError:
+            # Fallback to RAG service URL if available
+            rag_url = getattr(settings, "RAG_SERVICE_URL", None)
+            if rag_url:
+                import httpx
+
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    try:
+                        resp = await client.get(f"{rag_url}/health")
+                        latency = (time.perf_counter() - start) * 1000
+                        if resp.status_code == 200:
+                            components["rag"] = ComponentHealth(
+                                status="healthy",
+                                latency_ms=round(latency, 2),
+                                message="RAG service responding",
+                            )
+                        else:
+                            components["rag"] = ComponentHealth(
+                                status="degraded",
+                                latency_ms=round(latency, 2),
+                                message=f"RAG returned status {resp.status_code}",
+                            )
+                    except httpx.ConnectError:
+                        components["rag"] = ComponentHealth(
+                            status="unhealthy",
+                            message="Cannot connect to RAG service",
+                        )
+            else:
+                components["rag"] = ComponentHealth(
+                    status="degraded",
+                    message="RAG not configured (pgvector or RAG_SERVICE_URL)",
+                )
     except Exception as e:
         components["rag"] = ComponentHealth(
             status="degraded",
-            message=f"RAG check skipped: {str(e)[:50]}",
+            message=f"RAG check failed: {str(e)[:50]}",
         )
 
     # 5. Check Teams Integration

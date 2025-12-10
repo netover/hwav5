@@ -1,8 +1,33 @@
 """
-LLM Service using OpenAI for NVIDIA API Integration
+LLM Service using OpenAI SDK for OpenAI-Compatible APIs.
 
-This service provides a unified interface for interacting with NVIDIA API
-through OpenAI library, which has been tested and confirmed to work.
+This service uses the OpenAI Python SDK to connect to any OpenAI-compatible API:
+- NVIDIA NIM (tested and confirmed)
+- Azure OpenAI
+- Local models (vLLM, ollama with OpenAI mode)
+- OpenAI directly
+
+NOTE: This does NOT use LiteLLM directly. If multi-provider support with automatic
+      fallback is needed, consider migrating to `from litellm import acompletion`.
+
+Now integrated with LangFuse for:
+- Prompt management (externalized prompts)
+- Observability and tracing
+- Cost tracking
+
+Usage:
+    from resync.services.llm_service import get_llm_service
+    
+    llm = get_llm_service()
+    response = await llm.generate_agent_response(
+        agent_id="tws-agent",
+        user_message="Quais jobs estão em ABEND?",
+    )
+
+Configuration (settings):
+    - llm_model: Model name (e.g., "meta/llama-3.1-70b-instruct")
+    - llm_endpoint: Base URL (e.g., "https://integrate.api.nvidia.com/v1")
+    - llm_api_key: API key (SecretStr supported)
 """
 
 from __future__ import annotations
@@ -13,6 +38,17 @@ from typing import Any, AsyncGenerator, Optional
 
 from resync.core.exceptions import IntegrationError
 from resync.settings import settings
+
+# LangFuse integration (optional but recommended)
+try:
+    from resync.core.langfuse import (
+        get_prompt_manager,
+        get_tracer,
+        PromptType,
+    )
+    LANGFUSE_INTEGRATION = True
+except ImportError:
+    LANGFUSE_INTEGRATION = False
 
 try:
     from openai import AsyncOpenAI
@@ -323,7 +359,10 @@ class LLMService:
         agent_config: Optional[dict[str, Any]] = None,
     ) -> str:
         """
-        Generate a response from an AI agent
+        Generate a response from an AI agent.
+
+        Now uses LangFuse prompt management for externalized prompts.
+        Falls back to hardcoded prompts if LangFuse is unavailable.
 
         Args:
             agent_id: ID of agent
@@ -338,17 +377,57 @@ class LLMService:
         agent_name = (agent_config or {}).get("name", f"Agente {agent_id}")
         agent_description = (agent_config or {}).get("description", f"Assistente {agent_type}")
 
-        system_message = (
-            f"Você é {agent_name}, {agent_description}. "
-            "Responda de forma útil e profissional em português brasileiro. "
-            "Seja conciso e forneça informações precisas."
-        )
+        # Try to get prompt from LangFuse/PromptManager
+        system_message = None
+        
+        if LANGFUSE_INTEGRATION:
+            try:
+                prompt_manager = get_prompt_manager()
+                
+                # Try specific agent prompt first, then default
+                prompt = await prompt_manager.get_prompt(f"{agent_id}-system")
+                if not prompt:
+                    prompt = await prompt_manager.get_default_prompt(PromptType.AGENT)
+                
+                if prompt:
+                    # Build context from agent config
+                    context = f"Agente: {agent_name}\nDescrição: {agent_description}"
+                    if agent_config:
+                        context += f"\nConfiguração: {agent_config}"
+                    
+                    system_message = prompt.compile(context=context)
+                    logger.debug(
+                        "prompt_loaded_from_manager",
+                        prompt_id=prompt.id,
+                        agent_id=agent_id,
+                    )
+            except Exception as e:
+                logger.warning("prompt_manager_fallback", error=str(e))
+
+        # Fallback to hardcoded prompt
+        if not system_message:
+            system_message = (
+                f"Você é {agent_name}, {agent_description}. "
+                "Responda de forma útil e profissional em português brasileiro. "
+                "Seja conciso e forneça informações precisas."
+            )
 
         messages: list[dict[str, str]] = [{"role": "system", "content": system_message}]
         if conversation_history:
             messages.extend(conversation_history[-5:])  # últimas 5
 
         messages.append({"role": "user", "content": user_message})
+        
+        # Use tracer if available
+        if LANGFUSE_INTEGRATION:
+            tracer = get_tracer()
+            async with tracer.trace("generate_agent_response", model=self.model) as trace:
+                response = await self.generate_response(messages, max_tokens=800)
+                trace.output = response
+                trace.input_tokens = sum(len(m.get("content", "").split()) * 2 for m in messages)
+                trace.output_tokens = len(response.split()) * 2
+                return response
+        
         return await self.generate_response(messages, max_tokens=800)
 
     async def generate_rag_response(
@@ -358,7 +437,10 @@ class LLMService:
         conversation_history: Optional[list[dict[str, str]]] = None,
     ) -> str:
         """
-        Generate a response using RAG (Retrieval-Augmented Generation)
+        Generate a response using RAG (Retrieval-Augmented Generation).
+
+        Now uses LangFuse prompt management for externalized prompts.
+        Falls back to hardcoded prompts if LangFuse is unavailable.
 
         Args:
             query: User's query
@@ -368,19 +450,46 @@ class LLMService:
         Returns:
             Generated RAG response
         """
-        system_message = (
-            "Você é um assistente de IA especializado em responder perguntas "
-            "baseado no contexto fornecido. Use as informações do contexto para "
-            "responder de forma precisa e útil. Se o contexto não contiver "
-            "informações suficientes, diga que não sabe. Responda em português brasileiro."
-        )
+        # Try to get prompt from LangFuse/PromptManager
+        system_message = None
+        
+        if LANGFUSE_INTEGRATION:
+            try:
+                prompt_manager = get_prompt_manager()
+                prompt = await prompt_manager.get_default_prompt(PromptType.RAG)
+                
+                if prompt:
+                    system_message = prompt.compile(rag_context=context)
+                    logger.debug("rag_prompt_loaded_from_manager", prompt_id=prompt.id)
+            except Exception as e:
+                logger.warning("rag_prompt_manager_fallback", error=str(e))
+
+        # Fallback to hardcoded prompt
+        if not system_message:
+            system_message = (
+                "Você é um assistente de IA especializado em responder perguntas "
+                "baseado no contexto fornecido. Use as informações do contexto para "
+                "responder de forma precisa e útil. Se o contexto não contiver "
+                "informações suficientes, diga que não sabe. Responda em português brasileiro.\n\n"
+                f"Contexto relevante:\n{context}"
+            )
 
         messages: list[dict[str, str]] = [{"role": "system", "content": system_message}]
         if conversation_history:
             messages.extend(conversation_history[-3:])
 
-        contextual_query = f"Contexto relevante:\n{context}\n\nPergunta do usuário: {query}"
-        messages.append({"role": "user", "content": contextual_query})
+        messages.append({"role": "user", "content": query})
+        
+        # Use tracer if available
+        if LANGFUSE_INTEGRATION:
+            tracer = get_tracer()
+            async with tracer.trace("generate_rag_response", model=self.model, prompt_id="rag") as trace:
+                response = await self.generate_response(messages, max_tokens=1000)
+                trace.output = response
+                trace.input_tokens = sum(len(m.get("content", "").split()) * 2 for m in messages)
+                trace.output_tokens = len(response.split()) * 2
+                return response
+        
         return await self.generate_response(messages, max_tokens=1000)
 
     async def health_check(self) -> dict[str, Any]:

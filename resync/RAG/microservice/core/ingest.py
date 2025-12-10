@@ -1,7 +1,7 @@
 """
 Idempotent document ingestion service for RAG systems.
 
-Handles chunking, deduplication by SHA-256, batch embedding, and upsert to Qdrant.
+Handles chunking, deduplication by SHA-256, batch embedding, and upsert to pgvector.
 Integrates Prometheus metrics for observability.
 """
 
@@ -25,11 +25,11 @@ logger = logging.getLogger(__name__)
 
 class IngestService:
     """
-    Ingestão idempotente:
-    - chunking "token-aware"
-    - dedup por sha256 do chunk normalizado
-    - embed em lote com batch fixo
-    - upsert no Qdrant com payload completo
+    Idempotent ingestion service:
+    - Token-aware chunking
+    - Deduplication by normalized chunk SHA-256
+    - Batch embedding with fixed batch size
+    - Upsert to pgvector with complete payload
     """
 
     def __init__(self, embedder: Embedder, store: VectorStore, batch_size: int = 128):

@@ -1,0 +1,36 @@
+# =============================================================================
+# Ruff Configuration - Fast Python Linter
+# =============================================================================
+# Install: pip install ruff
+# Run: ruff check .
+# Fix: ruff check --fix .
+# =============================================================================
+
+target-version = "py310"
+line-length = 100
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "PIE", # flake8-pie
+    "RET", # flake8-return
+]
+
+ignore = [
+    "E501", # line too long (handled by formatter)
+    "B008", # do not perform function calls in argument defaults
+    "N812", # lowercase imported as non-lowercase
+]
+
+[lint.per-file-ignores]
+"resync/core/__init__.py" = ["F401"]         # Barrel module - re-exports
+"resync/core/health/__init__.py" = ["F401"]  # Barrel module - re-exports
+"resync/RAG/microservice/core/__init__.py" = ["F401"]
+"resync/core/knowledge_graph/__init__.py" = ["F401"]
