@@ -54,6 +54,7 @@ class OptimizedTWSClient:
         password: str,
         engine_name: str,
         engine_owner: str,
+        trust_env: bool = False,
     ) -> None:
         """
         Construct the TWS client.
@@ -64,6 +65,9 @@ class OptimizedTWSClient:
             password: Basic auth password
             engine_name: Default engine name for queries that require it
             engine_owner: Engine owner associated with the engine
+            trust_env: If True, use system proxy settings from environment variables.
+                       Set to True in corporate environments that require proxy access.
+                       Default is False to avoid requiring optional dependencies like socksio.
         """
         self.base_url = base_url.rstrip("/")
         self.auth = (username, password)
@@ -71,12 +75,10 @@ class OptimizedTWSClient:
         self.engine_owner = engine_owner
         # httpx client with a base URL and basic authentication. Connection pooling
         # is automatically handled by httpx.AsyncClient.
-        # Disable proxy usage via environment variables to avoid requiring optional
-        # dependencies such as socksio when a proxy is configured in the runtime
         self.client = httpx.AsyncClient(
             base_url=self.base_url,
             auth=self.auth,
-            trust_env=False,
+            trust_env=trust_env,
         )
 
     async def close(self) -> None:

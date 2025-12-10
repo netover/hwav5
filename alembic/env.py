@@ -23,9 +23,10 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Add your model's MetaData object here for 'autogenerate' support
-# from resync.core.database.models import Base
-# target_metadata = Base.metadata
-target_metadata = None
+# Import all models to ensure they are registered with Base.metadata
+from resync.core.database.models import Base  # noqa: E402
+
+target_metadata = Base.metadata
 
 # Override sqlalchemy.url from environment
 database_url = os.environ.get("DATABASE_URL")

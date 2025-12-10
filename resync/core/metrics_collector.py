@@ -1,17 +1,20 @@
 """
-Metrics Collection System with Prometheus and Grafana Integration.
+Metrics Collection System with Prometheus Integration.
 
-This module provides comprehensive metrics collection and visualization capabilities including:
+This module provides comprehensive metrics collection capabilities including:
 - Prometheus-compatible metrics endpoint
 - Automatic system metrics collection
 - Custom business metrics registration
-- Grafana dashboard generation
 - Alerting rules configuration
 - Performance metrics tracking
 - Health status monitoring
 - Security metrics integration
 - Real-time metrics streaming
 - Metrics aggregation and analysis
+
+Note:
+    Grafana integration was removed in v5.3.7. Use LangFuse/Evidently for
+    observability or connect external tools to the Prometheus endpoint.
 """
 
 
@@ -25,7 +28,6 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-import aiohttp
 import psutil
 from aiohttp import web
 
@@ -119,43 +121,8 @@ class AlertRule:
         }
 
 
-@dataclass
-class GrafanaDashboard:
-    """Grafana dashboard configuration."""
-
-    title: str
-    description: str
-    tags: list[str] = field(default_factory=lambda: ["hwa-new", "auto-generated"])
-    panels: list[dict[str, Any]] = field(default_factory=list)
-    time_range: dict[str, str] = field(
-        default_factory=lambda: {"from": "now-1h", "to": "now"}
-    )
-    refresh: str = "30s"
-
-    def to_grafana_format(self) -> dict[str, Any]:
-        """Convert to Grafana dashboard JSON format."""
-        return {
-            "dashboard": {
-                "title": self.title,
-                "description": self.description,
-                "tags": self.tags,
-                "panels": self.panels,
-                "time": self.time_range,
-                "refresh": self.refresh,
-                "schemaVersion": 27,
-                "version": 1,
-                "links": [],
-                "templating": {"list": []},
-                "annotations": {"list": []},
-                "editable": True,
-                "gnetId": None,
-                "graphTooltip": 0,
-                "hideControls": False,
-                "id": None,
-                "style": "dark",
-                "timezone": "browser",
-            }
-        }
+# Constants
+MAX_PROMETHEUS_VALUES_PER_METRIC = 10  # Limit values per metric to avoid duplicates
 
 
 @dataclass
@@ -179,11 +146,6 @@ class MetricsCollectorConfig:
     # Business metrics
     enable_business_metrics: bool = True
 
-    # Grafana integration
-    # grafana_url removed
-    # grafana_api_key removed
-    auto_create_dashboards: bool = True
-
     # Alerting
     enable_alerting: bool = True
     alert_rules_file: str = "alert_rules.yml"
@@ -195,16 +157,19 @@ class MetricsCollectorConfig:
 
 class MetricsCollector:
     """
-    Comprehensive metrics collection system with Prometheus and Grafana integration.
+    Comprehensive metrics collection system with Prometheus integration.
 
     Features:
     - Prometheus-compatible metrics endpoint
     - Automatic system and application metrics
     - Custom business metrics registration
-    - Grafana dashboard auto-generation
     - Alerting rules management
     - Real-time metrics streaming
     - Performance and health monitoring
+
+    Note:
+        Grafana integration was removed in v5.3.7 in favor of LangFuse/Evidently.
+        The Prometheus endpoint remains available for external visualization tools.
     """
 
     def __init__(self, config: MetricsCollectorConfig | None = None):
@@ -218,9 +183,6 @@ class MetricsCollector:
         # HTTP server for Prometheus endpoint
         self.http_app: web.Application | None = None
         self.http_runner: web.AppRunner | None = None
-
-        # Grafana integration
-        self.grafana_session: aiohttp.ClientSession | None = None
 
         # Alerting
         self.alert_rules: list[AlertRule] = []
@@ -344,10 +306,6 @@ class MetricsCollector:
         # Start HTTP server for Prometheus endpoint
         await self._start_http_server()
 
-        # Start Grafana integration
-        if self.config.grafana_url:
-            await self._initialize_grafana()
-
         # Start metrics collection
         self._collection_task = asyncio.create_task(self._metrics_collection_worker())
 
@@ -367,10 +325,6 @@ class MetricsCollector:
         # Stop HTTP server
         if self.http_runner:
             await self.http_runner.cleanup()
-
-        # Close Grafana session
-        if self.grafana_session:
-            await self.grafana_session.close()
 
         # Cancel tasks
         for task in [self._collection_task, self._http_task]:
@@ -404,32 +358,6 @@ class MetricsCollector:
         logger.info(
             f"Metrics HTTP server started on port {self.config.prometheus_port}"
         )
-
-    async def _initialize_grafana(self) -> None:
-        """Initialize Grafana integration."""
-        if not self.config.grafana_url or not self.config.grafana_api_key:
-            return
-
-        headers = {
-            "Authorization": f"Bearer {self.config.grafana_api_key}",
-            "Content-Type": "application/json",
-        }
-
-        self.grafana_session = aiohttp.ClientSession(headers=headers)
-
-        # Test connection
-        try:
-            async with self.grafana_session.get(
-                f"{self.config.grafana_url}/api/health"
-            ) as response:
-                if response.status == 200:
-                    logger.info("Grafana integration initialized")
-                    if self.config.auto_create_dashboards:
-                        await self._create_standard_dashboards()
-                else:
-                    logger.warning("Grafana connection failed")
-        except Exception as e:
-            logger.error(f"Grafana initialization failed: {e}")
 
     async def _load_alert_rules(self) -> None:
         """Load alerting rules."""
@@ -561,7 +489,7 @@ class MetricsCollector:
             metrics_by_name[metric.definition.name].append(metric)
 
         # Format each metric
-        for metric_name, values in metrics_by_name.items():
+        for _metric_name, values in metrics_by_name.items():
             definition = values[0].definition
 
             # Metric metadata
@@ -573,7 +501,7 @@ class MetricsCollector:
             )
 
             # Metric values
-            for value in values[-10:]:  # Last 10 values to avoid duplicates
+            for value in values[-MAX_PROMETHEUS_VALUES_PER_METRIC:]:
                 prom_line = value.to_prometheus()
                 output_lines.append(prom_line)
 
@@ -649,157 +577,6 @@ class MetricsCollector:
             except Exception as e:
                 logger.error(f"Process metrics collection failed: {e}")
 
-    async def _create_standard_dashboards(self) -> None:
-        """Create standard Grafana dashboards."""
-        if not self.grafana_session:
-            return
-
-        dashboards = [
-            self._create_system_dashboard(),
-            self._create_application_dashboard(),
-            self._create_security_dashboard(),
-            self._create_business_dashboard(),
-        ]
-
-        for dashboard in dashboards:
-            try:
-                async with self.grafana_session.post(
-                    f"{self.config.grafana_url}/api/dashboards/db",
-                    json=dashboard.to_grafana_format(),
-                ) as response:
-                    if response.status == 200:
-                        logger.info(f"Created Grafana dashboard: {dashboard.title}")
-                    else:
-                        logger.warning(
-                            f"Failed to create dashboard {dashboard.title}: {response.status}"
-                        )
-            except Exception as e:
-                logger.error(f"Dashboard creation failed: {e}")
-
-    def _create_system_dashboard(self) -> GrafanaDashboard:
-        """Create system metrics dashboard."""
-        dashboard = GrafanaDashboard(
-            title="HWA-New System Metrics",
-            description="System-level metrics for HWA-New",
-        )
-
-        # CPU Usage Panel
-        cpu_panel = {
-            "title": "CPU Usage",
-            "type": "graph",
-            "targets": [{"expr": "system_cpu_usage", "legendFormat": "CPU Usage %"}],
-            "yAxes": [{"unit": "percent"}],
-        }
-
-        # Memory Usage Panel
-        memory_panel = {
-            "title": "Memory Usage",
-            "type": "graph",
-            "targets": [
-                {"expr": "system_memory_usage", "legendFormat": "Memory Usage %"}
-            ],
-            "yAxes": [{"unit": "percent"}],
-        }
-
-        dashboard.panels = [cpu_panel, memory_panel]
-        return dashboard
-
-    def _create_application_dashboard(self) -> GrafanaDashboard:
-        """Create application metrics dashboard."""
-        dashboard = GrafanaDashboard(
-            title="HWA-New Application Metrics",
-            description="Application-level metrics for HWA-New",
-        )
-
-        # HTTP Requests Panel
-        http_panel = {
-            "title": "HTTP Requests",
-            "type": "graph",
-            "targets": [
-                {
-                    "expr": "rate(app_http_requests_total[5m])",
-                    "legendFormat": "Requests/sec",
-                }
-            ],
-        }
-
-        # Response Time Panel
-        response_time_panel = {
-            "title": "Response Time",
-            "type": "heatmap",
-            "targets": [
-                {"expr": "app_http_request_duration_bucket", "legendFormat": "{{le}}"}
-            ],
-        }
-
-        dashboard.panels = [http_panel, response_time_panel]
-        return dashboard
-
-    def _create_security_dashboard(self) -> GrafanaDashboard:
-        """Create security metrics dashboard."""
-        dashboard = GrafanaDashboard(
-            title="HWA-New Security Metrics",
-            description="Security-related metrics for HWA-New",
-        )
-
-        # Authentication Attempts Panel
-        auth_panel = {
-            "title": "Authentication Attempts",
-            "type": "graph",
-            "targets": [
-                {
-                    "expr": "rate(security_auth_attempts_total[5m])",
-                    "legendFormat": "{{result}}",
-                }
-            ],
-        }
-
-        # Threats Detected Panel
-        threats_panel = {
-            "title": "Threats Detected",
-            "type": "graph",
-            "targets": [
-                {
-                    "expr": "rate(security_threats_detected_total[5m])",
-                    "legendFormat": "{{threat_type}}",
-                }
-            ],
-        }
-
-        dashboard.panels = [auth_panel, threats_panel]
-        return dashboard
-
-    def _create_business_dashboard(self) -> GrafanaDashboard:
-        """Create business metrics dashboard."""
-        dashboard = GrafanaDashboard(
-            title="HWA-New Business Metrics",
-            description="Business-level metrics for HWA-New",
-        )
-
-        # Transactions Panel
-        transactions_panel = {
-            "title": "Business Transactions",
-            "type": "graph",
-            "targets": [
-                {
-                    "expr": "rate(business_transactions_total[5m])",
-                    "legendFormat": "{{type}} - {{status}}",
-                }
-            ],
-        }
-
-        # User Sessions Panel
-        sessions_panel = {
-            "title": "Active User Sessions",
-            "type": "singlestat",
-            "targets": [
-                {"expr": "business_user_sessions", "legendFormat": "Active Sessions"}
-            ],
-        }
-
-        dashboard.panels = [transactions_panel, sessions_panel]
-        return dashboard
-
     async def _metrics_collection_worker(self) -> None:
         """Background worker for periodic metrics collection."""
         while self._running:
@@ -849,7 +626,6 @@ class MetricsCollector:
                 "collect_interval_seconds": self.config.collect_interval_seconds,
                 "enable_system_metrics": self.config.enable_system_metrics,
                 "enable_business_metrics": self.config.enable_business_metrics,
-                "grafana_integration": self.config.grafana_url is not None,
             },
             "metrics": {
                 "total_definitions": len(self.metrics_definitions),

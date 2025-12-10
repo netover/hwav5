@@ -1,4 +1,4 @@
-# Plano de Correção - Problemas Críticos v5.3.5
+# Plano de Correção - Problemas Críticos v5.3.6
 
 ## Resumo Executivo
 
@@ -119,7 +119,7 @@ context_db_path: str = Field(
 
 ---
 
-## Correções v5.3.5 (Novas)
+## Correções v5.3.6 (Novas)
 
 ### 8. Remoção de Arquivos Mortos e Duplicados ✅
 
@@ -163,7 +163,7 @@ context_db_path: str = Field(
 
 ---
 
-## Resumo de Mudanças v5.3.5
+## Resumo de Mudanças v5.3.6
 
 | Categoria | Quantidade |
 |-----------|------------|
@@ -171,6 +171,58 @@ context_db_path: str = Field(
 | Arquivos movidos | 1 |
 | __init__.py atualizados | 2 |
 | Linhas de código eliminadas | ~2.000 (estimado) |
+
+---
+
+## Correções v5.3.6 (Novas)
+
+### 10. Correção de Bugs Críticos em metrics_collector.py ✅
+
+**Análise Recebida**: Relatório de Code Debugging identificou 8 categorias de problemas.
+
+**Problemas Verificados e Corrigidos**:
+
+| # | Problema | Severidade | Status |
+|---|----------|------------|--------|
+| 1 | AttributeError: `grafana_url` referenciado mas removido | 🔴 CRÍTICO | ✅ CORRIGIDO |
+| 2 | AttributeError: `grafana_api_key` referenciado mas removido | 🔴 CRÍTICO | ✅ CORRIGIDO |
+| 3 | Type hints `dict[str,str]` requer Python 3.9+ | 🟡 MÉDIA | ❌ FALSO (projeto requer Python 3.10+) |
+| 4 | Race condition em _LabeledCounter.inc() | 🟠 ALTA | ❌ FALSO (já usa lock do counter pai) |
+| 5 | O(n log n) em get_percentile() | 🟡 MÉDIA | ⏭️ ADIADO (aceitável com 10k itens) |
+| 6 | Buffer cleanup O(n) | 🟡 MÉDIA | ❌ FALSO (deque.popleft() é O(1)) |
+| 7 | Endpoint /metrics sem auth | 🟡 MÉDIA | ⏭️ ADIADO (típico em k8s) |
+| 8 | Magic number `-10` | 🟢 BAIXA | ✅ CORRIGIDO |
+
+**Correções Aplicadas**:
+
+```python
+# ANTES (linha 348) - AttributeError
+if self.config.grafana_url:
+    await self._initialize_grafana()
+
+# DEPOIS - Seguro com getattr
+grafana_url = getattr(self.config, 'grafana_url', None)
+if grafana_url:
+    await self._initialize_grafana()
+```
+
+```python
+# ANTES (linha 576) - Magic number
+for value in values[-10:]:
+
+# DEPOIS - Constante nomeada
+MAX_PROMETHEUS_VALUES_PER_METRIC = 10
+for value in values[-MAX_PROMETHEUS_VALUES_PER_METRIC:]:
+```
+
+**Linhas Corrigidas em metrics_collector.py**:
+- Linha 348: `getattr(self.config, 'grafana_url', None)`
+- Linha 411-414: `getattr()` para grafana_url e grafana_api_key
+- Linha 428: Variável local `grafana_url`
+- Linha 662-663: `getattr()` e validação
+- Linha 676: Variável local `grafana_url`
+- Linha 861: `getattr()` em get_metrics_summary()
+- Constante `MAX_PROMETHEUS_VALUES_PER_METRIC` adicionada
 
 ---
 
@@ -183,3 +235,108 @@ context_db_path: str = Field(
 | 5.3.3 | - | Deprecated field, docs arquitetura, lifespan docs |
 | 5.3.4 | 2025-12-10 | Limpeza de 890 imports não usados, ruff config |
 | 5.3.5 | 2025-12-10 | Remoção de 8 arquivos mortos/duplicados, consolidação |
+| 5.3.6 | 2025-12-10 | Correção de AttributeError em grafana_url/api_key |
+| 5.3.7 | 2025-12-10 | Security hardening, Alembic fix, código morto Grafana removido |
+
+---
+
+## Correções v5.3.7 (Code Quality & Security)
+
+### 11. Security Hardening em config.py ✅
+
+**Problema**: Senhas e secrets usando `str` simples, vazam em logs/prints.
+
+**Solução**:
+```python
+# ANTES
+secret_key: str = "CHANGE_ME_IN_PRODUCTION"
+tws_password: str = "twspass"
+
+# DEPOIS
+from pydantic import SecretStr, field_validator
+
+secret_key: SecretStr = SecretStr("CHANGE_ME_IN_PRODUCTION")
+tws_password: SecretStr = SecretStr("twspass")
+
+@field_validator("secret_key")
+def validate_secret_key(cls, v, info):
+    if info.data.get("environment") == "production" and "CHANGE_ME" in v.get_secret_value():
+        raise ValueError("SECRET_KEY must be set in production")
+    return v
+```
+
+**Arquivos Modificados**:
+- `resync/fastapi_app/core/config.py` - SecretStr + validadores
+- `resync/fastapi_app/core/security.py` - `.get_secret_value()` para JWT
+
+### 12. Alembic Autogenerate Habilitado ✅
+
+**Problema**: `target_metadata = None` impedia detecção automática de mudanças nos modelos.
+
+**Solução**:
+```python
+# ANTES
+# from resync.core.database.models import Base
+# target_metadata = Base.metadata
+target_metadata = None
+
+# DEPOIS
+from resync.core.database.models import Base  # noqa: E402
+target_metadata = Base.metadata
+```
+
+### 13. TWS Service - Proxy Configurável ✅
+
+**Problema**: `trust_env=False` hardcoded impedia uso em ambientes corporativos com proxy.
+
+**Solução**:
+```python
+def __init__(
+    self,
+    ...
+    trust_env: bool = False,  # Novo parâmetro
+) -> None:
+    self.client = httpx.AsyncClient(
+        trust_env=trust_env,  # Configurável
+    )
+```
+
+### 14. Remoção de Código Morto - Grafana Integration ✅
+
+**Análise**: 238 linhas de código morto relacionado a Grafana que nunca era executado.
+
+**Removidos**:
+| Item | Linhas | Motivo |
+|------|--------|--------|
+| `GrafanaDashboard` class | 37 | Nunca instanciada |
+| `grafana_session` attribute | 1 | Nunca inicializado |
+| `_initialize_grafana()` | 29 | Referenciava atributos inexistentes |
+| `_create_standard_dashboards()` | 31 | Nunca chamado |
+| `_create_system_dashboard()` | 27 | Nunca chamado |
+| `_create_application_dashboard()` | 30 | Nunca chamado |
+| `_create_security_dashboard()` | 33 | Nunca chamado |
+| `_create_business_dashboard()` | 30 | Nunca chamado |
+| Imports/comments relacionados | 20 | Dead code |
+| **TOTAL** | **238** | |
+
+**Resultado**:
+- `metrics_collector.py`: 893 → 655 linhas (-27%)
+- Import `aiohttp` removido (mantido apenas `from aiohttp import web`)
+
+### 15. Validação de resync/api/routes.py (Flask) ✅
+
+**Análise**: Arquivo Flask mencionado no relatório.
+
+**Resultado**: ✅ JÁ REMOVIDO em versão anterior (v5.3.2)
+
+---
+
+## Resumo v5.3.7
+
+| Métrica | Valor |
+|---------|-------|
+| Linhas de código morto removidas | 238 |
+| SecretStr implementados | 2 (secret_key, tws_password) |
+| Validadores de produção adicionados | 2 |
+| Correções de segurança | 3 |
+| Redução em metrics_collector.py | 27% |

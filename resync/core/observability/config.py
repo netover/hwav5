@@ -88,7 +88,7 @@ class ObservabilityConfig:
     # General settings
     environment: str = field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))
     service_name: str = "resync"
-    service_version: str = "5.3.5"
+    service_version: str = "5.3.7"
 
 
 # Singleton config
