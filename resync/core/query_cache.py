@@ -297,7 +297,7 @@ class QueryCacheManager:
                 # Invalidate all queries that depend on this table
                 invalidated = 0
                 for query_key in tracker.tracked_queries:
-                    if query_key in self.query_stats:
+                    if query_key in self.query_stats:  # noqa: SIM102
                         # Invalidate cache entry
                         if self.cache_manager:
                             invalidated += await self.cache_manager.invalidate(

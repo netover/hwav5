@@ -218,7 +218,7 @@ class CORSMonitoringMiddleware:
         request = Request(scope)
 
         async def send_wrapper(message):
-            if message["type"] == "http.response.start":
+            if message["type"] == "http.response.start":  # noqa: SIM102
                 # Check if this is a CORS preflight request
                 if request.method == "OPTIONS":
                     origin = request.headers.get("origin")

@@ -124,7 +124,7 @@ async def test_exception_rollback(cache):
         # Falha após começar operação
         mock_get_shard.side_effect = Exception("Mid-operation failure")
 
-        try:
+        try:  # noqa: SIM105
             await cache.set("new_key", "new_value")
         except Exception:
             pass  # Ignoramos a exceção para testar estado

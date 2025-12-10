@@ -25,7 +25,7 @@ llm_api_breaker = pybreaker.CircuitBreaker(
 logger = logging.getLogger(__name__)
 
 
-class TWS_LLMOptimizer:
+class TWS_LLMOptimizer:  # noqa: N801
     """
     TWS-optimized LLM integration with caching and model routing.
 

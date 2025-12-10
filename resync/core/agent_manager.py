@@ -157,24 +157,24 @@ except ImportError:
             }
 
 
-from pydantic import BaseModel
+from pydantic import BaseModel  # noqa: E402
 
-from resync.core.exceptions import (
+from resync.core.exceptions import (  # noqa: E402
     AgentError,
 )  # Renamed from AgentExecutionError for broader scope
-from resync.core.metrics import runtime_metrics
-from resync.services.mock_tws_service import MockTWSClient
-from resync.services.tws_service import OptimizedTWSClient
-from resync.settings import settings
+from resync.core.metrics import runtime_metrics  # noqa: E402
+from resync.services.mock_tws_service import MockTWSClient  # noqa: E402
+from resync.services.tws_service import OptimizedTWSClient  # noqa: E402
+from resync.settings import settings  # noqa: E402
 
-from .global_utils import get_environment_tags, get_global_correlation_id
+from .global_utils import get_environment_tags, get_global_correlation_id  # noqa: E402
 
 # --- Logging Setup ---
 logger = structlog.get_logger(__name__)
 
 
 # --- Pydantic Models for Agent Configuration ---
-from resync.models.agents import AgentConfig, AgentType
+from resync.models.agents import AgentConfig, AgentType  # noqa: E402
 
 
 class AgentsConfig(BaseModel):

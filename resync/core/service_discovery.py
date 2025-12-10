@@ -107,7 +107,7 @@ class ServiceInstance:
         if self.status == ServiceStatus.HEALTHY:
             # Penalize based on response time and failures
             base_score = 100.0
-            if self.response_time_avg > 0:
+            if self.response_time_avg > 0:  # noqa: SIM102
                 # Penalize slow responses (>500ms)
                 if self.response_time_avg > 0.5:
                     base_score -= min(30, (self.response_time_avg - 0.5) * 20)

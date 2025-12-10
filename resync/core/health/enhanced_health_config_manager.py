@@ -93,7 +93,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
                 config = checker.get_component_config()
                 # Merge with base thresholds
                 for key, value in config.items():
-                    if "threshold" in key.lower() or "percent" in key.lower():
+                    if "threshold" in key.lower() or "percent" in key.lower():  # noqa: SIM102
                         if isinstance(value, (int, float)):
                             base_thresholds[f"checker_{key}"] = float(value)
 

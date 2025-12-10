@@ -177,7 +177,7 @@ class CircuitBreaker:
         self.metrics.consecutive_failures += 1
         self.metrics.last_failure_time = datetime.utcnow()
 
-        if self.metrics.consecutive_failures >= self.config.failure_threshold:
+        if self.metrics.consecutive_failures >= self.config.failure_threshold:  # noqa: SIM102
             if self.state != CircuitBreakerState.OPEN:
                 self.state = CircuitBreakerState.OPEN
                 self.metrics.state_changes += 1

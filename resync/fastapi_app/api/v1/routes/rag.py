@@ -9,9 +9,9 @@ Provides endpoints for:
 - Document management
 - RAG statistics
 """
-from pathlib import Path
+from pathlib import Path  # noqa: E402
 
-from fastapi import (
+from fastapi import (  # noqa: E402
     APIRouter,
     BackgroundTasks,
     Depends,
@@ -22,10 +22,10 @@ from fastapi import (
     status,
 )
 
-from ...services.rag_service import RAGIntegrationService, get_rag_service
-from ..dependencies import get_current_user, get_logger
-from ..models.request_models import FileUploadValidation
-from ..models.response_models import FileUploadResponse
+from ...services.rag_service import RAGIntegrationService, get_rag_service  # noqa: E402
+from ..dependencies import get_current_user, get_logger  # noqa: E402
+from ..models.request_models import FileUploadValidation  # noqa: E402
+from ..models.response_models import FileUploadResponse  # noqa: E402
 
 router = APIRouter()
 

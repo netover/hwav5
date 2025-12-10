@@ -279,7 +279,7 @@ class ChaosEngineer:
     async def _simulate_agent_operation(self, manager: AgentManager, op_id: int) -> None:
         """Simulate agent operations for chaos testing."""
         # Simulate getting non-existent agent
-        try:
+        try:  # noqa: SIM105
             await manager.get_agent(f"non_existent_agent_{op_id}")
         except ValueError:
             pass  # Expected

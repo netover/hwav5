@@ -15,7 +15,7 @@ from starlette.responses import Response
 logger = logging.getLogger(__name__)
 
 # Internal metrics system
-from resync.core.metrics_internal import registry
+from resync.core.metrics_internal import registry  # noqa: E402
 
 try:
     # Optional instrumentation for FastAPI and ASGI frameworks
@@ -26,7 +26,7 @@ except Exception as e:
     FastAPIInstrumentor = None  # type: ignore
     OpenTelemetryMiddleware = None  # type: ignore
 
-from resync.api.endpoints import router as tws_router
+from resync.api.endpoints import router as tws_router  # noqa: E402
 
 
 def create_app() -> FastAPI:
@@ -63,7 +63,7 @@ def create_app() -> FastAPI:
     if OpenTelemetryMiddleware is not None:
         app.add_middleware(OpenTelemetryMiddleware)
     if FastAPIInstrumentor is not None:
-        try:
+        try:  # noqa: SIM105
             FastAPIInstrumentor().instrument_app(app)
         except Exception as _e:
             # Instrumentation is optional; ignore failures

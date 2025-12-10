@@ -215,7 +215,7 @@ def managed_file_sync(file_path: str, mode: str = "r") -> Iterator[Any]:
     """
     file_handle = None
     try:
-        file_handle = open(file_path, mode)
+        file_handle = open(file_path, mode)  # noqa: SIM115
         yield file_handle
     finally:
         if file_handle:

@@ -19,10 +19,12 @@ logger = get_logger(__name__)
 
 
 # Import shared types to avoid circular dependency
-import contextlib
+import contextlib  # noqa: E402
 
-from resync.core.compliance.types import SOC2ComplianceManager as BaseSOC2ComplianceManager
-from resync.core.compliance.types import SOC2TrustServiceCriteria
+from resync.core.compliance.types import (  # noqa: E402
+    SOC2ComplianceManager as BaseSOC2ComplianceManager,  # noqa: E402
+)
+from resync.core.compliance.types import SOC2TrustServiceCriteria  # noqa: E402
 
 
 class ControlCategory(Enum):

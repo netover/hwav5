@@ -139,7 +139,7 @@ def managed_file_operation(file_path: str, mode: str = "r", **kwargs) -> Iterato
     """
     file_obj = None
     try:
-        file_obj = open(file_path, mode, **kwargs)
+        file_obj = open(file_path, mode, **kwargs)  # noqa: SIM115
         yield file_obj
     except Exception as e:
         logger.error(f"File operation error for {file_path}: {e}")

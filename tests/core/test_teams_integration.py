@@ -93,7 +93,7 @@ async def test_teams_send_notification_no_webhook():
     notification = TeamsNotification(title="Test", message="Test message")
 
     # Should raise NotificationError when no webhook URL
-    with pytest.raises(Exception):  # Using generic Exception since it might be wrapped
+    with pytest.raises(Exception):  # Using generic Exception since it might be wrapped  # noqa: B017
         await teams_integration.send_notification(notification)
 
 

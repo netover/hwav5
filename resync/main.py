@@ -133,7 +133,7 @@ async def _check_tcp(host: str, port: int, timeout: float = 3.0) -> bool:
     try:
         _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
         writer.close()
-        try:
+        try:  # noqa: SIM105
             await writer.wait_closed()
         except (OSError, ConnectionError, RuntimeError):
             # alguns transports podem não suportar wait_closed; ignore

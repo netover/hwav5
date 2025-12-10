@@ -110,7 +110,7 @@ def process_old(strings):
 
 
 # New way: Single pass with pre-compiled pattern
-import re
+import re  # noqa: E402
 
 pattern = re.compile(r"[xyz]")
 

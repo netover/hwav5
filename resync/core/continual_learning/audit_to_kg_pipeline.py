@@ -479,7 +479,7 @@ class AuditToKGPipeline:
         for _entity_type, entity_list in entities.items():
             for _entity in entity_list:
                 # Check if entity has INCORRECT_ASSOCIATION edges
-                try:
+                try:  # noqa: SIM105
                     # This would query the graph for error edges
                     # For now, return False (no known issues)
                     pass

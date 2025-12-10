@@ -68,7 +68,7 @@ class ErrorFactory:
         correlation_id: str | None = None,
     ) -> BaseErrorResponse:
         """Factory method to create appropriate error response based on exception type."""
-        ErrorResponseBuilder = _get_error_response_builder()
+        ErrorResponseBuilder = _get_error_response_builder()  # noqa: N806
         builder = ErrorResponseBuilder()
 
         # Set correlation ID
@@ -132,7 +132,7 @@ class EnhancedResyncExceptionFactory:
         if is_production:
             # Remove potentially sensitive information
             details.pop("original_exception", None)
-            if "details" in details:
+            if "details" in details:  # noqa: SIM102
                 # Further sanitize nested details
                 if isinstance(details["details"], dict):
                     details["details"] = {

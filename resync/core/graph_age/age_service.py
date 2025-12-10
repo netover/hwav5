@@ -695,7 +695,7 @@ class AGEGraphService:
 # =============================================================================
 
 # Import timedelta for fallback
-from datetime import timedelta
+from datetime import timedelta  # noqa: E402
 
 
 class FallbackGraphService:

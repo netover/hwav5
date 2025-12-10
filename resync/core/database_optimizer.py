@@ -36,7 +36,7 @@ class QueryBatch:
 
     def __post_init__(self):
         """Generate batch ID after initialization."""
-        if not self.batch_id:
+        if not self.batch_id:  # noqa: SIM102
             # Create deterministic batch ID based on first query
             if self.queries:
                 sql, params = self.queries[0]
@@ -409,7 +409,7 @@ class DatabaseOptimizer:
 
         # Look for existing batch of same type
         for batch_id, batch in self.batches.items():
-            if batch_id.startswith(f"{query_type}_") and not batch.is_full and not batch.is_expired:
+            if batch_id.startswith(f"{query_type}_") and not batch.is_full and not batch.is_expired:  # noqa: SIM102
                 if batch.add_query(sql, params):
                     return batch_id
 

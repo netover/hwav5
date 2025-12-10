@@ -16,7 +16,7 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 # Import at module level
-from resync.core.async_cache import AsyncTTLCache
+from resync.core.async_cache import AsyncTTLCache  # noqa: E402
 
 
 async def test_cache_improvements():

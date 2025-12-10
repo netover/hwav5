@@ -249,8 +249,8 @@ async def check_rate_limit(request: Request) -> None:
     from datetime import datetime, timedelta
 
     # Rate limit configuration
-    RATE_LIMIT_REQUESTS = 100  # requests per window
-    RATE_LIMIT_WINDOW = 60  # seconds
+    RATE_LIMIT_REQUESTS = 100  # requests per window  # noqa: N806
+    RATE_LIMIT_WINDOW = 60  # seconds  # noqa: N806
 
     # In-memory store (use Redis in production)
     if not hasattr(check_rate_limit, "_store"):

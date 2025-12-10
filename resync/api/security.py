@@ -12,7 +12,7 @@ except Exception as e:
     logger.error("exception_caught", error=str(e), exc_info=True)
     jwt = None  # type: ignore
 
-from resync.config.app_settings import AppSettings
+from resync.config.app_settings import AppSettings  # noqa: E402
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 

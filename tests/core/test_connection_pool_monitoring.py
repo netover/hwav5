@@ -37,7 +37,7 @@ structlog.configure(
     logger_factory=structlog.PrintLoggerFactory(),
     cache_logger_on_first_use=True,
 )
-from resync.core.websocket_pool_manager import WebSocketPoolManager
+from resync.core.websocket_pool_manager import WebSocketPoolManager  # noqa: E402
 
 
 class TestConnectionPoolMetrics:
@@ -486,7 +486,7 @@ class TestPoolManagerMonitoring:
         manager = ConnectionPoolManager()
 
         # Mock pool creation
-        with patch.object(manager, "_setup_pool"):
+        with patch.object(manager, "_setup_pool"):  # noqa: SIM117
             with patch.object(manager, "health_check", return_value=True):
                 await manager.initialize()
                 yield manager

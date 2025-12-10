@@ -627,7 +627,7 @@ class HybridRAG:
 
                     # Get RAG similarity score
                     rag_similarity = 0.0
-                    if result["rag_results"] and isinstance(result["rag_results"], list):
+                    if result["rag_results"] and isinstance(result["rag_results"], list):  # noqa: SIM102
                         if result["rag_results"] and "score" in result["rag_results"][0]:
                             rag_similarity = float(result["rag_results"][0].get("score", 0))
 

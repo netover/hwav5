@@ -636,7 +636,7 @@ async def get_query_examples():
 # DASHBOARD ROUTE
 # =============================================================================
 
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse  # noqa: E402
 
 
 @monitoring_router.get("/dashboard", response_class=HTMLResponse)

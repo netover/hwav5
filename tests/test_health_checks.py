@@ -123,7 +123,7 @@ class TestHealthCheckService:
         """Test comprehensive health check with mocked components."""
 
         # Mock all the component health check methods
-        with patch.object(
+        with patch.object(  # noqa: SIM117
             health_service,
             "_check_database_health",
             return_value=ComponentHealth(

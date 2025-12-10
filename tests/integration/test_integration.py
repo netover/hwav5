@@ -254,7 +254,7 @@ class TestEndToEndIntegration:
         test_app.dependency_overrides[get_agent_manager] = lambda: mock_agent_manager
         test_app.dependency_overrides[get_knowledge_graph] = lambda: mock_kg
 
-        with patch("resync.api.chat.run_auditor_safely") as mock_run_auditor:
+        with patch("resync.api.chat.run_auditor_safely") as mock_run_auditor:  # noqa: SIM117
             with client.websocket_connect("/ws/test-agent") as websocket:
                 websocket.send_text("How do I restart a job?")
                 response = websocket.receive_text()
@@ -270,7 +270,7 @@ class TestEndToEndIntegration:
         mock_agent_manager.get_agent.return_value = None
         test_app.dependency_overrides[get_agent_manager] = lambda: mock_agent_manager
 
-        with pytest.raises(WebSocketDisconnect) as excinfo:
+        with pytest.raises(WebSocketDisconnect) as excinfo:  # noqa: SIM117
             with client.websocket_connect("/ws/non-existent-agent") as websocket:
                 # The connection should be closed by the server with a code
                 websocket.receive_json()

@@ -249,7 +249,7 @@ class OverallComplianceStrategy(ReportStrategy):
                 return 0.0
 
             # Lazy import to avoid circular dependency
-            _, SOC2TrustServiceCriteria = _get_soc2_classes()
+            _, SOC2TrustServiceCriteria = _get_soc2_classes()  # noqa: N806
 
             weights = {
                 SOC2TrustServiceCriteria.SECURITY: 0.3,

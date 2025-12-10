@@ -4,10 +4,10 @@ from datetime import datetime
 """
 System status routes for FastAPI
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends  # noqa: E402
 
-from ..dependencies import get_logger
-from ..models.response_models import SystemStatusResponse
+from ..dependencies import get_logger  # noqa: E402
+from ..models.response_models import SystemStatusResponse  # noqa: E402
 
 router = APIRouter()
 

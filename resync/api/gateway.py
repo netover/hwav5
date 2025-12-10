@@ -478,7 +478,7 @@ class APIGateway:
 
         # API Key authentication
         api_key = request.headers.get("X-API-Key")
-        if api_key:
+        if api_key:  # noqa: SIM102
             # This would validate API key (simplified)
             if api_key.startswith("api_key_"):
                 request["api_key_valid"] = True
@@ -616,7 +616,7 @@ class APIGateway:
             # Create HTTP client session
             timeout = aiohttp.ClientTimeout(total=route_config.timeout_seconds)
 
-            async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with aiohttp.ClientSession(timeout=timeout) as session:  # noqa: SIM117
                 # Forward request
                 async with session.request(
                     method=request.method,

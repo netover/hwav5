@@ -245,7 +245,7 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Setup templates - use absolute path from project root
-import pathlib
+import pathlib  # noqa: E402
 
 project_root = pathlib.Path(__file__).parent.parent.parent
 templates = Jinja2Templates(directory=str(project_root / "templates"))

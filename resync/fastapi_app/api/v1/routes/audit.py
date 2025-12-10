@@ -10,11 +10,15 @@ Provides audit functionality including:
 - Review workflow
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status  # noqa: E402
 
-from ..dependencies import check_rate_limit, get_current_user, get_logger
-from ..models.request_models import AuditFlagsQuery, AuditReviewRequest
-from ..models.response_models import AuditFlagInfo, AuditMetricsResponse, AuditReviewResponse
+from ..dependencies import check_rate_limit, get_current_user, get_logger  # noqa: E402
+from ..models.request_models import AuditFlagsQuery, AuditReviewRequest  # noqa: E402
+from ..models.response_models import (  # noqa: E402
+    AuditFlagInfo,
+    AuditMetricsResponse,
+    AuditReviewResponse,
+)
 
 router = APIRouter()
 

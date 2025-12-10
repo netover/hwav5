@@ -2,7 +2,10 @@
 
 This module contains all legacy property aliases to maintain backward compatibility
 while keeping main settings module more focused and maintainable.
+
+Note: Property names are intentionally uppercase for backward compatibility.
 """
+# ruff: noqa: N802
 
 from functools import cached_property
 from pathlib import Path

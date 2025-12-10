@@ -115,7 +115,7 @@ class TestMiddleware:
             mock_request.endpoint = "test_endpoint"
             mock_request.path = "/test"
 
-            with patch("routes.main.request", mock_request):
+            with patch("routes.main.request", mock_request):  # noqa: SIM117
                 with patch("routes.main.log_request_end") as mock_log:
                     after_request(mock_response)
 
@@ -149,7 +149,7 @@ class TestMiddleware:
             mock_request.endpoint = "test_endpoint"
             mock_request.path = "/test"
 
-            with patch("routes.main.request", mock_request):
+            with patch("routes.main.request", mock_request):  # noqa: SIM117
                 with patch("routes.main.log_request_end") as mock_log:
                     # Should not raise an exception
                     after_request(mock_response)
@@ -179,7 +179,7 @@ class TestMiddleware:
             mock_request.endpoint = "test_endpoint"
             mock_request.path = "/test"
 
-            with patch("routes.main.request", mock_request):
+            with patch("routes.main.request", mock_request):  # noqa: SIM117
                 with patch("routes.main.log_error") as mock_log:
                     result = handle_exception(test_exception)
 
@@ -214,7 +214,7 @@ class TestMiddleware:
             mock_request.endpoint = "test_endpoint"
             mock_request.path = "/test"
 
-            with patch("routes.main.request", mock_request):
+            with patch("routes.main.request", mock_request):  # noqa: SIM117
                 with patch("routes.main.log_error") as mock_log:
                     # Should not raise an exception
                     handle_exception(test_exception)
@@ -270,7 +270,7 @@ class TestLoggingContext:
             from routes.main import login
 
             # Mock the LoggingContext
-            with patch("routes.main.LoggingContext") as mock_context:
+            with patch("routes.main.LoggingContext") as mock_context:  # noqa: SIM117
                 with patch("routes.main.log_info") as mock_log:
                     login()
 
@@ -294,11 +294,11 @@ class TestLoggingContext:
             mock_request = MagicMock()
             mock_request.method = "POST"
 
-            with patch("routes.main.request", mock_request):
+            with patch("routes.main.request", mock_request):  # noqa: SIM117
                 with patch("routes.main.LoggingContext") as mock_context:
                     with patch("routes.main.log_info") as mock_log:
                         with patch("routes.main.abort"):  # Prevent actual abort
-                            try:
+                            try:  # noqa: SIM105
                                 chat()
                             except Exception:
                                 pass  # We expect this to fail due to mocking

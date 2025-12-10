@@ -77,8 +77,8 @@ async def test_audit_load_test(mock_audit_queue, mock_ia_auditor):
     """
 
     # Setup
-    NUM_CONCURRENT_REQUESTS = 120
-    TIMEOUT_SECONDS = 10
+    NUM_CONCURRENT_REQUESTS = 120  # noqa: N806
+    TIMEOUT_SECONDS = 10  # noqa: N806
     lock_contention = 0
     start_time = time.perf_counter()
 

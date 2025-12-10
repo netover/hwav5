@@ -801,7 +801,7 @@ class AIMonitoringService:
         """Apply resource limits before running monitoring."""
         limits = self.config.resource_limits
 
-        try:
+        try:  # noqa: SIM105
             # Set nice level (lower priority)
             os.nice(limits.nice_level)
         except (OSError, AttributeError):

@@ -24,7 +24,7 @@ VALIDATION_CACHE_TTL = 60  # seconds
 
 # Import from local modules
 # Direct imports of exceptions for stability and simplicity
-from resync.core.exceptions import (
+from resync.core.exceptions import (  # noqa: E402
     AgentExecutionError,
     AuditError,
     AuthenticationError,

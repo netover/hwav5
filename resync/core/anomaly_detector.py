@@ -653,7 +653,7 @@ class AnomalyDetectionEngine:
         """Update ML models with new training data."""
         try:
             # Force retraining if needed
-            if hasattr(self.primary_detector, "_should_retrain"):
+            if hasattr(self.primary_detector, "_should_retrain"):  # noqa: SIM102
                 if self.primary_detector._should_retrain():
                     # Retraining is handled automatically in detect() method
                     pass

@@ -216,10 +216,7 @@
                     </a>
                     <a class="nav-link" href="#" data-target="tws-config">
                         <i class="fas fa-server me-2"></i>TWS Configuration
-                    </a>
-                    <a class="nav-link" href="#" data-target="tws-instances">
-                        <i class="fas fa-network-wired me-2"></i>TWS Instances
-                        <span class="badge bg-info" style="margin-left:auto;" id="tws-instance-count">0</span>
+                        <span class="badge bg-info" style="margin-left:auto;" id="tws-sidebar-count">0</span>
                     </a>
                     <a class="nav-link" href="#" data-target="system-config">
                         <i class="fas fa-sliders-h me-2"></i>System Settings
@@ -481,29 +478,371 @@
                     <h2><i class="fas fa-server me-2"></i>TWS Configuration</h2>
                     <p class="text-muted">Configure connections to HCL Workload Automation instances</p>
 
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Primary TWS Instance</label>
-                                    <input type="text" id="primaryTwsInstance" class="form-control" placeholder="Primary instance">
+                    <!-- Navigation Tabs -->
+                    <ul class="nav nav-tabs mb-4" id="twsConfigTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tws-instances-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#tws-instances-content" type="button" role="tab">
+                                <i class="fas fa-network-wired me-2"></i>Instances
+                                <span class="badge bg-info ms-2" id="tws-instance-count">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tws-connection-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#tws-connection-content" type="button" role="tab">
+                                <i class="fas fa-plug me-2"></i>Connection Settings
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tws-monitoring-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#tws-monitoring-content" type="button" role="tab">
+                                <i class="fas fa-chart-line me-2"></i>Monitoring
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="twsConfigTabContent">
+                        <!-- TWS Instances Tab -->
+                        <div class="tab-pane fade show active" id="tws-instances-content" role="tabpanel">
+                            <!-- Status Cards -->
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <div class="card border-0 shadow-sm">
+                                        <div class="card-body text-center">
+                                            <h3 class="mb-0" id="tws-total-instances">0</h3>
+                                            <small class="text-muted">Total Instances</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card border-0 shadow-sm bg-success bg-opacity-10">
+                                        <div class="card-body text-center">
+                                            <h3 class="mb-0 text-success" id="tws-connected-count">0</h3>
+                                            <small class="text-muted">Connected</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
+                                        <div class="card-body text-center">
+                                            <h3 class="mb-0 text-warning" id="tws-pending-count">0</h3>
+                                            <small class="text-muted">Connecting</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card border-0 shadow-sm bg-danger bg-opacity-10">
+                                        <div class="card-body text-center">
+                                            <h3 class="mb-0 text-danger" id="tws-error-count">0</h3>
+                                            <small class="text-muted">Errors</small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Monitored TWS Instances (Up to 10)</label>
-                                <div id="twsInstancesList" class="mb-2">
-                                    <!-- Instances will be added here dynamically -->
+
+                            <!-- Actions Bar -->
+                            <div class="card mb-4">
+                                <div class="card-body d-flex justify-content-between align-items-center py-2">
+                                    <div class="btn-group">
+                                        <button class="btn btn-success btn-sm" onclick="TWSInstancesAdmin.connectAll()">
+                                            <i class="fas fa-plug me-1"></i>Connect All
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="TWSInstancesAdmin.disconnectAll()">
+                                            <i class="fas fa-unlink me-1"></i>Disconnect All
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-outline-secondary btn-sm me-2" onclick="TWSInstancesAdmin.refresh()">
+                                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                                        </button>
+                                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addTWSInstanceModal">
+                                            <i class="fas fa-plus me-1"></i>Add Instance
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control" id="newTwsInstanceInput" placeholder="Enter instance name">
-                                    <button class="btn btn-outline-secondary" type="button" id="addTwsInstanceBtn">
-                                        <i class="fas fa-plus"></i>
+                            </div>
+
+                            <!-- Instances Table -->
+                            <div class="card">
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width: 30px;"></th>
+                                                    <th>Instance</th>
+                                                    <th>Host</th>
+                                                    <th>Environment</th>
+                                                    <th>Status</th>
+                                                    <th>Learning</th>
+                                                    <th class="text-end">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tws-instances-table">
+                                                <tr>
+                                                    <td colspan="7" class="text-center py-4 text-muted">
+                                                        <i class="fas fa-spinner fa-spin me-2"></i>Loading instances...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Connection Settings Tab -->
+                        <div class="tab-pane fade" id="tws-connection-content" role="tabpanel">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Primary TWS Instance</label>
+                                            <input type="text" id="primaryTwsInstance" class="form-control" placeholder="Primary instance name">
+                                            <small class="text-muted">Main instance for operations</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Default Timeout (seconds)</label>
+                                            <input type="number" id="twsDefaultTimeout" class="form-control" value="30" min="5" max="300">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Monitored TWS Instances</label>
+                                        <div id="twsInstancesList" class="mb-2">
+                                            <!-- Instances will be added here dynamically -->
+                                        </div>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="newTwsInstanceInput" placeholder="Enter instance name">
+                                            <button class="btn btn-outline-secondary" type="button" id="addTwsInstanceBtn">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="twsMockMode">
+                                                <label class="form-check-label" for="twsMockMode">Mock Mode (Testing)</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="twsVerifySSL" checked>
+                                                <label class="form-check-label" for="twsVerifySSL">Verify SSL</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="twsAutoReconnect" checked>
+                                                <label class="form-check-label" for="twsAutoReconnect">Auto-Reconnect</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-success" id="saveTwsConfig">
+                                        <i class="fas fa-save me-1"></i>Save Connection Settings
                                     </button>
                                 </div>
                             </div>
-                            <button class="btn btn-success" id="saveTwsConfig">
-                                <i class="fas fa-save me-1"></i>Save TWS Configuration
-                            </button>
+                        </div>
+
+                        <!-- Monitoring Tab -->
+                        <div class="tab-pane fade" id="tws-monitoring-content" role="tabpanel">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Polling Interval (seconds)</label>
+                                            <input type="number" id="twsPollingInterval" class="form-control" value="30" min="10" max="300">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Job Stuck Threshold (minutes)</label>
+                                            <input type="number" id="twsStuckThreshold" class="form-control" value="30" min="5" max="120">
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Job Late Threshold (minutes)</label>
+                                            <input type="number" id="twsLateThreshold" class="form-control" value="15" min="1" max="60">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Anomaly Failure Rate (%)</label>
+                                            <input type="number" id="twsAnomalyThreshold" class="form-control" value="10" min="1" max="100" step="0.1">
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="twsPollingEnabled" checked>
+                                                <label class="form-check-label" for="twsPollingEnabled">Enable Polling</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="twsPatternDetection" checked>
+                                                <label class="form-check-label" for="twsPatternDetection">Pattern Detection</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="twsSolutionCorrelation" checked>
+                                                <label class="form-check-label" for="twsSolutionCorrelation">Solution Correlation</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-success" id="saveTwsMonitoringConfig">
+                                        <i class="fas fa-save me-1"></i>Save Monitoring Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add TWS Instance Modal -->
+                <div class="modal fade" id="addTWSInstanceModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add TWS Instance</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addTWSInstanceForm">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Instance Name *</label>
+                                            <input type="text" id="tws-new-name" class="form-control" placeholder="e.g., PROD1" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Display Name *</label>
+                                            <input type="text" id="tws-new-display-name" class="form-control" placeholder="Production Server 1" required>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-8">
+                                            <label class="form-label">Host *</label>
+                                            <input type="text" id="tws-new-host" class="form-control" placeholder="tws-server.example.com" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Port</label>
+                                            <input type="number" id="tws-new-port" class="form-control" value="31116">
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Username</label>
+                                            <input type="text" id="tws-new-username" class="form-control">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Password</label>
+                                            <input type="password" id="tws-new-password" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Environment</label>
+                                            <select id="tws-new-environment" class="form-select">
+                                                <option value="production">Production</option>
+                                                <option value="staging">Staging</option>
+                                                <option value="development">Development</option>
+                                                <option value="dr">DR</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Color</label>
+                                            <input type="color" id="tws-new-color" class="form-control form-control-color" value="#3b82f6">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">&nbsp;</label>
+                                            <div class="form-check mt-2">
+                                                <input class="form-check-input" type="checkbox" id="tws-new-ssl" checked>
+                                                <label class="form-check-label" for="tws-new-ssl">SSL Enabled</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="tws-new-learning" checked>
+                                                <label class="form-check-label" for="tws-new-learning">Enable Learning</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Description</label>
+                                        <textarea id="tws-new-description" class="form-control" rows="2"></textarea>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-secondary" onclick="TWSInstancesAdmin.testNewConnection()">
+                                    <i class="fas fa-vial me-1"></i>Test Connection
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="TWSInstancesAdmin.addInstance()">
+                                    <i class="fas fa-plus me-1"></i>Add Instance
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit TWS Instance Modal -->
+                <div class="modal fade" id="editTWSInstanceModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit TWS Instance</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <input type="hidden" id="tws-edit-id">
+                                <div class="mb-3">
+                                    <label class="form-label">Instance Name</label>
+                                    <input type="text" id="tws-edit-name" class="form-control" readonly>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Display Name</label>
+                                    <input type="text" id="tws-edit-display-name" class="form-control">
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-8">
+                                        <label class="form-label">Host</label>
+                                        <input type="text" id="tws-edit-host" class="form-control">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Port</label>
+                                        <input type="number" id="tws-edit-port" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Environment</label>
+                                        <select id="tws-edit-environment" class="form-select">
+                                            <option value="production">Production</option>
+                                            <option value="staging">Staging</option>
+                                            <option value="development">Development</option>
+                                            <option value="dr">DR</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Color</label>
+                                        <input type="color" id="tws-edit-color" class="form-control form-control-color">
+                                    </div>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="tws-edit-enabled" checked>
+                                    <label class="form-check-label" for="tws-edit-enabled">Instance Enabled</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="tws-edit-learning" checked>
+                                    <label class="form-check-label" for="tws-edit-learning">Enable Learning</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="TWSInstancesAdmin.saveInstance()">
+                                    <i class="fas fa-save me-1"></i>Save Changes
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3698,10 +4037,25 @@
         }
     };
     
-    // Initialize when TWS Instances section is shown
-    document.querySelector('[data-target="tws-instances"]')?.addEventListener('click', () => {
+    // Initialize when TWS Configuration section is shown
+    document.querySelector('[data-target="tws-config"]')?.addEventListener('click', () => {
         setTimeout(() => TWSInstancesAdmin.init(), 100);
     });
+    
+    // Also update sidebar badge when instances change
+    TWSInstancesAdmin.updateSidebarBadge = function() {
+        const sidebarBadge = document.getElementById('tws-sidebar-count');
+        if (sidebarBadge) {
+            sidebarBadge.textContent = this.instances.length;
+        }
+    };
+    
+    // Patch updateUI to also update sidebar badge
+    const originalUpdateUI = TWSInstancesAdmin.updateUI;
+    TWSInstancesAdmin.updateUI = function() {
+        originalUpdateUI.call(this);
+        this.updateSidebarBadge();
+    };
 
     // =============================================================================
     // BACKUP ADMIN

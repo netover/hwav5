@@ -351,7 +351,7 @@ class FileSystemHealthMonitor:
                             elif not os.access(item, os.R_OK):
                                 status.corrupted_files += 1
                             # Checksum verification for critical files
-                            elif self._should_verify_checksum(item):
+                            elif self._should_verify_checksum(item):  # noqa: SIM102
                                 if not self._verify_file_checksum(item):
                                     status.corrupted_files += 1
                         except (OSError, PermissionError):

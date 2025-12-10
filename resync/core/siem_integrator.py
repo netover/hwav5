@@ -744,7 +744,7 @@ class SIEMIntegrator:
                             logger.warning(f"Failed to reconnect to SIEM: {name}")
 
                     # Check circuit breaker
-                    if self.circuit_breaker.is_open(name):
+                    if self.circuit_breaker.is_open(name):  # noqa: SIM102
                         # Try to close circuit breaker if enough time has passed
                         if self.circuit_breaker.can_attempt(name):
                             self.circuit_breaker.attempt_reset(name)

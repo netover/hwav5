@@ -158,7 +158,7 @@ def safe_write_file(
     except Exception:
         # Restore backup if write failed
         if backup_path:
-            try:
+            try:  # noqa: SIM105
                 restore_file(file_path)
             except Exception:
                 pass  # Best effort

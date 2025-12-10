@@ -49,7 +49,7 @@ class SettingsValidators:
         legacy_min_size = info.data.get("redis_min_connections")
         legacy_max_size = info.data.get("redis_max_connections")
 
-        if legacy_min_size is not None and legacy_max_size is not None:
+        if legacy_min_size is not None and legacy_max_size is not None:  # noqa: SIM102
             # Se os defaults ainda estão ativos, permite fallback de compat.
             if info.data.get("redis_pool_min_size") == 5 and v == 20:
                 warnings.warn(
@@ -142,7 +142,7 @@ class SettingsValidators:
     def validate_llm_api_key(cls, v: SecretStr, info: ValidationInfo) -> SecretStr:
         """Valida chave da API em produção."""
         env = info.data.get("environment")
-        if env == Environment.PRODUCTION:
+        if env == Environment.PRODUCTION:  # noqa: SIM102
             if not v.get_secret_value() or v.get_secret_value() == ("dummy_key_for_development"):
                 raise ValueError("LLM_API_KEY must be set to a valid key in production")
         return v

@@ -728,7 +728,7 @@ class AsyncTTLCache:
 
                         if not eviction_found:
                             # If we couldn't find anything to evict, check if it's because we're in a tiny cache
-                            if eviction_count == 0 and self.max_entries < 2:
+                            if eviction_count == 0 and self.max_entries < 2:  # noqa: SIM102
                                 # For tiny caches, check if we're trying to add a second item
                                 if len(shard) > 1 or any(
                                     len(s) > 0
@@ -998,7 +998,7 @@ class AsyncTTLCache:
                                     shard[op["key"]] = entry
                                 else:
                                     shard.pop(op["key"], None)
-                            elif op["operation"] == "delete":
+                            elif op["operation"] == "delete":  # noqa: SIM102
                                 # Restore deleted item
                                 if "previous_value" in op:
                                     current_time = time()

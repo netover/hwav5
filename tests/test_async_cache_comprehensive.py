@@ -825,7 +825,7 @@ class TestAsyncTTLCacheErrorHandling:
             with patch("redis.asyncio.Redis.from_url") as mock_redis:
                 mock_redis.side_effect = Exception("Connection failed")
 
-                with pytest.raises(Exception):
+                with pytest.raises(Exception):  # noqa: B017
                     await get_redis_client()
 
 

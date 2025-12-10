@@ -191,7 +191,7 @@ class PerformanceMetricsCollector:
             # Analyze connection pool metrics
             pool_metrics = metrics.get("connection_pools", {})
 
-            if "error" not in pool_metrics:
+            if "error" not in pool_metrics:  # noqa: SIM102
                 # Check for pool-specific issues
                 if "auto_scaling" in pool_metrics:
                     auto_scaling = pool_metrics["auto_scaling"]

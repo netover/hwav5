@@ -144,7 +144,7 @@ async def test_pool_manager_creation() -> None:
             assert manager._shutdown is False
 
             # Ensure proper cleanup
-            try:
+            try:  # noqa: SIM105
                 await manager.shutdown()  # type: ignore[no-untyped-call]
             except Exception:
                 # Ignore shutdown errors in test environment

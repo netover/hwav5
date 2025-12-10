@@ -115,7 +115,7 @@ async def create_tws_instance(instance: TWSInstanceCreate):
     - NAZ → tws.naz.com:31116
     """
     manager = _get_manager()
-    TWSInstanceConfig, TWSEnvironment = _get_config_class()
+    TWSInstanceConfig, TWSEnvironment = _get_config_class()  # noqa: N806
 
     try:
         config = TWSInstanceConfig(

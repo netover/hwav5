@@ -275,11 +275,11 @@ RELATIONSHIPS:"""
         expected_types = ALLOWED_RELATIONS[predicate]
 
         # Wildcard match
-        if expected_types[0] != "*" and triplet.subject_type != expected_types[0]:
+        if expected_types[0] != "*" and triplet.subject_type != expected_types[0]:  # noqa: SIM102
             if triplet.subject_type != "unknown":
                 return False
 
-        if expected_types[1] != "*" and triplet.object_type != expected_types[1]:
+        if expected_types[1] != "*" and triplet.object_type != expected_types[1]:  # noqa: SIM102
             if triplet.object_type != "unknown":
                 return False
 

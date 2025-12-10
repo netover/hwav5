@@ -340,7 +340,7 @@ class TestTWSSyncManager:
         with patch.object(sync_manager, "_fetch_changes", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = []
 
-            with patch.object(sync_manager, "_apply_changes", new_callable=AsyncMock):
+            with patch.object(sync_manager, "_apply_changes", new_callable=AsyncMock):  # noqa: SIM117
                 with patch(
                     "resync.core.knowledge_graph.sync_manager.SyncState.get_last_sync",
                     new_callable=AsyncMock,
@@ -363,7 +363,7 @@ class TestTWSSyncManager:
         with patch.object(sync_manager, "_fetch_changes", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = test_changes
 
-            with patch.object(sync_manager, "_apply_changes", new_callable=AsyncMock) as mock_apply:
+            with patch.object(sync_manager, "_apply_changes", new_callable=AsyncMock) as mock_apply:  # noqa: SIM117
                 with patch(
                     "resync.core.knowledge_graph.sync_manager.SyncState.get_last_sync",
                     new_callable=AsyncMock,

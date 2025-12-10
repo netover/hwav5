@@ -264,7 +264,7 @@ class HealthHistoryManager:
         # Filter entries that contain the component
         component_history = []
         for entry in self.health_history:
-            if entry.timestamp >= cutoff_time:
+            if entry.timestamp >= cutoff_time:  # noqa: SIM102
                 if component_name in entry.component_changes:
                     component_history.append(
                         {
