@@ -6,9 +6,10 @@ import asyncio
 import logging
 import statistics
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, List
+from typing import Any
 
 from resync.core.interfaces import IAgentManager, ITWSClient
 from resync.core.metrics import runtime_metrics
@@ -29,14 +30,14 @@ class BenchmarkResult:
     p99_time: float  # 99th percentile in seconds
     errors: int
     timestamp: datetime
-    metadata: Dict[str, Any] = None
+    metadata: dict[str, Any] = None
 
 
 class PerformanceBenchmark:
     """Performance benchmarking system for Resync"""
 
     def __init__(self):
-        self.results: List[BenchmarkResult] = []
+        self.results: list[BenchmarkResult] = []
         self.logger = logging.getLogger(__name__)
 
     async def run_benchmark(
@@ -129,7 +130,7 @@ class PerformanceBenchmark:
 
     def compare_with_baseline(
         self, result: BenchmarkResult, baseline: BenchmarkResult
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Compare a benchmark result with a baseline
 
@@ -162,7 +163,7 @@ class PerformanceBenchmark:
 
     def get_historical_performance(
         self, operation: str, days: int = 7
-    ) -> List[BenchmarkResult]:
+    ) -> list[BenchmarkResult]:
         """
         Get historical performance data for an operation
 
@@ -182,7 +183,7 @@ class PerformanceBenchmark:
 
     def get_performance_trend(
         self, operation: str, days: int = 7
-    ) -> Dict[str, List[float]]:
+    ) -> dict[str, list[float]]:
         """
         Get performance trend data for an operation
 
@@ -214,7 +215,7 @@ class SystemBenchmarkRunner:
         self.tws_client = tws_client
         self.logger = logging.getLogger(__name__)
 
-    async def run_comprehensive_benchmark(self) -> Dict[str, BenchmarkResult]:
+    async def run_comprehensive_benchmark(self) -> dict[str, BenchmarkResult]:
         """
         Run comprehensive system benchmarks
         """

@@ -12,7 +12,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Deque
+from typing import Any
 
 from resync.core.pools.base_pool import (
     ConnectionPool,
@@ -55,9 +55,9 @@ class LoadMetrics:
     queue_depth: int = 0
 
     # Historical data (sliding window)
-    latency_history: Deque[float] = field(default_factory=lambda: deque(maxlen=1000))
-    request_history: Deque[float] = field(default_factory=lambda: deque(maxlen=100))
-    error_history: Deque[bool] = field(default_factory=lambda: deque(maxlen=1000))
+    latency_history: deque[float] = field(default_factory=lambda: deque(maxlen=1000))
+    request_history: deque[float] = field(default_factory=lambda: deque(maxlen=100))
+    error_history: deque[bool] = field(default_factory=lambda: deque(maxlen=1000))
 
     # Timestamps
     last_updated: float = 0.0
@@ -152,7 +152,7 @@ class AutoScalingConfig:
 class AutoScalingManager:
     """Intelligent auto-scaling manager for connection pools."""
 
-    def __init__(self, config: Optional[AutoScalingConfig] = None):
+    def __init__(self, config: AutoScalingConfig | None = None):
         self.config = config or AutoScalingConfig()
         self.load_metrics = LoadMetrics()
         self.current_connections = 10  # Default starting point
@@ -167,7 +167,7 @@ class AutoScalingManager:
         self.predicted_load = 0.0
 
         # Threading for background monitoring
-        self._monitor_thread: Optional[threading.Thread] = None
+        self._monitor_thread: threading.Thread | None = None
         self._stop_monitoring = threading.Event()
         self._monitoring_active = False
 
@@ -336,7 +336,7 @@ class AutoScalingManager:
             trend = statistics.mean(self.load_trend) - self.load_trend[0]
             self.predicted_load = max(0.0, min(1.0, current_load + trend))
 
-    def get_scaling_metrics(self) -> Dict[str, Any]:
+    def get_scaling_metrics(self) -> dict[str, Any]:
         """Get comprehensive scaling metrics."""
         return {
             "current_connections": self.current_connections,
@@ -367,11 +367,11 @@ class AdvancedConnectionPoolManager:
 
     def __init__(self):
         """Initialize advanced connection pool manager."""
-        self.traditional_manager: Optional[ConnectionPoolManager] = None
-        self.smart_pool: Optional[SmartConnectionPool] = None
-        self.auto_scaler: Optional[AutoScalingManager] = None
+        self.traditional_manager: ConnectionPoolManager | None = None
+        self.smart_pool: SmartConnectionPool | None = None
+        self.auto_scaler: AutoScalingManager | None = None
         self._initialized = False
-        self._performance_metrics: Dict[str, Any] = {}
+        self._performance_metrics: dict[str, Any] = {}
 
     async def initialize(self) -> None:
         """Initialize the advanced connection pool manager."""
@@ -454,7 +454,7 @@ class AdvancedConnectionPoolManager:
                     finally:
                         await pool.release(connection)
 
-    def get_performance_metrics(self) -> Dict[str, Any]:
+    def get_performance_metrics(self) -> dict[str, Any]:
         """Get comprehensive performance metrics."""
         metrics = {
             "timestamp": time.time(),
@@ -477,7 +477,7 @@ class AdvancedConnectionPoolManager:
 
         return metrics
 
-    async def force_health_check(self) -> Dict[str, Any]:
+    async def force_health_check(self) -> dict[str, Any]:
         """Force health check across all pools."""
         results = {
             "smart_pool": {},
@@ -506,7 +506,7 @@ class AdvancedConnectionPoolManager:
 
 
 # Global advanced pool manager instance
-_advanced_pool_manager: Optional[AdvancedConnectionPoolManager] = None
+_advanced_pool_manager: AdvancedConnectionPoolManager | None = None
 
 
 def get_advanced_connection_pool_manager() -> AdvancedConnectionPoolManager:

@@ -8,19 +8,19 @@ intent classification. Users no longer need to select a specific agent.
 """
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
-
-# Import RAG components
-from resync.RAG.microservice.core.embedding_service import EmbeddingService
-from resync.RAG.microservice.core.vector_store import get_default_store
-from resync.RAG.microservice.core.retriever import RagRetriever
-from resync.RAG.microservice.core.ingest import IngestService
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 # Import Unified Agent
 from resync.core.agent_manager import unified_agent
 
+# Import RAG components
+from resync.RAG.microservice.core.embedding_service import EmbeddingService
+from resync.RAG.microservice.core.ingest import IngestService
+from resync.RAG.microservice.core.retriever import RagRetriever
+from resync.RAG.microservice.core.vector_store import get_default_store
+
 from ..dependencies import get_logger
-from ..models.request_models import ChatMessageRequest, ChatHistoryQuery
+from ..models.request_models import ChatHistoryQuery, ChatMessageRequest
 from ..models.response_models import ChatMessageResponse
 
 router = APIRouter()
@@ -68,11 +68,11 @@ async def chat_message(
 ):
     """
     Send chat message to Resync AI Assistant.
-    
+
     The message is automatically routed to the appropriate handler based on
     intent classification. No agent_id selection is required - the system
     automatically determines the best handler for each query.
-    
+
     Supported intents:
     - Status queries (job status, workstation status)
     - Troubleshooting (error analysis, diagnostics)
@@ -91,9 +91,9 @@ async def chat_message(
             include_history=True,
             tws_instance_id=request.tws_instance_id
         )
-        
+
         response_message = result["response"]
-        
+
         logger_instance.info(
             "chat_message_processed",
             user_id="test_user",
@@ -136,20 +136,20 @@ async def analyze_message(
 ):
     """
     Analyze a message without processing it.
-    
+
     Returns the intent classification, confidence score, and which handler
     would process the message. Useful for debugging and understanding
     how the router interprets different queries.
     """
     global logger
     logger = logger_instance
-    
+
     try:
         from resync.core.agent_router import IntentClassifier
-        
+
         classifier = IntentClassifier()
         classification = classifier.classify(request.message)
-        
+
         return {
             "message": request.message,
             "primary_intent": classification.primary_intent.value,
@@ -160,7 +160,7 @@ async def analyze_message(
             "is_high_confidence": classification.is_high_confidence,
             "needs_clarification": classification.needs_clarification,
         }
-        
+
     except Exception as e:
         logger_instance.error("analyze_message_error", error=str(e))
         raise HTTPException(
@@ -177,7 +177,7 @@ async def chat_history(
 ):
     """Get chat history for the current session."""
     history = unified_agent.get_history()
-    
+
     return {
         "history": history,
         "agent_id": "unified",  # Always unified now
@@ -194,7 +194,7 @@ async def clear_chat_history(
 ):
     """Clear chat history for the current session."""
     unified_agent.clear_history()
-    
+
     logger_instance.info(
         "chat_history_cleared",
         user_id="test_user"
@@ -206,11 +206,11 @@ async def clear_chat_history(
 async def list_supported_intents():
     """
     List all supported intents and their descriptions.
-    
+
     Useful for understanding what types of queries the system can handle.
     """
     from resync.core.agent_router import Intent
-    
+
     intent_descriptions = {
         Intent.STATUS.value: "Check system, job, or workstation status",
         Intent.TROUBLESHOOTING.value: "Diagnose and resolve issues, analyze errors",
@@ -221,7 +221,7 @@ async def list_supported_intents():
         Intent.GREETING.value: "Greetings and introductions",
         Intent.GENERAL.value: "General questions and help",
     }
-    
+
     return {
         "intents": intent_descriptions,
         "total": len(intent_descriptions)

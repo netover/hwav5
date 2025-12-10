@@ -13,10 +13,11 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from resync.core.structured_logger import get_logger
 
@@ -236,8 +237,7 @@ class TaskManager:
         """Execute the task function with appropriate handling."""
         if asyncio.iscoroutinefunction(task.func):
             return await self._run_async_function(task)
-        else:
-            return await self._run_sync_function(task)
+        return await self._run_sync_function(task)
 
     async def _run_async_function(self, task: Task) -> Any:
         """Run an async task function."""
@@ -247,8 +247,7 @@ class TaskManager:
             return await asyncio.wait_for(
                 task.func(*task.args, **task.kwargs), timeout=task.timeout
             )
-        else:
-            return await task.func(*task.args, **task.kwargs)
+        return await task.func(*task.args, **task.kwargs)
 
     async def _run_sync_function(self, task: Task) -> Any:
         """Run a sync task function in executor."""
@@ -260,10 +259,9 @@ class TaskManager:
                 loop.run_in_executor(None, task.func, *task.args, **task.kwargs),
                 timeout=task.timeout,
             )
-        else:
-            return await loop.run_in_executor(
-                None, task.func, *task.args, **task.kwargs
-            )
+        return await loop.run_in_executor(
+            None, task.func, *task.args, **task.kwargs
+        )
 
     async def _handle_task_success(self, task: Task, result: Any) -> None:
         """Handle successful task completion."""

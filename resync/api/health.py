@@ -180,7 +180,7 @@ async def get_core_health() -> CoreHealthResponse:
             if component.status == HealthStatus.UNHEALTHY:
                 core_status = HealthStatus.UNHEALTHY
                 break
-            elif component.status == HealthStatus.DEGRADED:
+            if component.status == HealthStatus.DEGRADED:
                 core_status = HealthStatus.DEGRADED
 
         # Convert components to response format

@@ -10,11 +10,11 @@ Provides:
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import settings
@@ -36,10 +36,10 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Create JWT access token."""
     to_encode = data.copy()
-    
+
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -56,7 +56,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 
-def verify_token(token: str) -> Optional[dict]:
+def verify_token(token: str) -> dict | None:
     """Verify JWT token and return payload."""
     try:
         payload = jwt.decode(
@@ -94,7 +94,7 @@ async def get_current_user(
     # Extract user info from token
     username = payload.get("username", user_id)
     role = payload.get("role", "user")
-    
+
     # Basic validation: user_id must be non-empty string
     if not isinstance(user_id, str) or len(user_id) < 1:
         raise HTTPException(
@@ -118,20 +118,20 @@ async def get_current_user_from_db(
 ):
     """
     Get current authenticated user with database validation.
-    
+
     Use this dependency when you need to verify the user still exists
     and is active in the database.
     """
     token = credentials.credentials
     payload = verify_token(token)
-    
+
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(
@@ -139,30 +139,30 @@ async def get_current_user_from_db(
             detail="Invalid token payload",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # If database session provided, validate user exists
     if db:
         from resync.fastapi_app.db import UserService
-        
+
         user_service = UserService(db)
         user = await user_service.get_user_by_id(user_id)
-        
+
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User account is deactivated",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         return user.to_dict()
-    
+
     # Fallback to token-based user info
     return {
         "user_id": user_id,

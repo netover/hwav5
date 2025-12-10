@@ -16,17 +16,17 @@ Version: 5.2.3.29
 """
 
 from resync.core.monitoring.evidently_monitor import (
+    DEFAULT_MONITORING_CONFIG,
     EVIDENTLY_AVAILABLE,
-    DriftType,
-    MonitoringSchedule,
+    AIMonitoringService,
     AlertSeverity,
     DriftAlert,
-    ResourceLimits,
-    MonitoringConfig,
-    DEFAULT_MONITORING_CONFIG,
-    MonitoringDataCollector,
     DriftDetector,
-    AIMonitoringService,
+    DriftType,
+    MonitoringConfig,
+    MonitoringDataCollector,
+    MonitoringSchedule,
+    ResourceLimits,
     get_monitoring_service,
     init_monitoring_service,
 )

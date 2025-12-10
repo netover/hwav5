@@ -2,14 +2,14 @@
 """
 Helper utilities for FastAPI application
 """
-import uuid
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any
 import hashlib
 import json
-from pathlib import Path
-
 import logging
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
 logger = logging.getLogger(__name__)
 
 def generate_uuid() -> str:
@@ -28,7 +28,7 @@ def calculate_file_hash(file_path: Path) -> str:
             sha256.update(chunk)
     return sha256.hexdigest()
 
-def safe_json_loads(data: str) -> Optional[Dict[str, Any]]:
+def safe_json_loads(data: str) -> dict[str, Any] | None:
     """Safely parse JSON string"""
     try:
         return json.loads(data)
@@ -55,27 +55,26 @@ def extract_text_from_filename(filename: str) -> str:
     path = Path(filename)
     extension = path.suffix.lower()
     stem = path.stem
-    
+
     # Map extensions to content types
     text_extensions = {'.txt', '.md', '.csv', '.json', '.xml', '.html', '.yml', '.yaml'}
     doc_extensions = {'.pdf', '.doc', '.docx', '.rtf', '.odt'}
     code_extensions = {'.py', '.js', '.ts', '.java', '.cpp', '.c', '.go', '.rs'}
-    
+
     if extension in text_extensions:
         return f"text:{stem}"
-    elif extension in doc_extensions:
+    if extension in doc_extensions:
         return f"document:{stem}"
-    elif extension in code_extensions:
+    if extension in code_extensions:
         return f"code:{stem}"
-    else:
-        return stem
+    return stem
 
 def create_pagination_info(
     total_items: int,
     limit: int,
     offset: int,
-    current_page: Optional[int] = None
-) -> Dict[str, Any]:
+    current_page: int | None = None
+) -> dict[str, Any]:
     """Create pagination information"""
     total_pages = (total_items + limit - 1) // limit if limit > 0 else 1
     current_page = current_page or (offset // limit) + 1
@@ -109,8 +108,8 @@ def create_error_response(
     error_type: str,
     message: str,
     status_code: int,
-    details: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    details: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Create standardized error response"""
     response = {
         "error": {
@@ -128,9 +127,9 @@ def create_error_response(
 
 def create_success_response(
     data: Any,
-    message: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    message: str | None = None,
+    metadata: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Create standardized success response"""
     response = {
         "success": True,
@@ -154,10 +153,10 @@ def generate_correlation_id() -> str:
     """Generate correlation ID for request tracing"""
     return f"req_{uuid.uuid4().hex[:8]}"
 
-def parse_user_agent(user_agent: str) -> Dict[str, str]:
+def parse_user_agent(user_agent: str) -> dict[str, str]:
     """Parse user agent string to extract browser, OS, and device info."""
     ua_lower = user_agent.lower()
-    
+
     # Detect browser
     browser = "unknown"
     if "chrome" in ua_lower and "edg" not in ua_lower:
@@ -172,7 +171,7 @@ def parse_user_agent(user_agent: str) -> Dict[str, str]:
         browser = "Opera"
     elif "msie" in ua_lower or "trident" in ua_lower:
         browser = "Internet Explorer"
-    
+
     # Detect OS
     os_name = "unknown"
     if "windows" in ua_lower:
@@ -185,7 +184,7 @@ def parse_user_agent(user_agent: str) -> Dict[str, str]:
         os_name = "Android"
     elif "iphone" in ua_lower or "ipad" in ua_lower:
         os_name = "iOS"
-    
+
     # Detect device type
     device = "desktop"
     if "mobile" in ua_lower or "android" in ua_lower:
@@ -194,7 +193,7 @@ def parse_user_agent(user_agent: str) -> Dict[str, str]:
         device = "tablet"
     elif "bot" in ua_lower or "crawler" in ua_lower or "spider" in ua_lower:
         device = "bot"
-    
+
     return {
         "raw": user_agent[:200],  # Truncate for safety
         "browser": browser,

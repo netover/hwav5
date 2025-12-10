@@ -11,9 +11,9 @@ Components:
 
 Usage:
     from resync.core.vector import get_vector_service, VectorDocument
-    
+
     service = await get_vector_service()
-    
+
     # Add documents
     doc = VectorDocument(
         document_id="doc1",
@@ -21,35 +21,34 @@ Usage:
         metadata={"source": "manual"}
     )
     await service.upsert([doc], collection="tws_docs")
-    
+
     # Search
     results = await service.search("how to schedule jobs", collection="tws_docs", limit=5)
 """
-
-from .pgvector_service import (
-    PgVectorService,
-    get_vector_service,
-    VectorDocument,
-    SearchResult,
-    CollectionStats,
-)
 
 from .embedding_provider import (
     EmbeddingProvider,
     LiteLLMEmbeddingProvider,
     get_embedding_provider,
 )
+from .pgvector_service import (
+    CollectionStats,
+    PgVectorService,
+    SearchResult,
+    VectorDocument,
+    get_vector_service,
+)
 
 __all__ = [
     # Service
     "PgVectorService",
     "get_vector_service",
-    
+
     # Models
     "VectorDocument",
     "SearchResult",
     "CollectionStats",
-    
+
     # Embedding
     "EmbeddingProvider",
     "LiteLLMEmbeddingProvider",

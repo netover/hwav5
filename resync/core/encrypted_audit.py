@@ -18,14 +18,14 @@ import gzip
 import hashlib
 import hmac
 import json
+import secrets
 import time
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from cryptography.fernet import Fernet
-import secrets
 
 from resync.core.structured_logger import get_logger
 
@@ -39,13 +39,13 @@ class AuditEntry:
     entry_id: str
     timestamp: float
     event_type: str
-    user_id: Optional[str]
-    resource_id: Optional[str]
+    user_id: str | None
+    resource_id: str | None
     action: str
-    details: Dict[str, Any]
-    ip_address: Optional[str]
-    user_agent: Optional[str]
-    session_id: Optional[str]
+    details: dict[str, Any]
+    ip_address: str | None
+    user_agent: str | None
+    session_id: str | None
 
     # Cryptographic fields
     hash_value: str = ""  # SHA-256 hash of entry content
@@ -76,7 +76,7 @@ class AuditEntry:
         content_str = json.dumps(content, sort_keys=True, separators=(",", ":"))
         self.hash_value = hashlib.sha256(content_str.encode()).hexdigest()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert entry to dictionary."""
         return {
             "entry_id": self.entry_id,
@@ -97,7 +97,7 @@ class AuditEntry:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> AuditEntry:
+    def from_dict(cls, data: dict[str, Any]) -> AuditEntry:
         """Create entry from dictionary."""
         entry = cls(
             entry_id=data["entry_id"],
@@ -129,7 +129,7 @@ class EncryptionKey:
     key_id: str
     key_data: bytes
     created_at: float
-    expires_at: Optional[float]
+    expires_at: float | None
     is_active: bool = True
     rotation_reason: str = ""
 
@@ -147,7 +147,7 @@ class AuditLogBlock:
     """Block of audit entries for batch processing."""
 
     block_id: str
-    entries: List[AuditEntry]
+    entries: list[AuditEntry]
     created_at: float
     encrypted_data: bytes = b""
     block_hash: str = ""
@@ -205,8 +205,8 @@ class KeyManager:
 
     def __init__(self, config: EncryptedAuditConfig):
         self.config = config
-        self.keys: Dict[str, EncryptionKey] = {}
-        self.active_key_id: Optional[str] = None
+        self.keys: dict[str, EncryptionKey] = {}
+        self.active_key_id: str | None = None
         self.hmac_key: bytes = secrets.token_bytes(self.config.hmac_key_length)
 
     def generate_key(self, reason: str = "scheduled_rotation") -> EncryptionKey:
@@ -255,11 +255,11 @@ class KeyManager:
         logger.info(f"Key rotation completed: {new_key.key_id}")
         return new_key
 
-    def get_key_by_id(self, key_id: str) -> Optional[EncryptionKey]:
+    def get_key_by_id(self, key_id: str) -> EncryptionKey | None:
         """Get key by ID."""
         return self.keys.get(key_id)
 
-    def list_keys(self) -> List[Dict[str, Any]]:
+    def list_keys(self) -> list[dict[str, Any]]:
         """List all keys with metadata."""
         return [
             {
@@ -287,7 +287,7 @@ class EncryptedAuditTrail:
     - Efficient search capabilities
     """
 
-    def __init__(self, config: Optional[EncryptedAuditConfig] = None):
+    def __init__(self, config: EncryptedAuditConfig | None = None):
         self.config = config or EncryptedAuditConfig()
 
         # Core components
@@ -300,7 +300,7 @@ class EncryptedAuditTrail:
         self.audit_log_dir.mkdir(parents=True, exist_ok=True)
 
         # Block management
-        self.current_block: Optional[AuditLogBlock] = None
+        self.current_block: AuditLogBlock | None = None
         self.block_counter = 0
 
         # Statistics
@@ -309,9 +309,9 @@ class EncryptedAuditTrail:
         self.integrity_violations = 0
 
         # Background tasks
-        self._flush_task: Optional[asyncio.Task] = None
-        self._archival_task: Optional[asyncio.Task] = None
-        self._verification_task: Optional[asyncio.Task] = None
+        self._flush_task: asyncio.Task | None = None
+        self._archival_task: asyncio.Task | None = None
+        self._verification_task: asyncio.Task | None = None
         self._running = False
 
         # Initialize
@@ -372,13 +372,13 @@ class EncryptedAuditTrail:
     async def log_event(
         self,
         event_type: str,
-        user_id: Optional[str] = None,
-        resource_id: Optional[str] = None,
+        user_id: str | None = None,
+        resource_id: str | None = None,
         action: str = "",
-        details: Optional[Dict[str, Any]] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        session_id: Optional[str] = None,
+        details: dict[str, Any] | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
     ) -> str:
         """Log an audit event with cryptographic integrity."""
         entry_id = f"audit_{int(time.time() * 1000000)}_{secrets.token_hex(4)}"
@@ -437,13 +437,13 @@ class EncryptedAuditTrail:
 
     async def search_events(
         self,
-        start_time: Optional[float] = None,
-        end_time: Optional[float] = None,
-        event_type: Optional[str] = None,
-        user_id: Optional[str] = None,
-        resource_id: Optional[str] = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
+        event_type: str | None = None,
+        user_id: str | None = None,
+        resource_id: str | None = None,
         limit: int = 100,
-    ) -> List[AuditEntry]:
+    ) -> list[AuditEntry]:
         """Search audit events with optional filters."""
         results = []
 
@@ -467,11 +467,11 @@ class EncryptedAuditTrail:
     def _matches_filters(
         self,
         entry: AuditEntry,
-        start_time: Optional[float],
-        end_time: Optional[float],
-        event_type: Optional[str],
-        user_id: Optional[str],
-        resource_id: Optional[str],
+        start_time: float | None,
+        end_time: float | None,
+        event_type: str | None,
+        user_id: str | None,
+        resource_id: str | None,
     ) -> bool:
         """Check if entry matches search filters."""
         if start_time and entry.timestamp < start_time:
@@ -486,7 +486,7 @@ class EncryptedAuditTrail:
             return False
         return True
 
-    async def verify_integrity(self, full_chain_check: bool = False) -> Dict[str, Any]:
+    async def verify_integrity(self, full_chain_check: bool = False) -> dict[str, Any]:
         """
         Verify the integrity of audit logs.
 
@@ -582,7 +582,7 @@ class EncryptedAuditTrail:
 
         return True
 
-    async def _verify_full_chain(self) -> Dict[str, Any]:
+    async def _verify_full_chain(self) -> dict[str, Any]:
         """Perform full chain verification across all archived blocks."""
         # This would verify all archived blocks
         # Simplified implementation
@@ -595,7 +595,7 @@ class EncryptedAuditTrail:
 
     async def export_forensic_data(
         self, start_time: float, end_time: float, include_encrypted: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Export audit data for forensic analysis."""
         events = await self.search_events(
             start_time=start_time,
@@ -635,7 +635,7 @@ class EncryptedAuditTrail:
         logger.info(f"Encryption key rotated: {new_key.key_id}")
         return new_key.key_id
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get audit system statistics."""
         return {
             "performance": {

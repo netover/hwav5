@@ -6,7 +6,7 @@ All data stores are now consolidated in PostgreSQL.
 
 Usage:
     from resync.core.database import get_session, TWSStore, ContextStore
-    
+
     async with get_session() as session:
         store = TWSStore()
         await store.update_job_status(job)
@@ -17,67 +17,63 @@ from .config import (
     DatabaseDriver,
     get_database_config,
 )
-
 from .engine import (
+    get_db_session,
     get_engine,
     get_session,
-    get_db_session,
     get_session_factory,
 )
-
-from .schema import (
-    initialize_database,
-    create_schemas,
-    create_tables,
-    check_database_connection,
-)
-
 from .models import (
-    Base,
-    # Enums
-    JobStatusEnum,
-    EventSeverity,
-    ContentType,
-    # All models
-    TWSSnapshot,
-    TWSJobStatus,
-    TWSWorkstationStatus,
-    TWSEvent,
-    TWSPattern,
-    TWSProblemSolution,
-    Conversation,
-    ContextContent,
+    ActiveLearningCandidate,
     AuditEntry,
     AuditQueueItem,
-    UserProfile,
-    SessionHistory,
+    Base,
+    ContentType,
+    ContextContent,
+    Conversation,
+    EventSeverity,
     Feedback,
+    # Enums
+    JobStatusEnum,
     LearningThreshold,
-    ActiveLearningCandidate,
-    MetricDataPoint,
     MetricAggregation,
+    MetricDataPoint,
+    SessionHistory,
+    TWSEvent,
+    TWSJobStatus,
+    TWSPattern,
+    TWSProblemSolution,
+    # All models
+    TWSSnapshot,
+    TWSWorkstationStatus,
+    UserProfile,
     get_all_models,
 )
-
 from .repositories import (
-    # Base
-    BaseRepository,
-    TimestampedRepository,
-    # TWS
-    JobStatus,
-    PatternMatch,
-    TWSStore,
-    # Context
-    ContextStore,
     # Audit
     AuditEntryRepository,
     AuditQueueRepository,
-    # Analytics
-    UserBehaviorStore,
+    # Base
+    BaseRepository,
+    # Context
+    ContextStore,
     # Learning
     FeedbackStore,
+    # TWS
+    JobStatus,
     # Metrics
     MetricsStore,
+    PatternMatch,
+    TimestampedRepository,
+    TWSStore,
+    # Analytics
+    UserBehaviorStore,
+)
+from .schema import (
+    check_database_connection,
+    create_schemas,
+    create_tables,
+    initialize_database,
 )
 
 __all__ = [

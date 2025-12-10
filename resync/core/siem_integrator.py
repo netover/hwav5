@@ -18,10 +18,11 @@ import secrets
 import time
 from abc import ABC, abstractmethod
 from collections import deque
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
+from typing import Any
 
 import aiohttp
 
@@ -75,23 +76,23 @@ class SIEMEvent:
 
     # Event details
     message: str
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
     # Actor information
-    user_id: Optional[str] = None
-    session_id: Optional[str] = None
-    ip_address: Optional[str] = None
-    user_agent: Optional[str] = None
+    user_id: str | None = None
+    session_id: str | None = None
+    ip_address: str | None = None
+    user_agent: str | None = None
 
     # Target information
-    resource_id: Optional[str] = None
-    resource_type: Optional[str] = None
-    action: Optional[str] = None
+    resource_id: str | None = None
+    resource_type: str | None = None
+    action: str | None = None
 
     # Additional context
-    correlation_id: Optional[str] = None
-    tags: Set[str] = field(default_factory=set)
-    custom_fields: Dict[str, Any] = field(default_factory=dict)
+    correlation_id: str | None = None
+    tags: set[str] = field(default_factory=set)
+    custom_fields: dict[str, Any] = field(default_factory=dict)
 
     def to_cef(self) -> str:
         """Convert event to CEF format."""
@@ -181,18 +182,18 @@ class SIEMConfiguration:
     siem_type: SIEMType
     name: str
     endpoint_url: str
-    api_key: Optional[str] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
-    headers: Dict[str, str] = field(default_factory=dict)
+    api_key: str | None = None
+    username: str | None = None
+    password: str | None = None
+    headers: dict[str, str] = field(default_factory=dict)
     timeout_seconds: int = 30
     batch_size: int = 100
     retry_attempts: int = 3
     retry_delay_seconds: float = 1.0
     enable_ssl_verification: bool = True
-    custom_config: Dict[str, Any] = field(default_factory=dict)
+    custom_config: dict[str, Any] = field(default_factory=dict)
 
-    def get_auth_headers(self) -> Dict[str, str]:
+    def get_auth_headers(self) -> dict[str, str]:
         """Get authentication headers."""
         headers = dict(self.headers)
 
@@ -231,18 +232,18 @@ class SIEMConnector(ABC):
         """Send single event to SIEM."""
 
     @abstractmethod
-    async def send_events_batch(self, events: List[SIEMEvent]) -> int:
+    async def send_events_batch(self, events: list[SIEMEvent]) -> int:
         """Send batch of events to SIEM. Returns number of events sent successfully."""
 
     @abstractmethod
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on SIEM connection."""
 
     def is_connected(self) -> bool:
         """Check if connector is connected."""
         return self.status == SIEMStatus.CONNECTED
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get connector metrics."""
         return {
             "status": self.status.value,
@@ -260,7 +261,7 @@ class SplunkConnector(SIEMConnector):
 
     def __init__(self, config: SIEMConfiguration):
         super().__init__(config)
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
 
     async def connect(self) -> bool:
         """Connect to Splunk."""
@@ -280,9 +281,8 @@ class SplunkConnector(SIEMConnector):
                 self.last_connection_attempt = time.time()
                 self.connection_failures = 0
                 return True
-            else:
-                self.status = SIEMStatus.ERROR
-                return False
+            self.status = SIEMStatus.ERROR
+            return False
 
         except Exception as e:
             logger.error(f"Splunk connection failed: {e}")
@@ -301,7 +301,7 @@ class SplunkConnector(SIEMConnector):
         """Send single event to Splunk."""
         return await self.send_events_batch([event]) == 1
 
-    async def send_events_batch(self, events: List[SIEMEvent]) -> int:
+    async def send_events_batch(self, events: list[SIEMEvent]) -> int:
         """Send batch of events to Splunk."""
         if not self.session or not self.is_connected():
             return 0
@@ -329,11 +329,10 @@ class SplunkConnector(SIEMConnector):
                     self.events_sent += len(events)
                     self.last_event_sent = time.time()
                     return len(events)
-                else:
-                    logger.error(
-                        f"Splunk batch send failed: {response.status} - {await response.text()}"
-                    )
-                    return 0
+                logger.error(
+                    f"Splunk batch send failed: {response.status} - {await response.text()}"
+                )
+                return 0
 
         except Exception as e:
             logger.error(f"Splunk batch send error: {e}")
@@ -342,7 +341,7 @@ class SplunkConnector(SIEMConnector):
                 self.status = SIEMStatus.ERROR
             return 0
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform Splunk health check."""
         if not self.session:
             return {"status": "disconnected", "error": "No session"}
@@ -353,8 +352,7 @@ class SplunkConnector(SIEMConnector):
             async with self.session.get(url) as response:
                 if response.status == 200:
                     return {"status": "ok", "response_time": time.time()}
-                else:
-                    return {"status": "error", "http_status": response.status}
+                return {"status": "error", "http_status": response.status}
 
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
@@ -366,7 +364,7 @@ class ELKConnector(SIEMConnector):
 
     def __init__(self, config: SIEMConfiguration):
         super().__init__(config)
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
         self.bulk_endpoint = f"{self.config.endpoint_url}/_bulk"
 
     async def connect(self) -> bool:
@@ -386,9 +384,8 @@ class ELKConnector(SIEMConnector):
                 self.last_connection_attempt = time.time()
                 self.connection_failures = 0
                 return True
-            else:
-                self.status = SIEMStatus.ERROR
-                return False
+            self.status = SIEMStatus.ERROR
+            return False
 
         except Exception as e:
             logger.error(f"ELK connection failed: {e}")
@@ -407,7 +404,7 @@ class ELKConnector(SIEMConnector):
         """Send single event to ELK."""
         return await self.send_events_batch([event]) == 1
 
-    async def send_events_batch(self, events: List[SIEMEvent]) -> int:
+    async def send_events_batch(self, events: list[SIEMEvent]) -> int:
         """Send batch of events to ELK using bulk API."""
         if not self.session or not self.is_connected():
             return 0
@@ -436,11 +433,10 @@ class ELKConnector(SIEMConnector):
                     self.events_sent += successful
                     self.last_event_sent = time.time()
                     return successful
-                else:
-                    logger.error(
-                        f"ELK bulk send failed: {response.status} - {await response.text()}"
-                    )
-                    return 0
+                logger.error(
+                    f"ELK bulk send failed: {response.status} - {await response.text()}"
+                )
+                return 0
 
         except Exception as e:
             logger.error(f"ELK batch send error: {e}")
@@ -449,7 +445,7 @@ class ELKConnector(SIEMConnector):
                 self.status = SIEMStatus.ERROR
             return 0
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform ELK health check."""
         if not self.session:
             return {"status": "disconnected", "error": "No session"}
@@ -464,8 +460,7 @@ class ELKConnector(SIEMConnector):
                         "cluster_status": health_data.get("status"),
                         "response_time": time.time(),
                     }
-                else:
-                    return {"status": "error", "http_status": response.status}
+                return {"status": "error", "http_status": response.status}
 
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
@@ -486,9 +481,9 @@ class SIEMIntegrator:
     - Failover and redundancy
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
-        self.connectors: Dict[str, SIEMConnector] = {}
+        self.connectors: dict[str, SIEMConnector] = {}
         self.event_queue: asyncio.Queue = asyncio.Queue(maxsize=10000)
         self.correlation_engine = EventCorrelationEngine()
         self.enrichment_engine = EventEnrichmentEngine()
@@ -505,9 +500,9 @@ class SIEMIntegrator:
         self.last_flush = time.time()
 
         # Background tasks
-        self._processor_task: Optional[asyncio.Task] = None
-        self._flusher_task: Optional[asyncio.Task] = None
-        self._monitor_task: Optional[asyncio.Task] = None
+        self._processor_task: asyncio.Task | None = None
+        self._flusher_task: asyncio.Task | None = None
+        self._monitor_task: asyncio.Task | None = None
         self._running = False
 
         # Circuit breaker for failed SIEMs
@@ -621,13 +616,13 @@ class SIEMIntegrator:
             logger.warning("Event queue full, dropping custom event")
             return ""
 
-    def get_connector_status(self) -> Dict[str, Dict[str, Any]]:
+    def get_connector_status(self) -> dict[str, dict[str, Any]]:
         """Get status of all connectors."""
         return {
             name: connector.get_metrics() for name, connector in self.connectors.items()
         }
 
-    def get_system_metrics(self) -> Dict[str, Any]:
+    def get_system_metrics(self) -> dict[str, Any]:
         """Get overall system metrics."""
         connector_status = self.get_connector_status()
 
@@ -781,7 +776,7 @@ class EventCorrelationEngine:
     """Engine for correlating security events."""
 
     def __init__(self):
-        self.rules: List[Dict[str, Any]] = []
+        self.rules: list[dict[str, Any]] = []
         self.alerts_generated = 0
 
         # Initialize default correlation rules
@@ -825,7 +820,7 @@ class EventCorrelationEngine:
             },
         ]
 
-    async def correlate_event(self, event: SIEMEvent) -> Optional[Dict[str, Any]]:
+    async def correlate_event(self, event: SIEMEvent) -> dict[str, Any] | None:
         """Check if event correlates with recent events."""
         # This is a simplified implementation
         # In a real system, you'd maintain sliding windows of events per user/IP/etc.
@@ -839,7 +834,7 @@ class EventEnrichmentEngine:
     """Engine for enriching security events with additional context."""
 
     def __init__(self):
-        self.enrichers: List[Callable[[SIEMEvent], Awaitable[None]]] = []
+        self.enrichers: list[Callable[[SIEMEvent], Awaitable[None]]] = []
 
     async def enrich_event(self, event: SIEMEvent) -> None:
         """Enrich event with additional context."""
@@ -864,9 +859,9 @@ class SIEMCircuitBreaker:
     def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 300):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
-        self.failure_counts: Dict[str, int] = {}
-        self.last_failures: Dict[str, float] = {}
-        self.open_circuits: Set[str] = set()
+        self.failure_counts: dict[str, int] = {}
+        self.last_failures: dict[str, float] = {}
+        self.open_circuits: set[str] = set()
 
     def record_failure(self, siem_name: str) -> None:
         """Record a failure for a SIEM."""

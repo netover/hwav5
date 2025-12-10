@@ -4,9 +4,9 @@ FastAPI Database Configuration.
 Uses the core database module for unified configuration.
 """
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import declarative_base
 
 # Import from core database module
 from resync.core.database.config import (
@@ -15,12 +15,20 @@ from resync.core.database.config import (
     get_database_config,
 )
 from resync.core.database.engine import (
-    get_engine,
-    get_session as core_get_session,
-    get_session_factory,
-    init_db as core_init_db,
-    close_db as core_close_db,
     Base as CoreBase,
+)
+from resync.core.database.engine import (
+    close_db as core_close_db,
+)
+from resync.core.database.engine import (
+    get_engine,
+    get_session_factory,
+)
+from resync.core.database.engine import (
+    get_session as core_get_session,
+)
+from resync.core.database.engine import (
+    init_db as core_init_db,
 )
 
 # Re-export Base
@@ -33,7 +41,7 @@ AsyncSessionLocal = get_session_factory
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     FastAPI dependency for database sessions.
-    
+
     Usage:
         @router.get("/items")
         async def get_items(db: AsyncSession = Depends(get_db)):

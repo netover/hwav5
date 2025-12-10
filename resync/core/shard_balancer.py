@@ -4,7 +4,6 @@ Shard Balancer for distributed cache operations.
 This module provides basic shard balancing functionality for distributed cache systems.
 """
 
-from typing import Dict, List
 
 
 class ShardBalancer:
@@ -18,7 +17,7 @@ class ShardBalancer:
         """Get shard number for a given key."""
         return hash(key) % self.shards
 
-    def balance_load(self, keys: List[str]) -> Dict[int, List[str]]:
+    def balance_load(self, keys: list[str]) -> dict[int, list[str]]:
         """Balance keys across shards."""
         shards = {i: [] for i in range(self.shards)}
         for key in keys:

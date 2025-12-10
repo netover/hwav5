@@ -13,18 +13,18 @@ This module provides comprehensive GDPR compliance capabilities including:
 
 
 import asyncio
+import base64
 import hashlib
 import json
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import base64
 
 from resync.core.structured_logger import get_logger
 
@@ -96,12 +96,12 @@ class UserConsent:
     user_id: str
     consent_id: str
     status: ConsentStatus
-    granted_at: Optional[float] = None
-    withdrawn_at: Optional[float] = None
-    expires_at: Optional[float] = None
+    granted_at: float | None = None
+    withdrawn_at: float | None = None
+    expires_at: float | None = None
     legal_basis: str = ""
     purpose: str = ""
-    data_categories: Set[DataCategory] = field(default_factory=set)
+    data_categories: set[DataCategory] = field(default_factory=set)
     ip_address: str = ""
     user_agent: str = ""
 
@@ -130,9 +130,9 @@ class DataErasureRequest:
     user_id: str
     requested_at: float
     status: str = "pending"  # pending, processing, completed, failed
-    data_categories: Set[DataCategory] = field(default_factory=set)
+    data_categories: set[DataCategory] = field(default_factory=set)
     reason: str = ""
-    completed_at: Optional[float] = None
+    completed_at: float | None = None
     affected_records: int = 0
     verification_hash: str = ""  # Hash of deleted data for verification
 
@@ -142,7 +142,7 @@ class DataErasureRequest:
         self.completed_at = time.time()
         self.affected_records = affected_records
 
-    def generate_verification_hash(self, deleted_data: List[Dict[str, Any]]) -> str:
+    def generate_verification_hash(self, deleted_data: list[dict[str, Any]]) -> str:
         """Generate verification hash of deleted data."""
         data_str = json.dumps(
             sorted(deleted_data, key=lambda x: str(x)), sort_keys=True
@@ -159,11 +159,11 @@ class DataPortabilityRequest:
     requested_at: float
     status: str = "pending"  # pending, processing, completed, failed
     format: str = "json"  # json, xml, csv
-    data_categories: Set[DataCategory] = field(default_factory=set)
+    data_categories: set[DataCategory] = field(default_factory=set)
     include_audit_data: bool = False
-    completed_at: Optional[float] = None
+    completed_at: float | None = None
     data_size_bytes: int = 0
-    download_url: Optional[str] = None
+    download_url: str | None = None
 
 
 @dataclass
@@ -203,7 +203,7 @@ class DataAnonymizer:
         self.config = config
         self._salt = "gdpr_compliance_salt_2024"  # Should be configurable
 
-    def anonymize_personal_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def anonymize_personal_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """Anonymize personal identifiable information."""
         anonymized = data.copy()
 
@@ -237,7 +237,7 @@ class DataAnonymizer:
 
         return anonymized
 
-    def pseudonymize_data(self, data: Dict[str, Any], user_id: str) -> Dict[str, Any]:
+    def pseudonymize_data(self, data: dict[str, Any], user_id: str) -> dict[str, Any]:
         """Pseudonymize data using deterministic hashing."""
         pseudonymized = data.copy()
 
@@ -259,15 +259,14 @@ class DataAnonymizer:
             if len(value) <= 1:
                 return "*"
             return value[0] + "*" * (len(value) - 1)
-        elif isinstance(value, (int, float)):
+        if isinstance(value, (int, float)):
             # Replace with range/category
             if isinstance(value, int) and value > 1900 and value < 2100:
                 # Likely a year of birth
                 decade = (value // 10) * 10
                 return f"{decade}s"
             return "REDACTED"
-        else:
-            return "REDACTED"
+        return "REDACTED"
 
     def _pseudonymize_value(self, value: Any, user_id: str) -> str:
         """Create deterministic pseudonym for a value."""
@@ -280,7 +279,7 @@ class GDPRDataEncryptor:
 
     def __init__(self, config: GDPRComplianceConfig):
         self.config = config
-        self._current_key: Optional[bytes] = None
+        self._current_key: bytes | None = None
         self._key_created_at = 0
         self._cipher = None
         self._initialize_encryption()
@@ -336,7 +335,7 @@ class GDPRComplianceManager:
     - Breach detection and notification
     """
 
-    def __init__(self, config: Optional[GDPRComplianceConfig] = None):
+    def __init__(self, config: GDPRComplianceConfig | None = None):
         self.config = config or GDPRComplianceConfig()
 
         # Core components
@@ -344,19 +343,19 @@ class GDPRComplianceManager:
         self.encryptor = GDPRDataEncryptor(self.config)
 
         # Data management
-        self.retention_policies: Dict[DataCategory, DataRetentionPolicy] = {}
-        self.consent_records: Dict[str, List[UserConsent]] = defaultdict(list)
-        self.erasure_requests: Dict[str, DataErasureRequest] = {}
-        self.portability_requests: Dict[str, DataPortabilityRequest] = {}
+        self.retention_policies: dict[DataCategory, DataRetentionPolicy] = {}
+        self.consent_records: dict[str, list[UserConsent]] = defaultdict(list)
+        self.erasure_requests: dict[str, DataErasureRequest] = {}
+        self.portability_requests: dict[str, DataPortabilityRequest] = {}
 
         # Audit system
         self.audit_trail: deque = deque(maxlen=10000)
-        self.breach_incidents: List[Dict[str, Any]] = []
+        self.breach_incidents: list[dict[str, Any]] = []
 
         # Background tasks
-        self._cleanup_task: Optional[asyncio.Task] = None
-        self._audit_task: Optional[asyncio.Task] = None
-        self._breach_monitor_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
+        self._audit_task: asyncio.Task | None = None
+        self._breach_monitor_task: asyncio.Task | None = None
         self._running = False
 
         # Initialize default retention policies
@@ -451,11 +450,11 @@ class GDPRComplianceManager:
     async def record_user_consent(
         self,
         user_id: str,
-        data_categories: List[DataCategory],
+        data_categories: list[DataCategory],
         purpose: str,
         ip_address: str,
         user_agent: str,
-        expiry_days: Optional[int] = None,
+        expiry_days: int | None = None,
     ) -> str:
         """Record user consent for data processing."""
         consent_id = f"consent_{user_id}_{int(time.time())}"
@@ -516,7 +515,7 @@ class GDPRComplianceManager:
         return False
 
     async def request_data_erasure(
-        self, user_id: str, data_categories: List[DataCategory], reason: str = ""
+        self, user_id: str, data_categories: list[DataCategory], reason: str = ""
     ) -> str:
         """Request data erasure for a user (Right to be Forgotten)."""
         request_id = f"erasure_{user_id}_{int(time.time())}"
@@ -549,7 +548,7 @@ class GDPRComplianceManager:
     async def request_data_portability(
         self,
         user_id: str,
-        data_categories: List[DataCategory],
+        data_categories: list[DataCategory],
         format: str = "json",
         include_audit_data: bool = False,
     ) -> str:
@@ -584,7 +583,7 @@ class GDPRComplianceManager:
 
     async def check_data_retention_compliance(
         self, data_category: DataCategory, created_at: float
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check if data complies with retention policies."""
         policy = self.retention_policies.get(data_category)
         if not policy:
@@ -618,10 +617,10 @@ class GDPRComplianceManager:
     async def report_data_breach(
         self,
         breach_type: str,
-        affected_users: List[str],
-        data_categories: List[DataCategory],
+        affected_users: list[str],
+        data_categories: list[DataCategory],
         breach_description: str,
-        detection_time: Optional[float] = None,
+        detection_time: float | None = None,
     ) -> str:
         """Report a data breach incident."""
         # Use BLAKE2b instead of MD5 for generating breach IDs
@@ -659,7 +658,7 @@ class GDPRComplianceManager:
         logger.warning(f"Data breach reported: {breach_id}")
         return breach_id
 
-    def get_compliance_status(self) -> Dict[str, Any]:
+    def get_compliance_status(self) -> dict[str, Any]:
         """Get overall GDPR compliance status."""
         total_consents = sum(
             len(consents) for consents in self.consent_records.values()
@@ -846,7 +845,7 @@ class GDPRComplianceManager:
             logger.error(f"Data portability failed: {request.request_id} - {e}")
 
     async def _handle_consent_withdrawal(
-        self, user_id: str, data_categories: Set[DataCategory]
+        self, user_id: str, data_categories: set[DataCategory]
     ) -> None:
         """Handle consent withdrawal by triggering data erasure."""
         await self.request_data_erasure(
@@ -902,7 +901,7 @@ class GDPRComplianceManager:
         if len(self.audit_trail) == 0 and self.config.enable_audit_logging:
             logger.warning("Audit trail is empty - this may indicate compliance issues")
 
-    async def _handle_data_breach(self, breach: Dict[str, Any]) -> None:
+    async def _handle_data_breach(self, breach: dict[str, Any]) -> None:
         """Handle data breach incident response."""
         breach["status"] = "investigating"
 
@@ -917,7 +916,7 @@ class GDPRComplianceManager:
 
         logger.warning(f"Data breach handling initiated: {breach['breach_id']}")
 
-    async def _send_breach_notification(self, breach: Dict[str, Any]) -> None:
+    async def _send_breach_notification(self, breach: dict[str, Any]) -> None:
         """Send breach notification (simulated)."""
         breach["notification_sent"] = True
         breach["gdpr_compliant"] = True

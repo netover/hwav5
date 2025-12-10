@@ -3,9 +3,10 @@
 Validation utilities for FastAPI application
 """
 import re
-from typing import Optional
 from pathlib import Path
+
 from ..core.config import settings
+
 
 def validate_email(email: str) -> bool:
     """Validate email format"""
@@ -18,7 +19,7 @@ def validate_username(username: str) -> bool:
     pattern = r'^[a-zA-Z0-9_-]{3,30}$'
     return bool(re.match(pattern, username))
 
-def validate_password(password: str) -> tuple[bool, Optional[str]]:
+def validate_password(password: str) -> tuple[bool, str | None]:
     """Validate password strength"""
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"

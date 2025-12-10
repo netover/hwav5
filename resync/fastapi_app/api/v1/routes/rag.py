@@ -9,13 +9,23 @@ Provides endpoints for:
 - Document management
 - RAG statistics
 """
-from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends, BackgroundTasks, Query
 from pathlib import Path
-from typing import Optional
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
+
+from ...services.rag_service import RAGIntegrationService, get_rag_service
 from ..dependencies import get_current_user, get_logger
-from ..models.response_models import FileUploadResponse
 from ..models.request_models import FileUploadValidation
-from ...services.rag_service import get_rag_service, RAGIntegrationService
+from ..models.response_models import FileUploadResponse
 
 router = APIRouter()
 
@@ -98,7 +108,7 @@ async def upload_rag_file(
 ):
     """
     Upload file for RAG processing.
-    
+
     The file is saved and queued for background processing which includes:
     - Text extraction
     - Chunking
@@ -116,7 +126,7 @@ async def upload_rag_file(
 
         # Save file and get content
         content = await save_upload_file(file, file_path)
-        
+
         # Parse tags
         tag_list = [t.strip() for t in tags.split(",") if t.strip()]
 
@@ -173,19 +183,19 @@ async def search_rag(
 ):
     """
     Search for relevant documents using semantic search.
-    
+
     Returns chunks most similar to the query.
     """
     try:
         results = await rag_service.search(query=query, top_k=top_k)
-        
+
         logger_instance.info(
             "rag_search",
             user_id=current_user.get("user_id"),
             query=query[:50],
             results_count=len(results),
         )
-        
+
         return {
             "query": query,
             "results": [
@@ -210,7 +220,7 @@ async def search_rag(
 
 @router.get("/rag/files")
 async def list_rag_files(
-    status_filter: Optional[str] = Query(default=None, description="Filter by status"),
+    status_filter: str | None = Query(default=None, description="Filter by status"),
     limit: int = Query(default=100, ge=1, le=1000),
     current_user: dict = Depends(get_current_user),
     logger_instance = Depends(get_logger),
@@ -219,7 +229,7 @@ async def list_rag_files(
     """List uploaded RAG files with optional filtering."""
     try:
         docs = rag_service.list_documents(status=status_filter, limit=limit)
-        
+
         files = [
             {
                 "file_id": doc.file_id,
@@ -257,13 +267,13 @@ async def get_rag_file(
 ):
     """Get details of a specific RAG file."""
     doc = rag_service.get_document(file_id)
-    
+
     if not doc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Document {file_id} not found"
         )
-    
+
     return {
         "file_id": doc.file_id,
         "filename": doc.filename,
@@ -285,7 +295,7 @@ async def delete_rag_file(
     """Delete RAG file and its associated chunks."""
     try:
         deleted = rag_service.delete_document(file_id)
-        
+
         if not deleted:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

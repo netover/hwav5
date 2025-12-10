@@ -60,8 +60,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "monitoring_aggregator",
         "HealthMonitoringAggregator",
     ),
-    # Circuit breaker functionality
-    "CircuitBreaker": ("circuit_breaker", "CircuitBreaker"),
+    # Circuit breaker functionality (use resync.core.circuit_breaker instead)
     "CircuitBreakerManager": (
         "circuit_breaker_manager",
         "CircuitBreakerManager",
@@ -72,8 +71,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "ComponentCacheManager",
     ),
     "HealthHistoryManager": ("health_history_manager", "HealthHistoryManager"),
-    # Memory management
-    "MemoryManager": ("memory_manager", "MemoryManager"),
+    # Memory management (use resync.core.cache.memory_manager instead)
     "MemoryUsageTracker": ("memory_usage_tracker", "MemoryUsageTracker"),
     # Recovery and alerting
     "HealthRecoveryManager": ("recovery_manager", "HealthRecoveryManager"),
@@ -191,7 +189,6 @@ if _env_flag("HSC_STRICT_IMPORTS"):
 # Suporte a type-checkers sem custo em runtime
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
-    from .circuit_breaker import CircuitBreaker  # noqa: F401
     from .circuit_breaker_manager import CircuitBreakerManager  # noqa: F401
     from .component_cache_manager import ComponentCacheManager  # noqa: F401
     from .global_health_service_manager import (  # noqa: F401
@@ -210,7 +207,6 @@ if TYPE_CHECKING:
     from .health_monitoring_coordinator import HealthMonitoringCoordinator  # noqa: F401
     from .health_service_manager import HealthServiceManager  # noqa: F401
     from .health_service_orchestrator import HealthServiceOrchestrator  # noqa: F401
-    from .memory_manager import MemoryManager  # noqa: F401
     from .memory_usage_tracker import MemoryUsageTracker  # noqa: F401
     from .monitoring_aggregator import HealthMonitoringAggregator  # noqa: F401
     from .performance_metrics_collector import PerformanceMetricsCollector  # noqa: F401

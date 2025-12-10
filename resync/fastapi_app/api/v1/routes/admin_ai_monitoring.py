@@ -17,12 +17,11 @@ Version: 5.2.3.29
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-from fastapi import APIRouter, HTTPException, BackgroundTasks, status
-from pydantic import BaseModel, Field
+from typing import Any
 
 import structlog
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from pydantic import BaseModel, Field
 
 logger = structlog.get_logger(__name__)
 
@@ -41,7 +40,7 @@ CONFIG_PATH = Path(__file__).resolve().parent.parent.parent.parent.parent / "con
 
 class ResourceLimitsConfig(BaseModel):
     """Resource limits configuration."""
-    
+
     max_cpu_percent: float = Field(
         default=25.0,
         ge=5.0,
@@ -70,19 +69,19 @@ class ResourceLimitsConfig(BaseModel):
 
 class SpecialistAgentConfig(BaseModel):
     """Configuration for a single specialist agent."""
-    
+
     enabled: bool = Field(default=True, description="Whether the specialist is enabled")
     model_name: str = Field(default="gpt-4o", description="LLM model to use")
     temperature: float = Field(default=0.3, ge=0.0, le=2.0, description="Model temperature")
     max_tokens: int = Field(default=2048, ge=100, le=8192, description="Maximum response tokens")
     timeout_seconds: int = Field(default=30, ge=5, le=120, description="Request timeout")
     retry_attempts: int = Field(default=3, ge=0, le=5, description="Retry attempts on failure")
-    custom_instructions: Optional[str] = Field(default=None, description="Additional custom instructions")
+    custom_instructions: str | None = Field(default=None, description="Additional custom instructions")
 
 
 class SpecialistsConfig(BaseModel):
     """Configuration for all specialist agents."""
-    
+
     enabled: bool = Field(default=True, description="Enable specialist team")
     execution_mode: str = Field(
         default="coordinate",
@@ -95,7 +94,7 @@ class SpecialistsConfig(BaseModel):
     orchestrator_model: str = Field(default="gpt-4o", description="Orchestrator model")
     synthesizer_model: str = Field(default="gpt-4o", description="Synthesizer model")
     fallback_to_general: bool = Field(default=True, description="Fallback to general assistant on failure")
-    
+
     job_analyst: SpecialistAgentConfig = Field(
         default_factory=lambda: SpecialistAgentConfig(temperature=0.2)
     )
@@ -112,7 +111,7 @@ class SpecialistsConfig(BaseModel):
 
 class MonitoringScheduleConfig(BaseModel):
     """Monitoring schedule configuration."""
-    
+
     type: str = Field(
         default="daily",
         pattern="^(hourly|every_4_hours|daily|weekly|manual)$",
@@ -123,7 +122,7 @@ class MonitoringScheduleConfig(BaseModel):
         pattern=r"^\d{2}:\d{2}$",
         description="Time to run (HH:MM) for daily/weekly"
     )
-    day_of_week: Optional[int] = Field(
+    day_of_week: int | None = Field(
         default=None,
         ge=0,
         le=6,
@@ -133,7 +132,7 @@ class MonitoringScheduleConfig(BaseModel):
 
 class DriftDetectionConfig(BaseModel):
     """Drift detection configuration."""
-    
+
     data_drift_enabled: bool = Field(default=True, description="Monitor data/query drift")
     prediction_drift_enabled: bool = Field(default=True, description="Monitor prediction drift")
     target_drift_enabled: bool = Field(default=True, description="Monitor target/feedback drift")
@@ -145,7 +144,7 @@ class DriftDetectionConfig(BaseModel):
 
 class AIMonitoringConfig(BaseModel):
     """Complete AI monitoring configuration."""
-    
+
     enabled: bool = Field(default=True, description="Enable AI monitoring")
     schedule: MonitoringScheduleConfig = Field(default_factory=MonitoringScheduleConfig)
     drift_detection: DriftDetectionConfig = Field(default_factory=DriftDetectionConfig)
@@ -156,20 +155,20 @@ class AIMonitoringConfig(BaseModel):
 
 class AIConfigResponse(BaseModel):
     """Complete AI configuration response."""
-    
+
     specialists: SpecialistsConfig = Field(default_factory=SpecialistsConfig)
     monitoring: AIMonitoringConfig = Field(default_factory=AIMonitoringConfig)
-    last_updated: Optional[str] = Field(default=None, description="Last update timestamp")
-    updated_by: Optional[str] = Field(default=None, description="Who made the last update")
+    last_updated: str | None = Field(default=None, description="Last update timestamp")
+    updated_by: str | None = Field(default=None, description="Who made the last update")
 
 
 class MonitoringStatusResponse(BaseModel):
     """Monitoring status response."""
-    
+
     enabled: bool
     running: bool
     schedule: str
-    last_run: Optional[str]
+    last_run: str | None
     total_alerts: int
     recent_alerts: int
     evidently_available: bool
@@ -177,7 +176,7 @@ class MonitoringStatusResponse(BaseModel):
 
 class DriftAlertResponse(BaseModel):
     """Drift alert response."""
-    
+
     alert_id: str
     drift_type: str
     severity: str
@@ -186,26 +185,26 @@ class DriftAlertResponse(BaseModel):
     threshold: float
     message: str
     timestamp: str
-    details: Dict[str, Any] = Field(default_factory=dict)
+    details: dict[str, Any] = Field(default_factory=dict)
 
 
 class MonitoringRunResponse(BaseModel):
     """Monitoring run result response."""
-    
+
     timestamp: str
-    data_drift: Optional[Dict[str, Any]]
-    prediction_drift: Optional[Dict[str, Any]]
-    target_drift: Optional[Dict[str, Any]]
-    alerts: List[Dict[str, Any]]
+    data_drift: dict[str, Any] | None
+    prediction_drift: dict[str, Any] | None
+    target_drift: dict[str, Any] | None
+    alerts: list[dict[str, Any]]
     duration_seconds: float
-    error: Optional[str] = None
+    error: str | None = None
 
 
 # ============================================================================
 # DEFAULT CONFIGURATION
 # ============================================================================
 
-DEFAULT_AI_CONFIG: Dict[str, Any] = {
+DEFAULT_AI_CONFIG: dict[str, Any] = {
     "specialists": {
         "enabled": True,
         "execution_mode": "coordinate",
@@ -286,7 +285,7 @@ DEFAULT_AI_CONFIG: Dict[str, Any] = {
 # HELPER FUNCTIONS
 # ============================================================================
 
-def _load_config() -> Dict[str, Any]:
+def _load_config() -> dict[str, Any]:
     """Load configuration from file."""
     if CONFIG_PATH.exists():
         try:
@@ -294,25 +293,25 @@ def _load_config() -> Dict[str, Any]:
                 config = json.load(f)
                 # Merge with defaults for any missing keys
                 return _deep_merge(DEFAULT_AI_CONFIG.copy(), config)
-        except (json.JSONDecodeError, IOError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             logger.warning("config_load_error", error=str(e))
     return DEFAULT_AI_CONFIG.copy()
 
 
-def _save_config(config: Dict[str, Any], updated_by: str = "admin") -> None:
+def _save_config(config: dict[str, Any], updated_by: str = "admin") -> None:
     """Save configuration to file."""
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    
+
     config["last_updated"] = datetime.utcnow().isoformat()
     config["updated_by"] = updated_by
-    
+
     with open(CONFIG_PATH, "w") as f:
         json.dump(config, f, indent=2)
-    
+
     logger.info("config_saved", path=str(CONFIG_PATH), updated_by=updated_by)
 
 
-def _deep_merge(base: Dict, override: Dict) -> Dict:
+def _deep_merge(base: dict, override: dict) -> dict:
     """Deep merge two dictionaries."""
     result = base.copy()
     for key, value in override.items():
@@ -342,7 +341,7 @@ def _get_monitoring_service():
     summary="Get AI Configuration",
     description="Retrieve current configuration for specialist agents and AI monitoring.",
 )
-async def get_ai_config() -> Dict[str, Any]:
+async def get_ai_config() -> dict[str, Any]:
     """Get current AI configuration."""
     return _load_config()
 
@@ -356,17 +355,17 @@ async def get_ai_config() -> Dict[str, Any]:
 async def update_ai_config(
     config: AIConfigResponse,
     background_tasks: BackgroundTasks,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Update AI configuration."""
     try:
         config_dict = config.model_dump()
         _save_config(config_dict)
-        
+
         # Reload services in background
         background_tasks.add_task(_reload_services, config_dict)
-        
+
         return _load_config()
-        
+
     except Exception as e:
         logger.error("config_update_error", error=str(e))
         raise HTTPException(
@@ -383,7 +382,7 @@ async def update_ai_config(
 )
 async def update_specialists_config(
     specialists: SpecialistsConfig,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Update specialists configuration."""
     config = _load_config()
     config["specialists"] = specialists.model_dump()
@@ -400,15 +399,15 @@ async def update_specialists_config(
 async def update_monitoring_config(
     monitoring: AIMonitoringConfig,
     background_tasks: BackgroundTasks,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Update monitoring configuration."""
     config = _load_config()
     config["monitoring"] = monitoring.model_dump()
     _save_config(config)
-    
+
     # Restart monitoring service with new config
     background_tasks.add_task(_restart_monitoring, config["monitoring"])
-    
+
     return config["monitoring"]
 
 
@@ -421,18 +420,18 @@ async def update_monitoring_config(
     summary="Get Specialists Status",
     description="Get current status of all specialist agents.",
 )
-async def get_specialists_status() -> Dict[str, Any]:
+async def get_specialists_status() -> dict[str, Any]:
     """Get status of specialist agents."""
     config = _load_config()
     specialists_config = config.get("specialists", {})
-    
+
     specialists = [
         "job_analyst",
         "dependency_specialist",
         "resource_specialist",
         "knowledge_specialist",
     ]
-    
+
     status_list = []
     for spec_name in specialists:
         spec_config = specialists_config.get(spec_name, {})
@@ -444,7 +443,7 @@ async def get_specialists_status() -> Dict[str, Any]:
             "temperature": spec_config.get("temperature", 0.3),
             "max_tokens": spec_config.get("max_tokens", 2048),
         })
-    
+
     return {
         "team_enabled": specialists_config.get("enabled", True),
         "execution_mode": specialists_config.get("execution_mode", "coordinate"),
@@ -461,7 +460,7 @@ async def get_specialists_status() -> Dict[str, Any]:
 async def toggle_specialist(
     specialist_type: str,
     enabled: bool,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Toggle a specialist agent on/off."""
     valid_types = [
         "job_analyst",
@@ -469,21 +468,21 @@ async def toggle_specialist(
         "resource_specialist",
         "knowledge_specialist",
     ]
-    
+
     if specialist_type not in valid_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid specialist type. Must be one of: {valid_types}",
         )
-    
+
     config = _load_config()
     if specialist_type in config["specialists"]:
         config["specialists"][specialist_type]["enabled"] = enabled
     else:
         config["specialists"][specialist_type] = {"enabled": enabled}
-    
+
     _save_config(config)
-    
+
     return {
         "specialist": specialist_type,
         "enabled": enabled,
@@ -501,13 +500,13 @@ async def toggle_specialist(
     summary="Get Monitoring Status",
     description="Get current status of the AI monitoring service.",
 )
-async def get_monitoring_status() -> Dict[str, Any]:
+async def get_monitoring_status() -> dict[str, Any]:
     """Get monitoring service status."""
     service = _get_monitoring_service()
-    
+
     if service:
         return service.get_status()
-    
+
     # Return default status if service not initialized
     config = _load_config()
     return {
@@ -529,15 +528,15 @@ async def get_monitoring_status() -> Dict[str, Any]:
 async def toggle_monitoring(
     enabled: bool,
     background_tasks: BackgroundTasks,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Toggle monitoring service on/off."""
     config = _load_config()
     config["monitoring"]["enabled"] = enabled
     _save_config(config)
-    
+
     # Start/stop service
     background_tasks.add_task(_toggle_monitoring_service, enabled)
-    
+
     return {
         "enabled": enabled,
         "message": f"Monitoring {'enabled' if enabled else 'disabled'}",
@@ -550,16 +549,16 @@ async def toggle_monitoring(
     summary="Run Monitoring Now",
     description="Trigger a manual monitoring run.",
 )
-async def run_monitoring_now() -> Dict[str, Any]:
+async def run_monitoring_now() -> dict[str, Any]:
     """Run monitoring manually."""
     service = _get_monitoring_service()
-    
+
     if not service:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Monitoring service not initialized",
         )
-    
+
     try:
         result = await service.run_monitoring()
         return result
@@ -573,26 +572,27 @@ async def run_monitoring_now() -> Dict[str, Any]:
 
 @router.get(
     "/monitoring/alerts",
-    response_model=List[DriftAlertResponse],
+    response_model=list[DriftAlertResponse],
     summary="Get Monitoring Alerts",
     description="Get recent drift detection alerts.",
 )
 async def get_monitoring_alerts(
-    drift_type: Optional[str] = None,
-    severity: Optional[str] = None,
+    drift_type: str | None = None,
+    severity: str | None = None,
     hours: int = 24,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Get recent monitoring alerts."""
     service = _get_monitoring_service()
-    
+
     if not service:
         return []
-    
+
     from datetime import timedelta
-    from resync.core.monitoring import DriftType, AlertSeverity
-    
+
+    from resync.core.monitoring import AlertSeverity, DriftType
+
     since = datetime.utcnow() - timedelta(hours=hours)
-    
+
     # Convert string filters to enums
     drift_filter = None
     if drift_type:
@@ -600,20 +600,20 @@ async def get_monitoring_alerts(
             drift_filter = DriftType(drift_type)
         except ValueError:
             pass
-    
+
     severity_filter = None
     if severity:
         try:
             severity_filter = AlertSeverity(severity)
         except ValueError:
             pass
-    
+
     alerts = service.get_alerts(
         since=since,
         drift_type=drift_filter,
         severity=severity_filter,
     )
-    
+
     return [a.to_dict() for a in alerts]
 
 
@@ -624,11 +624,11 @@ async def get_monitoring_alerts(
 )
 async def list_monitoring_reports(
     limit: int = 10,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """List available monitoring reports."""
     config = _load_config()
     reports_path = Path(config.get("monitoring", {}).get("reports_path", "data/evidently_reports"))
-    
+
     reports = []
     if reports_path.exists():
         for report_file in sorted(reports_path.glob("*.html"), reverse=True)[:limit]:
@@ -638,7 +638,7 @@ async def list_monitoring_reports(
                 "size_kb": report_file.stat().st_size / 1024,
                 "created": datetime.fromtimestamp(report_file.stat().st_ctime).isoformat(),
             })
-    
+
     return {
         "reports_path": str(reports_path),
         "total_reports": len(list(reports_path.glob("*.html"))) if reports_path.exists() else 0,
@@ -650,47 +650,51 @@ async def list_monitoring_reports(
 # BACKGROUND TASKS
 # ============================================================================
 
-async def _reload_services(config: Dict[str, Any]) -> None:
+async def _reload_services(config: dict[str, Any]) -> None:
     """Reload services with new configuration."""
     logger.info("reloading_services")
-    
+
     # Reload monitoring if config changed
     if "monitoring" in config:
         await _restart_monitoring(config["monitoring"])
-    
+
     # Reload specialists if config changed
     if "specialists" in config:
         await _reload_specialists(config["specialists"])
 
 
-async def _restart_monitoring(monitoring_config: Dict[str, Any]) -> None:
+async def _restart_monitoring(monitoring_config: dict[str, Any]) -> None:
     """Restart monitoring service with new configuration."""
     try:
-        from resync.core.monitoring import MonitoringConfig, init_monitoring_service, get_monitoring_service
-        
+        from resync.core.monitoring import (
+            MonitoringConfig,
+            get_monitoring_service,
+            init_monitoring_service,
+        )
+
         # Stop existing service
         service = get_monitoring_service()
         if service:
             await service.stop()
-        
+
         if monitoring_config.get("enabled", False):
             # Create new config and start
             config = MonitoringConfig(**monitoring_config)
             await init_monitoring_service(config)
             logger.info("monitoring_service_restarted")
-            
+
     except ImportError:
         logger.warning("monitoring_module_not_available")
     except Exception as e:
         logger.error("monitoring_restart_error", error=str(e))
 
 
-async def _reload_specialists(specialists_config: Dict[str, Any]) -> None:
+async def _reload_specialists(specialists_config: dict[str, Any]) -> None:
     """Reload specialist agents with new configuration."""
     try:
         from resync.core.specialists import create_specialist_team
-        from resync.core.specialists.models import TeamConfig, SpecialistConfig, SpecialistType
-        
+        from resync.core.specialists.models import SpecialistConfig, SpecialistType, TeamConfig
+
         # Build team config from dict
         team_config = TeamConfig(
             enabled=specialists_config.get("enabled", True),
@@ -702,7 +706,7 @@ async def _reload_specialists(specialists_config: Dict[str, Any]) -> None:
             synthesizer_model=specialists_config.get("synthesizer_model", "gpt-4o"),
             fallback_to_general=specialists_config.get("fallback_to_general", True),
         )
-        
+
         # Build specialist configs
         for spec_type in SpecialistType:
             spec_key = spec_type.value
@@ -711,10 +715,10 @@ async def _reload_specialists(specialists_config: Dict[str, Any]) -> None:
                     specialist_type=spec_type,
                     **specialists_config[spec_key]
                 )
-        
+
         await create_specialist_team(config=team_config)
         logger.info("specialists_reloaded")
-        
+
     except ImportError:
         logger.warning("specialists_module_not_available")
     except Exception as e:
@@ -725,9 +729,9 @@ async def _toggle_monitoring_service(enabled: bool) -> None:
     """Start or stop monitoring service."""
     try:
         from resync.core.monitoring import get_monitoring_service, init_monitoring_service
-        
+
         service = get_monitoring_service()
-        
+
         if enabled and not service:
             config = _load_config()
             from resync.core.monitoring import MonitoringConfig
@@ -735,7 +739,7 @@ async def _toggle_monitoring_service(enabled: bool) -> None:
             await init_monitoring_service(monitoring_config)
         elif not enabled and service:
             await service.stop()
-            
+
     except ImportError:
         logger.warning("monitoring_module_not_available")
     except Exception as e:

@@ -3,9 +3,8 @@ Response Playbook Management.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
-from .models import ResponseAction, IncidentSeverity, IncidentCategory
+from .models import IncidentCategory, IncidentSeverity, ResponseAction
 
 
 @dataclass
@@ -13,19 +12,19 @@ class ResponsePlaybook:
     """
     Predefined response procedures for incident types.
     """
-    
+
     name: str
     description: str
     category: IncidentCategory
     min_severity: IncidentSeverity
-    actions: List[ResponseAction] = field(default_factory=list)
-    escalation_contacts: List[str] = field(default_factory=list)
-    
-    def get_actions(self) -> List[ResponseAction]:
+    actions: list[ResponseAction] = field(default_factory=list)
+    escalation_contacts: list[str] = field(default_factory=list)
+
+    def get_actions(self) -> list[ResponseAction]:
         """Get playbook actions."""
         return self.actions.copy()
-    
-    def to_dict(self) -> Dict:
+
+    def to_dict(self) -> dict:
         """Convert to dictionary."""
         return {
             "name": self.name,

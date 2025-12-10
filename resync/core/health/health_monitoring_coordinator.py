@@ -7,7 +7,6 @@ for the health check service, including monitoring loops and service lifecycle m
 
 
 import asyncio
-from typing import Optional
 
 import structlog
 
@@ -24,7 +23,7 @@ class HealthMonitoringCoordinator:
     and integration with the broader health monitoring ecosystem.
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """
         Initialize the health monitoring coordinator.
 
@@ -32,7 +31,7 @@ class HealthMonitoringCoordinator:
             config: Health check configuration (uses default if None)
         """
         self.config = config or HealthCheckConfig()
-        self._monitoring_task: Optional[asyncio.Task] = None
+        self._monitoring_task: asyncio.Task | None = None
         self._is_monitoring = False
         self._lock = asyncio.Lock()
 

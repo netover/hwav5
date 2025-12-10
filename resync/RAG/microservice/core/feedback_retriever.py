@@ -14,17 +14,17 @@ Key Features:
 
 import math
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from resync.core.structured_logger import get_logger
 from resync.RAG.microservice.core.config import CFG
-from resync.RAG.microservice.core.interfaces import Embedder, Retriever, VectorStore
 from resync.RAG.microservice.core.feedback_store import (
+    FEEDBACK_NEGATIVE,
+    FEEDBACK_POSITIVE,
     FeedbackStore,
     get_feedback_store,
-    FEEDBACK_POSITIVE,
-    FEEDBACK_NEGATIVE,
 )
+from resync.RAG.microservice.core.interfaces import Embedder, Retriever, VectorStore
 from resync.RAG.microservice.core.monitoring import query_seconds
 
 logger = get_logger(__name__)
@@ -35,14 +35,14 @@ class RetrievalResult:
     """Enhanced retrieval result with feedback information."""
     doc_id: str
     content: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
     base_score: float
     feedback_score: float
     final_score: float
     feedback_boost: float
     has_feedback: bool = False
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "doc_id": self.doc_id,
             "content": self.content,
@@ -58,28 +58,28 @@ class RetrievalResult:
 class FeedbackAwareRetriever(Retriever):
     """
     Retriever that incorporates user feedback into ranking.
-    
+
     Implements a hybrid scoring system:
     final_score = base_score * (1 + feedback_weight * feedback_score)
-    
+
     Where feedback_score is derived from:
     1. Exact query-document feedback (highest weight)
     2. Similar query feedback (medium weight)
     3. Document-level aggregate (lowest weight)
     """
-    
+
     def __init__(
         self,
         embedder: Embedder,
         store: VectorStore,
-        feedback_store: Optional[FeedbackStore] = None,
+        feedback_store: FeedbackStore | None = None,
         feedback_weight: float = 0.3,
         min_feedback_boost: float = -0.5,
         max_feedback_boost: float = 0.5,
     ):
         """
         Initialize feedback-aware retriever.
-        
+
         Args:
             embedder: Embedding service for queries
             store: Vector store for document retrieval
@@ -94,45 +94,45 @@ class FeedbackAwareRetriever(Retriever):
         self.feedback_weight = max(0.0, min(1.0, feedback_weight))
         self.min_feedback_boost = min_feedback_boost
         self.max_feedback_boost = max_feedback_boost
-        
+
         # Statistics
         self._retrieval_count = 0
         self._feedback_applied_count = 0
-    
+
     async def retrieve(
         self,
         query: str,
         top_k: int = 10,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         apply_feedback: bool = True,
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Retrieve documents with feedback-based reranking.
-        
+
         Args:
             query: Search query
             top_k: Number of results to return
             filters: Optional metadata filters
             apply_feedback: Whether to apply feedback reranking
             user_id: Optional user ID for personalized feedback
-            
+
         Returns:
             List of document dicts with scores
         """
         top_k = min(top_k, CFG.max_top_k)
         self._retrieval_count += 1
-        
+
         # Get query embedding
         query_embedding = await self.embedder.embed(query)
-        
+
         # Calculate ef_search dynamically
         ef = CFG.ef_search_base + int(math.log2(max(10, top_k)) * 8)
         ef = min(ef, CFG.ef_search_max)
-        
+
         # Retrieve more candidates for reranking
         retrieve_k = min(top_k * 3, CFG.max_top_k) if apply_feedback else top_k
-        
+
         with query_seconds.time():
             hits = await self.store.query(
                 vector=query_embedding,
@@ -142,89 +142,89 @@ class FeedbackAwareRetriever(Retriever):
                 ef_search=ef,
                 with_vectors=CFG.enable_rerank,
             )
-        
+
         if not hits:
             return []
-        
+
         # Apply feedback-based reranking
         if apply_feedback:
             hits = await self._apply_feedback_reranking(
                 hits, query, query_embedding, user_id
             )
             self._feedback_applied_count += 1
-        
+
         # Apply traditional reranking if enabled
         if CFG.enable_rerank and hits and "vector" in hits[0]:
             hits = self._apply_vector_rerank(hits, query_embedding)
-        
+
         return hits[:top_k]
-    
+
     async def _apply_feedback_reranking(
         self,
-        hits: List[Dict[str, Any]],
+        hits: list[dict[str, Any]],
         query: str,
-        query_embedding: List[float],
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        query_embedding: list[float],
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Apply feedback-based score adjustments.
-        
+
         Scoring formula:
         final_score = base_score * (1 + clamp(feedback_weight * feedback_score, min, max))
         """
         # Get document IDs
         doc_ids = [hit.get("id", hit.get("doc_id", "")) for hit in hits]
-        
+
         # Batch fetch document scores
         doc_scores = await self.feedback_store.get_document_scores_batch(doc_ids)
-        
+
         # Apply feedback to each hit
         for hit in hits:
             doc_id = hit.get("id", hit.get("doc_id", ""))
             base_score = hit.get("score", 0.0)
-            
+
             # Get feedback score (query-specific or document-level)
             feedback_score = await self.feedback_store.get_query_feedback_score(
                 query, doc_id, query_embedding
             )
-            
+
             # Fall back to document-level if no query-specific feedback
             if feedback_score == 0.0:
                 feedback_score = doc_scores.get(doc_id, 0.0)
-            
+
             # Calculate boost (clamped)
             feedback_boost = self.feedback_weight * feedback_score
             feedback_boost = max(self.min_feedback_boost, min(self.max_feedback_boost, feedback_boost))
-            
+
             # Apply boost to score
             final_score = base_score * (1 + feedback_boost)
-            
+
             # Update hit with feedback info
             hit["base_score"] = base_score
             hit["feedback_score"] = feedback_score
             hit["feedback_boost"] = feedback_boost
             hit["score"] = final_score
             hit["has_feedback"] = feedback_score != 0.0
-        
+
         # Sort by new scores
         hits.sort(key=lambda x: x.get("score", 0.0), reverse=True)
-        
+
         logger.debug(
             "feedback_reranking_applied",
             query_len=len(query),
             hits_count=len(hits),
             docs_with_feedback=sum(1 for h in hits if h.get("has_feedback"))
         )
-        
+
         return hits
-    
+
     def _apply_vector_rerank(
         self,
-        hits: List[Dict[str, Any]],
-        query_embedding: List[float],
-    ) -> List[Dict[str, Any]]:
+        hits: list[dict[str, Any]],
+        query_embedding: list[float],
+    ) -> list[dict[str, Any]]:
         """Apply cosine similarity reranking."""
-        def cosine(a: List[float], b: List[float]) -> float:
+        def cosine(a: list[float], b: list[float]) -> float:
             if not a or not b or len(a) != len(b):
                 return 0.0
             dot = sum(x * y for x, y in zip(a, b))
@@ -233,37 +233,37 @@ class FeedbackAwareRetriever(Retriever):
             if norm_a == 0 or norm_b == 0:
                 return 0.0
             return dot / (norm_a * norm_b)
-        
+
         for hit in hits:
             if "vector" in hit:
                 similarity = cosine(query_embedding, hit["vector"])
                 # Combine with existing score
                 hit["vector_similarity"] = similarity
                 hit["score"] = hit.get("score", 0.0) * 0.7 + similarity * 0.3
-        
+
         hits.sort(key=lambda x: x.get("score", 0.0), reverse=True)
         return hits
-    
+
     # =========================================================================
     # FEEDBACK RECORDING
     # =========================================================================
-    
+
     async def record_feedback(
         self,
         query: str,
         doc_id: str,
         rating: int,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> bool:
         """
         Record user feedback for a query-document pair.
-        
+
         Args:
             query: The search query
             doc_id: The document ID
             rating: -1 (not helpful), 0 (neutral), +1 (helpful)
             user_id: Optional user identifier
-            
+
         Returns:
             True if feedback was recorded
         """
@@ -275,32 +275,32 @@ class FeedbackAwareRetriever(Retriever):
             user_id=user_id,
             query_embedding=query_embedding,
         )
-    
+
     async def record_implicit_feedback(
         self,
         query: str,
         selected_doc_id: str,
-        shown_doc_ids: List[str],
-        user_id: Optional[str] = None,
+        shown_doc_ids: list[str],
+        user_id: str | None = None,
     ) -> int:
         """
         Record implicit feedback from user selection.
-        
+
         When a user selects one document from results:
         - Selected document gets positive feedback
         - Top non-selected documents get slight negative feedback
-        
+
         Args:
             query: The search query
             selected_doc_id: The document the user selected/used
             shown_doc_ids: All documents shown to user
             user_id: Optional user identifier
-            
+
         Returns:
             Number of feedback records created
         """
         query_embedding = await self.embedder.embed(query)
-        
+
         feedback_pairs = []
         for i, doc_id in enumerate(shown_doc_ids):
             if doc_id == selected_doc_id:
@@ -310,18 +310,18 @@ class FeedbackAwareRetriever(Retriever):
                 # Top 3 non-selected get slight negative
                 feedback_pairs.append((doc_id, FEEDBACK_NEGATIVE))
             # Others get no feedback
-        
+
         return await self.feedback_store.record_batch_feedback(
             query=query,
             doc_ratings=feedback_pairs,
             user_id=user_id,
         )
-    
+
     # =========================================================================
     # STATISTICS
     # =========================================================================
-    
-    def get_retriever_stats(self) -> Dict[str, Any]:
+
+    def get_retriever_stats(self) -> dict[str, Any]:
         """Get retriever statistics."""
         return {
             "total_retrievals": self._retrieval_count,
@@ -334,8 +334,8 @@ class FeedbackAwareRetriever(Retriever):
             "min_boost": self.min_feedback_boost,
             "max_boost": self.max_feedback_boost,
         }
-    
-    async def get_feedback_stats(self) -> Dict[str, Any]:
+
+    async def get_feedback_stats(self) -> dict[str, Any]:
         """Get feedback store statistics."""
         return await self.feedback_store.get_statistics()
 
@@ -343,18 +343,18 @@ class FeedbackAwareRetriever(Retriever):
 class AdaptiveFeedbackRetriever(FeedbackAwareRetriever):
     """
     Retriever with adaptive feedback weight based on feedback density.
-    
+
     Automatically adjusts feedback weight based on:
     - Amount of feedback available
     - Quality of feedback (consistency)
     - Query novelty
     """
-    
+
     def __init__(
         self,
         embedder: Embedder,
         store: VectorStore,
-        feedback_store: Optional[FeedbackStore] = None,
+        feedback_store: FeedbackStore | None = None,
         base_feedback_weight: float = 0.3,
         min_feedback_for_full_weight: int = 10,
     ):
@@ -366,19 +366,19 @@ class AdaptiveFeedbackRetriever(FeedbackAwareRetriever):
         )
         self.base_feedback_weight = base_feedback_weight
         self.min_feedback_for_full_weight = min_feedback_for_full_weight
-    
+
     async def _apply_feedback_reranking(
         self,
-        hits: List[Dict[str, Any]],
+        hits: list[dict[str, Any]],
         query: str,
-        query_embedding: List[float],
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        query_embedding: list[float],
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Apply adaptive feedback reranking."""
         # Get feedback statistics
         stats = await self.feedback_store.get_statistics()
         total_feedback = stats.get("total_feedback_records", 0)
-        
+
         # Adapt weight based on feedback density
         if total_feedback < self.min_feedback_for_full_weight:
             # Reduce weight when little feedback available
@@ -386,7 +386,7 @@ class AdaptiveFeedbackRetriever(FeedbackAwareRetriever):
             self.feedback_weight = self.base_feedback_weight * density_factor
         else:
             self.feedback_weight = self.base_feedback_weight
-        
+
         # Use parent's reranking logic
         return await super()._apply_feedback_reranking(
             hits, query, query_embedding, user_id
@@ -402,13 +402,13 @@ def create_feedback_aware_retriever(
 ) -> FeedbackAwareRetriever:
     """
     Create a feedback-aware retriever.
-    
+
     Args:
         embedder: Embedding service
         store: Vector store
         adaptive: Whether to use adaptive weight adjustment
         **kwargs: Additional arguments for retriever
-        
+
     Returns:
         Configured retriever instance
     """

@@ -3,16 +3,16 @@ Gerenciador principal de idempotency refatorado.
 """
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any
 
 from redis.asyncio import Redis
 
 from resync.core.idempotency.config import config
-from resync.core.idempotency.exceptions import IdempotencyStorageError, IdempotencyKeyError
+from resync.core.idempotency.exceptions import IdempotencyKeyError, IdempotencyStorageError
+from resync.core.idempotency.metrics import IdempotencyMetrics
 from resync.core.idempotency.models import IdempotencyRecord
 from resync.core.idempotency.storage import IdempotencyStorage
 from resync.core.idempotency.validation import IdempotencyKeyValidator
-from resync.core.idempotency.metrics import IdempotencyMetrics
 from resync.core.structured_logger import get_logger
 
 logger = get_logger(__name__)
@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 class IdempotencyManager:
     """
     Gerenciador de chaves de idempotência refatorado
-    
+
     Responsável por armazenar e recuperar respostas de operações
     idempotentes, garantindo que operações críticas não sejam
     executadas múltiplas vezes.
@@ -40,8 +40,8 @@ class IdempotencyManager:
         )
 
     async def get_cached_response(
-        self, idempotency_key: str, request_data: Optional[Dict[str, Any]] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, idempotency_key: str, request_data: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
         """
         Recupera resposta em cache para chave de idempotência
 
@@ -57,10 +57,10 @@ class IdempotencyManager:
         try:
             # Validar chave
             IdempotencyKeyValidator.validate(idempotency_key)
-            
+
             key = self._make_key(idempotency_key)
             cached_record = await self.storage.get(key)
-            
+
             if not cached_record:
                 self.metrics.cache_misses += 1
                 return None
@@ -130,10 +130,10 @@ class IdempotencyManager:
     async def cache_response(
         self,
         idempotency_key: str,
-        response_data: Dict[str, Any],
+        response_data: dict[str, Any],
         status_code: int = 200,
-        request_data: Optional[Dict[str, Any]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        request_data: dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """
         Armazena resposta para chave de idempotência
@@ -151,7 +151,7 @@ class IdempotencyManager:
         try:
             # Validar chave
             IdempotencyKeyValidator.validate(idempotency_key)
-            
+
             # Verificar tamanho da resposta
             response_size = len(str(response_data).encode("utf-8"))
             max_size_bytes = config.max_response_size_kb * 1024
@@ -194,11 +194,10 @@ class IdempotencyManager:
                     size_kb=response_size / 1024,
                 )
                 return True
-            else:
-                logger.error(
-                    "Failed to cache response", idempotency_key=idempotency_key
-                )
-                return False
+            logger.error(
+                "Failed to cache response", idempotency_key=idempotency_key
+            )
+            return False
 
         except IdempotencyKeyError as e:
             logger.warning(
@@ -290,7 +289,7 @@ class IdempotencyManager:
                 created_at=self._now(),
                 expires_at=self._now() + timedelta(seconds=ttl_seconds),
             ), ttl_seconds)
-            
+
             if success:
                 logger.debug(
                     "Operation marked as processing",
@@ -298,12 +297,11 @@ class IdempotencyManager:
                     ttl_seconds=ttl_seconds,
                 )
                 return True
-            else:
-                logger.error(
-                    "Failed to mark operation as processing",
-                    idempotency_key=idempotency_key,
-                )
-                return False
+            logger.error(
+                "Failed to mark operation as processing",
+                idempotency_key=idempotency_key,
+            )
+            return False
 
         except IdempotencyKeyError as e:
             logger.warning(
@@ -428,7 +426,7 @@ class IdempotencyManager:
             )
             return False
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Retorna métricas atuais"""
         return {
             "total_requests": self.metrics.total_requests,
@@ -448,7 +446,7 @@ class IdempotencyManager:
         """Cria chave Redis para marca de processamento"""
         return f"{config.processing_prefix}:{idempotency_key}"
 
-    def _hash_request_data(self, request_data: Dict[str, Any]) -> str:
+    def _hash_request_data(self, request_data: dict[str, Any]) -> str:
         """
         Gera hash dos dados da requisição para detectar mudanças
 

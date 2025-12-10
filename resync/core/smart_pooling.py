@@ -12,9 +12,10 @@ This module provides intelligent connection pooling with:
 import asyncio
 import time
 from collections import deque
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Any, AsyncGenerator, Dict, Optional, Set
+from typing import Any
 
 from resync.core.circuit_breaker import adaptive_tws_api_breaker
 from resync.core.structured_logger import get_logger
@@ -137,25 +138,25 @@ class SmartConnectionPool:
     - Adaptive scaling signals
     """
 
-    def __init__(self, config: Optional[SmartPoolConfig] = None):
+    def __init__(self, config: SmartPoolConfig | None = None):
         self.config = config or SmartPoolConfig()
 
         # Connection storage
-        self._connections: Dict[str, Any] = {}  # connection_id -> connection
-        self._connection_stats: Dict[str, ConnectionStats] = {}
+        self._connections: dict[str, Any] = {}  # connection_id -> connection
+        self._connection_stats: dict[str, ConnectionStats] = {}
         self._idle_connections: deque = deque()
-        self._active_connections: Set[str] = set()
+        self._active_connections: set[str] = set()
 
         # Request queue
         self._request_queue: asyncio.Queue = asyncio.Queue()
-        self._waiting_requests: Set[asyncio.Future] = set()
+        self._waiting_requests: set[asyncio.Future] = set()
 
         # Metrics and monitoring
         self.metrics = PoolMetrics()
         self._latency_history: deque = deque(maxlen=1000)
 
         # Health monitoring
-        self._health_monitor_task: Optional[asyncio.Task] = None
+        self._health_monitor_task: asyncio.Task | None = None
         self._running = False
 
         # Synchronization
@@ -458,7 +459,7 @@ class SmartConnectionPool:
 
         return random.random() > 0.01
 
-    def get_pool_stats(self) -> Dict[str, Any]:
+    def get_pool_stats(self) -> dict[str, Any]:
         """Get comprehensive pool statistics."""
         return {
             "connections": {
@@ -497,7 +498,7 @@ class SmartConnectionPool:
             },
         }
 
-    async def force_health_check(self) -> Dict[str, Any]:
+    async def force_health_check(self) -> dict[str, Any]:
         """Force immediate health check and return results."""
         await self._perform_health_checks()
 

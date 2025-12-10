@@ -6,8 +6,8 @@ from business logic in endpoints.
 
 import logging
 import time
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable
 
 from fastapi import Request
 
@@ -114,12 +114,11 @@ def handle_endpoint_errors(operation: str):
 
                 if isinstance(e, HTTPException):
                     raise e
-                else:
-                    # In the context of FastAPI endpoints, raise HTTPException for proper error response
-                    raise HTTPException(
-                        status_code=500,
-                        detail=error_response.message or str(e),
-                    )
+                # In the context of FastAPI endpoints, raise HTTPException for proper error response
+                raise HTTPException(
+                    status_code=500,
+                    detail=error_response.message or str(e),
+                )
 
         return wrapper
 

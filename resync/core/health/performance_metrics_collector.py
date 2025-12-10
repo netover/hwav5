@@ -8,7 +8,7 @@ across different system components for health monitoring purposes.
 
 import time
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 import psutil
 import structlog
@@ -29,10 +29,10 @@ class PerformanceMetricsCollector:
 
     def __init__(self):
         """Initialize the performance metrics collector."""
-        self._last_collection_time: Optional[datetime] = None
-        self._cached_metrics: Optional[Dict[str, Any]] = None
+        self._last_collection_time: datetime | None = None
+        self._cached_metrics: dict[str, Any] | None = None
 
-    async def get_system_performance_metrics(self) -> Dict[str, Any]:
+    async def get_system_performance_metrics(self) -> dict[str, Any]:
         """
         Get current system performance metrics.
 
@@ -69,7 +69,7 @@ class PerformanceMetricsCollector:
                 "collection_time": datetime.now().isoformat(),
             }
 
-    async def get_connection_pool_metrics(self) -> Dict[str, Any]:
+    async def get_connection_pool_metrics(self) -> dict[str, Any]:
         """
         Get connection pool performance metrics.
 
@@ -80,14 +80,13 @@ class PerformanceMetricsCollector:
             pool_manager = get_advanced_connection_pool_manager()
             if pool_manager:
                 return await pool_manager.get_performance_metrics()
-            else:
-                return {"error": "Advanced connection pool manager not available"}
+            return {"error": "Advanced connection pool manager not available"}
 
         except Exception as e:
             logger.warning("failed_to_get_connection_pool_metrics", error=str(e))
             return {"error": str(e)}
 
-    async def get_comprehensive_performance_metrics(self) -> Dict[str, Any]:
+    async def get_comprehensive_performance_metrics(self) -> dict[str, Any]:
         """
         Get comprehensive performance metrics including system and connection pools.
 
@@ -128,7 +127,7 @@ class PerformanceMetricsCollector:
                 "collection_time": datetime.now().isoformat(),
             }
 
-    def get_cached_metrics(self) -> Optional[Dict[str, Any]]:
+    def get_cached_metrics(self) -> dict[str, Any] | None:
         """
         Get cached performance metrics if available and recent.
 
@@ -151,7 +150,7 @@ class PerformanceMetricsCollector:
         self._cached_metrics = None
         self._last_collection_time = None
 
-    async def get_performance_summary(self) -> Dict[str, Any]:
+    async def get_performance_summary(self) -> dict[str, Any]:
         """
         Get a summary of current performance status.
 

@@ -9,23 +9,24 @@ Provides JWT-based authentication with:
 - Logout with token invalidation (in-memory blacklist for demo)
 """
 from datetime import timedelta
-from typing import Set
-from fastapi import APIRouter, HTTPException, status, Depends
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+from ....core.config import settings
 from ....core.security import (
     create_access_token,
-    verify_password,
-    get_password_hash,
     get_current_user,
+    get_password_hash,
+    verify_password,
 )
-from ....core.config import settings
 
 router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # In-memory token blacklist for logout (use Redis in production)
-_token_blacklist: Set[str] = set()
+_token_blacklist: set[str] = set()
 
 # Demo users database (use real DB in production)
 DEMO_USERS = {
@@ -36,7 +37,7 @@ DEMO_USERS = {
         "permissions": ["read", "write", "admin"],
     },
     "user": {
-        "username": "user", 
+        "username": "user",
         "hashed_password": get_password_hash("user"),
         "role": "user",
         "permissions": ["read"],
@@ -72,7 +73,7 @@ async def login_page():
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Authenticate user and return JWT token.
-    
+
     Demo credentials:
     - admin/admin (full permissions)
     - user/user (read only)
@@ -84,7 +85,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
         data={
@@ -95,7 +96,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         },
         expires_delta=access_token_expires,
     )
-    
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -113,7 +114,7 @@ async def read_users_me(current_user: dict = Depends(get_current_user)):
 async def logout(current_user: dict = Depends(get_current_user)):
     """
     Logout user by adding token to blacklist.
-    
+
     Note: In production, use Redis with TTL matching token expiry.
     """
     # Token is already validated by get_current_user dependency
@@ -137,7 +138,7 @@ async def refresh_token(current_user: dict = Depends(get_current_user)):
         },
         expires_delta=access_token_expires,
     )
-    
+
     return {
         "access_token": new_token,
         "token_type": "bearer",

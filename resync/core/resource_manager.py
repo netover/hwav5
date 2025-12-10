@@ -9,10 +9,11 @@ Java's try-with-resources and Python's context managers.
 
 import asyncio
 import logging
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Optional, TypeVar
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class ResourceInfo:
     resource_id: str
     resource_type: str
     created_at: datetime = field(default_factory=datetime.now)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def get_lifetime_seconds(self) -> float:
         """Get the lifetime of the resource in seconds."""
@@ -235,7 +236,7 @@ class ResourcePool:
 
     def __init__(self, max_resources: int = 100):
         self.max_resources = max_resources
-        self.active_resources: Dict[str, ResourceInfo] = {}
+        self.active_resources: dict[str, ResourceInfo] = {}
         self._lock = asyncio.Lock()
         self._resource_counter = 0
 
@@ -243,7 +244,7 @@ class ResourcePool:
         self,
         resource_type: str,
         factory: Callable[[], Any],
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> tuple[str, Any]:
         """
         Acquire a resource from the pool.
@@ -323,7 +324,7 @@ class ResourcePool:
 
     async def detect_leaks(
         self, max_lifetime_seconds: int = 3600
-    ) -> List[ResourceInfo]:
+    ) -> list[ResourceInfo]:
         """
         Detect potential resource leaks.
 
@@ -344,7 +345,7 @@ class ResourcePool:
                     )
             return leaks
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get resource pool statistics."""
         return {
             "active_resources": len(self.active_resources),
@@ -366,7 +367,7 @@ async def resource_scope(
     pool: ResourcePool,
     resource_type: str,
     factory: Callable[[], Any],
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
 ) -> AsyncIterator[Any]:
     """
     Context manager for scoped resource management.
@@ -394,10 +395,10 @@ class BatchResourceManager:
     """
 
     def __init__(self):
-        self.resources: List[tuple[str, Any, Callable]] = []
+        self.resources: list[tuple[str, Any, Callable]] = []
 
     async def add_resource(
-        self, resource_id: str, resource: Any, cleanup_fn: Optional[Callable] = None
+        self, resource_id: str, resource: Any, cleanup_fn: Callable | None = None
     ) -> None:
         """Add a resource to the batch."""
         self.resources.append((resource_id, resource, cleanup_fn))
@@ -435,7 +436,7 @@ class BatchResourceManager:
 
 
 # Global resource pool instance
-_global_resource_pool: Optional[ResourcePool] = None
+_global_resource_pool: ResourcePool | None = None
 
 
 def get_global_resource_pool() -> ResourcePool:

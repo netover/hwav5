@@ -7,12 +7,11 @@ reporting for the cache hierarchy system.
 """
 
 
+import asyncio  # Added to support async sleep in retry logic
 import time
 from datetime import datetime
-from typing import Optional
 
 import structlog
-import asyncio  # Added to support async sleep in retry logic
 
 from resync.core.exceptions import CacheHealthCheckError
 from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
@@ -33,8 +32,8 @@ class CacheHierarchyHealthMonitor:
 
     def __init__(self):
         """Initialize the cache hierarchy health monitor."""
-        self._last_check: Optional[datetime] = None
-        self._cached_result: Optional[ComponentHealth] = None
+        self._last_check: datetime | None = None
+        self._cached_result: ComponentHealth | None = None
 
     async def check_cache_health(self) -> ComponentHealth:
         """
@@ -156,7 +155,7 @@ class CacheHierarchyHealthMonitor:
             last_check=datetime.now(),
         )
 
-    def get_cached_health(self) -> Optional[ComponentHealth]:
+    def get_cached_health(self) -> ComponentHealth | None:
         """
         Get cached health result if available and recent.
 
@@ -168,9 +167,8 @@ class CacheHierarchyHealthMonitor:
             age = datetime.now() - self._last_check
             if age.total_seconds() < 300:
                 return self._cached_result
-            else:
-                # Cache expired
-                self._cached_result = None
+            # Cache expired
+            self._cached_result = None
 
         return None
 

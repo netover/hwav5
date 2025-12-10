@@ -7,6 +7,9 @@ implementations, following the Inversion of Control (IoC) principle.
 
 from resync.core.agent_manager import AgentManager
 from resync.core.connection_manager import ConnectionManager
+
+# Context Store (SQLite) - aliased as AsyncKnowledgeGraph for compatibility
+from resync.core.context_store import ContextStore as AsyncKnowledgeGraph
 from resync.core.di_container import (
     DIContainer,
     ServiceLifetime,
@@ -18,8 +21,6 @@ from resync.core.interfaces import (
     IKnowledgeGraph,
     ITWSClient,
 )
-# Context Store (SQLite) - aliased as AsyncKnowledgeGraph for compatibility
-from resync.core.context_store import ContextStore as AsyncKnowledgeGraph
 from resync.services.mock_tws_service import MockTWSClient
 from resync.services.tws_service import OptimizedTWSClient
 from resync.settings import settings

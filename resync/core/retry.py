@@ -6,7 +6,8 @@ ensuring consistent behavior and proper logging of retry attempts.
 """
 
 import logging
-from typing import Any, Callable, List, Optional, Type, TypeVar, Union
+from collections.abc import Callable
+from typing import Any, TypeVar, Union
 
 import httpx
 from tenacity import (
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # Type definitions
 F = TypeVar("F", bound=Callable[..., Any])
-ExceptionTypes = Union[Type[Exception], List[Type[Exception]]]
+ExceptionTypes = Union[type[Exception], list[type[Exception]]]
 
 
 def log_retry_attempt(retry_state: RetryCallState) -> None:
@@ -63,7 +64,7 @@ def http_retry(
     max_attempts: int = 3,
     min_wait: float = 1.0,
     max_wait: float = 10.0,
-    exceptions: Optional[ExceptionTypes] = None,
+    exceptions: ExceptionTypes | None = None,
 ) -> Callable[[F], F]:
     """
     Decorator for HTTP requests with exponential backoff.
@@ -116,7 +117,7 @@ def database_retry(
     max_attempts: int = 5,
     min_wait: float = 0.1,
     max_wait: float = 2.0,
-    exceptions: Optional[ExceptionTypes] = None,
+    exceptions: ExceptionTypes | None = None,
 ) -> Callable[[F], F]:
     """
     Decorator for database operations with exponential backoff.
@@ -161,7 +162,7 @@ def external_service_retry(
     max_attempts: int = 3,
     max_delay: float = 30.0,
     wait_time: float = 2.0,
-    exceptions: Optional[ExceptionTypes] = None,
+    exceptions: ExceptionTypes | None = None,
 ) -> Callable[[F], F]:
     """
     Decorator for external service calls with fixed wait and maximum total delay.

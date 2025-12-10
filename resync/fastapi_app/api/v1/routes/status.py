@@ -1,13 +1,13 @@
-from datetime import datetime
-import os
 import platform
+from datetime import datetime
 
 """
 System status routes for FastAPI
 """
 from fastapi import APIRouter, Depends
-from ..models.response_models import SystemStatusResponse
+
 from ..dependencies import get_logger
+from ..models.response_models import SystemStatusResponse
 
 router = APIRouter()
 
@@ -44,7 +44,7 @@ async def get_system_status(
         # Get status from store (production: use Redis/database)
         workstations = _status_store.get("workstations", [])
         jobs = _status_store.get("jobs", [])
-        
+
         # Add system info
         system_info = {
             "platform": platform.system(),
@@ -86,7 +86,7 @@ async def register_workstation(
         "status": status,
         "updated_at": datetime.now().isoformat(),
     }
-    
+
     # Update or add workstation
     existing = next(
         (w for w in _status_store["workstations"] if w["name"] == name),
@@ -96,5 +96,5 @@ async def register_workstation(
         existing.update(workstation)
     else:
         _status_store["workstations"].append(workstation)
-    
+
     return {"message": "Workstation registered", "workstation": workstation}

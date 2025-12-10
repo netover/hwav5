@@ -20,8 +20,8 @@ Key Features:
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple
 from enum import Enum
+from typing import Any
 
 from resync.core.structured_logger import get_logger
 
@@ -43,16 +43,16 @@ class EnrichmentResult:
     """Result of context enrichment."""
     original_query: str
     enriched_query: str
-    enrichments_applied: List[EnrichmentType]
-    context_snippets: List[str]
-    entities_found: Dict[str, List[str]]
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    
+    enrichments_applied: list[EnrichmentType]
+    context_snippets: list[str]
+    entities_found: dict[str, list[str]]
+    metadata: dict[str, Any] = field(default_factory=dict)
+
     @property
     def was_enriched(self) -> bool:
         return len(self.enrichments_applied) > 0
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "original_query": self.original_query,
             "enriched_query": self.enriched_query,
@@ -66,14 +66,14 @@ class EnrichmentResult:
 class ContextEnricher:
     """
     Enriches RAG queries with contextual information.
-    
+
     Process:
     1. Extract entities from query (jobs, workstations, error codes)
     2. Fetch relevant context from Learning Store and KG
     3. Inject context into query as natural language additions
     4. Return enriched query for RAG retrieval
     """
-    
+
     # Entity extraction patterns
     ENTITY_PATTERNS = {
         "job": [
@@ -100,7 +100,7 @@ class ContextEnricher:
             r"\b(?:file|database|queue)\s+([A-Z0-9_./]+)\b",
         ],
     }
-    
+
     # Context templates
     CONTEXT_TEMPLATES = {
         EnrichmentType.JOB_PATTERN: "(Job {job} típico: duração ~{duration}min, executa às {hour}h)",
@@ -110,7 +110,7 @@ class ContextEnricher:
         EnrichmentType.TEMPORAL_CONTEXT: "(Contexto temporal: {context})",
         EnrichmentType.ERROR_CONTEXT: "(Erro {code} geralmente resolvido com: {resolution})",
     }
-    
+
     def __init__(
         self,
         enable_learning_store: bool = True,
@@ -120,7 +120,7 @@ class ContextEnricher:
     ):
         """
         Initialize context enricher.
-        
+
         Args:
             enable_learning_store: Use Learning Store for patterns
             enable_knowledge_graph: Use KG for relationships
@@ -131,15 +131,15 @@ class ContextEnricher:
         self.enable_knowledge_graph = enable_knowledge_graph
         self.max_context_length = max_context_length
         self.min_confidence = min_confidence
-        
-        self._learning_stores: Dict[str, Any] = {}
+
+        self._learning_stores: dict[str, Any] = {}
         self._kg = None
-        
+
         # Statistics
         self._queries_enriched = 0
         self._total_queries = 0
-        self._enrichment_counts: Dict[EnrichmentType, int] = {}
-    
+        self._enrichment_counts: dict[EnrichmentType, int] = {}
+
     async def _get_learning_store(self, instance_id: str):
         """Get Learning Store for instance."""
         if instance_id not in self._learning_stores:
@@ -150,7 +150,7 @@ class ContextEnricher:
                 logger.warning(f"Could not load learning store: {e}")
                 return None
         return self._learning_stores[instance_id]
-    
+
     async def _get_kg(self):
         """Get Knowledge Graph instance."""
         if self._kg is None:
@@ -161,38 +161,38 @@ class ContextEnricher:
                 logger.warning(f"Could not load knowledge graph: {e}")
                 return None
         return self._kg
-    
+
     # =========================================================================
     # MAIN ENRICHMENT
     # =========================================================================
-    
+
     async def enrich_query(
         self,
         query: str,
         instance_id: str = "default",
-        user_context: Optional[Dict[str, Any]] = None,
+        user_context: dict[str, Any] | None = None,
     ) -> EnrichmentResult:
         """
         Enrich a query with contextual information.
-        
+
         Args:
             query: Original user query
             instance_id: TWS instance ID for Learning Store
             user_context: Optional additional context
-            
+
         Returns:
             EnrichmentResult with enriched query and metadata
         """
         self._total_queries += 1
-        
+
         # Extract entities from query
         entities = self._extract_entities(query)
-        
+
         # Collect context snippets
-        context_snippets: List[str] = []
-        enrichments_applied: List[EnrichmentType] = []
-        metadata: Dict[str, Any] = {}
-        
+        context_snippets: list[str] = []
+        enrichments_applied: list[EnrichmentType] = []
+        metadata: dict[str, Any] = {}
+
         # Enrich from Learning Store
         if self.enable_learning_store:
             ls_context, ls_types = await self._enrich_from_learning_store(
@@ -200,22 +200,22 @@ class ContextEnricher:
             )
             context_snippets.extend(ls_context)
             enrichments_applied.extend(ls_types)
-        
+
         # Enrich from Knowledge Graph
         if self.enable_knowledge_graph:
             kg_context, kg_types = await self._enrich_from_knowledge_graph(entities)
             context_snippets.extend(kg_context)
             enrichments_applied.extend(kg_types)
-        
+
         # Add temporal context if relevant
         temporal_context = self._get_temporal_context(query)
         if temporal_context:
             context_snippets.append(temporal_context)
             enrichments_applied.append(EnrichmentType.TEMPORAL_CONTEXT)
-        
+
         # Build enriched query
         enriched_query = self._build_enriched_query(query, context_snippets)
-        
+
         # Update statistics
         if enrichments_applied:
             self._queries_enriched += 1
@@ -223,7 +223,7 @@ class ContextEnricher:
                 self._enrichment_counts[etype] = (
                     self._enrichment_counts.get(etype, 0) + 1
                 )
-        
+
         result = EnrichmentResult(
             original_query=query,
             enriched_query=enriched_query,
@@ -232,7 +232,7 @@ class ContextEnricher:
             entities_found=entities,
             metadata=metadata,
         )
-        
+
         logger.debug(
             "query_enriched",
             original_len=len(query),
@@ -240,19 +240,19 @@ class ContextEnricher:
             enrichments=len(enrichments_applied),
             entities=sum(len(v) for v in entities.values()),
         )
-        
+
         return result
-    
+
     # =========================================================================
     # ENTITY EXTRACTION
     # =========================================================================
-    
-    def _extract_entities(self, text: str) -> Dict[str, List[str]]:
+
+    def _extract_entities(self, text: str) -> dict[str, list[str]]:
         """Extract entities from text."""
-        entities: Dict[str, List[str]] = {}
-        
+        entities: dict[str, list[str]] = {}
+
         for entity_type, patterns in self.ENTITY_PATTERNS.items():
-            found: Set[str] = set()
+            found: set[str] = set()
             for pattern in patterns:
                 matches = re.findall(pattern, text, re.IGNORECASE)
                 for match in matches:
@@ -262,30 +262,30 @@ class ContextEnricher:
                         found.add(match.upper())
             if found:
                 entities[entity_type] = list(found)
-        
+
         return entities
-    
+
     # =========================================================================
     # LEARNING STORE ENRICHMENT
     # =========================================================================
-    
+
     async def _enrich_from_learning_store(
         self,
-        entities: Dict[str, List[str]],
+        entities: dict[str, list[str]],
         instance_id: str,
-    ) -> Tuple[List[str], List[EnrichmentType]]:
+    ) -> tuple[list[str], list[EnrichmentType]]:
         """Get context from Learning Store."""
-        context_snippets: List[str] = []
-        enrichments: List[EnrichmentType] = []
-        
+        context_snippets: list[str] = []
+        enrichments: list[EnrichmentType] = []
+
         learning_store = await self._get_learning_store(instance_id)
         if not learning_store:
             return context_snippets, enrichments
-        
+
         jobs = entities.get("job", [])
         job_streams = entities.get("job_stream", ["*"])
         error_codes = entities.get("error_code", [])
-        
+
         for job_name in jobs:
             for job_stream in job_streams:
                 pattern = learning_store.get_job_pattern(job_name, job_stream)
@@ -299,7 +299,7 @@ class ContextEnricher:
                         )
                         context_snippets.append(context)
                         enrichments.append(EnrichmentType.JOB_PATTERN)
-                    
+
                     # Failure history context
                     if pattern.failure_rate > 0.05 and pattern.execution_count >= 10:
                         errors = ", ".join(pattern.common_failure_reasons[:3]) or "vários"
@@ -311,7 +311,7 @@ class ContextEnricher:
                         context_snippets.append(context)
                         enrichments.append(EnrichmentType.FAILURE_HISTORY)
                     break  # Found pattern, skip other streams
-        
+
         # Error resolution context
         for error_code in error_codes:
             resolution = learning_store.get_suggested_resolution(error_code)
@@ -322,27 +322,27 @@ class ContextEnricher:
                 )
                 context_snippets.append(context)
                 enrichments.append(EnrichmentType.ERROR_CONTEXT)
-        
+
         return context_snippets, enrichments
-    
+
     # =========================================================================
     # KNOWLEDGE GRAPH ENRICHMENT
     # =========================================================================
-    
+
     async def _enrich_from_knowledge_graph(
         self,
-        entities: Dict[str, List[str]],
-    ) -> Tuple[List[str], List[EnrichmentType]]:
+        entities: dict[str, list[str]],
+    ) -> tuple[list[str], list[EnrichmentType]]:
         """Get context from Knowledge Graph."""
-        context_snippets: List[str] = []
-        enrichments: List[EnrichmentType] = []
-        
+        context_snippets: list[str] = []
+        enrichments: list[EnrichmentType] = []
+
         kg = await self._get_kg()
         if not kg:
             return context_snippets, enrichments
-        
+
         jobs = entities.get("job", [])
-        
+
         for job_name in jobs[:3]:  # Limit to avoid too much context
             try:
                 # Get dependencies
@@ -355,7 +355,7 @@ class ContextEnricher:
                     )
                     context_snippets.append(context)
                     enrichments.append(EnrichmentType.DEPENDENCY_CONTEXT)
-                
+
                 # Get resources
                 resources = await self._get_job_resources(kg, job_name)
                 if resources:
@@ -366,29 +366,29 @@ class ContextEnricher:
                     )
                     context_snippets.append(context)
                     enrichments.append(EnrichmentType.RESOURCE_CONTEXT)
-                    
+
             except Exception as e:
                 logger.debug(f"KG enrichment failed for {job_name}: {e}")
                 continue
-        
+
         return context_snippets, enrichments
-    
-    async def _get_job_resources(self, kg, job_name: str) -> List[str]:
+
+    async def _get_job_resources(self, kg, job_name: str) -> list[str]:
         """Get resources used by a job from KG."""
         try:
             resources = await kg.get_jobs_using_resource(job_name)
             return resources if resources else []
         except Exception:
             return []
-    
+
     # =========================================================================
     # TEMPORAL CONTEXT
     # =========================================================================
-    
-    def _get_temporal_context(self, query: str) -> Optional[str]:
+
+    def _get_temporal_context(self, query: str) -> str | None:
         """Extract and add temporal context."""
         query_lower = query.lower()
-        
+
         # Check for time-related queries
         time_patterns = {
             r"\b(?:hoje|today)\b": "hoje, " + datetime.now().strftime("%d/%m/%Y"),
@@ -399,43 +399,43 @@ class ContextEnricher:
             r"\b(?:noite|night|overnight)\b": "período noturno (18h-06h)",
             r"\b(?:fim de semana|weekend)\b": "fim de semana (sábado/domingo)",
         }
-        
+
         for pattern, context in time_patterns.items():
             if re.search(pattern, query_lower):
                 return self.CONTEXT_TEMPLATES[EnrichmentType.TEMPORAL_CONTEXT].format(
                     context=context
                 )
-        
+
         return None
-    
+
     # =========================================================================
     # QUERY BUILDING
     # =========================================================================
-    
+
     def _build_enriched_query(
         self,
         original_query: str,
-        context_snippets: List[str],
+        context_snippets: list[str],
     ) -> str:
         """Build final enriched query."""
         if not context_snippets:
             return original_query
-        
+
         # Join context snippets
         context_text = " ".join(context_snippets)
-        
+
         # Truncate if too long
         if len(context_text) > self.max_context_length:
             context_text = context_text[:self.max_context_length] + "..."
-        
+
         # Append context to query
         return f"{original_query} {context_text}"
-    
+
     # =========================================================================
     # STATISTICS
     # =========================================================================
-    
-    def get_statistics(self) -> Dict[str, Any]:
+
+    def get_statistics(self) -> dict[str, Any]:
         """Get enrichment statistics."""
         return {
             "total_queries": self._total_queries,
@@ -456,7 +456,7 @@ class ContextEnricher:
 
 
 # Global instance
-_enricher: Optional[ContextEnricher] = None
+_enricher: ContextEnricher | None = None
 
 
 def get_context_enricher() -> ContextEnricher:
@@ -477,7 +477,7 @@ async def enrich_query(
 ) -> str:
     """
     Simple function to enrich a query.
-    
+
     Returns just the enriched query string.
     """
     enricher = get_context_enricher()

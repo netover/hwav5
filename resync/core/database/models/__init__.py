@@ -5,35 +5,35 @@ Contains all SQLAlchemy models for PostgreSQL storage.
 """
 
 from .stores import (
-    # Base
-    Base,
-    # Enums
-    JobStatusEnum,
-    EventSeverity,
-    ContentType,
-    # TWS Models
-    TWSSnapshot,
-    TWSJobStatus,
-    TWSWorkstationStatus,
-    TWSEvent,
-    TWSPattern,
-    TWSProblemSolution,
-    # Context Models
-    Conversation,
-    ContextContent,
+    ActiveLearningCandidate,
     # Audit Models
     AuditEntry,
     AuditQueueItem,
-    # Analytics Models
-    UserProfile,
-    SessionHistory,
+    # Base
+    Base,
+    ContentType,
+    ContextContent,
+    # Context Models
+    Conversation,
+    EventSeverity,
     # Learning Models
     Feedback,
+    # Enums
+    JobStatusEnum,
     LearningThreshold,
-    ActiveLearningCandidate,
+    MetricAggregation,
     # Metrics Models
     MetricDataPoint,
-    MetricAggregation,
+    SessionHistory,
+    TWSEvent,
+    TWSJobStatus,
+    TWSPattern,
+    TWSProblemSolution,
+    # TWS Models
+    TWSSnapshot,
+    TWSWorkstationStatus,
+    # Analytics Models
+    UserProfile,
     # Helper
     get_all_models,
 )
@@ -43,7 +43,7 @@ __all__ = [
     "Base",
     # Enums
     "JobStatusEnum",
-    "EventSeverity", 
+    "EventSeverity",
     "ContentType",
     # TWS Models
     "TWSSnapshot",

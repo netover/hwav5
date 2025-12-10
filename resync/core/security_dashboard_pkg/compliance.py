@@ -6,7 +6,6 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Any
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +29,12 @@ class ComplianceStatus(str, Enum):
 @dataclass
 class ComplianceCheck:
     """Represents a compliance check result."""
-    
+
     framework: ComplianceFramework
     control_id: str
     description: str
     status: ComplianceStatus
-    evidence: List[str] = field(default_factory=list)
+    evidence: list[str] = field(default_factory=list)
     remediation: str = ""
     checked_at: datetime = field(default_factory=datetime.now)
 
@@ -47,32 +46,32 @@ class ComplianceChecker:
 
     def __init__(self):
         """Initialize compliance checker."""
-        self._check_results: Dict[str, List[ComplianceCheck]] = {}
+        self._check_results: dict[str, list[ComplianceCheck]] = {}
 
     async def check_framework(
         self,
         framework: ComplianceFramework,
-    ) -> List[ComplianceCheck]:
+    ) -> list[ComplianceCheck]:
         """
         Run compliance checks for a framework.
-        
+
         Args:
             framework: Framework to check against
-            
+
         Returns:
             List of compliance check results
         """
         checks = []
-        
+
         if framework == ComplianceFramework.SOC2:
             checks = await self._check_soc2()
         elif framework == ComplianceFramework.GDPR:
             checks = await self._check_gdpr()
-        
+
         self._check_results[framework.value] = checks
         return checks
 
-    async def _check_soc2(self) -> List[ComplianceCheck]:
+    async def _check_soc2(self) -> list[ComplianceCheck]:
         """Run SOC2 compliance checks."""
         return [
             ComplianceCheck(
@@ -91,7 +90,7 @@ class ComplianceChecker:
             ),
         ]
 
-    async def _check_gdpr(self) -> List[ComplianceCheck]:
+    async def _check_gdpr(self) -> list[ComplianceCheck]:
         """Run GDPR compliance checks."""
         return [
             ComplianceCheck(
@@ -110,21 +109,21 @@ class ComplianceChecker:
     ) -> float:
         """
         Calculate compliance score for framework.
-        
+
         Returns percentage of compliant controls.
         """
         checks = self._check_results.get(framework.value, [])
         if not checks:
             return 0.0
-        
+
         compliant = sum(
             1 for c in checks
             if c.status == ComplianceStatus.COMPLIANT
         )
-        
+
         return (compliant / len(checks)) * 100
 
-    def get_all_results(self) -> Dict[str, List[Dict]]:
+    def get_all_results(self) -> dict[str, list[dict]]:
         """Get all compliance check results."""
         return {
             framework: [

@@ -5,7 +5,8 @@ This module provides predictive analysis for potential issues in the health moni
 """
 
 
-from typing import Any, Dict, List
+from typing import Any
+
 import structlog
 
 from resync.core.connection_pool_manager import get_advanced_connection_pool_manager
@@ -27,7 +28,7 @@ class PredictiveAnalysisEngine:
     def __init__(self):
         """Initialize the predictive analysis engine."""
 
-    async def perform_predictive_analysis(self) -> List[Dict[str, Any]]:
+    async def perform_predictive_analysis(self) -> list[dict[str, Any]]:
         """
         Perform predictive analysis for potential issues.
 
@@ -91,7 +92,7 @@ class PredictiveAnalysisEngine:
 
         return alerts
 
-    async def _check_connection_pool_health(self) -> Dict[str, Any]:
+    async def _check_connection_pool_health(self) -> dict[str, Any]:
         """Check health of all connection pools."""
         try:
             advanced_manager = get_advanced_connection_pool_manager()
@@ -112,43 +113,42 @@ class PredictiveAnalysisEngine:
                         "scaling_signals", {}
                     ),
                 }
-            else:
-                # Fallback to basic pool manager
-                try:
-                    from resync.core.connection_pool_manager import (
-                        get_connection_pool_manager,
-                    )
+            # Fallback to basic pool manager
+            try:
+                from resync.core.connection_pool_manager import (
+                    get_connection_pool_manager,
+                )
 
-                    pool_manager = get_connection_pool_manager()
-                    if pool_manager:
-                        basic_metrics = {}
-                        for pool_name, pool in pool_manager.pools.items():
-                            stats = pool.get_stats()
-                            basic_metrics[pool_name] = {
-                                "connections": stats.get("total_connections", 0),
-                                "utilization": stats.get("active_connections", 0)
-                                / max(1, stats.get("total_connections", 1)),
-                            }
-                        return basic_metrics
-                except ImportError:
-                    pass
+                pool_manager = get_connection_pool_manager()
+                if pool_manager:
+                    basic_metrics = {}
+                    for pool_name, pool in pool_manager.pools.items():
+                        stats = pool.get_stats()
+                        basic_metrics[pool_name] = {
+                            "connections": stats.get("total_connections", 0),
+                            "utilization": stats.get("active_connections", 0)
+                            / max(1, stats.get("total_connections", 1)),
+                        }
+                    return basic_metrics
+            except ImportError:
+                pass
 
         except Exception as e:
             logger.warning("connection_pool_health_check_failed", error=str(e))
 
         return {"error": "Unable to check connection pool health"}
 
-    async def _check_circuit_breaker_health(self) -> Dict[str, Any]:
+    async def _check_circuit_breaker_health(self) -> dict[str, Any]:
         """Check health of all circuit breakers."""
         results = {}
 
         # Check TWS circuit breakers
         try:
             from resync.core.circuit_breaker import (
-                adaptive_tws_api_breaker,
                 adaptive_llm_api_breaker,
-                tws_api_breaker,
+                adaptive_tws_api_breaker,
                 llm_api_breaker,
+                tws_api_breaker,
             )
 
             breakers = {
@@ -195,7 +195,7 @@ class PredictiveAnalysisEngine:
         """
         setattr(self, f"predict_{name}", predictor_func)
 
-    async def run_custom_predictors(self) -> List[Dict[str, Any]]:
+    async def run_custom_predictors(self) -> list[dict[str, Any]]:
         """
         Run all custom predictors and return their alerts.
 

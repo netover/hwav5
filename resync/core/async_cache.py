@@ -5,7 +5,7 @@ import collections
 import logging
 from dataclasses import dataclass
 from time import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from resync.core.exceptions import CacheError
 from resync.core.metrics import log_with_correlation, runtime_metrics
@@ -50,7 +50,7 @@ class AsyncTTLCache:
         cleanup_interval: int = 30,
         num_shards: int = 16,
         enable_wal: bool = False,
-        wal_path: Optional[str] = None,
+        wal_path: str | None = None,
         max_entries: int = 100000,
         max_memory_mb: int = 100,
         paranoia_mode: bool = False,
@@ -85,15 +85,15 @@ class AsyncTTLCache:
         try:
             # Define num_shards imediatamente (será sobrescrito por _load_configuration se necessário)
             self.num_shards = num_shards
-            
+
             # Initialize anomaly history with deque for O(1) operations
             self.anomaly_history = collections.deque()  # More efficient
             # Pre-allocate with reasonable max size to avoid frequent reallocations
             self.anomaly_history = collections.deque(maxlen=1000)
         # Initialize cache configuration efficiently
-            self.shards: List[Dict[str, CacheEntry]] = [{} for _ in range(self.num_shards)]
+            self.shards: list[dict[str, CacheEntry]] = [{} for _ in range(self.num_shards)]
             self.shard_locks: [asyncio.Lock() for _ in range(self.num_shards)]
-            self.cleanup_task: Optional[asyncio.Task[None]] = None
+            self.cleanup_task: asyncio.Task[None] | None = None
             self.is_running = False
             self._background_cleanup_started = False
 
@@ -116,7 +116,7 @@ class AsyncTTLCache:
         cleanup_interval: int,
         num_shards: int,
         enable_wal: bool,
-        wal_path: Optional[str],
+        wal_path: str | None,
         max_entries: int,
         max_memory_mb: int,
         paranoia_mode: bool,
@@ -129,7 +129,7 @@ class AsyncTTLCache:
             "component": "async_cache",
             "operation": "load_configuration"
         })
-        
+
         try:
             # Try to load from settings module
             from resync.settings import settings
@@ -213,15 +213,15 @@ class AsyncTTLCache:
         """
         Inicializa a estrutura do cache (shards e locks).
         """
-        self.shards: List[Dict[str, CacheEntry]] = [
+        self.shards: list[dict[str, CacheEntry]] = [
             {} for _ in range(self.num_shards)
         ]
         self.shard_locks = [asyncio.Lock() for _ in range(self.num_shards)]
-        self.cleanup_task: Optional[asyncio.Task[None]] = None
+        self.cleanup_task: asyncio.Task[None] | None = None
         self.is_running = False
         self._background_cleanup_started = False
 
-    def _setup_write_ahead_log(self, enable_wal: bool, wal_path: Optional[str]) -> None:
+    def _setup_write_ahead_log(self, enable_wal: bool, wal_path: str | None) -> None:
         """
         Configura o Write-Ahead Log se habilitado.
         """
@@ -231,7 +231,7 @@ class AsyncTTLCache:
                 "component": "async_cache",
                 "operation": "setup_wal"
             })
-            
+
             try:
                 wal_path_to_use = wal_path or "./cache_wal"
                 self.wal = WriteAheadLog(wal_path_to_use)
@@ -298,7 +298,7 @@ class AsyncTTLCache:
         replayed_count = await self.wal.replay_log(self)
         return replayed_count
 
-    def _get_shard(self, key: str) -> Tuple[Dict[str, CacheEntry], asyncio.Lock]:
+    def _get_shard(self, key: str) -> tuple[dict[str, CacheEntry], asyncio.Lock]:
         """Get the shard and lock for a given key with bounds checking."""
         # BOUNDS CHECKING - Prevent hash overflow/underflow
         try:
@@ -329,7 +329,7 @@ class AsyncTTLCache:
 
         return self.shards[shard_index], self.shard_locks[shard_index]
 
-    def _get_lru_key(self, shard: Dict[str, CacheEntry]) -> str:
+    def _get_lru_key(self, shard: dict[str, CacheEntry]) -> str:
         """
         Get the least recently used key in a shard.
         This is used for LRU eviction when cache bounds are exceeded.
@@ -579,28 +579,27 @@ class AsyncTTLCache:
                             correlation_id,
                         )
                         return entry.data
-                    else:
-                        # Entry expired, remove it
-                        del shard[key]
-                        runtime_metrics.cache_evictions.increment()
-                        # Update eviction rate
-                        total_evictions = runtime_metrics.cache_evictions.value
-                        total_sets = runtime_metrics.cache_sets.value
-                        if total_sets > 0:
-                            eviction_rate = total_evictions / total_sets
-                            runtime_metrics.record_health_check(
-                                "async_cache",
-                                "eviction_rate",
-                                {
-                                    "eviction_rate": eviction_rate,
-                                    "total_evictions": total_evictions,
-                                },
-                            )
-                        log_with_correlation(
-                            logging.DEBUG,
-                            f"Cache EXPIRED for key: {repr(key)}",
-                            correlation_id,
+                    # Entry expired, remove it
+                    del shard[key]
+                    runtime_metrics.cache_evictions.increment()
+                    # Update eviction rate
+                    total_evictions = runtime_metrics.cache_evictions.value
+                    total_sets = runtime_metrics.cache_sets.value
+                    if total_sets > 0:
+                        eviction_rate = total_evictions / total_sets
+                        runtime_metrics.record_health_check(
+                            "async_cache",
+                            "eviction_rate",
+                            {
+                                "eviction_rate": eviction_rate,
+                                "total_evictions": total_evictions,
+                            },
                         )
+                    log_with_correlation(
+                        logging.DEBUG,
+                        f"Cache EXPIRED for key: {repr(key)}",
+                        correlation_id,
+                    )
 
                 runtime_metrics.cache_misses.increment()
                 # Update miss rate
@@ -638,7 +637,7 @@ class AsyncTTLCache:
             runtime_metrics.close_correlation_id(correlation_id)
 
     async def set(
-        self, key: str, value: Any, ttl_seconds: Optional[float] = None
+        self, key: str, value: Any, ttl_seconds: float | None = None
     ) -> None:
         """
         Asynchronously add an item to the cache with comprehensive input validation.
@@ -800,7 +799,7 @@ class AsyncTTLCache:
             runtime_metrics.close_correlation_id(correlation_id)
 
     def _validate_cache_inputs(
-        self, key: Any, value: Any, ttl_seconds: Optional[float]
+        self, key: Any, value: Any, ttl_seconds: float | None
     ) -> tuple[str, float]:
         """
         Comprehensive input validation based on fuzzing failures.
@@ -873,16 +872,16 @@ class AsyncTTLCache:
             if not isinstance(value, (object, type, lambda: None)):
                 raise ValueError(f"Cache value must be serializable: {e}")
 
-    def _validate_cache_ttl(self, ttl_seconds: Optional[float]) -> float:
+    def _validate_cache_ttl(self, ttl_seconds: float | None) -> float:
         """Validate the TTL value."""
         # TTL VALIDATION - PREVENT EDGE CASES
         if ttl_seconds is None:
             return self.ttl_seconds
-        elif not isinstance(ttl_seconds, (int, float)):
+        if not isinstance(ttl_seconds, (int, float)):
             raise TypeError(f"TTL must be numeric: {type(ttl_seconds)}")
-        elif ttl_seconds < 0:
+        if ttl_seconds < 0:
             raise ValueError(f"TTL cannot be negative: {ttl_seconds}")
-        elif ttl_seconds > 86400 * 365:  # Max 1 year
+        if ttl_seconds > 86400 * 365:  # Max 1 year
             raise ValueError(f"TTL too large: {ttl_seconds} seconds (max 1 year)")
 
         return ttl_seconds
@@ -938,7 +937,7 @@ class AsyncTTLCache:
         finally:
             runtime_metrics.close_correlation_id(correlation_id)
 
-    async def rollback_transaction(self, operations: List[Dict[str, Any]]) -> bool:
+    async def rollback_transaction(self, operations: list[dict[str, Any]]) -> bool:
         """
         Rollback a series of cache operations atomically with comprehensive bounds checking.
 
@@ -1004,7 +1003,7 @@ class AsyncTTLCache:
                         raise ValueError(f"Invalid key in operation {i}: {type(key)}")
 
             # Group operations by shard to minimize lock contention with bounds checking
-            shard_operations: Dict[int, List[Dict[str, Any]]] = {}
+            shard_operations: dict[int, list[dict[str, Any]]] = {}
             for op in operations:
                 try:
                     # Use the same bounds-checked shard calculation
@@ -1255,7 +1254,7 @@ class AsyncTTLCache:
 
         return True
 
-    def get_detailed_metrics(self) -> Dict[str, Any]:
+    def get_detailed_metrics(self) -> dict[str, Any]:
         """Get comprehensive cache metrics for monitoring."""
         total_requests = (
             runtime_metrics.cache_hits.value + runtime_metrics.cache_misses.value
@@ -1289,7 +1288,7 @@ class AsyncTTLCache:
             "health_status": runtime_metrics.get_health_status().get("async_cache", {}),
         }
 
-    def create_backup_snapshot(self) -> Dict[str, Any]:
+    def create_backup_snapshot(self) -> dict[str, Any]:
         """
         Create a backup snapshot of current cache state for rollback purposes.
         WARNING: This is expensive and should be used sparingly.
@@ -1333,7 +1332,7 @@ class AsyncTTLCache:
         finally:
             runtime_metrics.close_correlation_id(correlation_id)
 
-    async def restore_from_snapshot(self, snapshot: Dict[str, Any]) -> bool:
+    async def restore_from_snapshot(self, snapshot: dict[str, Any]) -> bool:
         """
         Restore cache from a backup snapshot with comprehensive bounds checking.
         This will atomically replace all current cache contents.
@@ -1446,7 +1445,7 @@ class AsyncTTLCache:
                 pass
         logger.debug("AsyncTTLCache stopped")
 
-    async def _health_check_functionality(self, correlation_id) -> Dict[str, Any]:
+    async def _health_check_functionality(self, correlation_id) -> dict[str, Any]:
         """
         Perform basic functionality tests for the health check.
 
@@ -1526,7 +1525,7 @@ class AsyncTTLCache:
 
     async def _health_check_integrity(
         self, is_production: bool, correlation_id
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Perform cache bounds and integrity checks.
 
@@ -1591,8 +1590,8 @@ class AsyncTTLCache:
         }
 
     def _create_integrity_error_response(
-        self, error_msg: str, details: Dict, correlation_id, production_ready: bool
-    ) -> Dict[str, Any]:
+        self, error_msg: str, details: dict, correlation_id, production_ready: bool
+    ) -> dict[str, Any]:
         """Create a standardized error response for integrity checks."""
         return {
             "status": "critical",
@@ -1604,8 +1603,8 @@ class AsyncTTLCache:
         }
 
     def _create_integrity_warning_response(
-        self, error_msg: str, details: Dict, correlation_id, is_production: bool
-    ) -> Dict[str, Any]:
+        self, error_msg: str, details: dict, correlation_id, is_production: bool
+    ) -> dict[str, Any]:
         """Create a standardized warning response for integrity checks."""
         return {
             "status": "warning",
@@ -1617,8 +1616,8 @@ class AsyncTTLCache:
         }
 
     def _check_shard_balance(
-        self, shard_sizes: List[int], current_size: int
-    ) -> Optional[Dict[str, Any]]:
+        self, shard_sizes: list[int], current_size: int
+    ) -> dict[str, Any] | None:
         """Check if shards are balanced."""
         if self.num_shards > 1:
             avg_shard_size = current_size / self.num_shards
@@ -1637,7 +1636,7 @@ class AsyncTTLCache:
 
     async def _health_check_background_tasks(
         self, is_production: bool, correlation_id
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """
         Check the status of background tasks.
 
@@ -1665,7 +1664,7 @@ class AsyncTTLCache:
 
         return {"status": "ok", "cleanup_status": cleanup_status}
 
-    async def _health_check_performance(self, correlation_id) -> Dict[str, Any]:
+    async def _health_check_performance(self, correlation_id) -> dict[str, Any]:
         """
         Check performance metrics.
 
@@ -1689,7 +1688,7 @@ class AsyncTTLCache:
 
         return {"status": "ok", "hit_rate": hit_rate}
 
-    async def _health_check_config(self, correlation_id) -> Dict[str, Any]:
+    async def _health_check_config(self, correlation_id) -> dict[str, Any]:
         """
         Check configuration validity.
 
@@ -1721,7 +1720,7 @@ class AsyncTTLCache:
 
         return {"status": "ok"}
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """
         Perform PRODUCTION-GRADE comprehensive health check of the cache with rigorous validation.
         """
@@ -1814,7 +1813,7 @@ class AsyncTTLCache:
                 "exception_type": type(e).__name__,
             }
 
-    async def __aenter__(self) -> "AsyncTTLCache":
+    async def __aenter__(self) -> AsyncTTLCache:
         """Async context manager entry."""
         return self
 
@@ -1823,7 +1822,7 @@ class AsyncTTLCache:
         await self.stop()
 
     # Methods for WAL replay - these apply operations without re-logging to prevent loops
-    async def apply_wal_set(self, key: str, value: Any, ttl: Optional[float] = None):
+    async def apply_wal_set(self, key: str, value: Any, ttl: float | None = None):
         """
         Apply a SET operation from WAL replay without re-logging.
         This method is used during recovery to apply operations that were already logged to WAL.

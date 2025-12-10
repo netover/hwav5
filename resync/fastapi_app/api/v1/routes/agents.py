@@ -1,5 +1,6 @@
 
 from fastapi import APIRouter
+
 from ..models.response_models import AgentListResponse
 
 router = APIRouter(tags=["Agents"])
@@ -18,7 +19,7 @@ def list_agents() -> AgentListResponse:
             "description": "Agente para testes de monitoramento TWS"
         },
         {
-            "id": "demo-agent-2", 
+            "id": "demo-agent-2",
             "name": "Agente de Demonstração 2",
             "status": "ativo",
             "description": "Agente para testes de troubleshooting"

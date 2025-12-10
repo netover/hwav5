@@ -1,5 +1,6 @@
 
 from fastapi.testclient import TestClient
+
 import resync.fastapi_app.main as main_module
 
 client = TestClient(main_module.app)

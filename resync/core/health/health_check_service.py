@@ -2,15 +2,14 @@
 import logging
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
 
 from resync.core.health_models import (
     ComponentHealth,
     ComponentType,
     HealthCheckResult,
     HealthStatus,
+    SystemHealthStatus,
 )
-from resync.core.health_models import SystemHealthStatus
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +24,10 @@ class HealthCheckService:
 
     def __init__(self):
         """Initialize the health check service."""
-        self._component_cache: Dict[str, ComponentHealth] = {}
-        self._last_system_check: Optional[datetime] = None
+        self._component_cache: dict[str, ComponentHealth] = {}
+        self._last_system_check: datetime | None = None
 
-    async def run_all_checks(self) -> List[HealthCheckResult]:
+    async def run_all_checks(self) -> list[HealthCheckResult]:
         """
         Run health checks on all system components.
 
@@ -187,10 +186,9 @@ class HealthCheckService:
 
             if critical_ratio > 0.5:  # More than 50% critical
                 return SystemHealthStatus.CRITICAL
-            elif warning_count > 0 or critical_count > 0:
+            if warning_count > 0 or critical_count > 0:
                 return SystemHealthStatus.WARNING
-            else:
-                return SystemHealthStatus.OK
+            return SystemHealthStatus.OK
 
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
@@ -216,27 +214,26 @@ class HealthCheckService:
             # Basic health checks based on component type
             if component_type == ComponentType.DATABASE:
                 return await self._check_database_health_basic(component_name)
-            elif component_type == ComponentType.REDIS:
+            if component_type == ComponentType.REDIS:
                 return await self._check_redis_health_basic(component_name)
-            elif component_type == ComponentType.CACHE:
+            if component_type == ComponentType.CACHE:
                 return await self._check_cache_health_basic(component_name)
-            elif component_type == ComponentType.FILE_SYSTEM:
+            if component_type == ComponentType.FILE_SYSTEM:
                 return await self._check_file_system_health_basic(component_name)
-            elif component_type == ComponentType.MEMORY:
+            if component_type == ComponentType.MEMORY:
                 return await self._check_memory_health_basic(component_name)
-            elif component_type == ComponentType.CPU:
+            if component_type == ComponentType.CPU:
                 return await self._check_cpu_health_basic(component_name)
-            else:
-                # Default basic check
-                response_time = (time.time() - start_time) * 1000
-                return ComponentHealth(
-                    name=component_name,
-                    component_type=component_type,
-                    status=HealthStatus.HEALTHY,
-                    message=f"{component_name} basic check passed",
-                    response_time_ms=response_time,
-                    last_check=datetime.now(),
-                )
+            # Default basic check
+            response_time = (time.time() - start_time) * 1000
+            return ComponentHealth(
+                name=component_name,
+                component_type=component_type,
+                status=HealthStatus.HEALTHY,
+                message=f"{component_name} basic check passed",
+                response_time_ms=response_time,
+                last_check=datetime.now(),
+            )
 
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)

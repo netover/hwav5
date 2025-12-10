@@ -23,11 +23,12 @@ import io
 import logging
 import os
 import re
+from collections.abc import Generator
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urljoin, urlparse
 
 logger = logging.getLogger(__name__)
@@ -51,9 +52,9 @@ class DocumentChunk:
     total_chunks: int
     source: str
     document_type: DocumentType
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     sha256: str = ""
-    
+
     def __post_init__(self):
         if not self.sha256:
             self.sha256 = hashlib.sha256(self.content.encode("utf-8")).hexdigest()
@@ -66,11 +67,11 @@ class ParsedDocument:
     content: str
     source: str
     document_type: DocumentType
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    sections: List[Dict[str, str]] = field(default_factory=list)
-    tables: List[Dict[str, Any]] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    sections: list[dict[str, str]] = field(default_factory=list)
+    tables: list[dict[str, Any]] = field(default_factory=list)
     parsed_at: datetime = field(default_factory=datetime.utcnow)
-    
+
     @property
     def sha256(self) -> str:
         """Generate SHA256 hash of document content."""
@@ -84,7 +85,7 @@ class ParsedDocument:
 class PDFParser:
     """
     Enhanced PDF parser for IBM/HCL TWS documentation.
-    
+
     Features:
     - Text extraction with layout preservation
     - Table detection and extraction
@@ -92,7 +93,7 @@ class PDFParser:
     - Page number handling
     - Metadata extraction
     """
-    
+
     def __init__(
         self,
         extract_tables: bool = True,
@@ -101,7 +102,7 @@ class PDFParser:
     ):
         """
         Initialize PDF parser.
-        
+
         Args:
             extract_tables: Whether to extract tables separately
             remove_headers_footers: Whether to remove headers/footers
@@ -110,7 +111,7 @@ class PDFParser:
         self.extract_tables = extract_tables
         self.remove_headers_footers = remove_headers_footers
         self.preserve_layout = preserve_layout
-        
+
         # Check for pypdf availability
         try:
             import pypdf
@@ -118,22 +119,22 @@ class PDFParser:
         except ImportError:
             self._pypdf_available = False
             logger.warning("pypdf not installed. PDF parsing will be limited.")
-    
-    def parse(self, source: Union[str, Path, bytes, io.BytesIO]) -> ParsedDocument:
+
+    def parse(self, source: str | Path | bytes | io.BytesIO) -> ParsedDocument:
         """
         Parse a PDF document.
-        
+
         Args:
             source: File path, bytes, or BytesIO object
-            
+
         Returns:
             ParsedDocument with extracted content
         """
         if not self._pypdf_available:
             raise ImportError("pypdf is required for PDF parsing. Install with: pip install pypdf")
-        
+
         import pypdf
-        
+
         # Handle different input types
         if isinstance(source, (str, Path)):
             source_path = str(source)
@@ -145,37 +146,37 @@ class PDFParser:
         else:
             reader = pypdf.PdfReader(source)
             source_name = "stream.pdf"
-        
+
         # Extract metadata
         metadata = self._extract_metadata(reader)
-        
+
         # Extract text from all pages
         full_text = []
         sections = []
         tables = []
-        
+
         for page_num, page in enumerate(reader.pages, 1):
             page_text = page.extract_text() or ""
-            
+
             if self.remove_headers_footers:
                 page_text = self._remove_headers_footers(page_text)
-            
+
             # Detect sections by heading patterns
             page_sections = self._detect_sections(page_text, page_num)
             sections.extend(page_sections)
-            
+
             # Extract tables if enabled
             if self.extract_tables:
                 page_tables = self._extract_tables_from_page(page_text, page_num)
                 tables.extend(page_tables)
-            
+
             full_text.append(page_text)
-        
+
         content = "\n\n".join(full_text)
-        
+
         # Clean up content
         content = self._clean_text(content)
-        
+
         return ParsedDocument(
             title=metadata.get("title", source_name),
             content=content,
@@ -185,11 +186,11 @@ class PDFParser:
             sections=sections,
             tables=tables,
         )
-    
-    def _extract_metadata(self, reader) -> Dict[str, Any]:
+
+    def _extract_metadata(self, reader) -> dict[str, Any]:
         """Extract metadata from PDF."""
         metadata = {}
-        
+
         try:
             if reader.metadata:
                 metadata["title"] = reader.metadata.get("/Title", "")
@@ -198,36 +199,36 @@ class PDFParser:
                 metadata["creator"] = reader.metadata.get("/Creator", "")
                 metadata["producer"] = reader.metadata.get("/Producer", "")
                 metadata["creation_date"] = str(reader.metadata.get("/CreationDate", ""))
-            
+
             metadata["num_pages"] = len(reader.pages)
-            
+
             # Try to detect IBM/HCL product info
             if reader.pages:
                 first_page = reader.pages[0].extract_text() or ""
                 metadata.update(self._detect_tws_info(first_page))
-                
+
         except Exception as e:
             logger.warning(f"Error extracting PDF metadata: {e}")
-        
+
         return metadata
-    
-    def _detect_tws_info(self, text: str) -> Dict[str, Any]:
+
+    def _detect_tws_info(self, text: str) -> dict[str, Any]:
         """Detect TWS/HCL product information from text."""
         info = {}
-        
+
         # Version patterns
         version_patterns = [
             r"(?:Version|V)\s*(\d+\.\d+(?:\.\d+)?)",
             r"TWS\s+(\d+\.\d+(?:\.\d+)?)",
             r"Workload\s+Automation\s+(\d+\.\d+(?:\.\d+)?)",
         ]
-        
+
         for pattern in version_patterns:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 info["tws_version"] = match.group(1)
                 break
-        
+
         # Product patterns
         if "HCL Workload Automation" in text or "HCL TWS" in text:
             info["product"] = "HCL Workload Automation"
@@ -235,45 +236,45 @@ class PDFParser:
             info["product"] = "IBM Workload Automation"
         elif "Tivoli Workload Scheduler" in text:
             info["product"] = "IBM Tivoli Workload Scheduler"
-        
+
         return info
-    
+
     def _remove_headers_footers(self, text: str) -> str:
         """Remove common header/footer patterns."""
         lines = text.split("\n")
-        
+
         # Remove page numbers and common footer patterns
         cleaned_lines = []
         for line in lines:
             stripped = line.strip()
-            
+
             # Skip pure page numbers
             if re.match(r"^\d+$", stripped):
                 continue
-            
+
             # Skip common footer patterns
             if re.match(r"^Page\s+\d+\s+of\s+\d+", stripped, re.IGNORECASE):
                 continue
-            
+
             # Skip IBM/HCL copyright footers
             if re.match(r"^©\s*(IBM|HCL)\s+Corporation", stripped):
                 continue
-            
+
             cleaned_lines.append(line)
-        
+
         return "\n".join(cleaned_lines)
-    
-    def _detect_sections(self, text: str, page_num: int) -> List[Dict[str, str]]:
+
+    def _detect_sections(self, text: str, page_num: int) -> list[dict[str, str]]:
         """Detect document sections by heading patterns."""
         sections = []
-        
+
         # Common heading patterns for TWS docs
         heading_patterns = [
             r"^(\d+(?:\.\d+)*)\s+(.+)$",  # Numbered sections: 1.2.3 Title
             r"^(Chapter\s+\d+)[.:]\s*(.+)$",  # Chapter N: Title
             r"^([A-Z][A-Z\s]+)$",  # ALL CAPS headings
         ]
-        
+
         for line in text.split("\n"):
             stripped = line.strip()
             for pattern in heading_patterns:
@@ -285,18 +286,18 @@ class PDFParser:
                         "page": page_num,
                     })
                     break
-        
+
         return sections
-    
-    def _extract_tables_from_page(self, text: str, page_num: int) -> List[Dict[str, Any]]:
+
+    def _extract_tables_from_page(self, text: str, page_num: int) -> list[dict[str, Any]]:
         """Extract table-like structures from page text."""
         tables = []
-        
+
         # Simple table detection based on consistent spacing/alignment
         lines = text.split("\n")
         table_lines = []
         in_table = False
-        
+
         for line in lines:
             # Detect table rows by multiple tab/space separations
             if re.search(r"\s{2,}|\t", line) and len(line.split()) >= 2:
@@ -316,7 +317,7 @@ class PDFParser:
                         })
                     table_lines = []
                     in_table = False
-        
+
         # Handle table at end of page
         if len(table_lines) >= 3:
             tables.append({
@@ -324,22 +325,22 @@ class PDFParser:
                 "rows": len(table_lines),
                 "content": "\n".join(table_lines),
             })
-        
+
         return tables
-    
+
     def _clean_text(self, text: str) -> str:
         """Clean and normalize extracted text."""
         # Remove excessive whitespace
         text = re.sub(r"\n{3,}", "\n\n", text)
         text = re.sub(r"[ \t]{2,}", " ", text)
-        
+
         # Fix common OCR issues
         text = text.replace("ﬁ", "fi")
         text = text.replace("ﬂ", "fl")
         text = text.replace("'", "'")
         text = text.replace(""", '"')
         text = text.replace(""", '"')
-        
+
         return text.strip()
 
 
@@ -350,7 +351,7 @@ class PDFParser:
 class HTMLParser:
     """
     HTML parser for IBM Knowledge Center and HCL documentation.
-    
+
     Features:
     - BeautifulSoup4-based parsing
     - Code block preservation
@@ -358,7 +359,7 @@ class HTMLParser:
     - Navigation/sidebar removal
     - Link resolution
     """
-    
+
     def __init__(
         self,
         remove_navigation: bool = True,
@@ -367,7 +368,7 @@ class HTMLParser:
     ):
         """
         Initialize HTML parser.
-        
+
         Args:
             remove_navigation: Whether to remove nav/sidebar elements
             preserve_code_blocks: Whether to preserve code block formatting
@@ -376,7 +377,7 @@ class HTMLParser:
         self.remove_navigation = remove_navigation
         self.preserve_code_blocks = preserve_code_blocks
         self.extract_links = extract_links
-        
+
         # Check for BeautifulSoup availability
         try:
             from bs4 import BeautifulSoup
@@ -384,19 +385,19 @@ class HTMLParser:
         except ImportError:
             self._bs4_available = False
             logger.warning("BeautifulSoup4 not installed. HTML parsing will be limited.")
-    
+
     def parse(
         self,
-        source: Union[str, bytes],
-        url: Optional[str] = None,
+        source: str | bytes,
+        url: str | None = None,
     ) -> ParsedDocument:
         """
         Parse an HTML document.
-        
+
         Args:
             source: HTML content as string or bytes, or file path
             url: Optional source URL for link resolution
-            
+
         Returns:
             ParsedDocument with extracted content
         """
@@ -405,12 +406,12 @@ class HTMLParser:
                 "BeautifulSoup4 is required for HTML parsing. "
                 "Install with: pip install beautifulsoup4"
             )
-        
+
         from bs4 import BeautifulSoup
-        
+
         # Handle file path
         if isinstance(source, str) and os.path.exists(source):
-            with open(source, "r", encoding="utf-8") as f:
+            with open(source, encoding="utf-8") as f:
                 html_content = f.read()
             source_name = Path(source).name
         elif isinstance(source, bytes):
@@ -419,33 +420,33 @@ class HTMLParser:
         else:
             html_content = source
             source_name = url or "content.html"
-        
+
         # Parse HTML
         soup = BeautifulSoup(html_content, "html.parser")
-        
+
         # Extract metadata
         metadata = self._extract_metadata(soup, url)
-        
+
         # Remove unwanted elements
         if self.remove_navigation:
             self._remove_navigation_elements(soup)
-        
+
         # Extract main content
         main_content = self._extract_main_content(soup)
-        
+
         # Extract sections
         sections = self._extract_sections(soup)
-        
+
         # Extract tables
         tables = self._extract_tables(soup)
-        
+
         # Extract links
         if self.extract_links:
             metadata["links"] = self._extract_links(soup, url)
-        
+
         # Convert to text
         content = self._soup_to_text(main_content or soup)
-        
+
         return ParsedDocument(
             title=metadata.get("title", source_name),
             content=content,
@@ -455,40 +456,40 @@ class HTMLParser:
             sections=sections,
             tables=tables,
         )
-    
-    def _extract_metadata(self, soup, url: Optional[str]) -> Dict[str, Any]:
+
+    def _extract_metadata(self, soup, url: str | None) -> dict[str, Any]:
         """Extract metadata from HTML."""
         metadata = {}
-        
+
         # Title
         title_tag = soup.find("title")
         if title_tag:
             metadata["title"] = title_tag.get_text(strip=True)
-        
+
         # Meta tags
         for meta in soup.find_all("meta"):
             name = meta.get("name", "").lower()
             content = meta.get("content", "")
-            
+
             if name in ["description", "keywords", "author", "version"]:
                 metadata[name] = content
             elif name == "dc.date" or name == "date":
                 metadata["date"] = content
-        
+
         # URL
         if url:
             metadata["url"] = url
             metadata["domain"] = urlparse(url).netloc
-        
+
         # Detect IBM/HCL content
         page_text = soup.get_text()[:1000]  # First 1000 chars
         if "IBM Knowledge Center" in page_text:
             metadata["source_type"] = "ibm_knowledge_center"
         elif "HCL Documentation" in page_text or "HCL Software" in page_text:
             metadata["source_type"] = "hcl_documentation"
-        
+
         return metadata
-    
+
     def _remove_navigation_elements(self, soup) -> None:
         """Remove navigation, sidebar, and header/footer elements."""
         # Common navigation selectors
@@ -503,11 +504,11 @@ class HTMLParser:
             ".ibm-masthead", ".ibm-footer",  # IBM-specific
             ".hcl-header", ".hcl-footer",  # HCL-specific
         ]
-        
+
         for selector in selectors:
             for element in soup.select(selector):
                 element.decompose()
-    
+
     def _extract_main_content(self, soup):
         """Extract main content area."""
         # Common main content selectors
@@ -519,19 +520,19 @@ class HTMLParser:
             ".hcl-content",  # HCL-specific
             "[role='main']",
         ]
-        
+
         for selector in selectors:
             main = soup.select_one(selector)
             if main:
                 return main
-        
+
         # Fallback to body
         return soup.find("body") or soup
-    
-    def _extract_sections(self, soup) -> List[Dict[str, str]]:
+
+    def _extract_sections(self, soup) -> list[dict[str, str]]:
         """Extract document sections by headings."""
         sections = []
-        
+
         for level in range(1, 7):
             for heading in soup.find_all(f"h{level}"):
                 section_id = heading.get("id", "")
@@ -540,26 +541,26 @@ class HTMLParser:
                     "title": heading.get_text(strip=True),
                     "id": section_id,
                 })
-        
+
         return sections
-    
-    def _extract_tables(self, soup) -> List[Dict[str, Any]]:
+
+    def _extract_tables(self, soup) -> list[dict[str, Any]]:
         """Extract tables from HTML."""
         tables = []
-        
+
         for idx, table in enumerate(soup.find_all("table")):
             table_data = {
                 "index": idx,
                 "headers": [],
                 "rows": [],
             }
-            
+
             # Extract headers
             thead = table.find("thead")
             if thead:
                 for th in thead.find_all("th"):
                     table_data["headers"].append(th.get_text(strip=True))
-            
+
             # Extract rows
             tbody = table.find("tbody") or table
             for tr in tbody.find_all("tr"):
@@ -568,35 +569,35 @@ class HTMLParser:
                     row.append(td.get_text(strip=True))
                 if row:
                     table_data["rows"].append(row)
-            
+
             if table_data["rows"]:
                 tables.append(table_data)
-        
+
         return tables
-    
-    def _extract_links(self, soup, base_url: Optional[str]) -> List[Dict[str, str]]:
+
+    def _extract_links(self, soup, base_url: str | None) -> list[dict[str, str]]:
         """Extract and resolve links."""
         links = []
-        
+
         for a in soup.find_all("a", href=True):
             href = a.get("href", "")
             text = a.get_text(strip=True)
-            
+
             # Skip empty or anchor-only links
             if not href or href.startswith("#"):
                 continue
-            
+
             # Resolve relative URLs
             if base_url and not href.startswith(("http://", "https://", "//")):
                 href = urljoin(base_url, href)
-            
+
             links.append({
                 "url": href,
                 "text": text,
             })
-        
+
         return links
-    
+
     def _soup_to_text(self, soup) -> str:
         """Convert BeautifulSoup element to clean text."""
         # Handle code blocks specially
@@ -604,14 +605,14 @@ class HTMLParser:
             for code in soup.find_all(["code", "pre"]):
                 code_text = code.get_text()
                 code.replace_with(f"\n```\n{code_text}\n```\n")
-        
+
         # Get text with separator
         text = soup.get_text(separator="\n")
-        
+
         # Clean up
         text = re.sub(r"\n{3,}", "\n\n", text)
         text = re.sub(r"[ \t]+", " ", text)
-        
+
         return text.strip()
 
 
@@ -622,27 +623,27 @@ class HTMLParser:
 class DocumentationFetcher:
     """
     Fetch documentation from IBM Knowledge Center and HCL Documentation.
-    
+
     Handles:
     - HTTP requests with proper headers
     - Rate limiting
     - Error handling
     - Caching
     """
-    
+
     # Common documentation base URLs
     IBM_KC_BASE = "https://www.ibm.com/docs"
     HCL_DOCS_BASE = "https://help.hcltechsw.com"
-    
+
     def __init__(
         self,
         timeout: float = 30.0,
-        user_agent: Optional[str] = None,
-        cache_dir: Optional[Path] = None,
+        user_agent: str | None = None,
+        cache_dir: Path | None = None,
     ):
         """
         Initialize documentation fetcher.
-        
+
         Args:
             timeout: Request timeout in seconds
             user_agent: Custom user agent string
@@ -653,55 +654,55 @@ class DocumentationFetcher:
             "Mozilla/5.0 (compatible; ResyncRAG/1.0; +https://github.com/resync)"
         )
         self.cache_dir = cache_dir
-        
+
         if cache_dir:
             cache_dir.mkdir(parents=True, exist_ok=True)
-    
-    async def fetch(self, url: str) -> Tuple[str, Dict[str, Any]]:
+
+    async def fetch(self, url: str) -> tuple[str, dict[str, Any]]:
         """
         Fetch a documentation page.
-        
+
         Args:
             url: URL to fetch
-            
+
         Returns:
             Tuple of (content, metadata)
         """
         import httpx
-        
+
         # Check cache first
         if self.cache_dir:
             cache_file = self._get_cache_path(url)
             if cache_file.exists():
                 logger.debug(f"Using cached content for {url}")
                 return cache_file.read_text(encoding="utf-8"), {"cached": True}
-        
+
         # Fetch page
         headers = {
             "User-Agent": self.user_agent,
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.5",
         }
-        
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.get(url, headers=headers, follow_redirects=True)
             response.raise_for_status()
             content = response.text
-        
+
         # Cache the content
         if self.cache_dir:
             cache_file = self._get_cache_path(url)
             cache_file.write_text(content, encoding="utf-8")
-        
+
         metadata = {
             "url": str(response.url),
             "status_code": response.status_code,
             "content_type": response.headers.get("content-type", ""),
             "fetched_at": datetime.utcnow().isoformat(),
         }
-        
+
         return content, metadata
-    
+
     def _get_cache_path(self, url: str) -> Path:
         """Get cache file path for URL."""
         url_hash = hashlib.md5(url.encode()).hexdigest()
@@ -715,49 +716,48 @@ class DocumentationFetcher:
 class DocumentParser:
     """
     Unified document parser for RAG ingestion.
-    
+
     Automatically detects document type and uses appropriate parser.
     """
-    
+
     def __init__(self):
         """Initialize document parser with all sub-parsers."""
         self.pdf_parser = PDFParser()
         self.html_parser = HTMLParser()
-    
+
     def parse(
         self,
-        source: Union[str, Path, bytes],
-        document_type: Optional[DocumentType] = None,
+        source: str | Path | bytes,
+        document_type: DocumentType | None = None,
         **kwargs,
     ) -> ParsedDocument:
         """
         Parse a document.
-        
+
         Args:
             source: Document source (path, bytes, or string)
             document_type: Explicit document type (auto-detected if not provided)
             **kwargs: Additional parser-specific options
-            
+
         Returns:
             ParsedDocument
         """
         # Auto-detect document type
         if document_type is None:
             document_type = self._detect_type(source)
-        
+
         # Route to appropriate parser
         if document_type == DocumentType.PDF:
             return self.pdf_parser.parse(source)
-        elif document_type == DocumentType.HTML:
+        if document_type == DocumentType.HTML:
             return self.html_parser.parse(source, **kwargs)
-        elif document_type == DocumentType.MARKDOWN:
+        if document_type == DocumentType.MARKDOWN:
             return self._parse_markdown(source)
-        elif document_type == DocumentType.TEXT:
+        if document_type == DocumentType.TEXT:
             return self._parse_text(source)
-        else:
-            raise ValueError(f"Unsupported document type: {document_type}")
-    
-    def _detect_type(self, source: Union[str, Path, bytes]) -> DocumentType:
+        raise ValueError(f"Unsupported document type: {document_type}")
+
+    def _detect_type(self, source: str | Path | bytes) -> DocumentType:
         """Auto-detect document type."""
         if isinstance(source, (str, Path)):
             path = Path(source)
@@ -773,19 +773,17 @@ class DocumentParser:
                     ".xml": DocumentType.XML,
                 }
                 return type_map.get(suffix, DocumentType.TEXT)
-            elif source.startswith(("http://", "https://")):
-                return DocumentType.HTML
-            elif source.strip().startswith(("<html", "<!DOCTYPE", "<HTML")):
+            if source.startswith(("http://", "https://")) or source.strip().startswith(("<html", "<!DOCTYPE", "<HTML")):
                 return DocumentType.HTML
         elif isinstance(source, bytes):
             if source.startswith(b"%PDF"):
                 return DocumentType.PDF
-            elif source.startswith((b"<html", b"<!DOCTYPE", b"<HTML")):
+            if source.startswith((b"<html", b"<!DOCTYPE", b"<HTML")):
                 return DocumentType.HTML
-        
+
         return DocumentType.TEXT
-    
-    def _parse_markdown(self, source: Union[str, Path]) -> ParsedDocument:
+
+    def _parse_markdown(self, source: str | Path) -> ParsedDocument:
         """Parse markdown document."""
         if isinstance(source, Path) or os.path.exists(str(source)):
             path = Path(source)
@@ -794,11 +792,11 @@ class DocumentParser:
         else:
             content = source
             source_name = "content.md"
-        
+
         # Extract title from first heading
         title_match = re.match(r"^#\s+(.+)$", content, re.MULTILINE)
         title = title_match.group(1) if title_match else source_name
-        
+
         # Extract sections
         sections = []
         for match in re.finditer(r"^(#{1,6})\s+(.+)$", content, re.MULTILINE):
@@ -806,7 +804,7 @@ class DocumentParser:
                 "level": str(len(match.group(1))),
                 "title": match.group(2),
             })
-        
+
         return ParsedDocument(
             title=title,
             content=content,
@@ -814,8 +812,8 @@ class DocumentParser:
             document_type=DocumentType.MARKDOWN,
             sections=sections,
         )
-    
-    def _parse_text(self, source: Union[str, Path]) -> ParsedDocument:
+
+    def _parse_text(self, source: str | Path) -> ParsedDocument:
         """Parse plain text document."""
         if isinstance(source, Path) or os.path.exists(str(source)):
             path = Path(source)
@@ -824,14 +822,14 @@ class DocumentParser:
         else:
             content = source
             source_name = "content.txt"
-        
+
         return ParsedDocument(
             title=source_name,
             content=content,
             source=source_name,
             document_type=DocumentType.TEXT,
         )
-    
+
     def chunk(
         self,
         document: ParsedDocument,
@@ -840,18 +838,18 @@ class DocumentParser:
     ) -> Generator[DocumentChunk, None, None]:
         """
         Chunk a parsed document.
-        
+
         Args:
             document: ParsedDocument to chunk
             chunk_size: Target chunk size in characters
             chunk_overlap: Overlap between chunks
-            
+
         Yields:
             DocumentChunk objects
         """
         content = document.content
         total_length = len(content)
-        
+
         if total_length <= chunk_size:
             yield DocumentChunk(
                 content=content,
@@ -862,14 +860,14 @@ class DocumentParser:
                 metadata=document.metadata,
             )
             return
-        
+
         # Calculate chunks
         chunks = []
         start = 0
-        
+
         while start < total_length:
             end = start + chunk_size
-            
+
             # Try to break at sentence boundary
             if end < total_length:
                 # Look for sentence end
@@ -878,10 +876,10 @@ class DocumentParser:
                     if break_point != -1:
                         end = break_point + len(sep)
                         break
-            
+
             chunks.append(content[start:end])
             start = end - chunk_overlap
-        
+
         total_chunks = len(chunks)
         for idx, chunk_content in enumerate(chunks):
             yield DocumentChunk(

@@ -9,12 +9,11 @@ utilization tracking.
 
 import time
 from datetime import datetime
-from typing import Dict, Optional
 
 import structlog
 
-from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
 from resync.core.connection_pool_manager import get_connection_pool_manager
+from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
 
 logger = structlog.get_logger(__name__)
 
@@ -32,8 +31,8 @@ class ConnectionPoolMonitor:
 
     def __init__(self):
         """Initialize the connection pool monitor."""
-        self._last_check: Optional[datetime] = None
-        self._cached_results: Dict[str, ComponentHealth] = {}
+        self._last_check: datetime | None = None
+        self._cached_results: dict[str, ComponentHealth] = {}
 
     async def check_connection_pools_health(self) -> ComponentHealth:
         """
@@ -194,7 +193,7 @@ class ConnectionPoolMonitor:
                 error_count=1,
             )
 
-    async def check_all_connection_health(self) -> Dict[str, ComponentHealth]:
+    async def check_all_connection_health(self) -> dict[str, ComponentHealth]:
         """
         Check all connection pool health metrics.
 
@@ -212,7 +211,7 @@ class ConnectionPoolMonitor:
             "websocket_pool": websocket_pool_health,
         }
 
-    def get_cached_health(self, component_name: str) -> Optional[ComponentHealth]:
+    def get_cached_health(self, component_name: str) -> ComponentHealth | None:
         """
         Get cached health result for a specific component.
 
@@ -227,9 +226,8 @@ class ConnectionPoolMonitor:
             age = datetime.now() - self._last_check
             if age and age.total_seconds() < 300:
                 return self._cached_results[component_name]
-            else:
-                # Cache expired
-                self._cached_results.pop(component_name, None)
+            # Cache expired
+            self._cached_results.pop(component_name, None)
 
         return None
 

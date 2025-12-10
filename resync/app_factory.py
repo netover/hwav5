@@ -8,9 +8,9 @@ initialization logic following the factory pattern.
 import hashlib
 import os
 import sys
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,9 +70,9 @@ class ApplicationFactory:
 
     def __init__(self):
         """Initialize the application factory."""
-        self.app: Optional[FastAPI] = None
-        self.templates: Optional[Jinja2Templates] = None
-        self.template_env: Optional[Environment] = None
+        self.app: FastAPI | None = None
+        self.templates: Jinja2Templates | None = None
+        self.template_env: Environment | None = None
 
     @asynccontextmanager
     async def lifespan(self, app: FastAPI) -> AsyncIterator[None]:
@@ -146,7 +146,7 @@ class ApplicationFactory:
                 from resync.core.monitoring_integration import (
                     initialize_proactive_monitoring,
                 )
-                
+
                 await initialize_proactive_monitoring(app)
                 app_logger.info("proactive_monitoring_initialized")
             except Exception as e:
@@ -227,7 +227,7 @@ class ApplicationFactory:
                     app_logger.info("proactive_monitoring_shutdown_successful")
                 except Exception as e:
                     app_logger.warning("proactive_monitoring_shutdown_error", error=str(e))
-                
+
                 await shutdown_tws_monitor()
                 logger.info("application_shutdown_completed")
                 app_logger.info("application_shutdown_successful")
@@ -413,7 +413,7 @@ class ApplicationFactory:
         try:
             from resync.api.monitoring_routes import monitoring_router
             from resync.core.monitoring_integration import register_dashboard_route
-            
+
             self.app.include_router(monitoring_router, tags=["Monitoring"])
             register_dashboard_route(self.app)
             logger.info("monitoring_routers_registered")

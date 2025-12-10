@@ -14,13 +14,11 @@ Key Features:
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from resync.core.structured_logger import get_logger
-from resync.core.knowledge_graph.models import (
-    NodeType, ExtractedTriplet
-)
 from resync.core.database.engine import get_db_session as get_async_session
+from resync.core.knowledge_graph.models import ExtractedTriplet, NodeType
+from resync.core.structured_logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -50,11 +48,11 @@ ALLOWED_RELATIONS = {
     "BELONGS_TO": ("job", "job_stream"),
     "USES": ("job", "resource"),
     "FOLLOWS": ("job", "schedule"),
-    
+
     # Hierarchy
     "PART_OF": ("*", "*"),
     "CONTAINS": ("*", "*"),
-    
+
     # Events
     "AFFECTED": ("event", "job"),
     "OCCURRED_ON": ("event", "workstation"),
@@ -82,87 +80,87 @@ ENTITY_PATTERNS = {
 class TripletExtractor:
     """
     Extracts knowledge graph triplets from text using LLM.
-    
+
     Uses schema-based extraction to ensure only valid relationships
     are extracted, preventing hallucination.
     """
-    
-    def __init__(self, llm_client: Optional[Any] = None):
+
+    def __init__(self, llm_client: Any | None = None):
         """
         Initialize extractor.
-        
+
         Args:
             llm_client: LLM client for extraction (uses LiteLLM if None)
         """
         self._llm = llm_client
-    
+
     async def _get_llm(self):
         """Get or create LLM client."""
         if self._llm is None:
             from resync.services.llm_service import get_llm_service
             self._llm = get_llm_service()
         return self._llm
-    
+
     # =========================================================================
     # MAIN EXTRACTION
     # =========================================================================
-    
+
     async def extract_from_text(
         self,
         text: str,
-        source_document: Optional[str] = None,
+        source_document: str | None = None,
         auto_approve: bool = False
-    ) -> List[Triplet]:
+    ) -> list[Triplet]:
         """
         Extract triplets from text using LLM.
-        
+
         Args:
             text: Text to extract from
             source_document: Optional source document reference
             auto_approve: If True, add directly to graph; else queue for review
-            
+
         Returns:
             List of extracted triplets
         """
         if not text or len(text.strip()) < 10:
             return []
-        
+
         # Build extraction prompt
         prompt = self._build_extraction_prompt(text)
-        
+
         try:
             llm = await self._get_llm()
             response = await llm.generate(prompt)
-            
+
             # Parse response
             triplets = self._parse_extraction_response(response, text)
-            
+
             # Normalize entities
             triplets = [self._normalize_triplet(t) for t in triplets]
-            
+
             # Filter by allowed schema
             triplets = [t for t in triplets if self._is_valid_triplet(t)]
-            
+
             # Save to review queue if not auto-approving
             if not auto_approve:
                 await self._save_to_review_queue(triplets, text, source_document)
-            
+
             logger.info(
                 "triplets_extracted",
                 count=len(triplets),
                 source=source_document
             )
-            
+
             return triplets
-            
+
         except Exception as e:
             logger.error("triplet_extraction_failed", error=str(e))
             return []
-    
+
     def _build_extraction_prompt(self, text: str) -> str:
         """Build the extraction prompt with schema constraints."""
-        relations_list = "\n".join([f"  - {r}" for r in ALLOWED_RELATIONS.keys()])
-        
+        relations_list = "\n".join([f"  - {r}" for r in ALLOWED_RELATIONS])
+
         return f"""You are a Knowledge Graph Engineer for a TWS/HWA workload automation system.
 Extract relationships from the text below.
 
@@ -184,38 +182,38 @@ TEXT:
 {text[:2000]}
 
 RELATIONSHIPS:"""
-    
+
     def _parse_extraction_response(
         self,
         response: str,
         source_text: str
-    ) -> List[Triplet]:
+    ) -> list[Triplet]:
         """Parse LLM response into triplets."""
         triplets = []
-        
+
         lines = response.strip().split("\n")
-        
+
         for line in lines:
             line = line.strip()
-            
+
             if not line or line.upper() == "NONE":
                 continue
-            
+
             # Skip lines that don't look like triplets
             if "|" not in line:
                 continue
-            
+
             parts = [p.strip() for p in line.split("|")]
-            
+
             if len(parts) >= 3:
                 subject = parts[0]
                 predicate = parts[1].upper().replace(" ", "_")
                 obj = parts[2]
-                
+
                 # Infer types from context
                 subj_type = self._infer_entity_type(subject)
                 obj_type = self._infer_entity_type(obj)
-                
+
                 triplets.append(Triplet(
                     subject=subject,
                     subject_type=subj_type,
@@ -225,34 +223,34 @@ RELATIONSHIPS:"""
                     confidence=0.8,  # Default confidence for LLM extraction
                     source_text=source_text[:500]
                 ))
-        
+
         return triplets
-    
+
     def _infer_entity_type(self, entity: str) -> str:
         """Infer entity type from name patterns."""
         entity_upper = entity.upper()
-        
+
         # Check patterns
         for etype, patterns in ENTITY_PATTERNS.items():
             for pattern in patterns:
                 if re.search(pattern, entity, re.IGNORECASE):
                     return etype
-        
+
         # Heuristics
         if re.match(r"^[A-Z][A-Z0-9_]{2,}$", entity_upper):
             return "job"  # Most likely a job name
-        
+
         if re.match(r"^[A-Z]{2,3}\d{3,}$", entity_upper):
             return "workstation"
-        
+
         return "unknown"
-    
+
     def _normalize_triplet(self, triplet: Triplet) -> Triplet:
         """Normalize entity names to prevent duplicates."""
         # Remove common prefixes/suffixes
         subject = self._normalize_entity_name(triplet.subject)
         obj = self._normalize_entity_name(triplet.object)
-        
+
         return Triplet(
             subject=subject,
             subject_type=triplet.subject_type,
@@ -262,45 +260,45 @@ RELATIONSHIPS:"""
             confidence=triplet.confidence,
             source_text=triplet.source_text
         )
-    
+
     def _normalize_entity_name(self, name: str) -> str:
         """Normalize an entity name."""
         # Remove quotes
         name = name.strip("'\"")
-        
+
         # Remove common prefixes
         for prefix in ["job:", "Job:", "JOB:", "ws:", "WS:", "resource:"]:
             if name.startswith(prefix):
                 name = name[len(prefix):]
-        
+
         # Uppercase for consistency
         return name.strip().upper()
-    
+
     def _is_valid_triplet(self, triplet: Triplet) -> bool:
         """Check if triplet matches allowed schema."""
         predicate = triplet.predicate
-        
+
         if predicate not in ALLOWED_RELATIONS:
             return False
-        
+
         expected_types = ALLOWED_RELATIONS[predicate]
-        
+
         # Wildcard match
         if expected_types[0] != "*" and triplet.subject_type != expected_types[0]:
             if triplet.subject_type != "unknown":
                 return False
-        
+
         if expected_types[1] != "*" and triplet.object_type != expected_types[1]:
             if triplet.object_type != "unknown":
                 return False
-        
+
         return True
-    
+
     async def _save_to_review_queue(
         self,
-        triplets: List[Triplet],
+        triplets: list[Triplet],
         source_text: str,
-        source_document: Optional[str]
+        source_document: str | None
     ) -> None:
         """Save extracted triplets to review queue."""
         async with get_async_session() as session:
@@ -316,34 +314,34 @@ RELATIONSHIPS:"""
                     status="pending"
                 )
                 session.add(record)
-            
+
             await session.commit()
-    
+
     # =========================================================================
     # RULE-BASED EXTRACTION (for structured data)
     # =========================================================================
-    
+
     def extract_from_tws_data(
         self,
-        job_data: Dict[str, Any]
-    ) -> List[Triplet]:
+        job_data: dict[str, Any]
+    ) -> list[Triplet]:
         """
         Extract triplets from structured TWS job data.
-        
+
         This is more reliable than LLM extraction for structured sources.
-        
+
         Args:
             job_data: Job definition from TWS API
-            
+
         Returns:
             List of triplets
         """
         triplets = []
-        
+
         job_name = job_data.get("name", job_data.get("job_name", ""))
         if not job_name:
             return triplets
-        
+
         # Workstation relationship
         workstation = job_data.get("workstation", job_data.get("ws", ""))
         if workstation:
@@ -356,7 +354,7 @@ RELATIONSHIPS:"""
                 confidence=1.0,
                 source_text="TWS API"
             ))
-        
+
         # Job stream relationship
         job_stream = job_data.get("job_stream", job_data.get("stream", ""))
         if job_stream:
@@ -369,7 +367,7 @@ RELATIONSHIPS:"""
                 confidence=1.0,
                 source_text="TWS API"
             ))
-        
+
         # Dependencies
         dependencies = job_data.get("dependencies", job_data.get("deps", []))
         for dep in dependencies:
@@ -385,7 +383,7 @@ RELATIONSHIPS:"""
                     confidence=1.0,
                     source_text="TWS API"
                 ))
-        
+
         # Resources
         resources = job_data.get("resources", job_data.get("resource_requirements", []))
         if isinstance(resources, dict):
@@ -403,28 +401,28 @@ RELATIONSHIPS:"""
                     confidence=1.0,
                     source_text="TWS API"
                 ))
-        
+
         return triplets
-    
+
     def extract_from_event(
         self,
-        event_data: Dict[str, Any]
-    ) -> List[Triplet]:
+        event_data: dict[str, Any]
+    ) -> list[Triplet]:
         """
         Extract triplets from event/log data.
-        
+
         Args:
             event_data: Event record
-            
+
         Returns:
             List of triplets
         """
         triplets = []
-        
+
         event_id = event_data.get("event_id", event_data.get("id", ""))
         if not event_id:
             return triplets
-        
+
         # Affected job
         job_id = event_data.get("job_id", event_data.get("job_name", ""))
         if job_id:
@@ -437,7 +435,7 @@ RELATIONSHIPS:"""
                 confidence=1.0,
                 source_text="Event log"
             ))
-        
+
         # Workstation
         workstation = event_data.get("workstation", event_data.get("source", ""))
         if workstation:
@@ -450,7 +448,7 @@ RELATIONSHIPS:"""
                 confidence=1.0,
                 source_text="Event log"
             ))
-        
+
         return triplets
 
 
@@ -458,10 +456,10 @@ RELATIONSHIPS:"""
 # REVIEW QUEUE MANAGEMENT
 # =============================================================================
 
-async def get_pending_triplets(limit: int = 50) -> List[Dict[str, Any]]:
+async def get_pending_triplets(limit: int = 50) -> list[dict[str, Any]]:
     """Get triplets pending review."""
     from sqlalchemy import select
-    
+
     async with get_async_session() as session:
         result = await session.execute(
             select(ExtractedTriplet)
@@ -476,24 +474,25 @@ async def get_pending_triplets(limit: int = 50) -> List[Dict[str, Any]]:
 async def approve_triplet(triplet_id: int, reviewer: str) -> bool:
     """Approve a triplet and add to graph."""
     from sqlalchemy import select
+
     from resync.core.knowledge_graph.graph import get_knowledge_graph
-    
+
     async with get_async_session() as session:
         result = await session.execute(
             select(ExtractedTriplet).where(ExtractedTriplet.id == triplet_id)
         )
         triplet = result.scalar_one_or_none()
-        
+
         if not triplet:
             return False
-        
+
         # Update status
         triplet.status = "approved"
         triplet.reviewed_by = reviewer
         triplet.reviewed_at = datetime.utcnow()
-        
+
         await session.commit()
-        
+
         # Add to graph
         kg = get_knowledge_graph()
         await kg.add_node(
@@ -515,41 +514,41 @@ async def approve_triplet(triplet_id: int, reviewer: str) -> bool:
             confidence=triplet.confidence,
             source="llm_extracted"
         )
-        
+
         logger.info(
             "triplet_approved",
             triplet_id=triplet_id,
             reviewer=reviewer
         )
-        
+
         return True
 
 
 async def reject_triplet(triplet_id: int, reviewer: str) -> bool:
     """Reject a triplet."""
     from sqlalchemy import select
-    
+
     async with get_async_session() as session:
         result = await session.execute(
             select(ExtractedTriplet).where(ExtractedTriplet.id == triplet_id)
         )
         triplet = result.scalar_one_or_none()
-        
+
         if not triplet:
             return False
-        
+
         triplet.status = "rejected"
         triplet.reviewed_by = reviewer
         triplet.reviewed_at = datetime.utcnow()
-        
+
         await session.commit()
-        
+
         logger.info(
             "triplet_rejected",
             triplet_id=triplet_id,
             reviewer=reviewer
         )
-        
+
         return True
 
 

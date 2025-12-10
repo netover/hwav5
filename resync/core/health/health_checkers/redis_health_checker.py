@@ -7,7 +7,7 @@ This module provides health checking functionality for Redis cache connections.
 
 import time
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -16,6 +16,7 @@ from resync.core.health_models import (
     ComponentType,
     HealthStatus,
 )
+
 from .base_health_checker import BaseHealthChecker
 
 logger = structlog.get_logger(__name__)
@@ -58,7 +59,8 @@ class RedisHealthChecker(BaseHealthChecker):
 
             # Test actual Redis connectivity
             import redis.asyncio as redis_async
-            from redis.exceptions import RedisError, TimeoutError as RedisTimeoutError
+            from redis.exceptions import RedisError
+            from redis.exceptions import TimeoutError as RedisTimeoutError
 
             try:
                 redis_client = redis_async.from_url(settings.REDIS_URL)
@@ -130,7 +132,7 @@ class RedisHealthChecker(BaseHealthChecker):
         """Determine health status based on Redis exception type."""
         return ComponentType.REDIS
 
-    def get_component_config(self) -> Dict[str, Any]:
+    def get_component_config(self) -> dict[str, Any]:
         """Get Redis-specific configuration."""
         return {
             "timeout_seconds": self.config.timeout_seconds,

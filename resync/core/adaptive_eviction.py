@@ -2,7 +2,7 @@
 Adaptive eviction strategies for cache management.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 
 class AdaptiveEviction:
@@ -16,6 +16,6 @@ class AdaptiveEviction:
         """Determine if eviction is needed."""
         return current_size >= self.max_memory
 
-    def get_eviction_candidates(self, items: Dict[str, Any]) -> List[str]:
+    def get_eviction_candidates(self, items: dict[str, Any]) -> list[str]:
         """Get items that should be evicted."""
         return list(items.keys())[:len(items)//4]  # Evict 25% of items

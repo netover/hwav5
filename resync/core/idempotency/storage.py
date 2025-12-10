@@ -2,7 +2,6 @@
 Abstração de armazenamento para o sistema de idempotency.
 """
 
-from typing import Optional
 
 from redis.asyncio import Redis
 
@@ -16,21 +15,21 @@ class IdempotencyStorage:
     def __init__(self, redis_client: Redis):
         self.redis = redis_client
 
-    async def get(self, key: str) -> Optional[IdempotencyRecord]:
+    async def get(self, key: str) -> IdempotencyRecord | None:
         """Recupera registro de idempotency"""
         try:
             cached_data = await self.redis.get(key)
             if not cached_data:
                 return None
-            
+
             record_data = await self.redis.get(key)
             if not record_data:
                 return None
-            
+
             record_dict = await self.redis.get(key)
             if not record_dict:
                 return None
-            
+
             return IdempotencyRecord.from_dict(record_dict)
         except Exception as e:
             raise IdempotencyStorageError(f"Failed to get idempotency record: {str(e)}")

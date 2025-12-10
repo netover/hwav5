@@ -13,13 +13,15 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import httpx
 
 from resync.core.exceptions import IntegrationError
-from .instance import TWSInstance, TWSInstanceConfig, TWSInstanceStatus, TWSEnvironment
+
+from .instance import TWSEnvironment, TWSInstance, TWSInstanceConfig, TWSInstanceStatus
 from .learning import TWSLearningStore
-from .session import SessionManager, TWSSession, get_session_manager
+from .session import TWSSession, get_session_manager
 
 logger = logging.getLogger(__name__)
 
@@ -27,56 +29,56 @@ logger = logging.getLogger(__name__)
 class TWSInstanceManager:
     """
     Manages multiple TWS instances.
-    
+
     Provides centralized management of all TWS connections,
     each with isolated configuration and learning data.
-    
+
     Example instances:
         SAZ → tws.saz.com.br:31116
         NAZ → tws.naz.com:31116
         MAZ → tws.maz.com:31116
     """
-    
-    def __init__(self, config_path: Optional[Path] = None):
+
+    def __init__(self, config_path: Path | None = None):
         self.config_path = config_path or Path("config/tws_instances.json")
-        
+
         # Instance storage
-        self._instances: Dict[str, TWSInstance] = {}
-        
+        self._instances: dict[str, TWSInstance] = {}
+
         # Learning stores (one per instance)
-        self._learning_stores: Dict[str, TWSLearningStore] = {}
-        
+        self._learning_stores: dict[str, TWSLearningStore] = {}
+
         # HTTP clients (one per instance)
-        self._clients: Dict[str, httpx.AsyncClient] = {}
-        
+        self._clients: dict[str, httpx.AsyncClient] = {}
+
         # Session manager
         self._session_manager = get_session_manager()
-        
+
         # Load saved instances
         self._load_instances()
-    
+
     def _load_instances(self):
         """Load instances from configuration file."""
         if self.config_path.exists():
             try:
-                with open(self.config_path, 'r') as f:
+                with open(self.config_path) as f:
                     data = json.load(f)
-                
+
                 for instance_data in data.get("instances", []):
                     config = TWSInstanceConfig.from_dict(instance_data)
                     instance = TWSInstance(config=config)
                     self._instances[config.id] = instance
-                    
+
                     # Create learning store
                     self._learning_stores[config.id] = TWSLearningStore(config.id)
-                
+
                 logger.info(f"Loaded {len(self._instances)} TWS instances")
             except Exception as e:
                 logger.error(f"Error loading instances: {e}")
         else:
             # Create default instances
             self._create_default_instances()
-    
+
     def _create_default_instances(self):
         """Create default example instances."""
         defaults = [
@@ -117,19 +119,19 @@ class TWSInstanceManager:
                 sort_order=3,
             ),
         ]
-        
+
         for config in defaults:
             instance = TWSInstance(config=config)
             self._instances[config.id] = instance
             self._learning_stores[config.id] = TWSLearningStore(config.id)
-        
+
         self._save_instances()
         logger.info("Created default TWS instances")
-    
+
     def _save_instances(self):
         """Save instances to configuration file."""
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         data = {
             "instances": [
                 inst.config.to_dict()
@@ -140,99 +142,99 @@ class TWSInstanceManager:
             ],
             "saved_at": datetime.utcnow().isoformat(),
         }
-        
+
         with open(self.config_path, 'w') as f:
             json.dump(data, f, indent=2)
-        
+
         logger.info(f"Saved {len(self._instances)} TWS instances")
-    
+
     # Instance CRUD
-    
+
     def add_instance(self, config: TWSInstanceConfig) -> TWSInstance:
         """Add a new TWS instance."""
         if any(i.config.name == config.name for i in self._instances.values()):
             raise ValueError(f"Instance with name '{config.name}' already exists")
-        
+
         instance = TWSInstance(config=config)
         self._instances[config.id] = instance
-        
+
         # Create learning store
         self._learning_stores[config.id] = TWSLearningStore(config.id)
-        
+
         self._save_instances()
         logger.info(f"Added TWS instance: {config.name}")
-        
+
         return instance
-    
-    def get_instance(self, instance_id: str) -> Optional[TWSInstance]:
+
+    def get_instance(self, instance_id: str) -> TWSInstance | None:
         """Get instance by ID."""
         return self._instances.get(instance_id)
-    
-    def get_instance_by_name(self, name: str) -> Optional[TWSInstance]:
+
+    def get_instance_by_name(self, name: str) -> TWSInstance | None:
         """Get instance by name."""
         for instance in self._instances.values():
             if instance.config.name.lower() == name.lower():
                 return instance
         return None
-    
-    def get_all_instances(self) -> List[TWSInstance]:
+
+    def get_all_instances(self) -> list[TWSInstance]:
         """Get all instances sorted by sort_order."""
         return sorted(
             self._instances.values(),
             key=lambda x: x.config.sort_order
         )
-    
-    def update_instance(self, instance_id: str, updates: Dict[str, Any]) -> Optional[TWSInstance]:
+
+    def update_instance(self, instance_id: str, updates: dict[str, Any]) -> TWSInstance | None:
         """Update instance configuration."""
         instance = self._instances.get(instance_id)
         if not instance:
             return None
-        
+
         config = instance.config
         for key, value in updates.items():
             if hasattr(config, key):
                 setattr(config, key, value)
-        
+
         config.updated_at = datetime.utcnow()
         self._save_instances()
-        
+
         logger.info(f"Updated TWS instance: {config.name}")
         return instance
-    
+
     def delete_instance(self, instance_id: str) -> bool:
         """Delete an instance."""
         if instance_id not in self._instances:
             return False
-        
+
         instance = self._instances[instance_id]
         name = instance.config.name
-        
+
         # Close any active connections
         if instance_id in self._clients:
             asyncio.create_task(self._clients[instance_id].aclose())
             del self._clients[instance_id]
-        
+
         # Remove learning store
         if instance_id in self._learning_stores:
             del self._learning_stores[instance_id]
-        
+
         del self._instances[instance_id]
         self._save_instances()
-        
+
         logger.info(f"Deleted TWS instance: {name}")
         return True
-    
+
     # Connection Management
-    
+
     async def connect_instance(self, instance_id: str) -> bool:
         """Establish connection to a TWS instance."""
         instance = self._instances.get(instance_id)
         if not instance:
             return False
-        
+
         config = instance.config
         instance.status = TWSInstanceStatus.CONNECTING
-        
+
         try:
             # Create HTTP client
             client = httpx.AsyncClient(
@@ -243,52 +245,51 @@ class TWSInstanceManager:
                 ),
                 verify=config.ssl_verify,
             )
-            
+
             # Test connection
             response = await client.get("/twsd/health")
-            
+
             if response.status_code == 200:
                 instance.status = TWSInstanceStatus.CONNECTED
                 instance.last_connected = datetime.utcnow()
                 instance.error_count = 0
                 instance.last_error = None
                 self._clients[instance_id] = client
-                
+
                 logger.info(f"Connected to TWS instance: {config.name}")
                 return True
-            else:
-                raise IntegrationError(f"Health check failed: {response.status_code}")
-                
+            raise IntegrationError(f"Health check failed: {response.status_code}")
+
         except Exception as e:
             instance.status = TWSInstanceStatus.ERROR
             instance.error_count += 1
             instance.last_error = str(e)
-            
+
             logger.error(f"Failed to connect to {config.name}: {e}")
             return False
-    
+
     async def disconnect_instance(self, instance_id: str):
         """Disconnect from a TWS instance."""
         instance = self._instances.get(instance_id)
         if not instance:
             return
-        
+
         if instance_id in self._clients:
             await self._clients[instance_id].aclose()
             del self._clients[instance_id]
-        
+
         instance.status = TWSInstanceStatus.DISCONNECTED
         logger.info(f"Disconnected from TWS instance: {instance.config.name}")
-    
-    async def test_connection(self, instance_id: str) -> Dict[str, Any]:
+
+    async def test_connection(self, instance_id: str) -> dict[str, Any]:
         """Test connection to an instance."""
         instance = self._instances.get(instance_id)
         if not instance:
             return {"success": False, "error": "Instance not found"}
-        
+
         config = instance.config
         start_time = datetime.utcnow()
-        
+
         try:
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(connect=10, read=10),
@@ -297,52 +298,52 @@ class TWSInstanceManager:
                 response = await client.get(
                     f"{instance.connection_url}/twsd/health"
                 )
-                
+
                 latency = (datetime.utcnow() - start_time).total_seconds() * 1000
-                
+
                 return {
                     "success": response.status_code == 200,
                     "status_code": response.status_code,
                     "latency_ms": round(latency, 2),
                     "url": instance.connection_url,
                 }
-                
+
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
                 "url": instance.connection_url,
             }
-    
+
     # Learning Store Access
-    
-    def get_learning_store(self, instance_id: str) -> Optional[TWSLearningStore]:
+
+    def get_learning_store(self, instance_id: str) -> TWSLearningStore | None:
         """Get learning store for an instance."""
         return self._learning_stores.get(instance_id)
-    
+
     # Session Management
-    
+
     def create_session(
         self,
         instance_id: str,
         user_id: str,
         username: str,
-    ) -> Optional[TWSSession]:
+    ) -> TWSSession | None:
         """Create a session for an operator on an instance."""
         instance = self._instances.get(instance_id)
         if not instance:
             return None
-        
+
         session = self._session_manager.create_session(
             instance_id=instance_id,
             instance_name=instance.config.name,
             user_id=user_id,
             username=username,
         )
-        
+
         instance.active_sessions += 1
         return session
-    
+
     def close_session(self, session_id: str):
         """Close an operator session."""
         session = self._session_manager.get_session(session_id)
@@ -350,19 +351,19 @@ class TWSInstanceManager:
             instance = self._instances.get(session.instance_id)
             if instance:
                 instance.active_sessions = max(0, instance.active_sessions - 1)
-        
+
         self._session_manager.close_session(session_id)
-    
-    def get_user_sessions(self, user_id: str) -> List[TWSSession]:
+
+    def get_user_sessions(self, user_id: str) -> list[TWSSession]:
         """Get all sessions for a user."""
         return self._session_manager.get_user_sessions(user_id)
-    
+
     # Summary & Stats
-    
-    def get_summary(self) -> Dict[str, Any]:
+
+    def get_summary(self) -> dict[str, Any]:
         """Get summary of all instances."""
         instances = self.get_all_instances()
-        
+
         return {
             "total_instances": len(instances),
             "connected": len([i for i in instances if i.status == TWSInstanceStatus.CONNECTED]),
@@ -384,7 +385,7 @@ class TWSInstanceManager:
 
 
 # Global manager instance
-_manager: Optional[TWSInstanceManager] = None
+_manager: TWSInstanceManager | None = None
 
 
 def get_tws_manager() -> TWSInstanceManager:

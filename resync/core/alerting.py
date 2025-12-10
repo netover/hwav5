@@ -5,10 +5,11 @@ Alerting system for Resync with multiple notification channels
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, List
+from typing import Any
 
 import structlog
 
@@ -147,7 +148,7 @@ class AlertingSystem:
     """
 
     def __init__(self):
-        self.rules: List[AlertRule] = []
+        self.rules: list[AlertRule] = []
         self.active_alerts: list[Alert] = []
         self.escalation_policies: dict[str, list[Callable]] = {}
         self.alert_history: list[Alert] = []
@@ -302,18 +303,17 @@ class AlertingSystem:
         """Check if a condition is met"""
         if condition == "gt":
             return value > threshold
-        elif condition == "lt":
+        if condition == "lt":
             return value < threshold
-        elif condition == "eq":
+        if condition == "eq":
             return value == threshold
-        elif condition == "ne":
+        if condition == "ne":
             return value != threshold
-        elif condition == "ge":
+        if condition == "ge":
             return value >= threshold
-        elif condition == "le":
+        if condition == "le":
             return value <= threshold
-        else:
-            return False
+        return False
 
     def _find_active_alert(self, rule_name: str, metric_name: str) -> Alert | None:
         """Find an active alert for a specific rule and metric"""

@@ -7,7 +7,7 @@ ensuring thread-safe initialization and proper lifecycle management.
 
 
 import asyncio
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 
@@ -26,11 +26,11 @@ class GlobalHealthServiceManager:
 
     def __init__(self):
         """Initialize the global health service manager."""
-        self._health_service: Optional[Any] = None
+        self._health_service: Any | None = None
         self._lock = asyncio.Lock()
 
     async def get_service(
-        self, service_factory_func, config: Optional[HealthCheckConfig] = None
+        self, service_factory_func, config: HealthCheckConfig | None = None
     ) -> Any:
         """
         Get the global health check service instance with thread-safe initialization.
@@ -75,7 +75,7 @@ class GlobalHealthServiceManager:
         else:
             logger.debug("health_service_already_shutdown_or_never_initialized")
 
-    def get_current_service(self) -> Optional[Any]:
+    def get_current_service(self) -> Any | None:
         """
         Get the current health service instance without initialization.
 
@@ -99,7 +99,7 @@ _global_health_manager = GlobalHealthServiceManager()
 
 
 async def get_global_health_service(
-    service_factory_func, config: Optional[HealthCheckConfig] = None
+    service_factory_func, config: HealthCheckConfig | None = None
 ) -> Any:
     """
     Convenience function to get the global health service instance.
@@ -121,7 +121,7 @@ async def shutdown_global_health_service() -> None:
     await _global_health_manager.shutdown_service()
 
 
-def get_current_global_health_service() -> Optional[Any]:
+def get_current_global_health_service() -> Any | None:
     """
     Get the current global health service instance without initialization.
 

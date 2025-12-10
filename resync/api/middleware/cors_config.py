@@ -3,10 +3,9 @@ import logging
 import re
 import socket
 from enum import Enum
-from typing import List, Union
 from urllib.parse import urlparse
 
-from pydantic import field_validator, BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -43,19 +42,19 @@ class CORSPolicy(BaseModel):
     )
 
     # Allowed origins configuration
-    allowed_origins: List[str] = Field(
+    allowed_origins: list[str] = Field(
         default=[],
         description="List of allowed origins. Use specific domains in production, wildcards only in development.",
     )
 
     # Allowed methods configuration
-    allowed_methods: List[str] = Field(
+    allowed_methods: list[str] = Field(
         default=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         description="List of allowed HTTP methods.",
     )
 
     # Allowed headers configuration
-    allowed_headers: List[str] = Field(
+    allowed_headers: list[str] = Field(
         default=["Content-Type", "Authorization", "X-Requested-With"],
         description="List of allowed headers.",
     )
@@ -82,7 +81,7 @@ class CORSPolicy(BaseModel):
     )
 
     # Dynamic validation settings
-    origin_regex_patterns: List[str] = Field(
+    origin_regex_patterns: list[str] = Field(
         default=[], description="Regex patterns for dynamic origin validation."
     )
 
@@ -94,9 +93,9 @@ class CORSPolicy(BaseModel):
             v = v.lower()
             if v in ["dev", "development"]:
                 return Environment.DEVELOPMENT
-            elif v in ["prod", "production"]:
+            if v in ["prod", "production"]:
                 return Environment.PRODUCTION
-            elif v in ["test", "testing"]:
+            if v in ["test", "testing"]:
                 return Environment.TEST
         return v
 
@@ -107,10 +106,10 @@ class CORSPolicy(BaseModel):
         """Validate each origin in the allowed_origins list."""
         if not v:
             return v
-        
+
         # Get environment from context
         environment = info.data.get("environment")
-        
+
         validated_origins = []
         for origin in v:
             # Check for wildcard in production
@@ -126,7 +125,7 @@ class CORSPolicy(BaseModel):
                     f"Invalid origin format: {origin}. "
                     "Expected format: http(s)://domain.com or http(s)://domain.com:port"
                 )
-            
+
             validated_origins.append(origin)
 
         return validated_origins
@@ -138,10 +137,10 @@ class CORSPolicy(BaseModel):
         """Validate HTTP methods."""
         if not v:
             return v
-        
+
         allowed_methods = {method.value for method in CORSMethods}
         validated_methods = []
-        
+
         for method in v:
             if method not in allowed_methods:
                 raise ValueError(
@@ -149,7 +148,7 @@ class CORSPolicy(BaseModel):
                     f"Allowed methods: {', '.join(allowed_methods)}"
                 )
             validated_methods.append(method)
-        
+
         return validated_methods
 
     @field_validator("max_age")
@@ -169,25 +168,25 @@ class CORSPolicy(BaseModel):
         """Validate regex patterns are compilable and not allowed in production."""
         if not v:
             return v
-        
+
         environment = info.data.get("environment")
         validated_patterns = []
-        
+
         for pattern in v:
             try:
                 re.compile(pattern)
             except re.error as e:
                 raise ValueError(f"Invalid regex pattern '{pattern}': {e}") from e
-            
+
             # Check if regex patterns are used in production
             if environment == Environment.PRODUCTION:
                 raise ValueError(
                     "Regex patterns are not allowed in production. "
                     "Use explicit domain names in allowed_origins instead."
                 )
-            
+
             validated_patterns.append(pattern)
-        
+
         return validated_patterns
 
     @staticmethod
@@ -243,21 +242,20 @@ class CORSPolicy(BaseModel):
                 try:
                     socket.inet_pton(socket.AF_INET6, host.strip("[]"))
                     return True
-                except socket.error:
+                except OSError:
                     pass  # Not a valid IPv6, continue to other checks
 
             elif "." in host:  # Likely IPv4 or domain
                 try:
                     socket.inet_aton(host)  # Valid IPv4
                     return True
-                except socket.error:
+                except OSError:
                     # Not IPv4, check if it's a valid domain name
                     # Simple domain validation using regex
                     domain_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$"
                     if re.match(domain_pattern, host):
                         return True
-                    else:
-                        return False
+                    return False
         return False
 
     def is_origin_allowed(self, origin: str) -> bool:
@@ -352,7 +350,7 @@ class CORSConfig(BaseModel):
         description="CORS policy for test environment",
     )
 
-    def get_policy(self, environment: Union[str, Environment]) -> CORSPolicy:
+    def get_policy(self, environment: str | Environment) -> CORSPolicy:
         """
         Get CORS policy for a specific environment.
 
@@ -367,15 +365,14 @@ class CORSConfig(BaseModel):
 
         if environment == Environment.DEVELOPMENT:
             return self.development
-        elif environment == Environment.PRODUCTION:
+        if environment == Environment.PRODUCTION:
             return self.production
-        elif environment == Environment.TEST:
+        if environment == Environment.TEST:
             return self.test
-        else:
-            raise ValueError(f"Unknown environment: {environment}")
+        raise ValueError(f"Unknown environment: {environment}")
 
     def update_policy(
-        self, environment: Union[str, Environment], policy: CORSPolicy
+        self, environment: str | Environment, policy: CORSPolicy
     ) -> None:
         """
         Update CORS policy for a specific environment.

@@ -1,7 +1,7 @@
 """Enhanced exception classes with error codes and categories for standardized error handling."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class ResyncException(Exception):
@@ -10,13 +10,13 @@ class ResyncException(Exception):
     def __init__(
         self,
         message: str,
-        error_code: Optional[str] = None,
-        error_category: Optional[str] = None,
-        severity: Optional[str] = None,
-        user_friendly_message: Optional[str] = None,
-        troubleshooting_hints: Optional[list[str]] = None,
-        details: Optional[Dict[str, Any]] = None,
-        original_exception: Optional[Exception] = None,
+        error_code: str | None = None,
+        error_category: str | None = None,
+        severity: str | None = None,
+        user_friendly_message: str | None = None,
+        troubleshooting_hints: list[str] | None = None,
+        details: dict[str, Any] | None = None,
+        original_exception: Exception | None = None,
     ):
         """
         Initialize the exception with enhanced error information.
@@ -71,7 +71,7 @@ class ResyncException(Exception):
         """Get default troubleshooting hints for this exception type."""
         return ["Please try again later.", "Contact support if the issue persists."]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert exception to dictionary for serialization."""
         return {
             "error_code": self.error_code,
@@ -342,7 +342,7 @@ class NotFoundError(ResyncException):
     def _get_default_user_message(self) -> str:
         return "The requested resource was not found."
 
-    def __init__(self, resource: str, identifier: Optional[str] = None, **kwargs):
+    def __init__(self, resource: str, identifier: str | None = None, **kwargs):
         """
         Initialize NotFoundError with resource information.
 
@@ -370,8 +370,8 @@ class ExceptionFactory:
     def create_validation_error(
         field: str,
         message: str,
-        value: Optional[Any] = None,
-        error_code: Optional[str] = None,
+        value: Any | None = None,
+        error_code: str | None = None,
     ) -> ParsingError:
         """Create a validation error with field information."""
         details = {"field": field}
@@ -387,8 +387,8 @@ class ExceptionFactory:
     @staticmethod
     def create_resource_not_found(
         resource: str,
-        identifier: Optional[str] = None,
-        error_code: Optional[str] = None,
+        identifier: str | None = None,
+        error_code: str | None = None,
     ) -> NotFoundError:
         """Create a resource not found error."""
         return NotFoundError(
@@ -399,7 +399,7 @@ class ExceptionFactory:
 
     @staticmethod
     def create_external_service_error(
-        service: str, message: str, error_code: Optional[str] = None
+        service: str, message: str, error_code: str | None = None
     ) -> TWSConnectionError:
         """Create an external service error."""
         return TWSConnectionError(
@@ -410,7 +410,7 @@ class ExceptionFactory:
 
     @staticmethod
     def create_rate_limit_error(
-        limit: int, window: str, error_code: Optional[str] = None
+        limit: int, window: str, error_code: str | None = None
     ) -> ResyncException:
         """Create a rate limit error."""
         return ResyncException(

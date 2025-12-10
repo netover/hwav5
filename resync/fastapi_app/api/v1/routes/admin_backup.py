@@ -15,29 +15,28 @@ Endpoints:
     GET    /api/v1/admin/backup/{id}         - Get backup details
     GET    /api/v1/admin/backup/{id}/download - Download backup file
     DELETE /api/v1/admin/backup/{id}         - Delete backup
-    
+
     GET    /api/v1/admin/backup/schedules          - List schedules
     POST   /api/v1/admin/backup/schedules          - Create schedule
     PUT    /api/v1/admin/backup/schedules/{id}     - Update schedule
     DELETE /api/v1/admin/backup/schedules/{id}     - Delete schedule
-    
+
     GET    /api/v1/admin/backup/stats        - Backup statistics
     POST   /api/v1/admin/backup/cleanup      - Manual cleanup
 """
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from resync.core.backup import (
-    get_backup_service,
-    BackupType,
-    BackupStatus,
     BackupInfo,
     BackupSchedule,
+    BackupStatus,
+    BackupType,
+    get_backup_service,
 )
 from resync.core.structured_logger import get_logger
 
@@ -66,12 +65,12 @@ class BackupResponse(BaseModel):
     size_bytes: int
     size_human: str
     created_at: str
-    completed_at: Optional[str]
+    completed_at: str | None
     duration_seconds: float
     checksum_sha256: str
-    metadata: Dict[str, Any]
-    error: Optional[str]
-    
+    metadata: dict[str, Any]
+    error: str | None
+
     @classmethod
     def from_backup_info(cls, backup: BackupInfo) -> "BackupResponse":
         return cls(
@@ -92,16 +91,16 @@ class BackupResponse(BaseModel):
 
 class BackupListResponse(BaseModel):
     """Response with list of backups."""
-    backups: List[BackupResponse]
+    backups: list[BackupResponse]
     total: int
-    
+
 
 class CreateScheduleRequest(BaseModel):
     """Request to create a backup schedule."""
     name: str = Field(..., description="Schedule name")
     backup_type: str = Field(..., description="Type: database, config, or full")
     cron_expression: str = Field(
-        ..., 
+        ...,
         description="Cron expression (e.g., '0 2 * * *' for 2 AM daily)",
         examples=["0 2 * * *", "0 0 * * 0", "0 0 1 * *"]
     )
@@ -110,9 +109,9 @@ class CreateScheduleRequest(BaseModel):
 
 class UpdateScheduleRequest(BaseModel):
     """Request to update a backup schedule."""
-    enabled: Optional[bool] = None
-    cron_expression: Optional[str] = None
-    retention_days: Optional[int] = Field(default=None, ge=1, le=365)
+    enabled: bool | None = None
+    cron_expression: str | None = None
+    retention_days: int | None = Field(default=None, ge=1, le=365)
 
 
 class ScheduleResponse(BaseModel):
@@ -123,10 +122,10 @@ class ScheduleResponse(BaseModel):
     cron_expression: str
     enabled: bool
     retention_days: int
-    last_run: Optional[str]
-    next_run: Optional[str]
+    last_run: str | None
+    next_run: str | None
     created_at: str
-    
+
     @classmethod
     def from_schedule(cls, schedule: BackupSchedule) -> "ScheduleResponse":
         return cls(
@@ -144,7 +143,7 @@ class ScheduleResponse(BaseModel):
 
 class ScheduleListResponse(BaseModel):
     """Response with list of schedules."""
-    schedules: List[ScheduleResponse]
+    schedules: list[ScheduleResponse]
 
 
 class BackupStatsResponse(BaseModel):
@@ -152,7 +151,7 @@ class BackupStatsResponse(BaseModel):
     total_backups: int
     total_size_bytes: int
     total_size_human: str
-    by_type: Dict[str, Dict[str, Any]]
+    by_type: dict[str, dict[str, Any]]
     active_schedules: int
     backup_directory: str
 
@@ -179,11 +178,11 @@ async def create_database_backup(
 ):
     """
     Create a PostgreSQL database backup.
-    
+
     The backup is created using pg_dump and compressed with gzip.
     """
     service = get_backup_service()
-    
+
     try:
         backup = await service.create_database_backup(
             description=request.description,
@@ -199,11 +198,11 @@ async def create_database_backup(
 async def create_config_backup(request: CreateBackupRequest):
     """
     Create a system configuration backup.
-    
+
     Includes config files, prompts, environment variables, etc.
     """
     service = get_backup_service()
-    
+
     try:
         backup = await service.create_config_backup(
             description=request.description,
@@ -219,11 +218,11 @@ async def create_config_backup(request: CreateBackupRequest):
 async def create_full_backup(request: CreateBackupRequest):
     """
     Create a full backup (database + config).
-    
+
     Creates both backups and packages them into a single ZIP file.
     """
     service = get_backup_service()
-    
+
     try:
         backup = await service.create_full_backup(description=request.description)
         return BackupResponse.from_backup_info(backup)
@@ -234,15 +233,15 @@ async def create_full_backup(request: CreateBackupRequest):
 
 @router.get("/list", response_model=BackupListResponse)
 async def list_backups(
-    backup_type: Optional[str] = Query(None, description="Filter by type: database, config, full"),
-    status: Optional[str] = Query(None, description="Filter by status"),
+    backup_type: str | None = Query(None, description="Filter by type: database, config, full"),
+    status: str | None = Query(None, description="Filter by status"),
     limit: int = Query(100, ge=1, le=500),
 ):
     """
     List all backups with optional filters.
     """
     service = get_backup_service()
-    
+
     # Parse filters
     type_filter = None
     if backup_type:
@@ -250,20 +249,20 @@ async def list_backups(
             type_filter = BackupType(backup_type)
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid backup type: {backup_type}")
-    
+
     status_filter = None
     if status:
         try:
             status_filter = BackupStatus(status)
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
-    
+
     backups = await service.list_backups(
         backup_type=type_filter,
         status=status_filter,
         limit=limit,
     )
-    
+
     return BackupListResponse(
         backups=[BackupResponse.from_backup_info(b) for b in backups],
         total=len(backups),
@@ -277,10 +276,10 @@ async def get_backup(backup_id: str):
     """
     service = get_backup_service()
     backup = service.get_backup(backup_id)
-    
+
     if not backup:
         raise HTTPException(status_code=404, detail="Backup not found")
-    
+
     return BackupResponse.from_backup_info(backup)
 
 
@@ -290,15 +289,15 @@ async def download_backup(backup_id: str):
     Download a backup file.
     """
     service = get_backup_service()
-    
+
     backup = service.get_backup(backup_id)
     if not backup:
         raise HTTPException(status_code=404, detail="Backup not found")
-    
+
     filepath = service.get_backup_filepath(backup_id)
     if not filepath:
         raise HTTPException(status_code=404, detail="Backup file not found")
-    
+
     # Determine media type
     if backup.filename.endswith(".sql.gz"):
         media_type = "application/gzip"
@@ -306,7 +305,7 @@ async def download_backup(backup_id: str):
         media_type = "application/zip"
     else:
         media_type = "application/octet-stream"
-    
+
     return FileResponse(
         path=str(filepath),
         filename=backup.filename,
@@ -320,11 +319,11 @@ async def delete_backup(backup_id: str):
     Delete a backup.
     """
     service = get_backup_service()
-    
+
     deleted = await service.delete_backup(backup_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Backup not found")
-    
+
     return {"message": "Backup deleted", "backup_id": backup_id}
 
 
@@ -339,7 +338,7 @@ async def list_schedules():
     """
     service = get_backup_service()
     schedules = service.list_schedules()
-    
+
     return ScheduleListResponse(
         schedules=[ScheduleResponse.from_schedule(s) for s in schedules]
     )
@@ -349,7 +348,7 @@ async def list_schedules():
 async def create_schedule(request: CreateScheduleRequest):
     """
     Create a new backup schedule.
-    
+
     Cron expression format: minute hour day month weekday
     Examples:
     - "0 2 * * *" = 2:00 AM every day
@@ -357,22 +356,22 @@ async def create_schedule(request: CreateScheduleRequest):
     - "0 0 1 * *" = Midnight on the 1st of every month
     """
     service = get_backup_service()
-    
+
     try:
         backup_type = BackupType(request.backup_type)
     except ValueError:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Invalid backup type: {request.backup_type}. Use: database, config, or full"
         )
-    
+
     schedule = service.create_schedule(
         name=request.name,
         backup_type=backup_type,
         cron_expression=request.cron_expression,
         retention_days=request.retention_days,
     )
-    
+
     return ScheduleResponse.from_schedule(schedule)
 
 
@@ -382,17 +381,17 @@ async def update_schedule(schedule_id: str, request: UpdateScheduleRequest):
     Update a backup schedule.
     """
     service = get_backup_service()
-    
+
     schedule = service.update_schedule(
         schedule_id=schedule_id,
         enabled=request.enabled,
         cron_expression=request.cron_expression,
         retention_days=request.retention_days,
     )
-    
+
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
-    
+
     return ScheduleResponse.from_schedule(schedule)
 
 
@@ -402,11 +401,11 @@ async def delete_schedule(schedule_id: str):
     Delete a backup schedule.
     """
     service = get_backup_service()
-    
+
     deleted = service.delete_schedule(schedule_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Schedule not found")
-    
+
     return {"message": "Schedule deleted", "schedule_id": schedule_id}
 
 
@@ -421,7 +420,7 @@ async def get_backup_stats():
     """
     service = get_backup_service()
     stats = service.get_statistics()
-    
+
     return BackupStatsResponse(**stats)
 
 
@@ -429,13 +428,13 @@ async def get_backup_stats():
 async def cleanup_old_backups(request: CleanupRequest):
     """
     Manually cleanup old backups.
-    
+
     Deletes all backups older than the specified retention period.
     """
     service = get_backup_service()
-    
+
     deleted_count = await service.cleanup_old_backups(request.retention_days)
-    
+
     return CleanupResponse(
         deleted_count=deleted_count,
         retention_days=request.retention_days,
@@ -449,7 +448,7 @@ async def start_scheduler():
     """
     service = get_backup_service()
     await service.start_scheduler()
-    
+
     return {"message": "Backup scheduler started"}
 
 
@@ -460,5 +459,5 @@ async def stop_scheduler():
     """
     service = get_backup_service()
     await service.stop_scheduler()
-    
+
     return {"message": "Backup scheduler stopped"}

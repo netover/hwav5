@@ -18,7 +18,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 from resync.core.structured_logger import get_logger
 
@@ -74,11 +74,11 @@ class Incident:
 
     # Timeline
     detected_at: float = field(default_factory=time.time)
-    triaged_at: Optional[float] = None
-    contained_at: Optional[float] = None
-    eradicated_at: Optional[float] = None
-    recovered_at: Optional[float] = None
-    closed_at: Optional[float] = None
+    triaged_at: float | None = None
+    contained_at: float | None = None
+    eradicated_at: float | None = None
+    recovered_at: float | None = None
+    closed_at: float | None = None
 
     # Impact assessment
     affected_users: int = 0
@@ -87,19 +87,19 @@ class Incident:
     business_impact: str = ""  # Financial, operational impact
 
     # Response tracking
-    assigned_to: Optional[str] = None
-    response_actions: List[Dict[str, Any]] = field(default_factory=list)
-    evidence: List[Dict[str, Any]] = field(default_factory=list)
+    assigned_to: str | None = None
+    response_actions: list[dict[str, Any]] = field(default_factory=list)
+    evidence: list[dict[str, Any]] = field(default_factory=list)
 
     # Communication
-    notifications_sent: List[Dict[str, Any]] = field(default_factory=list)
-    stakeholders_notified: Set[str] = field(default_factory=set)
+    notifications_sent: list[dict[str, Any]] = field(default_factory=list)
+    stakeholders_notified: set[str] = field(default_factory=set)
 
     # Metadata
     detection_source: str = ""
-    correlation_id: Optional[str] = None
-    tags: Set[str] = field(default_factory=set)
-    custom_fields: Dict[str, Any] = field(default_factory=dict)
+    correlation_id: str | None = None
+    tags: set[str] = field(default_factory=set)
+    custom_fields: dict[str, Any] = field(default_factory=dict)
 
     @property
     def duration(self) -> float:
@@ -145,7 +145,7 @@ class Incident:
 
         return max(0.0, min(100.0, base_score))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert incident to dictionary."""
         return {
             "incident_id": self.incident_id,
@@ -189,8 +189,8 @@ class ResponseAction:
     requires_approval: bool = False
 
     # Execution details
-    target_systems: List[str] = field(default_factory=list)
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    target_systems: list[str] = field(default_factory=list)
+    parameters: dict[str, Any] = field(default_factory=dict)
     success_criteria: str = ""
     rollback_procedure: str = ""
 
@@ -207,21 +207,21 @@ class ResponsePlaybook:
     name: str
     description: str
     category: IncidentCategory
-    severity_range: Tuple[IncidentSeverity, IncidentSeverity]
+    severity_range: tuple[IncidentSeverity, IncidentSeverity]
 
     # Playbook steps
-    triage_steps: List[str] = field(default_factory=list)
-    containment_steps: List[str] = field(default_factory=list)
-    eradication_steps: List[str] = field(default_factory=list)
-    recovery_steps: List[str] = field(default_factory=list)
-    lessons_learned_steps: List[str] = field(default_factory=list)
+    triage_steps: list[str] = field(default_factory=list)
+    containment_steps: list[str] = field(default_factory=list)
+    eradication_steps: list[str] = field(default_factory=list)
+    recovery_steps: list[str] = field(default_factory=list)
+    lessons_learned_steps: list[str] = field(default_factory=list)
 
     # Automated actions
-    automated_actions: List[ResponseAction] = field(default_factory=list)
+    automated_actions: list[ResponseAction] = field(default_factory=list)
 
     # Escalation rules
     escalation_threshold: timedelta = field(default_factory=lambda: timedelta(hours=1))
-    notify_stakeholders: List[str] = field(default_factory=list)
+    notify_stakeholders: list[str] = field(default_factory=list)
 
     def applies_to(self, incident: Incident) -> bool:
         """Check if playbook applies to incident."""
@@ -233,20 +233,19 @@ class ResponsePlaybook:
         category_ok = self.category == incident.category
         return severity_ok and category_ok
 
-    def get_next_steps(self, incident: Incident) -> List[str]:
+    def get_next_steps(self, incident: Incident) -> list[str]:
         """Get next steps based on incident status."""
         if incident.status == IncidentStatus.DETECTED:
             return self.triage_steps
-        elif incident.status == IncidentStatus.TRIAGED:
+        if incident.status == IncidentStatus.TRIAGED:
             return self.containment_steps
-        elif incident.status == IncidentStatus.CONTAINMENT:
+        if incident.status == IncidentStatus.CONTAINMENT:
             return self.eradication_steps
-        elif incident.status == IncidentStatus.ERADICATION:
+        if incident.status == IncidentStatus.ERADICATION:
             return self.recovery_steps
-        elif incident.status == IncidentStatus.RECOVERY:
+        if incident.status == IncidentStatus.RECOVERY:
             return self.lessons_learned_steps
-        else:
-            return []
+        return []
 
 
 @dataclass
@@ -267,13 +266,13 @@ class IncidentResponseConfig:
     # Notification settings
     notify_on_detection: bool = True
     notify_on_containment: bool = True
-    escalation_intervals_minutes: List[int] = field(
+    escalation_intervals_minutes: list[int] = field(
         default_factory=lambda: [60, 240, 1440]
     )
 
     # Stakeholder management
-    critical_stakeholders: List[str] = field(default_factory=list)
-    notification_channels: List[str] = field(default_factory=lambda: ["email", "slack"])
+    critical_stakeholders: list[str] = field(default_factory=list)
+    notification_channels: list[str] = field(default_factory=lambda: ["email", "slack"])
 
     # Learning and improvement
     enable_learning: bool = True
@@ -285,7 +284,7 @@ class IncidentDetector:
 
     def __init__(self, config: IncidentResponseConfig):
         self.config = config
-        self.detection_rules: List[Dict[str, Any]] = []
+        self.detection_rules: list[dict[str, Any]] = []
 
         # Initialize detection rules
         self._initialize_detection_rules()
@@ -354,7 +353,7 @@ class IncidentDetector:
             },
         ]
 
-    async def detect_incident(self, events: List[Dict[str, Any]]) -> Optional[Incident]:
+    async def detect_incident(self, events: list[dict[str, Any]]) -> Incident | None:
         """Detect incidents from security events."""
         for rule in self.detection_rules:
             if rule["condition"](events):
@@ -389,7 +388,7 @@ class IncidentResponder:
 
     def __init__(self, config: IncidentResponseConfig):
         self.config = config
-        self.response_actions: Dict[str, ResponseAction] = {}
+        self.response_actions: dict[str, ResponseAction] = {}
 
         # Initialize response actions
         self._initialize_response_actions()
@@ -464,7 +463,7 @@ class IncidentResponder:
         for action in actions:
             self.response_actions[action.action_id] = action
 
-    async def execute_response(self, incident: Incident) -> List[Dict[str, Any]]:
+    async def execute_response(self, incident: Incident) -> list[dict[str, Any]]:
         """Execute automated response actions for incident."""
         executed_actions = []
 
@@ -533,7 +532,7 @@ class IncidentResponder:
 
     async def _execute_action(
         self, action: ResponseAction, incident: Incident
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a specific response action."""
         # This is where you'd integrate with actual systems
         # For now, simulate execution
@@ -644,7 +643,7 @@ Please review and take appropriate action.
         """.strip()
 
     async def _send_notifications(
-        self, message: str, stakeholders: List[str], notification_type: str
+        self, message: str, stakeholders: list[str], notification_type: str
     ) -> None:
         """Send notifications via configured channels."""
         # This would integrate with actual notification systems
@@ -674,7 +673,7 @@ class IncidentResponseEngine:
     - Continuous learning and improvement
     """
 
-    def __init__(self, config: Optional[IncidentResponseConfig] = None):
+    def __init__(self, config: IncidentResponseConfig | None = None):
         self.config = config or IncidentResponseConfig()
 
         # Core components
@@ -683,9 +682,9 @@ class IncidentResponseEngine:
         self.notifier = NotificationManager(self.config)
 
         # Incident management
-        self.active_incidents: Dict[str, Incident] = {}
-        self.incident_history: List[Incident] = []
-        self.response_playbooks: Dict[str, ResponsePlaybook] = {}
+        self.active_incidents: dict[str, Incident] = {}
+        self.incident_history: list[Incident] = []
+        self.response_playbooks: dict[str, ResponsePlaybook] = {}
 
         # Event buffering for detection
         self.event_buffer: deque = deque(maxlen=1000)
@@ -698,9 +697,9 @@ class IncidentResponseEngine:
         self.average_response_time = 0.0
 
         # Background tasks
-        self._detection_task: Optional[asyncio.Task] = None
-        self._escalation_task: Optional[asyncio.Task] = None
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._detection_task: asyncio.Task | None = None
+        self._escalation_task: asyncio.Task | None = None
+        self._cleanup_task: asyncio.Task | None = None
         self._running = False
 
         # Initialize playbooks
@@ -827,7 +826,7 @@ class IncidentResponseEngine:
 
         logger.info("Incident response engine stopped")
 
-    async def process_security_event(self, event: Dict[str, Any]) -> None:
+    async def process_security_event(self, event: dict[str, Any]) -> None:
         """Process a security event for incident detection."""
         # Add timestamp if not present
         if "timestamp" not in event:
@@ -914,17 +913,17 @@ class IncidentResponseEngine:
 
         return True
 
-    def get_incident(self, incident_id: str) -> Optional[Incident]:
+    def get_incident(self, incident_id: str) -> Incident | None:
         """Get incident by ID."""
         return self.active_incidents.get(incident_id)
 
-    def get_active_incidents(self) -> List[Incident]:
+    def get_active_incidents(self) -> list[Incident]:
         """Get all active incidents."""
         return list(self.active_incidents.values())
 
     def get_incident_history(
-        self, limit: int = 50, severity_filter: Optional[IncidentSeverity] = None
-    ) -> List[Incident]:
+        self, limit: int = 50, severity_filter: IncidentSeverity | None = None
+    ) -> list[Incident]:
         """Get incident history with optional filtering."""
         incidents = self.incident_history[-limit:]
 
@@ -933,7 +932,7 @@ class IncidentResponseEngine:
 
         return incidents
 
-    def get_response_metrics(self) -> Dict[str, Any]:
+    def get_response_metrics(self) -> dict[str, Any]:
         """Get incident response metrics."""
         total_incidents = len(self.incident_history) + len(self.active_incidents)
         if total_incidents == 0:

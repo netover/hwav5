@@ -11,7 +11,7 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 try:
     import toml
@@ -81,7 +81,7 @@ class ConfigPersistenceManager:
         """Ensure backup directory exists."""
         self.backup_dir.mkdir(parents=True, exist_ok=True)
 
-    def load_config(self) -> Dict[str, Any]:
+    def load_config(self) -> dict[str, Any]:
         """Load current configuration from file.
 
         Returns:
@@ -91,14 +91,14 @@ class ConfigPersistenceManager:
             ConfigPersistenceError: If loading fails
         """
         try:
-            with open(self.config_file, "r", encoding="utf-8") as f:
+            with open(self.config_file, encoding="utf-8") as f:
                 return toml.load(f)
         except Exception as e:
             logger.error(f"Failed to load configuration: {e}", exc_info=True)
             raise ConfigPersistenceError(f"Failed to load config: {e}") from e
 
     def save_config(
-        self, section: str, data: Dict[str, Any], create_backup: bool = True
+        self, section: str, data: dict[str, Any], create_backup: bool = True
     ) -> None:
         """Save configuration section to file with atomic write.
 
@@ -190,7 +190,7 @@ class ConfigPersistenceManager:
             except Exception as e:
                 logger.warning(f"Failed to remove old backup {old_backup}: {e}")
 
-    def get_section(self, section: str) -> Dict[str, Any]:
+    def get_section(self, section: str) -> dict[str, Any]:
         """Get specific configuration section.
 
         Args:
@@ -262,7 +262,7 @@ class ConfigPersistenceManager:
             logger.error(f"Failed to restore backup: {e}", exc_info=True)
             raise ConfigPersistenceError(f"Failed to restore backup: {e}") from e
 
-    def validate_config(self, config: Dict[str, Any]) -> tuple[bool, list[str]]:
+    def validate_config(self, config: dict[str, Any]) -> tuple[bool, list[str]]:
         """Validate configuration structure and values.
 
         Args:

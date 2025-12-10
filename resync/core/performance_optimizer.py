@@ -14,7 +14,7 @@ import logging
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from resync.core.metrics import runtime_metrics
 
@@ -158,7 +158,7 @@ class CachePerformanceMonitor:
             self.metrics_history.append(metrics)
             return metrics
 
-    async def get_optimization_recommendations(self) -> List[str]:
+    async def get_optimization_recommendations(self) -> list[str]:
         """
         Analyze cache performance and provide optimization recommendations.
 
@@ -230,7 +230,7 @@ class ConnectionPoolOptimizer:
                 )
 
     async def get_current_metrics(
-        self, pool_stats: Dict[str, Any]
+        self, pool_stats: dict[str, Any]
     ) -> ConnectionPoolMetrics:
         """Get current connection pool metrics."""
         async with self._lock:
@@ -253,7 +253,7 @@ class ConnectionPoolOptimizer:
 
     async def suggest_pool_size(
         self, current_metrics: ConnectionPoolMetrics
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """
         Suggest optimal min and max pool sizes based on metrics.
 
@@ -279,7 +279,7 @@ class ConnectionPoolOptimizer:
 
     async def get_optimization_recommendations(
         self, current_metrics: ConnectionPoolMetrics
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Analyze pool performance and provide optimization recommendations.
 
@@ -351,9 +351,9 @@ class ResourceManager:
     """
 
     def __init__(self):
-        self.active_resources: Dict[str, Any] = {}
+        self.active_resources: dict[str, Any] = {}
         self._lock = asyncio.Lock()
-        self.resource_creation_times: Dict[str, datetime] = {}
+        self.resource_creation_times: dict[str, datetime] = {}
 
     async def register_resource(self, resource_id: str, resource: Any) -> None:
         """Register a resource for tracking."""
@@ -399,7 +399,7 @@ class ResourceManager:
                 finally:
                     await self.unregister_resource(resource_id)
 
-    async def detect_leaks(self, max_lifetime_seconds: int = 3600) -> List[str]:
+    async def detect_leaks(self, max_lifetime_seconds: int = 3600) -> list[str]:
         """
         Detect potential resource leaks.
 
@@ -430,7 +430,7 @@ class ResourceManager:
 
 
 # Global resource manager instance
-_resource_manager: Optional[ResourceManager] = None
+_resource_manager: ResourceManager | None = None
 
 
 def get_resource_manager() -> ResourceManager:
@@ -450,8 +450,8 @@ class PerformanceOptimizationService:
     """
 
     def __init__(self):
-        self.cache_monitors: Dict[str, CachePerformanceMonitor] = {}
-        self.pool_optimizers: Dict[str, ConnectionPoolOptimizer] = {}
+        self.cache_monitors: dict[str, CachePerformanceMonitor] = {}
+        self.pool_optimizers: dict[str, ConnectionPoolOptimizer] = {}
         self.resource_manager = get_resource_manager()
         self._lock = asyncio.Lock()
 
@@ -469,7 +469,7 @@ class PerformanceOptimizationService:
                 self.pool_optimizers[pool_name] = ConnectionPoolOptimizer(pool_name)
             return self.pool_optimizers[pool_name]
 
-    async def get_system_performance_report(self) -> Dict[str, Any]:
+    async def get_system_performance_report(self) -> dict[str, Any]:
         """
         Generate a comprehensive system performance report.
 
@@ -517,7 +517,7 @@ class PerformanceOptimizationService:
 
 
 # Global performance optimization service
-_performance_service: Optional[PerformanceOptimizationService] = None
+_performance_service: PerformanceOptimizationService | None = None
 
 
 def get_performance_service() -> PerformanceOptimizationService:

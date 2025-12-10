@@ -10,7 +10,7 @@ system with improved modularity and maintainability.
 import asyncio
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -22,18 +22,20 @@ from resync.core.health_models import (
     HealthStatus,
     HealthStatusHistory,
 )
+from resync.core.pools.pool_manager import (
+    get_connection_pool_manager,  # Needed for DB health checks
+)
 
 # Import extracted components
 from .circuit_breaker import CircuitBreaker
 from .health_check_utils import HealthCheckUtils
-from .proactive_monitor import ProactiveHealthMonitor
 from .monitors.cache_monitor import CacheHierarchyHealthMonitor
 from .monitors.connection_monitor import ConnectionPoolMonitor
 from .monitors.redis_monitor import RedisHealthMonitor
 from .monitors.system_monitor import SystemResourceMonitor
 from .monitors.tws_monitor import TWSMonitorHealthChecker
+from .proactive_monitor import ProactiveHealthMonitor
 
-from resync.core.pools.pool_manager import get_connection_pool_manager  # Needed for DB health checks
 logger = structlog.get_logger(__name__)
 
 
@@ -45,7 +47,7 @@ class EnhancedHealthService:
     to provide comprehensive health checking with improved maintainability.
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """
         Initialize the enhanced health service.
 
@@ -53,8 +55,8 @@ class EnhancedHealthService:
             config: Optional health check configuration
         """
         self.config = config or HealthCheckConfig()
-        self.health_history: List[HealthStatusHistory] = []
-        self.last_health_check: Optional[datetime] = None
+        self.health_history: list[HealthStatusHistory] = []
+        self.last_health_check: datetime | None = None
 
         # Initialize component monitors
         self.redis_monitor = RedisHealthMonitor()
@@ -77,7 +79,7 @@ class EnhancedHealthService:
         self._cache_misses = 0
 
         # Monitoring control
-        self._monitoring_task: Optional[asyncio.Task] = None
+        self._monitoring_task: asyncio.Task | None = None
         self._is_monitoring = False
 
     async def start_monitoring(self) -> None:
@@ -167,7 +169,7 @@ class EnhancedHealthService:
             logger.error("enhanced_health_check_timed_out", timeout_seconds=30)
             check_results = [
                 asyncio.TimeoutError(f"Health check component {name} timed out")
-                for name in health_checks.keys()
+                for name in health_checks
             ]
 
         # Process results
@@ -436,7 +438,7 @@ class EnhancedHealthService:
                 error_count=1,
             )
 
-    async def perform_proactive_health_checks(self) -> Dict[str, Any]:
+    async def perform_proactive_health_checks(self) -> dict[str, Any]:
         """
         Perform proactive health checks using extracted monitor.
 
@@ -463,8 +465,8 @@ class EnhancedHealthService:
         self.health_history.append(history_entry)
 
     def get_health_history(
-        self, hours: int = 24, max_entries: Optional[int] = None
-    ) -> List[HealthStatusHistory]:
+        self, hours: int = 24, max_entries: int | None = None
+    ) -> list[HealthStatusHistory]:
         """Get health history for specified time period."""
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
@@ -510,7 +512,7 @@ class EnhancedHealthService:
 
 
 # Global enhanced health service instance
-_enhanced_health_service: Optional[EnhancedHealthService] = None
+_enhanced_health_service: EnhancedHealthService | None = None
 _enhanced_health_service_lock = asyncio.Lock()
 
 

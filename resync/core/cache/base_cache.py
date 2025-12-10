@@ -6,7 +6,7 @@ It defines the core cache operations that all cache implementations must support
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 
 class BaseCache(ABC):
@@ -19,7 +19,7 @@ class BaseCache(ABC):
     """
 
     @abstractmethod
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """
         Retrieve a value from the cache by key.
 
@@ -31,7 +31,7 @@ class BaseCache(ABC):
         """
 
     @abstractmethod
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """
         Store a value in the cache with an optional time-to-live.
 

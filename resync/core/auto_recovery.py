@@ -6,7 +6,7 @@ This module provides automatic recovery capabilities for failed components and s
 
 
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 
@@ -21,7 +21,7 @@ logger = structlog.get_logger(__name__)
 class AutoRecovery:
     """Automatic recovery system for health monitoring."""
 
-    async def execute_auto_recovery(self) -> List[Dict[str, Any]]:
+    async def execute_auto_recovery(self) -> list[dict[str, Any]]:
         """
         Execute automatic recovery actions.
 
@@ -85,7 +85,7 @@ class AutoRecovery:
 
         return actions
 
-    async def _check_connection_pool_health(self) -> Dict[str, Any]:
+    async def _check_connection_pool_health(self) -> dict[str, Any]:
         """Check health of all connection pools."""
         try:
             advanced_manager = get_advanced_connection_pool_manager()
@@ -106,35 +106,34 @@ class AutoRecovery:
                         "scaling_signals", {}
                     ),
                 }
-            else:
-                # Fallback to basic pool manager
-                pool_manager = get_connection_pool_manager()
-                if pool_manager:
-                    basic_metrics = {}
-                    for pool_name, pool in pool_manager.pools.items():
-                        stats = pool.get_stats()
-                        basic_metrics[pool_name] = {
-                            "connections": stats.get("total_connections", 0),
-                            "utilization": stats.get("active_connections", 0)
-                            / max(1, stats.get("total_connections", 1)),
-                        }
-                    return basic_metrics
+            # Fallback to basic pool manager
+            pool_manager = get_connection_pool_manager()
+            if pool_manager:
+                basic_metrics = {}
+                for pool_name, pool in pool_manager.pools.items():
+                    stats = pool.get_stats()
+                    basic_metrics[pool_name] = {
+                        "connections": stats.get("total_connections", 0),
+                        "utilization": stats.get("active_connections", 0)
+                        / max(1, stats.get("total_connections", 1)),
+                    }
+                return basic_metrics
 
         except Exception as e:
             logger.warning("connection_pool_health_check_failed", error=str(e))
 
         return {"error": "Unable to check connection pool health"}
 
-    async def _check_circuit_breaker_health(self) -> Dict[str, Any]:
+    async def _check_circuit_breaker_health(self) -> dict[str, Any]:
         """Check health of all circuit breakers."""
         results = {}
 
         # Check TWS circuit breakers
         from resync.core.circuit_breaker import (
-            adaptive_tws_api_breaker,
             adaptive_llm_api_breaker,
-            tws_api_breaker,
+            adaptive_tws_api_breaker,
             llm_api_breaker,
+            tws_api_breaker,
         )
 
         breakers = {
@@ -168,7 +167,7 @@ class AutoRecovery:
 
         return results
 
-    async def _attempt_component_recovery(self) -> List[Dict[str, Any]]:
+    async def _attempt_component_recovery(self) -> list[dict[str, Any]]:
         """Attempt to recover failed components."""
         actions = []
 
@@ -207,7 +206,7 @@ class AutoRecovery:
 
         return actions
 
-    async def _perform_resource_cleanup(self) -> List[Dict[str, Any]]:
+    async def _perform_resource_cleanup(self) -> list[dict[str, Any]]:
         """Perform cleanup of leaked or unused resources."""
         actions = []
 
@@ -232,7 +231,7 @@ class AutoRecovery:
 
         return actions
 
-    async def _perform_auto_scaling(self) -> List[Dict[str, Any]]:
+    async def _perform_auto_scaling(self) -> list[dict[str, Any]]:
         """Perform automatic scaling based on current load."""
         actions = []
 
@@ -305,11 +304,11 @@ class AutoRecovery:
             logger.error("memory_cleanup_failed", error=str(e))
             return False
 
-    async def _cleanup_temp_files(self) -> Dict[str, Any]:
+    async def _cleanup_temp_files(self) -> dict[str, Any]:
         """Clean up temporary files."""
         try:
-            import tempfile
             import os
+            import tempfile
 
             temp_dir = tempfile.gettempdir()
             cleanup_count = 0
@@ -341,7 +340,7 @@ class AutoRecovery:
             logger.error("temp_file_cleanup_failed", error=str(e))
             return None
 
-    async def _cleanup_stale_connections(self) -> Dict[str, Any]:
+    async def _cleanup_stale_connections(self) -> dict[str, Any]:
         """Clean up stale connections."""
         try:
             # This would implement actual stale connection cleanup
@@ -356,7 +355,7 @@ class AutoRecovery:
             logger.error("stale_connection_cleanup_failed", error=str(e))
             return None
 
-    async def _cleanup_cache_entries(self) -> Dict[str, Any]:
+    async def _cleanup_cache_entries(self) -> dict[str, Any]:
         """Clean up cache entries."""
         try:
             # This would implement actual cache cleanup

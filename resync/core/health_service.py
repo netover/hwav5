@@ -4,7 +4,7 @@ import tempfile
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # Soft import for aiofiles (optional dependency)
 try:
@@ -16,7 +16,6 @@ import structlog
 
 from resync.core.connection_pool_manager import get_advanced_connection_pool_manager
 from resync.core.exceptions import CircuitBreakerError, ServiceUnavailableError
-from resync.core.pools.pool_manager import get_connection_pool_manager
 from resync.core.health_models import (
     ComponentHealth,
     ComponentType,
@@ -25,6 +24,7 @@ from resync.core.health_models import (
     HealthStatus,
     HealthStatusHistory,
 )
+from resync.core.pools.pool_manager import get_connection_pool_manager
 from resync.settings import settings
 
 from .health_utils import get_health_checks_dict, initialize_health_result
@@ -75,20 +75,20 @@ class CircuitBreaker:
 
 
 # Global health check service instance
-_health_check_service: Optional[HealthCheckService] = None
+_health_check_service: HealthCheckService | None = None
 _health_service_lock = asyncio.Lock()
 
 
 class HealthCheckService:
     """Comprehensive health check service for all system components."""
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         self.config = config or HealthCheckConfig()
-        self.health_history: List[HealthStatusHistory] = []
-        self.last_health_check: Optional[datetime] = None
-        self.component_cache: Dict[str, ComponentHealth] = {}
+        self.health_history: list[HealthStatusHistory] = []
+        self.last_health_check: datetime | None = None
+        self.component_cache: dict[str, ComponentHealth] = {}
         self.cache_expiry = timedelta(seconds=self.config.check_interval_seconds)
-        self._monitoring_task: Optional[asyncio.Task] = None
+        self._monitoring_task: asyncio.Task | None = None
         self._is_monitoring = False
         self._memory_usage_mb: float = 0.0
         self._cleanup_lock = asyncio.Lock()
@@ -137,7 +137,7 @@ class HealthCheckService:
                 logger.error("error_in_health_monitoring_loop", error=str(e))
                 await asyncio.sleep(10)  # Brief pause on error
 
-    async def _get_performance_metrics(self) -> Dict[str, Any]:
+    async def _get_performance_metrics(self) -> dict[str, Any]:
         """Get current performance metrics for health monitoring."""
         try:
             # Get system metrics
@@ -159,7 +159,7 @@ class HealthCheckService:
             logger.warning("failed_to_get_performance_metrics", error=str(e))
             return {"error": str(e)}
 
-    async def _get_connection_pool_stats(self) -> Dict[str, Any]:
+    async def _get_connection_pool_stats(self) -> dict[str, Any]:
         """Get connection pool statistics."""
         try:
             pool_manager = get_advanced_connection_pool_manager()
@@ -279,7 +279,7 @@ class HealthCheckService:
 
         return result
 
-    async def perform_proactive_health_checks(self) -> Dict[str, Any]:
+    async def perform_proactive_health_checks(self) -> dict[str, Any]:
         """
         Perform proactive health checks for connection pools and critical components.
 
@@ -375,7 +375,7 @@ class HealthCheckService:
 
         return results
 
-    async def _check_connection_pool_health(self) -> Dict[str, Any]:
+    async def _check_connection_pool_health(self) -> dict[str, Any]:
         """Check health of all connection pools."""
         try:
             advanced_manager = get_advanced_connection_pool_manager()
@@ -396,35 +396,34 @@ class HealthCheckService:
                         "scaling_signals", {}
                     ),
                 }
-            else:
-                # Fallback to basic pool manager
-                pool_manager = get_connection_pool_manager()
-                if pool_manager:
-                    basic_metrics = {}
-                    for pool_name, pool in pool_manager.pools.items():
-                        stats = pool.get_stats()
-                        basic_metrics[pool_name] = {
-                            "connections": stats.get("total_connections", 0),
-                            "utilization": stats.get("active_connections", 0)
-                            / max(1, stats.get("total_connections", 1)),
-                        }
-                    return basic_metrics
+            # Fallback to basic pool manager
+            pool_manager = get_connection_pool_manager()
+            if pool_manager:
+                basic_metrics = {}
+                for pool_name, pool in pool_manager.pools.items():
+                    stats = pool.get_stats()
+                    basic_metrics[pool_name] = {
+                        "connections": stats.get("total_connections", 0),
+                        "utilization": stats.get("active_connections", 0)
+                        / max(1, stats.get("total_connections", 1)),
+                    }
+                return basic_metrics
 
         except Exception as e:
             logger.warning("connection_pool_health_check_failed", error=str(e))
 
         return {"error": "Unable to check connection pool health"}
 
-    async def _check_circuit_breaker_health(self) -> Dict[str, Any]:
+    async def _check_circuit_breaker_health(self) -> dict[str, Any]:
         """Check health of all circuit breakers."""
         results = {}
 
         # Check TWS circuit breakers
         from resync.core.circuit_breaker import (
-            adaptive_tws_api_breaker,
             adaptive_llm_api_breaker,
-            tws_api_breaker,
+            adaptive_tws_api_breaker,
             llm_api_breaker,
+            tws_api_breaker,
         )
 
         breakers = {
@@ -458,7 +457,7 @@ class HealthCheckService:
 
         return results
 
-    async def _perform_predictive_analysis(self) -> List[Dict[str, Any]]:
+    async def _perform_predictive_analysis(self) -> list[dict[str, Any]]:
         """Perform predictive analysis for potential issues."""
         alerts = []
 
@@ -517,7 +516,7 @@ class HealthCheckService:
 
         return alerts
 
-    async def _execute_auto_recovery(self) -> List[Dict[str, Any]]:
+    async def _execute_auto_recovery(self) -> list[dict[str, Any]]:
         """Execute automatic recovery actions."""
         actions = []
 
@@ -561,7 +560,7 @@ class HealthCheckService:
 
         return actions
 
-    async def _compare_with_baseline(self) -> Dict[str, Any]:
+    async def _compare_with_baseline(self) -> dict[str, Any]:
         """Compare current performance with historical baseline."""
         # This would compare with stored baseline metrics
         # For now, return placeholder structure
@@ -1301,7 +1300,7 @@ class HealthCheckService:
             )
 
     def _get_component_type(self, name: str) -> ComponentType:
-        mapping: Dict[str, ComponentType] = {
+        mapping: dict[str, ComponentType] = {
             "database": ComponentType.DATABASE,
             "redis": ComponentType.REDIS,
             "cache_hierarchy": ComponentType.CACHE,
@@ -1315,7 +1314,7 @@ class HealthCheckService:
         return mapping.get(name, ComponentType.OTHER)
 
     def _calculate_overall_status(
-        self, components: Dict[str, ComponentHealth]
+        self, components: dict[str, ComponentHealth]
     ) -> HealthStatus:
         # Handle empty components case
         if not components:
@@ -1336,9 +1335,9 @@ class HealthCheckService:
         return worst
 
     def _generate_summary(
-        self, components: Dict[str, ComponentHealth]
-    ) -> Dict[str, int]:
-        summary: Dict[str, int] = {
+        self, components: dict[str, ComponentHealth]
+    ) -> dict[str, int]:
+        summary: dict[str, int] = {
             "healthy": 0,
             "degraded": 0,
             "unhealthy": 0,
@@ -1355,8 +1354,8 @@ class HealthCheckService:
                 summary["unknown"] += 1
         return summary
 
-    def _check_alerts(self, components: Dict[str, ComponentHealth]) -> List[str]:
-        alerts: List[str] = []
+    def _check_alerts(self, components: dict[str, ComponentHealth]) -> list[str]:
+        alerts: list[str] = []
         for name, comp in components.items():
             if comp.status == HealthStatus.UNHEALTHY:
                 alerts.append(f"{name} is unhealthy")
@@ -1375,19 +1374,19 @@ class HealthCheckService:
                     alerts.append(f"{name} is degraded")
         return alerts
 
-    async def _update_cache(self, components: Dict[str, ComponentHealth]) -> None:
+    async def _update_cache(self, components: dict[str, ComponentHealth]) -> None:
         """Thread-safe update of component cache."""
         async with self._cache_lock:
             self.component_cache = components.copy()
 
     async def _get_cached_component(
         self, component_name: str
-    ) -> Optional[ComponentHealth]:
+    ) -> ComponentHealth | None:
         """Thread-safe retrieval of a component from cache."""
         async with self._cache_lock:
             return self.component_cache.get(component_name)
 
-    async def _get_all_cached_components(self) -> Dict[str, ComponentHealth]:
+    async def _get_all_cached_components(self) -> dict[str, ComponentHealth]:
         """Thread-safe retrieval of all cached components."""
         async with self._cache_lock:
             return self.component_cache.copy()
@@ -1471,8 +1470,8 @@ class HealthCheckService:
                 logger.error("error_during_health_history_cleanup", error=str(e))
 
     async def _get_component_changes(
-        self, components: Dict[str, ComponentHealth]
-    ) -> Dict[str, HealthStatus]:
+        self, components: dict[str, ComponentHealth]
+    ) -> dict[str, HealthStatus]:
         """Track component status changes for history."""
         changes = {}
         cached_components = await self._get_all_cached_components()
@@ -1519,12 +1518,11 @@ class HealthCheckService:
                 # More realistic estimation: each entry ~2KB
                 estimated_size_bytes = history_size * 2048
                 return round(estimated_size_bytes / (1024 * 1024), 2)
-            else:
-                return 0.0
+            return 0.0
         except Exception:
             return 0.0
 
-    def get_memory_usage(self) -> Dict[str, Any]:
+    def get_memory_usage(self) -> dict[str, Any]:
         """Get current memory usage statistics."""
         return {
             "history_entries": len(self.health_history),
@@ -1536,7 +1534,7 @@ class HealthCheckService:
             "enable_monitoring": self.config.enable_memory_monitoring,
         }
 
-    async def force_cleanup(self) -> Dict[str, Any]:
+    async def force_cleanup(self) -> dict[str, Any]:
         """Force immediate cleanup of health history."""
         original_size = len(self.health_history)
         await self._cleanup_health_history()
@@ -1550,8 +1548,8 @@ class HealthCheckService:
         }
 
     def get_health_history(
-        self, hours: int = 24, max_entries: Optional[int] = None
-    ) -> List[HealthStatusHistory]:
+        self, hours: int = 24, max_entries: int | None = None
+    ) -> list[HealthStatusHistory]:
         """Get health history for the specified number of hours with optional entry limit."""
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
@@ -1569,7 +1567,7 @@ class HealthCheckService:
 
     async def get_component_health(
         self, component_name: str
-    ) -> Optional[ComponentHealth]:
+    ) -> ComponentHealth | None:
         """Get the current health status of a specific component with expiry validation."""
         health = await self._get_cached_component(component_name)
         if health:

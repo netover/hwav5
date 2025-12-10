@@ -9,17 +9,17 @@ Provides database and configuration backup capabilities:
 
 Usage:
     from resync.core.backup import get_backup_service
-    
+
     service = get_backup_service()
     backup = await service.create_database_backup()
 """
 
 from resync.core.backup.backup_service import (
-    BackupService,
     BackupInfo,
     BackupSchedule,
-    BackupType,
+    BackupService,
     BackupStatus,
+    BackupType,
     get_backup_service,
 )
 

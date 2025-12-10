@@ -9,9 +9,9 @@ Version: 5.2.3.29
 """
 
 
-import re
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Callable
+from collections.abc import Callable
+from datetime import datetime
+from typing import Any
 
 import structlog
 
@@ -25,7 +25,7 @@ logger = structlog.get_logger(__name__)
 def tool(func: Callable) -> Callable:
     """
     Decorator to mark a function as a tool for Agno agents.
-    
+
     Compatible with both Agno's @tool decorator and standalone usage.
     """
     func._is_tool = True
@@ -41,16 +41,16 @@ def tool(func: Callable) -> Callable:
 class JobLogTool:
     """
     Tool for analyzing TWS job logs and execution history.
-    
+
     Capabilities:
     - Retrieve job execution logs
     - Parse return codes and ABEND codes
     - Identify error patterns
     - Get execution statistics
     """
-    
+
     # Common TWS/z/OS ABEND codes with descriptions
-    ABEND_CODES: Dict[str, str] = {
+    ABEND_CODES: dict[str, str] = {
         "S0C1": "Operation exception - invalid instruction",
         "S0C4": "Protection exception - invalid memory access",
         "S0C7": "Data exception - invalid decimal/numeric data",
@@ -66,9 +66,9 @@ class JobLogTool:
         "U1000": "User abend - custom application code",
         "U4038": "CICS transaction abend",
     }
-    
+
     # Common return code meanings
-    RETURN_CODES: Dict[int, str] = {
+    RETURN_CODES: dict[int, str] = {
         0: "Successful completion",
         4: "Warning - minor issues",
         8: "Error - processing problems",
@@ -76,31 +76,31 @@ class JobLogTool:
         16: "Critical error - job failed",
         20: "Fatal error - immediate termination",
     }
-    
-    def __init__(self, tws_client: Optional[Any] = None):
+
+    def __init__(self, tws_client: Any | None = None):
         """Initialize with optional TWS client."""
         self.tws_client = tws_client
-    
+
     @tool
     def get_job_log(
         self,
         job_name: str,
-        run_date: Optional[str] = None,
+        run_date: str | None = None,
         max_lines: int = 100,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Retrieve execution log for a specific job.
-        
+
         Args:
             job_name: Name of the job (e.g., BATCH001, DAILY_BACKUP)
             run_date: Date to retrieve (YYYY-MM-DD), defaults to today
             max_lines: Maximum log lines to return
-            
+
         Returns:
             Job log details including status, return code, and log content
         """
         logger.info("get_job_log", job_name=job_name, run_date=run_date)
-        
+
         # Mock implementation - replace with actual TWS API call
         return {
             "job_name": job_name,
@@ -120,15 +120,15 @@ class JobLogTool:
             ],
             "error_details": "Data exception at offset 0x1A2F in module PROC001",
         }
-    
+
     @tool
-    def analyze_return_code(self, return_code: int) -> Dict[str, Any]:
+    def analyze_return_code(self, return_code: int) -> dict[str, Any]:
         """
         Analyze a return code and provide interpretation.
-        
+
         Args:
             return_code: The job return code (0-999)
-            
+
         Returns:
             Analysis with severity, description, and recommendations
         """
@@ -143,12 +143,12 @@ class JobLogTool:
             severity = "SEVERE"
         else:
             severity = "CRITICAL"
-        
+
         description = self.RETURN_CODES.get(
             return_code,
             f"Custom return code {return_code}"
         )
-        
+
         return {
             "return_code": return_code,
             "severity": severity,
@@ -156,15 +156,15 @@ class JobLogTool:
             "action_required": severity in ("ERROR", "SEVERE", "CRITICAL"),
             "recommendations": self._get_rc_recommendations(return_code, severity),
         }
-    
+
     @tool
-    def analyze_abend_code(self, abend_code: str) -> Dict[str, Any]:
+    def analyze_abend_code(self, abend_code: str) -> dict[str, Any]:
         """
         Analyze an ABEND code and provide interpretation.
-        
+
         Args:
             abend_code: The ABEND code (e.g., S0C7, U0016)
-            
+
         Returns:
             Analysis with description, common causes, and solutions
         """
@@ -173,7 +173,7 @@ class JobLogTool:
             abend_upper,
             f"Unknown ABEND code {abend_upper}"
         )
-        
+
         return {
             "abend_code": abend_upper,
             "description": description,
@@ -181,20 +181,20 @@ class JobLogTool:
             "common_causes": self._get_abend_causes(abend_upper),
             "recommended_actions": self._get_abend_solutions(abend_upper),
         }
-    
+
     @tool
     def get_job_history(
         self,
         job_name: str,
         days: int = 7,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get execution history for a job over specified days.
-        
+
         Args:
             job_name: Name of the job
             days: Number of days of history
-            
+
         Returns:
             Execution history with statistics and trends
         """
@@ -213,31 +213,30 @@ class JobLogTool:
             "last_success": "2025-12-08T14:30:00Z",
             "last_failure": "2025-12-09T08:35:22Z",
         }
-    
-    def _get_rc_recommendations(self, rc: int, severity: str) -> List[str]:
+
+    def _get_rc_recommendations(self, rc: int, severity: str) -> list[str]:
         """Get recommendations based on return code."""
         if severity == "SUCCESS":
             return ["No action required"]
-        elif severity == "WARNING":
+        if severity == "WARNING":
             return [
                 "Review job output for warnings",
                 "Verify data quality if applicable",
             ]
-        elif severity == "ERROR":
+        if severity == "ERROR":
             return [
                 "Check job log for error details",
                 "Verify input files exist and are accessible",
                 "Check for resource constraints",
             ]
-        else:
-            return [
-                "Immediate investigation required",
-                "Check system logs for related issues",
-                "Verify job dependencies completed successfully",
-                "Consider rerunning after investigation",
-            ]
-    
-    def _get_abend_causes(self, abend: str) -> List[str]:
+        return [
+            "Immediate investigation required",
+            "Check system logs for related issues",
+            "Verify job dependencies completed successfully",
+            "Consider rerunning after investigation",
+        ]
+
+    def _get_abend_causes(self, abend: str) -> list[str]:
         """Get common causes for an ABEND code."""
         causes_map = {
             "S0C7": [
@@ -262,8 +261,8 @@ class JobLogTool:
             ],
         }
         return causes_map.get(abend, ["Unknown - check system logs"])
-    
-    def _get_abend_solutions(self, abend: str) -> List[str]:
+
+    def _get_abend_solutions(self, abend: str) -> list[str]:
         """Get recommended solutions for an ABEND code."""
         solutions_map = {
             "S0C7": [
@@ -294,9 +293,9 @@ class ErrorCodeTool:
     """
     Tool for looking up and explaining TWS error codes.
     """
-    
+
     # TWS/HWA specific error codes
-    TWS_ERRORS: Dict[str, str] = {
+    TWS_ERRORS: dict[str, str] = {
         "AWSBCJ001E": "Job not found in current plan",
         "AWSBCJ002E": "Job already running",
         "AWSBCJ003E": "Job dependencies not satisfied",
@@ -310,15 +309,15 @@ class ErrorCodeTool:
         "AWSBCS001E": "Scheduler service unavailable",
         "AWSBCS002E": "Database connection failed",
     }
-    
+
     @tool
-    def lookup_error(self, error_code: str) -> Dict[str, Any]:
+    def lookup_error(self, error_code: str) -> dict[str, Any]:
         """
         Look up a TWS error code and provide explanation.
-        
+
         Args:
             error_code: TWS error code (e.g., AWSBCJ001E)
-            
+
         Returns:
             Error details with description and resolution steps
         """
@@ -327,7 +326,7 @@ class ErrorCodeTool:
             code_upper,
             "Unknown TWS error code"
         )
-        
+
         return {
             "error_code": code_upper,
             "description": description,
@@ -335,30 +334,30 @@ class ErrorCodeTool:
             "severity": self._get_severity(code_upper),
             "resolution_steps": self._get_resolution(code_upper),
         }
-    
+
     def _categorize_error(self, code: str) -> str:
         """Categorize error by type."""
         if "BCJ" in code:
             return "Job Error"
-        elif "BCW" in code:
+        if "BCW" in code:
             return "Workstation Error"
-        elif "BCD" in code:
+        if "BCD" in code:
             return "Dependency Error"
-        elif "BCS" in code:
+        if "BCS" in code:
             return "System Error"
         return "Unknown"
-    
+
     def _get_severity(self, code: str) -> str:
         """Determine error severity."""
         if code.endswith("E"):
             return "ERROR"
-        elif code.endswith("W"):
+        if code.endswith("W"):
             return "WARNING"
-        elif code.endswith("I"):
+        if code.endswith("I"):
             return "INFO"
         return "UNKNOWN"
-    
-    def _get_resolution(self, code: str) -> List[str]:
+
+    def _get_resolution(self, code: str) -> list[str]:
         """Get resolution steps for error."""
         resolutions = {
             "AWSBCJ001E": [
@@ -383,29 +382,29 @@ class DependencyGraphTool:
     """
     Tool for analyzing job dependencies and workflow graphs.
     """
-    
-    def __init__(self, knowledge_graph: Optional[Any] = None):
+
+    def __init__(self, knowledge_graph: Any | None = None):
         """Initialize with optional knowledge graph."""
         self.knowledge_graph = knowledge_graph
-    
+
     @tool
     def get_predecessors(
         self,
         job_name: str,
         depth: int = 3,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get predecessor jobs (upstream dependencies).
-        
+
         Args:
             job_name: Name of the job
             depth: How many levels of predecessors to retrieve
-            
+
         Returns:
             Predecessor tree with dependency details
         """
         logger.info("get_predecessors", job_name=job_name, depth=depth)
-        
+
         # Mock implementation
         return {
             "job_name": job_name,
@@ -434,25 +433,25 @@ class DependencyGraphTool:
             "blocking_predecessors": [],
             "critical_path": ["INIT_PROCESS", "DAILY_EXTRACT", job_name],
         }
-    
+
     @tool
     def get_successors(
         self,
         job_name: str,
         depth: int = 3,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get successor jobs (downstream dependents).
-        
+
         Args:
             job_name: Name of the job
             depth: How many levels of successors to retrieve
-            
+
         Returns:
             Successor tree with impact assessment
         """
         logger.info("get_successors", job_name=job_name, depth=depth)
-        
+
         # Mock implementation
         return {
             "job_name": job_name,
@@ -481,25 +480,25 @@ class DependencyGraphTool:
             "impacted_jobs": ["REPORT_GEN", "DATA_LOAD", "FINAL_REPORT"],
             "critical_successors": ["REPORT_GEN"],  # Business-critical
         }
-    
+
     @tool
     def analyze_impact(
         self,
         job_name: str,
         failure_scenario: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Analyze the impact if a job fails or is delayed.
-        
+
         Args:
             job_name: Name of the job
             failure_scenario: True for failure, False for delay
-            
+
         Returns:
             Impact analysis with affected jobs and recommendations
         """
         successors = self.get_successors(job_name)
-        
+
         return {
             "job_name": job_name,
             "scenario": "failure" if failure_scenario else "delay",
@@ -515,15 +514,15 @@ class DependencyGraphTool:
                 "Consider running backup procedures",
             ],
         }
-    
+
     @tool
-    def detect_cycles(self, job_stream: str) -> Dict[str, Any]:
+    def detect_cycles(self, job_stream: str) -> dict[str, Any]:
         """
         Detect dependency cycles in a job stream.
-        
+
         Args:
             job_stream: Name of the job stream to analyze
-            
+
         Returns:
             Cycle detection results
         """
@@ -545,18 +544,18 @@ class WorkstationTool:
     """
     Tool for analyzing workstation status and capacity.
     """
-    
+
     @tool
     def get_workstation_status(
         self,
-        workstation_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        workstation_name: str | None = None,
+    ) -> dict[str, Any]:
         """
         Get current workstation status.
-        
+
         Args:
             workstation_name: Specific workstation or None for all
-            
+
         Returns:
             Workstation status details
         """
@@ -573,28 +572,27 @@ class WorkstationTool:
                 "disk_usage_percent": 78.5,
                 "last_heartbeat": "2025-12-09T10:45:00Z",
             }
-        else:
-            return {
-                "workstations": [
-                    {"name": "TWS_MASTER", "status": "ONLINE", "jobs_running": 2},
-                    {"name": "TWS_AGENT1", "status": "ONLINE", "jobs_running": 5},
-                    {"name": "TWS_AGENT2", "status": "OFFLINE", "jobs_running": 0},
-                ],
-                "total_online": 2,
-                "total_offline": 1,
-            }
-    
+        return {
+            "workstations": [
+                {"name": "TWS_MASTER", "status": "ONLINE", "jobs_running": 2},
+                {"name": "TWS_AGENT1", "status": "ONLINE", "jobs_running": 5},
+                {"name": "TWS_AGENT2", "status": "OFFLINE", "jobs_running": 0},
+            ],
+            "total_online": 2,
+            "total_offline": 1,
+        }
+
     @tool
     def check_resource_availability(
         self,
         resource_name: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Check if a specific resource is available.
-        
+
         Args:
             resource_name: Name of the resource
-            
+
         Returns:
             Resource availability and usage details
         """
@@ -607,18 +605,18 @@ class WorkstationTool:
             "queue_depth": 0,
             "waiting_jobs": [],
         }
-    
+
     @tool
     def get_resource_conflicts(
         self,
-        job_names: List[str],
-    ) -> Dict[str, Any]:
+        job_names: list[str],
+    ) -> dict[str, Any]:
         """
         Check for resource conflicts between jobs.
-        
+
         Args:
             job_names: List of job names to check
-            
+
         Returns:
             Conflict analysis
         """
@@ -635,25 +633,25 @@ class CalendarTool:
     """
     Tool for TWS calendar and scheduling analysis.
     """
-    
+
     @tool
     def get_calendar_schedule(
         self,
         calendar_name: str,
-        date: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        date: str | None = None,
+    ) -> dict[str, Any]:
         """
         Get calendar schedule information.
-        
+
         Args:
             calendar_name: Name of the TWS calendar
             date: Specific date or None for today
-            
+
         Returns:
             Calendar schedule details
         """
         check_date = date or datetime.now().strftime("%Y-%m-%d")
-        
+
         return {
             "calendar": calendar_name,
             "date": check_date,
@@ -663,18 +661,18 @@ class CalendarTool:
             "next_run_date": check_date,
             "business_days_remaining": 15,
         }
-    
+
     @tool
     def check_scheduling_window(
         self,
         job_name: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Check the scheduling window for a job.
-        
+
         Args:
             job_name: Name of the job
-            
+
         Returns:
             Scheduling window details
         """

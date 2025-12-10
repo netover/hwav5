@@ -3,7 +3,6 @@ CSP configuration module for Resync application.
 """
 
 import logging
-from typing import Optional
 
 from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -31,7 +30,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def configure_csp(app: FastAPI, settings_module: Optional[object] = None) -> None:
+def configure_csp(app: FastAPI, settings_module: object | None = None) -> None:
     """
     Configure CSP and other security headers for the FastAPI application.
 

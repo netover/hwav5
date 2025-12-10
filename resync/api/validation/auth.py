@@ -1,12 +1,12 @@
 """Authentication and authorization validation models."""
 
 from enum import Enum
-from typing import List, Optional
+from typing import Annotated
 
-from pydantic import field_validator, StringConstraints as PydanticStringConstraints, EmailStr, Field, ConfigDict
+from pydantic import ConfigDict, EmailStr, Field, field_validator
+from pydantic import StringConstraints as PydanticStringConstraints
 
 from .common import BaseValidatedModel
-from typing_extensions import Annotated
 
 
 class AuthProvider(str, Enum):
@@ -120,30 +120,30 @@ class TokenRequest(BaseValidatedModel):
         description="OAuth2 grant type",
     )
 
-    username: Optional[str] = Field(
+    username: str | None = Field(
         None,
         min_length=3,
         max_length=50,
         description="Username (required for password grant)",
     )
 
-    password: Optional[Annotated[str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)]] = (
+    password: Annotated[str, PydanticStringConstraints(min_length=8, max_length=128, strip_whitespace=True)] | None = (
         Field(None, description="Password (required for password grant)")
     )
 
-    refresh_token: Optional[str] = Field(
+    refresh_token: str | None = Field(
         None, description="Refresh token (required for refresh_token grant)"
     )
 
-    client_id: Optional[str] = Field(
+    client_id: str | None = Field(
         None, description="Client ID (required for client_credentials grant)"
     )
 
-    client_secret: Optional[str] = Field(
+    client_secret: str | None = Field(
         None, description="Client secret (required for client_credentials grant)"
     )
 
-    scope: Optional[List[str]] = Field(
+    scope: list[str] | None = Field(
         default_factory=list, description="Requested scopes", max_length=10
     )
 
@@ -240,11 +240,11 @@ class UserRegistrationRequest(BaseValidatedModel):
         ..., description="Password"
     )
 
-    first_name: Optional[Annotated[str, PydanticStringConstraints(min_length=1, max_length=50, strip_whitespace=True)]] = (
+    first_name: Annotated[str, PydanticStringConstraints(min_length=1, max_length=50, strip_whitespace=True)] | None = (
         Field(None, description="First name")
     )
 
-    last_name: Optional[Annotated[str, PydanticStringConstraints(min_length=1, max_length=50, strip_whitespace=True)]] = (
+    last_name: Annotated[str, PydanticStringConstraints(min_length=1, max_length=50, strip_whitespace=True)] | None = (
         Field(None, description="Last name")
     )
 
@@ -345,7 +345,7 @@ class TokenRefreshRequest(BaseValidatedModel):
         ..., description="Refresh token"
     )
 
-    client_id: Optional[str] = Field(None, description="Client ID")
+    client_id: str | None = Field(None, description="Client ID")
 
     model_config = ConfigDict(
         extra="forbid",
@@ -355,9 +355,9 @@ class TokenRefreshRequest(BaseValidatedModel):
 class LogoutRequest(BaseValidatedModel):
     """Logout request validation model."""
 
-    access_token: Optional[str] = Field(None, description="Access token to invalidate")
+    access_token: str | None = Field(None, description="Access token to invalidate")
 
-    refresh_token: Optional[str] = Field(
+    refresh_token: str | None = Field(
         None, description="Refresh token to invalidate"
     )
 
@@ -377,15 +377,13 @@ class APIKeyRequest(BaseValidatedModel):
         ..., description="API key name"
     )
 
-    description: Optional[
-        Annotated[str, PydanticStringConstraints(min_length=5, max_length=200, strip_whitespace=True)]
-    ] = Field(None, description="API key description")
+    description: Annotated[str, PydanticStringConstraints(min_length=5, max_length=200, strip_whitespace=True)] | None = Field(None, description="API key description")
 
-    scopes: List[str] = Field(
+    scopes: list[str] = Field(
         default_factory=list, description="API key scopes", max_length=10
     )
 
-    expires_in_days: Optional[int] = Field(
+    expires_in_days: int | None = Field(
         None, ge=1, le=365, description="Number of days until expiration"
     )
 

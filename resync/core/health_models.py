@@ -2,7 +2,7 @@
 import enum
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class SystemHealthStatus(str, enum.Enum):
@@ -45,11 +45,11 @@ class ComponentHealth:
     name: str
     component_type: ComponentType
     status: HealthStatus
-    status_code: Optional[str] = None
-    message: Optional[str] = None
-    response_time_ms: Optional[float] = None
-    last_check: Optional[datetime] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    status_code: str | None = None
+    message: str | None = None
+    response_time_ms: float | None = None
+    last_check: datetime | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
     error_count: int = 0
     warning_count: int = 0
 
@@ -59,12 +59,12 @@ class HealthCheckResult:
     """Result of a comprehensive health check."""
 
     overall_status: HealthStatus
-    timestamp: Optional[datetime]
-    correlation_id: Optional[str] = None
-    components: Dict[str, ComponentHealth] = field(default_factory=dict)
-    summary: Dict[str, Any] = field(default_factory=dict)
-    alerts: List[Dict[str, Any]] = field(default_factory=list)
-    performance_metrics: Dict[str, float] = field(default_factory=dict)
+    timestamp: datetime | None
+    correlation_id: str | None = None
+    components: dict[str, ComponentHealth] = field(default_factory=dict)
+    summary: dict[str, Any] = field(default_factory=dict)
+    alerts: list[dict[str, Any]] = field(default_factory=list)
+    performance_metrics: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
@@ -118,16 +118,16 @@ class HealthCheckConfig:
 class HealthStatusHistory:
     """Historical record of health status changes."""
 
-    timestamp: Optional[datetime]
+    timestamp: datetime | None
     overall_status: HealthStatus
-    component_changes: Dict[str, HealthStatus] = field(default_factory=dict)
-    alerts_triggered: List[str] = field(default_factory=list)
+    component_changes: dict[str, HealthStatus] = field(default_factory=dict)
+    alerts_triggered: list[str] = field(default_factory=list)
 
 
 class HealthCheckError(Exception):
     """Exception raised when health check fails."""
 
-    def __init__(self, component: str, message: str, status_code: Optional[str] = None):
+    def __init__(self, component: str, message: str, status_code: str | None = None):
         self.component = component
         self.message = message
         self.status_code = status_code
@@ -163,11 +163,11 @@ class RecoveryResult:
     success: bool
     component_name: str
     recovery_type: str
-    timestamp: Optional[datetime]
+    timestamp: datetime | None
     message: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    error_details: Optional[str] = None
-    recovery_time_ms: Optional[float] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    error_details: str | None = None
+    recovery_time_ms: float | None = None
 
     def __post_init__(self):
         """Set timestamp if not provided."""

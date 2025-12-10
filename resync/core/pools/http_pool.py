@@ -6,8 +6,9 @@ Separated to follow Single Responsibility Principle.
 
 import logging
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Optional
+from typing import Any
 
 import httpx
 
@@ -27,7 +28,7 @@ class HTTPConnectionPool(ConnectionPool[httpx.AsyncClient]):
         super().__init__(config)
         self.base_url = base_url
         self.client_kwargs = client_kwargs
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     async def _setup_pool(self) -> None:
         """Setup HTTP connection pool using httpx."""

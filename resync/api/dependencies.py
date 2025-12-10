@@ -4,7 +4,6 @@ Este módulo fornece funções de dependência para injeção em endpoints,
 incluindo gerenciamento de idempotência, autenticação, e obtenção de IDs de contexto.
 """
 
-from typing import Optional
 
 from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -178,7 +177,7 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict | None:
     """Obtém usuário atual a partir do token JWT.
 
@@ -190,17 +189,17 @@ async def get_current_user(
     """
     if not credentials:
         return None
-    
+
     try:
         # Import security module for JWT validation
         from resync.fastapi_app.core.security import verify_token
-        
+
         token = credentials.credentials
         payload = verify_token(token)
-        
+
         if not payload:
             return None
-        
+
         return {
             "user_id": payload.get("sub"),
             "username": payload.get("username", payload.get("sub")),
@@ -250,25 +249,25 @@ async def check_rate_limit(request: Request) -> None:
     """
     from collections import defaultdict
     from datetime import datetime, timedelta
-    
+
     # Rate limit configuration
     RATE_LIMIT_REQUESTS = 100  # requests per window
     RATE_LIMIT_WINDOW = 60  # seconds
-    
+
     # In-memory store (use Redis in production)
     if not hasattr(check_rate_limit, '_store'):
         check_rate_limit._store = defaultdict(list)
-    
+
     client_ip = request.client.host if request.client else "unknown"
     now = datetime.now()
     window_start = now - timedelta(seconds=RATE_LIMIT_WINDOW)
-    
+
     # Clean old entries
     check_rate_limit._store[client_ip] = [
         ts for ts in check_rate_limit._store[client_ip]
         if ts > window_start
     ]
-    
+
     # Check limit
     if len(check_rate_limit._store[client_ip]) >= RATE_LIMIT_REQUESTS:
         raise RateLimitError(
@@ -278,6 +277,6 @@ async def check_rate_limit(request: Request) -> None:
                 "limit": RATE_LIMIT_REQUESTS,
             },
         )
-    
+
     # Record request
     check_rate_limit._store[client_ip].append(now)

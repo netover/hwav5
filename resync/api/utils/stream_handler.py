@@ -9,6 +9,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
+
 # Import a structured logger from the core logging module. The original code
 # referenced `resync_new.utils.simple_logger.get_logger`, which is not present
 # in this repository. Use the structured logger implementation instead.

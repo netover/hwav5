@@ -8,7 +8,7 @@ including thresholds, intervals, and component-specific settings.
 
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -28,7 +28,7 @@ class HealthCheckConfigurationManager:
     - Providing configuration validation and defaults
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """
         Initialize the configuration manager.
 
@@ -36,7 +36,7 @@ class HealthCheckConfigurationManager:
             config: Base health check configuration (creates default if None)
         """
         self.config = config or self._create_default_config()
-        self._config_history: List[Dict[str, Any]] = []
+        self._config_history: list[dict[str, Any]] = []
         self._max_history_size = 100
 
     def _create_default_config(self) -> HealthCheckConfig:
@@ -81,7 +81,7 @@ class HealthCheckConfigurationManager:
         """Get current configuration."""
         return self.config
 
-    def get_component_config(self, component_name: str) -> Dict[str, Any]:
+    def get_component_config(self, component_name: str) -> dict[str, Any]:
         """
         Get configuration specific to a component.
 
@@ -198,7 +198,7 @@ class HealthCheckConfigurationManager:
         if updates:
             self.update_config(**updates)
 
-    def validate_config(self) -> List[str]:
+    def validate_config(self) -> list[str]:
         """
         Validate current configuration.
 
@@ -240,7 +240,7 @@ class HealthCheckConfigurationManager:
 
         return errors
 
-    def get_config_summary(self) -> Dict[str, Any]:
+    def get_config_summary(self) -> dict[str, Any]:
         """Get a summary of current configuration."""
         config_dict = self.config.model_dump()
         return {
@@ -270,7 +270,7 @@ class HealthCheckConfigurationManager:
         logger.info("health_check_config_reset_to_defaults")
 
     def _add_to_config_history(
-        self, old_config: Dict[str, Any], changes: Dict[str, Any]
+        self, old_config: dict[str, Any], changes: dict[str, Any]
     ) -> None:
         """Add configuration change to history."""
         self._config_history.append(
@@ -285,7 +285,7 @@ class HealthCheckConfigurationManager:
         if len(self._config_history) > self._max_history_size:
             self._config_history = self._config_history[-self._max_history_size :]
 
-    def get_config_history(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_config_history(self, limit: int | None = None) -> list[dict[str, Any]]:
         """
         Get configuration change history.
 
@@ -299,7 +299,7 @@ class HealthCheckConfigurationManager:
             return self._config_history[-limit:]
         return self._config_history.copy()
 
-    def export_config(self) -> Dict[str, Any]:
+    def export_config(self) -> dict[str, Any]:
         """Export current configuration as dictionary."""
         config_dict = self.config.model_dump()
         return {
@@ -309,7 +309,7 @@ class HealthCheckConfigurationManager:
             "is_valid": len(self.validate_config()) == 0,
         }
 
-    def import_config(self, config_data: Dict[str, Any]) -> bool:
+    def import_config(self, config_data: dict[str, Any]) -> bool:
         """
         Import configuration from dictionary.
 
@@ -336,7 +336,7 @@ class HealthCheckConfigurationManager:
             logger.error("health_check_config_import_failed", error=str(e))
             return False
 
-    def get_component_thresholds(self, component_name: str) -> Dict[str, float]:
+    def get_component_thresholds(self, component_name: str) -> dict[str, float]:
         """
         Get threshold values for a specific component.
 
@@ -376,7 +376,7 @@ class HealthCheckConfigurationManager:
         )
 
     def set_component_thresholds(
-        self, component_name: str, thresholds: Dict[str, float]
+        self, component_name: str, thresholds: dict[str, float]
     ) -> None:
         """
         Set threshold values for a specific component.
@@ -399,7 +399,7 @@ class HealthCheckConfigurationManager:
             thresholds=thresholds,
         )
 
-    def get_monitoring_intervals(self) -> Dict[str, int]:
+    def get_monitoring_intervals(self) -> dict[str, int]:
         """Get monitoring intervals for different components."""
         return {
             "health_check": self.config.check_interval_seconds,
@@ -433,7 +433,7 @@ class HealthCheckConfigurationManager:
 
         return component_name in enabled_components
 
-    def get_retry_configuration(self, component_name: str) -> Dict[str, Any]:
+    def get_retry_configuration(self, component_name: str) -> dict[str, Any]:
         """
         Get retry configuration for a component.
 

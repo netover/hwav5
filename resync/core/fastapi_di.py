@@ -7,10 +7,11 @@ that resolve services from the container.
 
 from __future__ import annotations
 
-import inspect
 import asyncio  # Added to allow running async dependency injection in sync wrappers
+import inspect
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Type, TypeVar, get_type_hints
+from typing import Any, TypeVar, get_type_hints
 
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -18,6 +19,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from resync.core.agent_manager import AgentManager
 from resync.core.audit_queue import AsyncAuditQueue
 from resync.core.connection_manager import ConnectionManager
+
+# Context Store (SQLite) - aliased as AsyncKnowledgeGraph for compatibility
+from resync.core.context_store import ContextStore as AsyncKnowledgeGraph
 from resync.core.di_container import DIContainer, ServiceLifetime, container
 from resync.core.file_ingestor import create_file_ingestor
 from resync.core.interfaces import (
@@ -28,8 +32,6 @@ from resync.core.interfaces import (
     IKnowledgeGraph,
     ITWSClient,
 )
-# Context Store (SQLite) - aliased as AsyncKnowledgeGraph for compatibility
-from resync.core.context_store import ContextStore as AsyncKnowledgeGraph
 
 # --- Logging Setup ---
 from resync.core.structured_logger import get_logger
@@ -54,16 +56,15 @@ def get_tws_client_factory():
     if settings.TWS_MOCK_MODE:
         logger.info("TWS_MOCK_MODE is enabled. Creating MockTWSClient.")
         return MockTWSClient()
-    else:
-        logger.info("Creating OptimizedTWSClient.")
-        return OptimizedTWSClient(
-            hostname=settings.TWS_HOST,
-            port=settings.TWS_PORT,
-            username=settings.TWS_USER,
-            password=settings.TWS_PASSWORD,
-            engine_name=settings.TWS_ENGINE_NAME,
-            engine_owner=settings.TWS_ENGINE_OWNER,
-        )
+    logger.info("Creating OptimizedTWSClient.")
+    return OptimizedTWSClient(
+        hostname=settings.TWS_HOST,
+        port=settings.TWS_PORT,
+        username=settings.TWS_USER,
+        password=settings.TWS_PASSWORD,
+        engine_name=settings.TWS_ENGINE_NAME,
+        engine_owner=settings.TWS_ENGINE_OWNER,
+    )
 
 
 def get_teams_integration_factory():
@@ -142,7 +143,7 @@ def configure_container(app_container: DIContainer = container) -> DIContainer:
     return app_container
 
 
-def get_service(service_type: Type[T]) -> Callable[[], T]:
+def get_service(service_type: type[T]) -> Callable[[], T]:
     """
     Create a FastAPI dependency that resolves a service from the container.
 
@@ -297,16 +298,15 @@ def with_injection(func: Callable) -> Callable:
             return await func(*args, **kwargs)
 
         return async_wrapper
-    else:
 
-        @wraps(func)
-        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-            # This is a synchronous function, so we need to run the async inject_dependencies
-            # function in an event loop.
-            async def run_injection():
-                await inject_dependencies(kwargs)
+    @wraps(func)
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+        # This is a synchronous function, so we need to run the async inject_dependencies
+        # function in an event loop.
+        async def run_injection():
+            await inject_dependencies(kwargs)
 
-            asyncio.run(run_injection())
-            return func(*args, **kwargs)
+        asyncio.run(run_injection())
+        return func(*args, **kwargs)
 
-        return sync_wrapper
+    return sync_wrapper

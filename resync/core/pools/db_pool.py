@@ -5,8 +5,8 @@ Provides database connection pooling using PostgreSQL/SQLAlchemy.
 """
 
 import logging
-from typing import Any, Dict, Optional
 from contextlib import asynccontextmanager
+from typing import Any
 
 from resync.core.database.engine import get_engine, get_session, get_session_factory
 
@@ -18,11 +18,11 @@ __all__ = ["DatabasePool", "get_db_pool"]
 class DatabasePool:
     """
     Database Pool - PostgreSQL Backend.
-    
+
     Uses SQLAlchemy's built-in connection pooling.
     """
-    
-    def __init__(self, db_path: Optional[str] = None, pool_size: int = 10):
+
+    def __init__(self, db_path: str | None = None, pool_size: int = 10):
         """
         Initialize. db_path is ignored - uses PostgreSQL.
         Pool size is configured via SQLAlchemy engine settings.
@@ -33,33 +33,33 @@ class DatabasePool:
         self._session_factory = None
         self._initialized = False
         self._pool_size = pool_size
-    
+
     async def initialize(self) -> None:
         """Initialize the pool."""
         self._engine = get_engine()
         self._session_factory = get_session_factory()
         self._initialized = True
         logger.info("DatabasePool initialized (PostgreSQL + SQLAlchemy pooling)")
-    
+
     async def close(self) -> None:
         """Close the pool."""
         if self._engine:
             await self._engine.dispose()
         self._initialized = False
-    
+
     @asynccontextmanager
     async def get_connection(self):
         """Get a database connection from the pool."""
         async with get_session() as session:
             yield session
-    
+
     @asynccontextmanager
     async def acquire(self):
         """Alias for get_connection."""
         async with self.get_connection() as conn:
             yield conn
-    
-    def get_pool_status(self) -> Dict[str, Any]:
+
+    def get_pool_status(self) -> dict[str, Any]:
         """Get pool status information."""
         if self._engine:
             pool = self._engine.pool
@@ -73,7 +73,7 @@ class DatabasePool:
         return {"status": "not_initialized"}
 
 
-_instance: Optional[DatabasePool] = None
+_instance: DatabasePool | None = None
 
 def get_db_pool() -> DatabasePool:
     """Get the singleton DatabasePool instance."""

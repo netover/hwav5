@@ -8,6 +8,11 @@ from typing import Any
 from fastapi import Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
+# Import enhanced ResyncException from the core exceptions module. The
+# original import referred to the non‑existent `resync_new.utils` package.
+from resync.core.exceptions_enhanced import ResyncException
 from resync.core.utils.error_utils import (
     ErrorResponseBuilder,
     create_error_response_from_exception,
@@ -16,10 +21,6 @@ from resync.core.utils.error_utils import (
     generate_correlation_id,
     log_error_response,
 )
-# Import enhanced ResyncException from the core exceptions module. The
-# original import referred to the non‑existent `resync_new.utils` package.
-from resync.core.exceptions_enhanced import ResyncException
-from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -242,6 +243,7 @@ async def http_exception_handler(request: Request, exc: Any) -> JSONResponse:
 def register_exception_handlers(app: Any) -> None:
     """Register all exception handlers with the FastAPI application."""
     from fastapi import HTTPException
+
     from resync.core.exceptions_enhanced import ResyncException
 
     # Add the global exception handler middleware

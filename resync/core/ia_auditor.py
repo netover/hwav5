@@ -129,7 +129,7 @@ async def _perform_action_on_memory(
             confidence=confidence,
             reason=analysis.get("reason", "N/A"),
         )
-        
+
         # === CONTINUAL LEARNING INTEGRATION ===
         # Convert audit finding to knowledge graph entries
         try:
@@ -147,11 +147,11 @@ async def _perform_action_on_memory(
         except Exception as e:
             logger.warning("continual_learning_pipeline_error", error=str(e))
         # === END CONTINUAL LEARNING INTEGRATION ===
-        
+
         success = await _get_knowledge_graph().atomic_check_and_delete(memory_id)
         return ("delete", memory_id) if success else None
 
-    elif (
+    if (
         analysis.get("is_incorrect")
         and confidence > AUDIT_FLAGGING_CONFIDENCE_THRESHOLD
     ):
@@ -159,7 +159,7 @@ async def _perform_action_on_memory(
         logger.warning(
             "flagging_memory", memory_id=memory_id, confidence=confidence, reason=reason
         )
-        
+
         # === CONTINUAL LEARNING INTEGRATION ===
         # Convert audit finding to knowledge graph entries (for flagged items too)
         try:
@@ -177,7 +177,7 @@ async def _perform_action_on_memory(
         except Exception as e:
             logger.warning("continual_learning_pipeline_error", error=str(e))
         # === END CONTINUAL LEARNING INTEGRATION ===
-        
+
         success = await _get_knowledge_graph().atomic_check_and_flag(
             memory_id, reason, confidence
         )

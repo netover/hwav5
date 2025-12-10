@@ -1,8 +1,8 @@
 
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
-from collections import defaultdict, Counter
+from typing import Any
 
 from resync.core.health_models import (
     ComponentHealth,
@@ -23,8 +23,8 @@ class ComponentHealthSummary:
     degraded_count: int
     unhealthy_count: int
     unknown_count: int
-    average_response_time_ms: Optional[float] = None
-    components: List[ComponentHealth] = field(default_factory=list)
+    average_response_time_ms: float | None = None
+    components: list[ComponentHealth] = field(default_factory=list)
 
     @property
     def health_percentage(self) -> float:
@@ -38,12 +38,11 @@ class ComponentHealthSummary:
         """Determine overall status for this component type."""
         if self.unhealthy_count > 0:
             return HealthStatus.UNHEALTHY
-        elif self.degraded_count > 0:
+        if self.degraded_count > 0:
             return HealthStatus.DEGRADED
-        elif self.unknown_count > 0:
+        if self.unknown_count > 0:
             return HealthStatus.UNKNOWN
-        else:
-            return HealthStatus.HEALTHY
+        return HealthStatus.HEALTHY
 
 
 @dataclass
@@ -58,11 +57,11 @@ class OverallHealthStatus:
     unhealthy_components: int
     unknown_components: int
     overall_health_percentage: float
-    component_summaries: Dict[ComponentType, ComponentHealthSummary] = field(
+    component_summaries: dict[ComponentType, ComponentHealthSummary] = field(
         default_factory=dict
     )
-    critical_issues: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
+    critical_issues: list[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
     @property
     def is_system_healthy(self) -> bool:
@@ -76,11 +75,11 @@ class HealthReport:
 
     timestamp: datetime
     overall_status: OverallHealthStatus
-    component_health: Dict[str, ComponentHealth] = field(default_factory=dict)
-    performance_metrics: Dict[str, Any] = field(default_factory=dict)
-    trends: Dict[str, Any] = field(default_factory=dict)
-    alerts: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    component_health: dict[str, ComponentHealth] = field(default_factory=dict)
+    performance_metrics: dict[str, Any] = field(default_factory=dict)
+    trends: dict[str, Any] = field(default_factory=dict)
+    alerts: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class HealthMonitoringAggregator:
@@ -92,7 +91,7 @@ class HealthMonitoringAggregator:
     health, generating overall system status, and identifying trends and issues.
     """
 
-    def __init__(self, health_service: Optional[HealthCheckService] = None):
+    def __init__(self, health_service: HealthCheckService | None = None):
         """
         Initialize the HealthMonitoringAggregator.
 
@@ -101,8 +100,8 @@ class HealthMonitoringAggregator:
                           a new instance will be created when needed.
         """
         self.health_service = health_service
-        self._last_collection_time: Optional[datetime] = None
-        self._cached_report: Optional[HealthReport] = None
+        self._last_collection_time: datetime | None = None
+        self._cached_report: HealthReport | None = None
 
     async def get_health_service(self) -> HealthCheckService:
         """Get or create the health check service instance."""
@@ -151,7 +150,7 @@ class HealthMonitoringAggregator:
 
     async def aggregate_component_health(
         self,
-    ) -> Dict[ComponentType, ComponentHealthSummary]:
+    ) -> dict[ComponentType, ComponentHealthSummary]:
         """
         Aggregate health data by component type.
 
@@ -167,7 +166,7 @@ class HealthMonitoringAggregator:
             await self.collect_all_health_checks()
 
         # Group components by type
-        components_by_type: Dict[ComponentType, List[ComponentHealth]] = defaultdict(
+        components_by_type: dict[ComponentType, list[ComponentHealth]] = defaultdict(
             list
         )
 
@@ -183,7 +182,7 @@ class HealthMonitoringAggregator:
         return summaries
 
     async def generate_overall_health_status(
-        self, health_result: Optional[HealthCheckResult] = None
+        self, health_result: HealthCheckResult | None = None
     ) -> OverallHealthStatus:
         """
         Generate overall health status for the system.
@@ -256,7 +255,7 @@ class HealthMonitoringAggregator:
         )
 
     def _create_component_summary(
-        self, component_type: ComponentType, components: List[ComponentHealth]
+        self, component_type: ComponentType, components: list[ComponentHealth]
     ) -> ComponentHealthSummary:
         """Create a summary for a specific component type."""
         status_counts = Counter(component.status for component in components)
@@ -283,8 +282,8 @@ class HealthMonitoringAggregator:
         )
 
     def _identify_critical_issues(
-        self, components: Dict[str, ComponentHealth]
-    ) -> List[str]:
+        self, components: dict[str, ComponentHealth]
+    ) -> list[str]:
         """Identify critical issues from component health data."""
         issues = []
 
@@ -317,9 +316,9 @@ class HealthMonitoringAggregator:
 
     def _generate_recommendations(
         self,
-        components: Dict[str, ComponentHealth],
-        summaries: Dict[ComponentType, ComponentHealthSummary],
-    ) -> List[str]:
+        components: dict[str, ComponentHealth],
+        summaries: dict[ComponentType, ComponentHealthSummary],
+    ) -> list[str]:
         """Generate recommendations based on component health."""
         recommendations = []
 
@@ -369,7 +368,7 @@ class HealthMonitoringAggregator:
         age = datetime.now() - self._last_collection_time
         return age.total_seconds() > max_age_seconds
 
-    async def get_cached_report(self) -> Optional[HealthReport]:
+    async def get_cached_report(self) -> HealthReport | None:
         """Get cached health report if available and fresh."""
         if self._should_refresh_cache():
             return None

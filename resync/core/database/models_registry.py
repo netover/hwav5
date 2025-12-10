@@ -20,38 +20,39 @@ _registered = False
 def register_all_models():
     """
     Import all SQLAlchemy models to register them with Base.metadata.
-    
+
     This must be called before init_db() to ensure all tables are created.
     """
     global _registered
-    
+
     if _registered:
         return
-    
+
     # Import all model modules to register them with Base
+    # NOTE: These imports are for side-effects only (model registration)
     try:
         # FastAPI app models (Users, Sessions, etc.)
-        from resync.fastapi_app.db.models import (
-            User,
-            Session,
+        from resync.fastapi_app.db.models import (  # noqa: F401
             APIKey,
+            Session,
+            User,
         )
         logger.debug("Registered fastapi_app models")
     except ImportError as e:
         logger.warning(f"Could not import fastapi_app models: {e}")
-    
+
     try:
         # Knowledge Graph models
-        from resync.core.knowledge_graph.models import (
-            GraphNode,
-            GraphEdge,
+        from resync.core.knowledge_graph.models import (  # noqa: F401
             ExtractedTriplet,
+            GraphEdge,
+            GraphNode,
             GraphSnapshot,
         )
         logger.debug("Registered knowledge_graph models")
     except ImportError as e:
         logger.warning(f"Could not import knowledge_graph models: {e}")
-    
+
     _registered = True
     logger.info("All database models registered")
 

@@ -3,12 +3,12 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from time import time as time_func
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from cachetools import LRUCache
-from resync.core.metrics_compat import Counter, Histogram
 
 from resync.core.async_cache import AsyncTTLCache
+from resync.core.metrics_compat import Counter, Histogram
 from resync.settings import settings
 
 cache_hits = Counter("cache_hierarchy_hits_total", "Total cache hits", ["cache_level"])
@@ -76,18 +76,18 @@ class L1Cache:
         self.max_size = max_size
         self.num_shards = num_shards
         # Use cachetools LRUCache for better performance and built-in LRU functionality
-        self.shards: List[LRUCache] = [
+        self.shards: list[LRUCache] = [
             LRUCache(maxsize=max_size // num_shards if num_shards > 0 else max_size)
             for _ in range(num_shards)
         ]
         self.shard_locks = [asyncio.Lock() for _ in range(num_shards)]
 
-    def _get_shard(self, key: str) -> Tuple[LRUCache, asyncio.Lock]:
+    def _get_shard(self, key: str) -> tuple[LRUCache, asyncio.Lock]:
         """Get the shard and lock for a given key."""
         shard_index = hash(key) % self.num_shards
         return self.shards[shard_index], self.shard_locks[shard_index]
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """
         Get value from L1 cache.
         """
@@ -231,7 +231,7 @@ class CacheHierarchy:
             await self.l2_cache.stop()
             logger.info("CacheHierarchy stopped")
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """
         Get value from cache hierarchy with priority L1 → L2.
         Applies key prefix and decryption as needed.
@@ -261,7 +261,7 @@ class CacheHierarchy:
         return None
 
     async def set(
-        self, key: str, value: Any, ttl_seconds: Optional[int] = None
+        self, key: str, value: Any, ttl_seconds: int | None = None
     ) -> None:
         """
         Set value in cache hierarchy with write-through pattern.
@@ -276,7 +276,7 @@ class CacheHierarchy:
         logger.debug("cache_hierarchy_set", key=prefixed_key)
 
     async def set_from_source(
-        self, key: str, value: Any, ttl_seconds: Optional[int] = None
+        self, key: str, value: Any, ttl_seconds: int | None = None
     ) -> None:
         """
         Set value after fetching from source.
@@ -299,13 +299,13 @@ class CacheHierarchy:
         await self.l2_cache.clear()
         logger.debug("Cache HIERARCHY CLEARED")
 
-    def size(self) -> Tuple[int, int]:
+    def size(self) -> tuple[int, int]:
         """Get sizes of both cache tiers."""
         l1_size = self.l1_cache.size()
         l2_size = self.l2_cache.size()
         return l1_size, l2_size
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive cache metrics."""
         l1_size, l2_size = self.size()
         return {
@@ -330,7 +330,7 @@ class CacheHierarchy:
 
 
 # Global cache hierarchy instance
-cache_hierarchy: Optional[CacheHierarchy] = None
+cache_hierarchy: CacheHierarchy | None = None
 
 
 def get_cache_hierarchy() -> CacheHierarchy:

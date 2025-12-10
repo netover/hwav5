@@ -14,13 +14,13 @@ managing the lifecycle of critical application components including:
 import asyncio
 import os
 import sys
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import FastAPI
 from redis.exceptions import (
-    ResponseError,
     BusyLoadingError,
+    ResponseError,
 )
 
 from resync.api_gateway.container import setup_dependencies

@@ -6,8 +6,7 @@ Defines interfaces for Embedder, VectorStore, and Retriever to enable dependency
 
 from __future__ import annotations
 
-from typing import Any
-from typing import Protocol
+from typing import Any, Protocol
 
 
 # pylint: disable=too-few-public-methods

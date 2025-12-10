@@ -17,7 +17,7 @@ Now integrated with LangFuse for:
 
 Usage:
     from resync.services.llm_service import get_llm_service
-    
+
     llm = get_llm_service()
     response = await llm.generate_agent_response(
         agent_id="tws-agent",
@@ -33,8 +33,9 @@ Configuration (settings):
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncGenerator
 from functools import lru_cache
-from typing import Any, AsyncGenerator, Optional
+from typing import Any
 
 from resync.core.exceptions import IntegrationError
 from resync.settings import settings
@@ -42,25 +43,25 @@ from resync.settings import settings
 # LangFuse integration (optional but recommended)
 try:
     from resync.core.langfuse import (
+        PromptType,
         get_prompt_manager,
         get_tracer,
-        PromptType,
     )
     LANGFUSE_INTEGRATION = True
 except ImportError:
     LANGFUSE_INTEGRATION = False
 
 try:
-    from openai import AsyncOpenAI
     # Import specific exceptions from OpenAI v1.x
     from openai import (
+        APIConnectionError,
+        APIError,
+        APIStatusError,
+        APITimeoutError,
+        AsyncOpenAI,
         AuthenticationError,
         BadRequestError,
-        APIConnectionError,
         RateLimitError,
-        APIError,
-        APITimeoutError,
-        APIStatusError,
     )
     OPENAI_AVAILABLE = True
 except ImportError:  # pragma: no cover
@@ -69,7 +70,7 @@ except ImportError:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 
-def _coerce_secret(value: Any) -> Optional[str]:
+def _coerce_secret(value: Any) -> str | None:
     """Accept str or pydantic SecretStr; return plain str or None."""
     if value is None:
         return None
@@ -160,11 +161,11 @@ class LLMService:
     async def generate_response(
         self,
         messages: list[dict[str, str]],
-        temperature: Optional[float] = None,
-        top_p: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-        frequency_penalty: Optional[float] = None,
-        presence_penalty: Optional[float] = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        max_tokens: int | None = None,
+        frequency_penalty: float | None = None,
+        presence_penalty: float | None = None,
         stream: bool = False,
     ) -> str:
         """
@@ -355,8 +356,8 @@ class LLMService:
         self,
         agent_id: str,
         user_message: str,
-        conversation_history: Optional[list[dict[str, str]]] = None,
-        agent_config: Optional[dict[str, Any]] = None,
+        conversation_history: list[dict[str, str]] | None = None,
+        agent_config: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate a response from an AI agent.
@@ -379,22 +380,22 @@ class LLMService:
 
         # Try to get prompt from LangFuse/PromptManager
         system_message = None
-        
+
         if LANGFUSE_INTEGRATION:
             try:
                 prompt_manager = get_prompt_manager()
-                
+
                 # Try specific agent prompt first, then default
                 prompt = await prompt_manager.get_prompt(f"{agent_id}-system")
                 if not prompt:
                     prompt = await prompt_manager.get_default_prompt(PromptType.AGENT)
-                
+
                 if prompt:
                     # Build context from agent config
                     context = f"Agente: {agent_name}\nDescrição: {agent_description}"
                     if agent_config:
                         context += f"\nConfiguração: {agent_config}"
-                    
+
                     system_message = prompt.compile(context=context)
                     logger.debug(
                         "prompt_loaded_from_manager",
@@ -417,7 +418,7 @@ class LLMService:
             messages.extend(conversation_history[-5:])  # últimas 5
 
         messages.append({"role": "user", "content": user_message})
-        
+
         # Use tracer if available
         if LANGFUSE_INTEGRATION:
             tracer = get_tracer()
@@ -427,14 +428,14 @@ class LLMService:
                 trace.input_tokens = sum(len(m.get("content", "").split()) * 2 for m in messages)
                 trace.output_tokens = len(response.split()) * 2
                 return response
-        
+
         return await self.generate_response(messages, max_tokens=800)
 
     async def generate_rag_response(
         self,
         query: str,
         context: str,
-        conversation_history: Optional[list[dict[str, str]]] = None,
+        conversation_history: list[dict[str, str]] | None = None,
     ) -> str:
         """
         Generate a response using RAG (Retrieval-Augmented Generation).
@@ -452,12 +453,12 @@ class LLMService:
         """
         # Try to get prompt from LangFuse/PromptManager
         system_message = None
-        
+
         if LANGFUSE_INTEGRATION:
             try:
                 prompt_manager = get_prompt_manager()
                 prompt = await prompt_manager.get_default_prompt(PromptType.RAG)
-                
+
                 if prompt:
                     system_message = prompt.compile(rag_context=context)
                     logger.debug("rag_prompt_loaded_from_manager", prompt_id=prompt.id)
@@ -479,7 +480,7 @@ class LLMService:
             messages.extend(conversation_history[-3:])
 
         messages.append({"role": "user", "content": query})
-        
+
         # Use tracer if available
         if LANGFUSE_INTEGRATION:
             tracer = get_tracer()
@@ -489,7 +490,7 @@ class LLMService:
                 trace.input_tokens = sum(len(m.get("content", "").split()) * 2 for m in messages)
                 trace.output_tokens = len(response.split()) * 2
                 return response
-        
+
         return await self.generate_response(messages, max_tokens=1000)
 
     async def health_check(self) -> dict[str, Any]:
@@ -544,8 +545,8 @@ class LLMService:
         self,
         user_message: str,
         agent_id: str,
-        agent_config: Optional[dict[str, Any]] = None,
-        conversation_history: Optional[list[dict[str, str]]] = None,
+        agent_config: dict[str, Any] | None = None,
+        conversation_history: list[dict[str, str]] | None = None,
         stream: bool = False,  # pylint: disable=unused-argument
     ) -> str:
         """

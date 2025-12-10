@@ -12,7 +12,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from resync.core.structured_logger import get_logger
 
@@ -20,7 +20,8 @@ logger = get_logger(__name__)
 
 
 # Import shared types to avoid circular dependency
-from resync.core.compliance.types import SOC2TrustServiceCriteria, SOC2ComplianceManager as BaseSOC2ComplianceManager
+from resync.core.compliance.types import SOC2ComplianceManager as BaseSOC2ComplianceManager
+from resync.core.compliance.types import SOC2TrustServiceCriteria
 
 
 class ControlCategory(Enum):
@@ -55,16 +56,16 @@ class SOC2Control:
     name: str
     description: str
     category: ControlCategory
-    criteria: List[SOC2TrustServiceCriteria]
+    criteria: list[SOC2TrustServiceCriteria]
     status: ControlStatus = ControlStatus.NOT_IMPLEMENTED
-    implemented_at: Optional[float] = None
-    tested_at: Optional[float] = None
-    audited_at: Optional[float] = None
-    evidence_required: List[str] = field(default_factory=list)
+    implemented_at: float | None = None
+    tested_at: float | None = None
+    audited_at: float | None = None
+    evidence_required: list[str] = field(default_factory=list)
     risk_level: str = "medium"  # low, medium, high, critical
     automated_testing: bool = False
     test_frequency_days: int = 30
-    last_test_result: Optional[bool] = None
+    last_test_result: bool | None = None
     failure_count: int = 0
 
     def is_compliant(self) -> bool:
@@ -110,9 +111,9 @@ class SOC2Evidence:
     description: str
     collected_at: float
     validity_days: int = 365
-    file_path: Optional[str] = None
-    content_hash: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    file_path: str | None = None
+    content_hash: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def is_valid(self) -> bool:
         """Check if evidence is still valid."""
@@ -155,9 +156,9 @@ class ProcessingIntegrityCheck:
     records_processed: int = 0
     records_failed: int = 0
     processing_time: float = 0.0
-    checksum_before: Optional[str] = None
-    checksum_after: Optional[str] = None
-    validation_errors: List[str] = field(default_factory=list)
+    checksum_before: str | None = None
+    checksum_after: str | None = None
+    validation_errors: list[str] = field(default_factory=list)
 
     @property
     def integrity_score(self) -> float:
@@ -192,7 +193,7 @@ class ConfidentialityIncident:
     response_time_minutes: float = 0.0
     resolved: bool = False
     resolution_details: str = ""
-    preventive_measures: List[str] = field(default_factory=list)
+    preventive_measures: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -239,30 +240,30 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
     - Risk assessment and management
     """
 
-    def __init__(self, config: Optional[SOC2ComplianceConfig] = None):
+    def __init__(self, config: SOC2ComplianceConfig | None = None):
         self.config = config or SOC2ComplianceConfig()
 
         # Control management
-        self.controls: Dict[str, SOC2Control] = {}
-        self.control_tests: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        self.controls: dict[str, SOC2Control] = {}
+        self.control_tests: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
         # Evidence management
-        self.evidence: Dict[str, SOC2Evidence] = {}
-        self.evidence_by_control: Dict[str, List[str]] = defaultdict(list)
+        self.evidence: dict[str, SOC2Evidence] = {}
+        self.evidence_by_control: dict[str, list[str]] = defaultdict(list)
 
         # Monitoring data
         self.availability_metrics: deque = deque(maxlen=1000)
         self.processing_checks: deque = deque(maxlen=1000)
-        self.confidentiality_incidents: List[ConfidentialityIncident] = []
+        self.confidentiality_incidents: list[ConfidentialityIncident] = []
 
         # Audit trails
         self.audit_trail: deque = deque(maxlen=10000)
-        self.compliance_reports: List[Dict[str, Any]] = []
+        self.compliance_reports: list[dict[str, Any]] = []
 
         # Background tasks
-        self._testing_task: Optional[asyncio.Task] = None
-        self._monitoring_task: Optional[asyncio.Task] = None
-        self._reporting_task: Optional[asyncio.Task] = None
+        self._testing_task: asyncio.Task | None = None
+        self._monitoring_task: asyncio.Task | None = None
+        self._reporting_task: asyncio.Task | None = None
         self._running = False
 
         # Initialize standard SOC 2 controls
@@ -492,7 +493,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             self.controls[control.control_id] = control
 
     async def implement_control(
-        self, control_id: str, implementation_details: Dict[str, Any]
+        self, control_id: str, implementation_details: dict[str, Any]
     ) -> bool:
         """Mark a control as implemented."""
         if control_id not in self.controls:
@@ -512,7 +513,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
         logger.info(f"Control implemented: {control_id}")
         return True
 
-    async def test_control(self, control_id: str) -> Dict[str, Any]:
+    async def test_control(self, control_id: str) -> dict[str, Any]:
         """Test a specific control."""
         if control_id not in self.controls:
             return {"success": False, "error": "Control not found"}
@@ -559,7 +560,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
         evidence_type: str,
         description: str,
         content: bytes,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Collect evidence for a control."""
         # Using MD5 for ID generation only, not for security purposes
@@ -646,19 +647,19 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
         logger.warning(f"Confidentiality incident reported: {incident_id}")
         return incident_id
 
-    def generate_compliance_report(self) -> Dict[str, Any]:
+    def generate_compliance_report(self) -> dict[str, Any]:
         """Generate comprehensive SOC 2 compliance report using Strategy pattern."""
         # Import strategies locally to avoid circular dependencies
         from resync.core.compliance.report_strategies import (
-            ControlComplianceStrategy,
-            CriteriaScoresStrategy,
-            OverallComplianceStrategy,
-            ControlStatusSummaryStrategy,
-            EvidenceSummaryStrategy,
             AvailabilitySummaryStrategy,
-            ProcessingIntegritySummaryStrategy,
             ConfidentialityIncidentsSummaryStrategy,
-            RecommendationsStrategy
+            ControlComplianceStrategy,
+            ControlStatusSummaryStrategy,
+            CriteriaScoresStrategy,
+            EvidenceSummaryStrategy,
+            OverallComplianceStrategy,
+            ProcessingIntegritySummaryStrategy,
+            RecommendationsStrategy,
         )
 
         # Create report structure
@@ -693,8 +694,8 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
         return report
 
     def get_control_status(
-        self, control_id: Optional[str] = None
-    ) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+        self, control_id: str | None = None
+    ) -> dict[str, Any] | list[dict[str, Any]]:
         """Get control status information."""
         if control_id:
             control = self.controls.get(control_id)
@@ -718,7 +719,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
         # Return all controls
         return [self.get_control_status(cid) for cid in self.controls.keys()]
 
-    async def _run_automated_test(self, control: SOC2Control) -> Dict[str, Any]:
+    async def _run_automated_test(self, control: SOC2Control) -> dict[str, Any]:
         """Run automated test for a control."""
         # This would implement specific tests for each control type
         # For now, simulate basic tests
@@ -726,17 +727,16 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
         if control.control_id.startswith("SEC-"):
             # Security control tests
             return await self._test_security_control(control)
-        elif control.control_id.startswith("AVL-"):
+        if control.control_id.startswith("AVL-"):
             # Availability control tests
             return await self._test_availability_control(control)
-        elif control.control_id.startswith("INT-"):
+        if control.control_id.startswith("INT-"):
             # Processing integrity tests
             return await self._test_integrity_control(control)
-        else:
-            # Generic test
-            return {"success": True, "details": "Generic automated test passed"}
+        # Generic test
+        return {"success": True, "details": "Generic automated test passed"}
 
-    async def _test_security_control(self, control: SOC2Control) -> Dict[str, Any]:
+    async def _test_security_control(self, control: SOC2Control) -> dict[str, Any]:
         """Test security-related controls."""
         # Simulate security tests
         test_results = {
@@ -750,7 +750,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
 
         return {"success": success, "details": result, "control_type": "security"}
 
-    async def _test_availability_control(self, control: SOC2Control) -> Dict[str, Any]:
+    async def _test_availability_control(self, control: SOC2Control) -> dict[str, Any]:
         """Test availability-related controls."""
         # Check recent availability metrics
         if not self.availability_metrics:
@@ -773,7 +773,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             "control_type": "availability",
         }
 
-    async def _test_integrity_control(self, control: SOC2Control) -> Dict[str, Any]:
+    async def _test_integrity_control(self, control: SOC2Control) -> dict[str, Any]:
         """Test processing integrity controls."""
         # Check recent processing integrity
         if not self.processing_checks:
@@ -876,7 +876,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             except Exception as e:
                 logger.error(f"Reporting worker error: {e}")
 
-    def _generate_recommendations(self, report: Dict[str, Any]) -> List[str]:
+    def _generate_recommendations(self, report: dict[str, Any]) -> list[str]:
         """Generate recommendations based on compliance report."""
         recommendations = []
 

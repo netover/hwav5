@@ -12,7 +12,7 @@ Usage:
         setup_langfuse,
         setup_evidently,
     )
-    
+
     # On app startup
     await setup_langfuse()
     setup_evidently()
@@ -23,10 +23,9 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from resync.core.structured_logger import get_logger
-from resync.settings import settings
 
 logger = get_logger(__name__)
 
@@ -38,43 +37,43 @@ logger = get_logger(__name__)
 @dataclass
 class LangFuseConfig:
     """LangFuse configuration."""
-    
+
     enabled: bool = field(default_factory=lambda: os.getenv("LANGFUSE_ENABLED", "false").lower() == "true")
     public_key: str = field(default_factory=lambda: os.getenv("LANGFUSE_PUBLIC_KEY", ""))
     secret_key: str = field(default_factory=lambda: os.getenv("LANGFUSE_SECRET_KEY", ""))
     host: str = field(default_factory=lambda: os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"))
-    
+
     # Sampling
     sample_rate: float = field(default_factory=lambda: float(os.getenv("LANGFUSE_SAMPLE_RATE", "1.0")))
-    
+
     # Flush settings
     flush_interval_seconds: int = 5
     batch_size: int = 50
-    
+
     def is_configured(self) -> bool:
         """Check if LangFuse is properly configured."""
         return self.enabled and bool(self.public_key) and bool(self.secret_key)
 
 
-@dataclass  
+@dataclass
 class EvidentlyConfig:
     """Evidently configuration."""
-    
+
     enabled: bool = field(default_factory=lambda: os.getenv("EVIDENTLY_ENABLED", "false").lower() == "true")
-    
+
     # Reference data settings
     reference_window_days: int = 7
     current_window_hours: int = 24
-    
+
     # Drift thresholds
     feature_drift_threshold: float = 0.1
     prediction_drift_threshold: float = 0.15
     data_quality_threshold: float = 0.95
-    
+
     # Monitoring intervals
     check_interval_minutes: int = 60
     report_retention_days: int = 30
-    
+
     # Storage
     reports_dir: str = field(default_factory=lambda: os.getenv("EVIDENTLY_REPORTS_DIR", "/var/log/resync/evidently"))
 
@@ -82,18 +81,18 @@ class EvidentlyConfig:
 @dataclass
 class ObservabilityConfig:
     """Combined observability configuration."""
-    
+
     langfuse: LangFuseConfig = field(default_factory=LangFuseConfig)
     evidently: EvidentlyConfig = field(default_factory=EvidentlyConfig)
-    
+
     # General settings
     environment: str = field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))
     service_name: str = "resync"
-    service_version: str = "5.3.1"
+    service_version: str = "5.3.5"
 
 
 # Singleton config
-_config: Optional[ObservabilityConfig] = None
+_config: ObservabilityConfig | None = None
 
 
 def get_observability_config() -> ObservabilityConfig:
@@ -115,21 +114,21 @@ _langfuse_client = None
 async def setup_langfuse() -> bool:
     """
     Initialize LangFuse client.
-    
+
     Returns:
         True if successfully initialized, False otherwise
     """
     global _langfuse_client
-    
+
     config = get_observability_config().langfuse
-    
+
     if not config.is_configured():
         logger.info("langfuse_disabled", reason="not configured")
         return False
-    
+
     try:
         from langfuse import Langfuse
-        
+
         _langfuse_client = Langfuse(
             public_key=config.public_key,
             secret_key=config.secret_key,
@@ -137,17 +136,17 @@ async def setup_langfuse() -> bool:
             flush_interval=config.flush_interval_seconds,
             max_retries=3,
         )
-        
+
         # Verify connection
         # Note: Langfuse doesn't have a direct ping, so we just check client creation
-        
+
         logger.info(
             "langfuse_initialized",
             host=config.host,
             sample_rate=config.sample_rate,
         )
         return True
-        
+
     except ImportError:
         logger.warning("langfuse_not_installed", hint="pip install langfuse")
         return False
@@ -164,7 +163,7 @@ def get_langfuse_client():
 async def shutdown_langfuse():
     """Shutdown LangFuse client gracefully."""
     global _langfuse_client
-    
+
     if _langfuse_client:
         try:
             _langfuse_client.flush()
@@ -187,64 +186,64 @@ _evidently_monitor = None
 class EvidentlyMonitor:
     """
     Evidently-based monitoring for ML/AI pipelines.
-    
+
     Tracks:
     - Data drift in inputs
     - Prediction drift in outputs
     - Data quality metrics
     - Feature statistics
     """
-    
+
     def __init__(self, config: EvidentlyConfig):
         self.config = config
-        self._reference_data: List[Dict[str, Any]] = []
-        self._current_data: List[Dict[str, Any]] = []
-        self._last_check: Optional[datetime] = None
-        self._reports: List[Dict[str, Any]] = []
-        
+        self._reference_data: list[dict[str, Any]] = []
+        self._current_data: list[dict[str, Any]] = []
+        self._last_check: datetime | None = None
+        self._reports: list[dict[str, Any]] = []
+
         # Ensure reports directory exists
         os.makedirs(config.reports_dir, exist_ok=True)
-        
+
         # Try to import evidently
         try:
             from evidently import ColumnMapping
-            from evidently.report import Report
             from evidently.metric_preset import DataDriftPreset, DataQualityPreset
-            
+            from evidently.report import Report
+
             self._evidently_available = True
             self._Report = Report
             self._DataDriftPreset = DataDriftPreset
             self._DataQualityPreset = DataQualityPreset
             self._ColumnMapping = ColumnMapping
-            
+
         except ImportError:
             self._evidently_available = False
             logger.warning("evidently_not_installed", hint="pip install evidently")
-    
-    def add_reference_data(self, data: Dict[str, Any]) -> None:
+
+    def add_reference_data(self, data: dict[str, Any]) -> None:
         """Add data point to reference dataset."""
         data["_timestamp"] = datetime.utcnow().isoformat()
         self._reference_data.append(data)
-        
+
         # Trim old data
         cutoff = datetime.utcnow() - timedelta(days=self.config.reference_window_days)
         self._reference_data = [
-            d for d in self._reference_data 
+            d for d in self._reference_data
             if datetime.fromisoformat(d["_timestamp"]) > cutoff
         ]
-    
-    def add_current_data(self, data: Dict[str, Any]) -> None:
+
+    def add_current_data(self, data: dict[str, Any]) -> None:
         """Add data point to current dataset."""
         data["_timestamp"] = datetime.utcnow().isoformat()
         self._current_data.append(data)
-        
+
         # Trim old data
         cutoff = datetime.utcnow() - timedelta(hours=self.config.current_window_hours)
         self._current_data = [
             d for d in self._current_data
             if datetime.fromisoformat(d["_timestamp"]) > cutoff
         ]
-    
+
     def track_llm_call(
         self,
         input_tokens: int,
@@ -265,7 +264,7 @@ class EvidentlyMonitor:
             "prompt_type": prompt_type,
         }
         self.add_current_data(data)
-    
+
     def track_rag_query(
         self,
         query_length: int,
@@ -283,54 +282,54 @@ class EvidentlyMonitor:
             "collection": collection,
         }
         self.add_current_data(data)
-    
-    async def check_drift(self) -> Dict[str, Any]:
+
+    async def check_drift(self) -> dict[str, Any]:
         """
         Check for data drift between reference and current data.
-        
+
         Returns:
             Drift report with metrics and alerts
         """
         if not self._evidently_available:
             return {"error": "Evidently not installed"}
-        
+
         if len(self._reference_data) < 10 or len(self._current_data) < 10:
             return {"error": "Insufficient data for drift detection"}
-        
+
         try:
             import pandas as pd
-            
+
             # Convert to DataFrames
             ref_df = pd.DataFrame(self._reference_data)
             cur_df = pd.DataFrame(self._current_data)
-            
+
             # Remove timestamp column
             ref_df = ref_df.drop(columns=["_timestamp"], errors="ignore")
             cur_df = cur_df.drop(columns=["_timestamp"], errors="ignore")
-            
+
             # Select numeric columns only
             numeric_cols = ref_df.select_dtypes(include=["number"]).columns.tolist()
             ref_df = ref_df[numeric_cols]
             cur_df = cur_df[numeric_cols]
-            
+
             # Create drift report
             report = self._Report(metrics=[self._DataDriftPreset()])
             report.run(reference_data=ref_df, current_data=cur_df)
-            
+
             # Extract results
             result = report.as_dict()
-            
+
             # Check thresholds
             drift_detected = False
             drift_columns = []
-            
+
             for metric in result.get("metrics", []):
                 if metric.get("metric") == "DataDriftTable":
                     for col_data in metric.get("result", {}).get("drift_by_columns", {}).values():
                         if col_data.get("drift_detected"):
                             drift_detected = True
                             drift_columns.append(col_data.get("column_name"))
-            
+
             report_data = {
                 "timestamp": datetime.utcnow().isoformat(),
                 "drift_detected": drift_detected,
@@ -339,11 +338,11 @@ class EvidentlyMonitor:
                 "current_size": len(cur_df),
                 "details": result,
             }
-            
+
             # Save report
             self._save_report(report_data)
             self._last_check = datetime.utcnow()
-            
+
             # Log alert if drift detected
             if drift_detected:
                 logger.warning(
@@ -352,59 +351,59 @@ class EvidentlyMonitor:
                     reference_size=len(ref_df),
                     current_size=len(cur_df),
                 )
-            
+
             return report_data
-            
+
         except Exception as e:
             logger.error("drift_check_failed", error=str(e))
             return {"error": str(e)}
-    
-    def _save_report(self, report: Dict[str, Any]) -> None:
+
+    def _save_report(self, report: dict[str, Any]) -> None:
         """Save report to disk."""
         try:
             import json
-            
+
             timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
             filename = f"drift_report_{timestamp}.json"
             filepath = os.path.join(self.config.reports_dir, filename)
-            
+
             with open(filepath, "w") as f:
                 json.dump(report, f, indent=2, default=str)
-            
+
             self._reports.append({
                 "filename": filename,
                 "timestamp": timestamp,
                 "drift_detected": report.get("drift_detected", False),
             })
-            
+
             # Cleanup old reports
             self._cleanup_old_reports()
-            
+
         except Exception as e:
             logger.warning("report_save_failed", error=str(e))
-    
+
     def _cleanup_old_reports(self) -> None:
         """Remove reports older than retention period."""
         cutoff = datetime.utcnow() - timedelta(days=self.config.report_retention_days)
-        
+
         import os
         for filename in os.listdir(self.config.reports_dir):
             if not filename.startswith("drift_report_"):
                 continue
-            
+
             filepath = os.path.join(self.config.reports_dir, filename)
             try:
                 # Extract timestamp from filename
                 parts = filename.replace("drift_report_", "").replace(".json", "")
                 file_time = datetime.strptime(parts, "%Y%m%d_%H%M%S")
-                
+
                 if file_time < cutoff:
                     os.remove(filepath)
                     logger.debug("old_report_deleted", filename=filename)
             except Exception:
                 pass
-    
-    def get_statistics(self) -> Dict[str, Any]:
+
+    def get_statistics(self) -> dict[str, Any]:
         """Get monitoring statistics."""
         return {
             "enabled": self._evidently_available,
@@ -420,28 +419,28 @@ class EvidentlyMonitor:
         }
 
 
-def setup_evidently() -> Optional[EvidentlyMonitor]:
+def setup_evidently() -> EvidentlyMonitor | None:
     """
     Initialize Evidently monitor.
-    
+
     Returns:
         EvidentlyMonitor instance or None if disabled
     """
     global _evidently_monitor
-    
+
     config = get_observability_config().evidently
-    
+
     if not config.enabled:
         logger.info("evidently_disabled")
         return None
-    
+
     _evidently_monitor = EvidentlyMonitor(config)
     logger.info("evidently_initialized", reports_dir=config.reports_dir)
-    
+
     return _evidently_monitor
 
 
-def get_evidently_monitor() -> Optional[EvidentlyMonitor]:
+def get_evidently_monitor() -> EvidentlyMonitor | None:
     """Get the Evidently monitor."""
     return _evidently_monitor
 
@@ -450,10 +449,10 @@ def get_evidently_monitor() -> Optional[EvidentlyMonitor]:
 # UNIFIED OBSERVABILITY
 # =============================================================================
 
-async def setup_observability() -> Dict[str, bool]:
+async def setup_observability() -> dict[str, bool]:
     """
     Initialize all observability components.
-    
+
     Returns:
         Dict with component initialization status
     """
@@ -461,7 +460,7 @@ async def setup_observability() -> Dict[str, bool]:
         "langfuse": await setup_langfuse(),
         "evidently": setup_evidently() is not None,
     }
-    
+
     logger.info("observability_setup_complete", **results)
     return results
 
@@ -472,10 +471,10 @@ async def shutdown_observability() -> None:
     logger.info("observability_shutdown_complete")
 
 
-def get_observability_status() -> Dict[str, Any]:
+def get_observability_status() -> dict[str, Any]:
     """Get status of all observability components."""
     config = get_observability_config()
-    
+
     return {
         "langfuse": {
             "enabled": config.langfuse.enabled,

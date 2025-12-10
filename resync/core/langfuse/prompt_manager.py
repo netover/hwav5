@@ -21,10 +21,10 @@ import asyncio
 import json
 import logging
 from datetime import datetime
+from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-from enum import Enum
 
 import yaml
 from pydantic import BaseModel, Field
@@ -59,38 +59,38 @@ class PromptType(str, Enum):
 
 class PromptConfig(BaseModel):
     """Configuration for a single prompt."""
-    
+
     id: str = Field(..., description="Unique prompt identifier (e.g., 'tws-agent-v2')")
     name: str = Field(..., description="Human-readable name")
     type: PromptType = Field(default=PromptType.SYSTEM, description="Prompt type")
     version: str = Field(default="1.0.0", description="Semantic version")
-    
+
     # Content
     content: str = Field(..., description="Prompt template with {{variables}}")
     description: str = Field(default="", description="Prompt description/purpose")
-    
+
     # Metadata
-    model_hint: Optional[str] = Field(None, description="Recommended model for this prompt")
-    temperature_hint: Optional[float] = Field(None, ge=0, le=2, description="Recommended temperature")
-    max_tokens_hint: Optional[int] = Field(None, description="Recommended max tokens")
-    
+    model_hint: str | None = Field(None, description="Recommended model for this prompt")
+    temperature_hint: float | None = Field(None, ge=0, le=2, description="Recommended temperature")
+    max_tokens_hint: int | None = Field(None, description="Recommended max tokens")
+
     # Variables
-    variables: List[str] = Field(default_factory=list, description="Required variables in template")
-    default_values: Dict[str, str] = Field(default_factory=dict, description="Default values for variables")
-    
+    variables: list[str] = Field(default_factory=list, description="Required variables in template")
+    default_values: dict[str, str] = Field(default_factory=dict, description="Default values for variables")
+
     # Status
     is_active: bool = Field(default=True, description="Whether prompt is active")
     is_default: bool = Field(default=False, description="Whether this is the default for its type")
-    
+
     # Tracking
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     created_by: str = Field(default="system")
-    
+
     # A/B Testing
-    ab_test_group: Optional[str] = Field(None, description="A/B test group identifier")
+    ab_test_group: str | None = Field(None, description="A/B test group identifier")
     ab_test_weight: float = Field(default=1.0, ge=0, le=1, description="Weight for A/B selection")
-    
+
     class Config:
         json_encoders = {datetime: lambda v: v.isoformat()}
 
@@ -98,52 +98,52 @@ class PromptConfig(BaseModel):
 class PromptTemplate:
     """
     Compiled prompt template ready for use.
-    
+
     Usage:
         template = PromptTemplate(config)
         message = template.compile(user_name="John", context="TWS status")
     """
-    
+
     def __init__(self, config: PromptConfig):
         self.config = config
-        self._compiled_cache: Dict[str, str] = {}
-    
+        self._compiled_cache: dict[str, str] = {}
+
     def compile(self, **variables: str) -> str:
         """
         Compile the template with provided variables.
-        
+
         Args:
             **variables: Key-value pairs to substitute in template
-            
+
         Returns:
             Compiled prompt string
-            
+
         Raises:
             ValueError: If required variables are missing
         """
         # Merge with defaults
         final_vars = {**self.config.default_values, **variables}
-        
+
         # Check required variables
         missing = set(self.config.variables) - set(final_vars.keys())
         if missing:
             raise ValueError(f"Missing required variables: {missing}")
-        
+
         # Substitute variables (using {{var}} syntax)
         result = self.config.content
         for var_name, var_value in final_vars.items():
             result = result.replace(f"{{{{{var_name}}}}}", str(var_value))
-        
+
         return result
-    
-    def to_message(self, role: str = "system", **variables: str) -> Dict[str, str]:
+
+    def to_message(self, role: str = "system", **variables: str) -> dict[str, str]:
         """
         Create a chat message dictionary.
-        
+
         Args:
             role: Message role (system, user, assistant)
             **variables: Variables for template compilation
-            
+
         Returns:
             Dict with 'role' and 'content' keys
         """
@@ -151,17 +151,17 @@ class PromptTemplate:
             "role": role,
             "content": self.compile(**variables)
         }
-    
+
     @property
     def id(self) -> str:
         return self.config.id
-    
+
     @property
-    def model_hint(self) -> Optional[str]:
+    def model_hint(self) -> str | None:
         return self.config.model_hint
-    
+
     @property
-    def temperature_hint(self) -> Optional[float]:
+    def temperature_hint(self) -> float | None:
         return self.config.temperature_hint
 
 
@@ -172,50 +172,50 @@ class PromptTemplate:
 class PromptManager:
     """
     Centralized prompt management with LangFuse integration.
-    
+
     Features:
     - Load prompts from YAML files
     - Sync with LangFuse for cloud management
     - Version control and A/B testing
     - Runtime compilation with variables
     - Admin CRUD operations
-    
+
     The manager uses a tiered approach:
     1. Check LangFuse (if available and configured)
     2. Fall back to local YAML files
     3. Fall back to hardcoded defaults
     """
-    
-    _instance: Optional["PromptManager"] = None
+
+    _instance: PromptManager | None = None
     _initialized: bool = False
-    
-    def __new__(cls) -> "PromptManager":
+
+    def __new__(cls) -> PromptManager:
         """Singleton pattern."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
+
     def __init__(self):
         """Initialize the prompt manager."""
         if self._initialized:
             return
-        
-        self._prompts: Dict[str, PromptConfig] = {}
-        self._templates: Dict[str, PromptTemplate] = {}
-        self._langfuse_client: Optional[Langfuse] = None
+
+        self._prompts: dict[str, PromptConfig] = {}
+        self._templates: dict[str, PromptTemplate] = {}
+        self._langfuse_client: Langfuse | None = None
         self._lock = asyncio.Lock()
-        
+
         # Paths
         self._prompts_dir = Path(__file__).parent.parent.parent / "prompts"
         self._prompts_dir.mkdir(exist_ok=True)
-        
+
         self._initialized = True
         logger.info("prompt_manager_created")
-    
+
     async def initialize(self) -> None:
         """
         Initialize the prompt manager.
-        
+
         Loads prompts from:
         1. LangFuse (if configured)
         2. Local YAML files
@@ -233,20 +233,20 @@ class PromptManager:
                     logger.info("langfuse_client_initialized")
                 except Exception as e:
                     logger.warning("langfuse_init_failed", error=str(e))
-            
+
             # Load prompts
             await self._load_default_prompts()
             await self._load_yaml_prompts()
-            
+
             if self._langfuse_client:
                 await self._sync_from_langfuse()
-            
+
             logger.info(
                 "prompt_manager_initialized",
                 prompt_count=len(self._prompts),
                 langfuse_enabled=self._langfuse_client is not None
             )
-    
+
     def _should_use_langfuse(self) -> bool:
         """Check if LangFuse should be used."""
         return (
@@ -254,7 +254,7 @@ class PromptManager:
             getattr(settings, 'langfuse_public_key', None) and
             getattr(settings, 'langfuse_secret_key', None)
         )
-    
+
     async def _load_default_prompts(self) -> None:
         """Load hardcoded default prompts."""
         defaults = [
@@ -282,7 +282,7 @@ Se não tiver certeza sobre algo, indique claramente.""",
                 temperature_hint=0.7,
                 is_default=True,
             ),
-            
+
             PromptConfig(
                 id="tws-rag-system-v1",
                 name="TWS RAG System Prompt",
@@ -306,7 +306,7 @@ Instruções adicionais:
                 temperature_hint=0.3,
                 is_default=True,
             ),
-            
+
             PromptConfig(
                 id="intent-router-v1",
                 name="Intent Router Prompt",
@@ -331,7 +331,7 @@ Responda APENAS com o nome da categoria em maiúsculas.""",
                 max_tokens_hint=10,
                 is_default=True,
             ),
-            
+
             PromptConfig(
                 id="tws-status-report-v1",
                 name="TWS Status Report Prompt",
@@ -354,7 +354,7 @@ Seja conciso e priorize informações críticas.""",
                 default_values={"system_data": "{}"},
                 is_default=True,
             ),
-            
+
             PromptConfig(
                 id="tool-response-formatter-v1",
                 name="Tool Response Formatter",
@@ -372,27 +372,27 @@ Se houver erros, explique o que pode ter acontecido.""",
                 is_default=True,
             ),
         ]
-        
+
         for prompt in defaults:
             self._prompts[prompt.id] = prompt
             self._templates[prompt.id] = PromptTemplate(prompt)
-    
+
     async def _load_yaml_prompts(self) -> None:
         """Load prompts from YAML files."""
         if not self._prompts_dir.exists():
             return
-        
+
         for yaml_file in self._prompts_dir.glob("*.yaml"):
             try:
-                with open(yaml_file, "r", encoding="utf-8") as f:
+                with open(yaml_file, encoding="utf-8") as f:
                     data = yaml.safe_load(f)
-                
+
                 if not data:
                     continue
-                
+
                 # Handle single prompt or list of prompts
                 prompts_data = data if isinstance(data, list) else [data]
-                
+
                 for prompt_data in prompts_data:
                     try:
                         config = PromptConfig(**prompt_data)
@@ -401,65 +401,65 @@ Se houver erros, explique o que pode ter acontecido.""",
                         logger.debug("prompt_loaded_from_yaml", prompt_id=config.id, file=yaml_file.name)
                     except Exception as e:
                         logger.warning("invalid_prompt_in_yaml", file=yaml_file.name, error=str(e))
-                        
+
             except Exception as e:
                 logger.warning("yaml_load_failed", file=yaml_file.name, error=str(e))
-    
+
     async def _sync_from_langfuse(self) -> None:
         """Sync prompts from LangFuse."""
         if not self._langfuse_client:
             return
-        
+
         try:
             # Get all prompts from LangFuse
             # Note: This is a simplified implementation - actual LangFuse API may differ
             logger.info("syncing_prompts_from_langfuse")
-            
+
             # LangFuse SDK usage would go here
             # For now, we'll just log that we would sync
             logger.debug("langfuse_sync_placeholder")
-            
+
         except Exception as e:
             logger.warning("langfuse_sync_failed", error=str(e))
-    
+
     # =========================================================================
     # PUBLIC API
     # =========================================================================
-    
+
     async def get_prompt(
         self,
         prompt_id: str,
-        version: Optional[str] = None
-    ) -> Optional[PromptTemplate]:
+        version: str | None = None
+    ) -> PromptTemplate | None:
         """
         Get a prompt template by ID.
-        
+
         Args:
             prompt_id: The prompt identifier
             version: Optional specific version (defaults to latest)
-            
+
         Returns:
             PromptTemplate if found, None otherwise
         """
         # Try exact ID first
         if prompt_id in self._templates:
             return self._templates[prompt_id]
-        
+
         # Try with version suffix
         if version:
             versioned_id = f"{prompt_id}-v{version}"
             if versioned_id in self._templates:
                 return self._templates[versioned_id]
-        
+
         return None
-    
-    async def get_default_prompt(self, prompt_type: PromptType) -> Optional[PromptTemplate]:
+
+    async def get_default_prompt(self, prompt_type: PromptType) -> PromptTemplate | None:
         """
         Get the default prompt for a given type.
-        
+
         Args:
             prompt_type: The type of prompt to get
-            
+
         Returns:
             Default PromptTemplate for the type, or None
         """
@@ -467,19 +467,19 @@ Se houver erros, explique o que pode ter acontecido.""",
             if config.type == prompt_type and config.is_default and config.is_active:
                 return self._templates[config.id]
         return None
-    
+
     async def list_prompts(
         self,
-        prompt_type: Optional[PromptType] = None,
+        prompt_type: PromptType | None = None,
         active_only: bool = True
-    ) -> List[PromptConfig]:
+    ) -> list[PromptConfig]:
         """
         List all prompts, optionally filtered.
-        
+
         Args:
             prompt_type: Filter by type
             active_only: Only return active prompts
-            
+
         Returns:
             List of PromptConfig objects
         """
@@ -491,142 +491,142 @@ Se houver erros, explique o que pode ter acontecido.""",
                 continue
             result.append(config)
         return result
-    
+
     async def create_prompt(self, config: PromptConfig) -> PromptConfig:
         """
         Create a new prompt.
-        
+
         Args:
             config: The prompt configuration
-            
+
         Returns:
             The created PromptConfig
-            
+
         Raises:
             ValueError: If prompt ID already exists
         """
         if config.id in self._prompts:
             raise ValueError(f"Prompt '{config.id}' already exists")
-        
+
         config.created_at = datetime.utcnow()
         config.updated_at = datetime.utcnow()
-        
+
         self._prompts[config.id] = config
         self._templates[config.id] = PromptTemplate(config)
-        
+
         # Save to YAML
         await self._save_prompt_to_yaml(config)
-        
+
         # Sync to LangFuse
         if self._langfuse_client:
             await self._sync_prompt_to_langfuse(config)
-        
+
         logger.info("prompt_created", prompt_id=config.id)
         return config
-    
+
     async def update_prompt(
         self,
         prompt_id: str,
-        updates: Dict[str, Any]
-    ) -> Optional[PromptConfig]:
+        updates: dict[str, Any]
+    ) -> PromptConfig | None:
         """
         Update an existing prompt.
-        
+
         Args:
             prompt_id: The prompt to update
             updates: Dictionary of fields to update
-            
+
         Returns:
             Updated PromptConfig, or None if not found
         """
         if prompt_id not in self._prompts:
             return None
-        
+
         config = self._prompts[prompt_id]
-        
+
         # Apply updates
         for key, value in updates.items():
             if hasattr(config, key):
                 setattr(config, key, value)
-        
+
         config.updated_at = datetime.utcnow()
-        
+
         # Rebuild template
         self._templates[prompt_id] = PromptTemplate(config)
-        
+
         # Save to YAML
         await self._save_prompt_to_yaml(config)
-        
+
         # Sync to LangFuse
         if self._langfuse_client:
             await self._sync_prompt_to_langfuse(config)
-        
+
         logger.info("prompt_updated", prompt_id=prompt_id)
         return config
-    
+
     async def delete_prompt(self, prompt_id: str) -> bool:
         """
         Delete a prompt.
-        
+
         Args:
             prompt_id: The prompt to delete
-            
+
         Returns:
             True if deleted, False if not found
         """
         if prompt_id not in self._prompts:
             return False
-        
+
         del self._prompts[prompt_id]
         del self._templates[prompt_id]
-        
+
         # Remove from YAML
         yaml_file = self._prompts_dir / f"{prompt_id}.yaml"
         if yaml_file.exists():
             yaml_file.unlink()
-        
+
         logger.info("prompt_deleted", prompt_id=prompt_id)
         return True
-    
+
     async def _save_prompt_to_yaml(self, config: PromptConfig) -> None:
         """Save a prompt to its YAML file."""
         yaml_file = self._prompts_dir / f"{config.id}.yaml"
-        
+
         data = config.model_dump(mode='json')
-        
+
         with open(yaml_file, "w", encoding="utf-8") as f:
             yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
-    
+
     async def _sync_prompt_to_langfuse(self, config: PromptConfig) -> None:
         """Sync a prompt to LangFuse."""
         if not self._langfuse_client:
             return
-        
+
         try:
             # LangFuse SDK prompt creation would go here
             logger.debug("langfuse_prompt_sync", prompt_id=config.id)
         except Exception as e:
             logger.warning("langfuse_prompt_sync_failed", prompt_id=config.id, error=str(e))
-    
+
     # =========================================================================
     # A/B TESTING
     # =========================================================================
-    
+
     async def get_ab_test_prompt(
         self,
         base_prompt_id: str,
-        user_id: Optional[str] = None
-    ) -> Optional[PromptTemplate]:
+        user_id: str | None = None
+    ) -> PromptTemplate | None:
         """
         Get a prompt for A/B testing.
-        
+
         Uses consistent hashing based on user_id to ensure
         the same user always gets the same variant.
-        
+
         Args:
             base_prompt_id: Base prompt ID (e.g., 'tws-agent')
             user_id: User identifier for consistent assignment
-            
+
         Returns:
             Selected PromptTemplate
         """
@@ -635,23 +635,23 @@ Se houver erros, explique o que pode ter acontecido.""",
             config for config in self._prompts.values()
             if config.id.startswith(base_prompt_id) and config.is_active
         ]
-        
+
         if not variants:
             return None
-        
+
         if len(variants) == 1:
             return self._templates[variants[0].id]
-        
+
         # Select based on user_id hash
         if user_id:
             hash_value = hash(user_id) % 100
             cumulative_weight = 0
-            
+
             for variant in sorted(variants, key=lambda x: x.id):
                 cumulative_weight += variant.ab_test_weight * 100
                 if hash_value < cumulative_weight:
                     return self._templates[variant.id]
-        
+
         # Fallback to first active variant
         return self._templates[variants[0].id]
 
@@ -660,7 +660,7 @@ Se houver erros, explique o que pode ter acontecido.""",
 # SINGLETON ACCESS
 # =============================================================================
 
-_prompt_manager: Optional[PromptManager] = None
+_prompt_manager: PromptManager | None = None
 
 
 @lru_cache(maxsize=1)

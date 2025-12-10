@@ -3,16 +3,12 @@
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any
 
-from pydantic import field_validator, StringConstraints as PydanticStringConstraints, Field, ConfigDict
+from pydantic import ConfigDict, Field, field_validator
+from pydantic import StringConstraints as PydanticStringConstraints
 
-from .common import (
-    BaseValidatedModel,
-    NumericConstraints,
-    StringConstraints,
-    ValidationPatterns,  ValidationInfo)
-from typing_extensions import Annotated
+from .common import BaseValidatedModel, NumericConstraints, StringConstraints, ValidationPatterns
 
 
 class SortOrder(str, Enum):
@@ -87,7 +83,7 @@ class SearchParams(BaseValidatedModel):
         ..., description="Search query string"
     )
 
-    search_fields: Optional[List[str]] = Field(
+    search_fields: list[str] | None = Field(
         None, description="Specific fields to search in", max_length=10
     )
 
@@ -141,7 +137,7 @@ class SearchParams(BaseValidatedModel):
 class FilterParams(BaseValidatedModel):
     """Filter query parameters."""
 
-    filters: Optional[List[Dict[str, Any]]] = Field(
+    filters: list[dict[str, Any]] | None = Field(
         default_factory=list, description="List of filter conditions", max_length=20
     )
 
@@ -202,11 +198,11 @@ class FilterParams(BaseValidatedModel):
 class SortParams(BaseValidatedModel):
     """Sorting query parameters."""
 
-    sort_by: Optional[List[str]] = Field(
+    sort_by: list[str] | None = Field(
         default_factory=list, description="Fields to sort by", max_length=5
     )
 
-    sort_order: Optional[List[SortOrder]] = Field(
+    sort_order: list[SortOrder] | None = Field(
         default_factory=list, description="Sort order for each field", max_length=5
     )
 
@@ -241,11 +237,11 @@ class SortParams(BaseValidatedModel):
 class DateRangeParams(BaseValidatedModel):
     """Date range query parameters."""
 
-    start_date: Optional[datetime] = Field(
+    start_date: datetime | None = Field(
         None, description="Start date (ISO 8601 format)"
     )
 
-    end_date: Optional[datetime] = Field(None, description="End date (ISO 8601 format)")
+    end_date: datetime | None = Field(None, description="End date (ISO 8601 format)")
 
     date_field: str = Field(
         default="created_at",
@@ -269,31 +265,31 @@ class DateRangeParams(BaseValidatedModel):
 class AgentQueryParams(BaseValidatedModel):
     """Agent-specific query parameters."""
 
-    agent_id: Optional[StringConstraints.AGENT_ID] = Field(
+    agent_id: StringConstraints.AGENT_ID | None = Field(
         None, description="Filter by agent ID"
     )
 
-    name: Optional[Annotated[str, PydanticStringConstraints(min_length=1, max_length=100)]] = Field(
+    name: Annotated[str, PydanticStringConstraints(min_length=1, max_length=100)] | None = Field(
         None, description="Filter by agent name (partial match)"
     )
 
-    type: Optional[str] = Field(None, description="Filter by agent type")
+    type: str | None = Field(None, description="Filter by agent type")
 
-    status: Optional[str] = Field(None, description="Filter by agent status")
+    status: str | None = Field(None, description="Filter by agent status")
 
-    tools: Optional[List[str]] = Field(
+    tools: list[str] | None = Field(
         None, description="Filter by tools", max_length=10
     )
 
-    model_name: Optional[StringConstraints.MODEL_NAME] = Field(
+    model_name: StringConstraints.MODEL_NAME | None = Field(
         None, description="Filter by model name"
     )
 
-    memory_enabled: Optional[bool] = Field(None, description="Filter by memory setting")
+    memory_enabled: bool | None = Field(None, description="Filter by memory setting")
 
     include_inactive: bool = Field(default=False, description="Include inactive agents")
 
-    tags: Optional[List[Annotated[str, PydanticStringConstraints(min_length=1, max_length=50)]]] = Field(
+    tags: list[Annotated[str, PydanticStringConstraints(min_length=1, max_length=50)]] | None = Field(
         None, description="Filter by tags", max_length=5
     )
 
@@ -328,11 +324,11 @@ class AgentQueryParams(BaseValidatedModel):
 class SystemQueryParams(BaseValidatedModel):
     """System monitoring query parameters."""
 
-    metric_types: Optional[List[str]] = Field(
+    metric_types: list[str] | None = Field(
         None, description="Types of metrics to retrieve", max_length=10
     )
 
-    time_range: Optional[str] = Field(
+    time_range: str | None = Field(
         None, pattern=r"^(1h|6h|24h|7d|30d|90d)$", description="Time range for metrics"
     )
 
@@ -344,7 +340,7 @@ class SystemQueryParams(BaseValidatedModel):
 
     include_alerts: bool = Field(default=True, description="Include system alerts")
 
-    severity_filter: Optional[List[str]] = Field(
+    severity_filter: list[str] | None = Field(
         None, description="Filter by alert severity", max_length=3
     )
 
@@ -373,19 +369,19 @@ class AuditQueryParams(BaseValidatedModel):
         description="Audit status filter",
     )
 
-    query: Optional[Annotated[str, PydanticStringConstraints(min_length=1, max_length=200, strip_whitespace=True)]] = (
+    query: Annotated[str, PydanticStringConstraints(min_length=1, max_length=200, strip_whitespace=True)] | None = (
         Field(None, description="Search query")
     )
 
-    user_id: Optional[StringConstraints.SAFE_TEXT] = Field(
+    user_id: StringConstraints.SAFE_TEXT | None = Field(
         None, description="Filter by user ID"
     )
 
-    agent_id: Optional[StringConstraints.AGENT_ID] = Field(
+    agent_id: StringConstraints.AGENT_ID | None = Field(
         None, description="Filter by agent ID"
     )
 
-    severity: Optional[List[str]] = Field(
+    severity: list[str] | None = Field(
         None, description="Filter by severity levels", max_length=3
     )
 
@@ -405,23 +401,23 @@ class AuditQueryParams(BaseValidatedModel):
 class FileQueryParams(BaseValidatedModel):
     """File-related query parameters."""
 
-    file_types: Optional[List[str]] = Field(
+    file_types: list[str] | None = Field(
         None, description="Filter by file types", max_length=10
     )
 
-    size_min: Optional[int] = Field(
+    size_min: int | None = Field(
         None, ge=0, description="Minimum file size in bytes"
     )
 
-    size_max: Optional[int] = Field(
+    size_max: int | None = Field(
         None, ge=0, description="Maximum file size in bytes"
     )
 
-    uploaded_by: Optional[StringConstraints.SAFE_TEXT] = Field(
+    uploaded_by: StringConstraints.SAFE_TEXT | None = Field(
         None, description="Filter by uploader"
     )
 
-    status: Optional[str] = Field(None, description="Filter by file processing status")
+    status: str | None = Field(None, description="Filter by file processing status")
 
     model_config = ConfigDict(
         extra="forbid",
@@ -442,7 +438,7 @@ class FileQueryParams(BaseValidatedModel):
         if v:
             if isinstance(v, str) and ValidationPatterns.SCRIPT_PATTERN.search(v):
                 raise ValueError("Field contains potentially malicious content")
-            elif isinstance(v, list):
+            if isinstance(v, list):
                 for item in v:
                     if ValidationPatterns.SCRIPT_PATTERN.search(item):
                         raise ValueError(

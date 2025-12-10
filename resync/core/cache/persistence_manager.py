@@ -9,7 +9,7 @@ import json
 import logging
 import os
 from time import time
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class CachePersistenceManager:
             )
             raise
 
-    def create_backup_snapshot(self, cache_data: Dict[str, Any]) -> str:
+    def create_backup_snapshot(self, cache_data: dict[str, Any]) -> str:
         """
         Create a backup snapshot of cache state.
 
@@ -107,14 +107,14 @@ class CachePersistenceManager:
             )
             return filepath
 
-        except (IOError, OSError) as e:
+        except OSError as e:
             logger.error(f"Failed to write snapshot to {filepath}: {e}")
-            raise IOError(f"Failed to create snapshot: {e}")
+            raise OSError(f"Failed to create snapshot: {e}")
         except (TypeError, ValueError) as e:
             logger.error(f"Failed to serialize cache data: {e}")
             raise ValueError(f"Serialization failed: {e}")
 
-    def restore_from_snapshot(self, snapshot_path: str) -> Dict[str, Any]:
+    def restore_from_snapshot(self, snapshot_path: str) -> dict[str, Any]:
         """
         Restore cache data from a snapshot file.
 
@@ -138,12 +138,12 @@ class CachePersistenceManager:
 
         try:
             # Read and parse snapshot file
-            with open(snapshot_path, "r", encoding="utf-8") as f:
+            with open(snapshot_path, encoding="utf-8") as f:
                 snapshot = json.load(f)
 
-        except (IOError, OSError) as e:
+        except OSError as e:
             logger.error(f"Failed to read snapshot from {snapshot_path}: {e}")
-            raise IOError(f"Failed to read snapshot: {e}")
+            raise OSError(f"Failed to read snapshot: {e}")
         except (json.JSONDecodeError, ValueError) as e:
             logger.error(f"Failed to parse snapshot JSON from {snapshot_path}: {e}")
             raise ValueError(f"Invalid snapshot format: {e}")
@@ -200,7 +200,7 @@ class CachePersistenceManager:
         logger.info(f"Loaded snapshot from {snapshot_path}: {total_entries} entries")
         return snapshot
 
-    def list_snapshots(self) -> list[Dict[str, Any]]:
+    def list_snapshots(self) -> list[dict[str, Any]]:
         """
         List all available snapshots in the snapshot directory.
 
@@ -246,7 +246,7 @@ class CachePersistenceManager:
 
                     # Try to read metadata for total_entries
                     try:
-                        with open(filepath, "r", encoding="utf-8") as f:
+                        with open(filepath, encoding="utf-8") as f:
                             snapshot_data = json.load(f)
                         total_entries = snapshot_data.get("_metadata", {}).get(
                             "total_entries", 0

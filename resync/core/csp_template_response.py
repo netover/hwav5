@@ -1,6 +1,6 @@
 """Custom template response with CSP nonce support."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -18,11 +18,11 @@ class CSPTemplateResponse(HTMLResponse):
     def __init__(
         self,
         template_name: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         templates: Jinja2Templates,
         status_code: int = 200,
-        headers: Optional[Dict[str, str]] = None,
-        media_type: Optional[str] = None,
+        headers: dict[str, str] | None = None,
+        media_type: str | None = None,
         background=None,
     ):
         """
@@ -62,11 +62,11 @@ class CSPTemplateResponse(HTMLResponse):
 
 def create_csp_template_response(
     template_name: str,
-    context: Dict[str, Any],
+    context: dict[str, Any],
     templates: Jinja2Templates,
     status_code: int = 200,
-    headers: Optional[Dict[str, str]] = None,
-    media_type: Optional[str] = None,
+    headers: dict[str, str] | None = None,
+    media_type: str | None = None,
     background=None,
 ) -> CSPTemplateResponse:
     """

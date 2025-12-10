@@ -32,7 +32,7 @@ Audit:
     GET  /api/v1/admin/threshold-tuning/audit-log      - Get audit history
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -102,10 +102,10 @@ async def _get_manager():
 # =============================================================================
 
 @router.get("/status")
-async def get_status() -> Dict[str, Any]:
+async def get_status() -> dict[str, Any]:
     """
     Get full threshold tuning status.
-    
+
     Returns complete status including:
     - Current mode and parameters
     - All thresholds with bounds
@@ -124,7 +124,7 @@ async def get_status() -> Dict[str, Any]:
 # =============================================================================
 
 @router.get("/mode")
-async def get_mode() -> Dict[str, Any]:
+async def get_mode() -> dict[str, Any]:
     """Get current auto-tuning mode."""
     manager = await _get_manager()
     mode = await manager.get_mode()
@@ -136,10 +136,10 @@ async def get_mode() -> Dict[str, Any]:
 
 
 @router.put("/mode")
-async def set_mode(request: ModeRequest) -> Dict[str, Any]:
+async def set_mode(request: ModeRequest) -> dict[str, Any]:
     """
     Set auto-tuning mode.
-    
+
     Modes:
     - **off**: Static thresholds (default behavior)
     - **low**: Metrics collection + recommendations (Phase 1-2)
@@ -154,7 +154,7 @@ async def set_mode(request: ModeRequest) -> Dict[str, Any]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid mode: {request.mode}. Must be one of: off, low, mid, high"
         )
-    
+
     manager = await _get_manager()
     result = await manager.set_mode(mode, request.admin_user)
     return result
@@ -165,7 +165,7 @@ async def set_mode(request: ModeRequest) -> Dict[str, Any]:
 # =============================================================================
 
 @router.get("/thresholds")
-async def get_thresholds() -> Dict[str, Any]:
+async def get_thresholds() -> dict[str, Any]:
     """Get all threshold configurations."""
     manager = await _get_manager()
     thresholds = await manager.get_thresholds()
@@ -173,25 +173,25 @@ async def get_thresholds() -> Dict[str, Any]:
 
 
 @router.get("/thresholds/{name}")
-async def get_threshold(name: str) -> Dict[str, Any]:
+async def get_threshold(name: str) -> dict[str, Any]:
     """Get a specific threshold configuration."""
     manager = await _get_manager()
     threshold = await manager.get_threshold(name)
-    
+
     if not threshold:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Threshold not found: {name}"
         )
-    
+
     return {"status": "success", "threshold": threshold.to_dict()}
 
 
 @router.put("/thresholds/{name}")
-async def set_threshold(name: str, request: ThresholdRequest) -> Dict[str, Any]:
+async def set_threshold(name: str, request: ThresholdRequest) -> dict[str, Any]:
     """
     Set a threshold value.
-    
+
     The value will be clamped to the threshold's min/max bounds.
     """
     manager = await _get_manager()
@@ -201,18 +201,18 @@ async def set_threshold(name: str, request: ThresholdRequest) -> Dict[str, Any]:
         request.admin_user,
         request.reason,
     )
-    
+
     if result["status"] == "error":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=result["message"]
         )
-    
+
     return result
 
 
 @router.post("/reset")
-async def reset_to_defaults(request: ResetRequest) -> Dict[str, Any]:
+async def reset_to_defaults(request: ResetRequest) -> dict[str, Any]:
     """Reset all thresholds to default values."""
     manager = await _get_manager()
     result = await manager.reset_to_defaults(request.admin_user)
@@ -220,17 +220,17 @@ async def reset_to_defaults(request: ResetRequest) -> Dict[str, Any]:
 
 
 @router.post("/rollback")
-async def rollback_to_last_good(request: ResetRequest) -> Dict[str, Any]:
+async def rollback_to_last_good(request: ResetRequest) -> dict[str, Any]:
     """Rollback to last known good thresholds."""
     manager = await _get_manager()
     result = await manager.rollback_to_last_good(request.admin_user)
-    
+
     if result["status"] == "error":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=result["message"]
         )
-    
+
     return result
 
 
@@ -241,10 +241,10 @@ async def rollback_to_last_good(request: ResetRequest) -> Dict[str, Any]:
 @router.get("/metrics")
 async def get_metrics(
     days: int = Query(default=30, ge=1, le=365, description="Number of days to aggregate")
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get metrics summary for the specified period.
-    
+
     Returns aggregated metrics including:
     - Total evaluations
     - True/False Positives/Negatives
@@ -263,10 +263,10 @@ async def get_metrics(
 @router.get("/metrics/daily")
 async def get_daily_metrics(
     days: int = Query(default=30, ge=1, le=365, description="Number of days to retrieve")
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get daily metrics for charting.
-    
+
     Returns per-day metrics for visualization.
     """
     manager = await _get_manager()
@@ -283,7 +283,7 @@ async def get_daily_metrics(
 # =============================================================================
 
 @router.get("/recommendations")
-async def get_recommendations() -> Dict[str, Any]:
+async def get_recommendations() -> dict[str, Any]:
     """Get all pending recommendations."""
     manager = await _get_manager()
     recs = await manager.get_pending_recommendations()
@@ -291,10 +291,10 @@ async def get_recommendations() -> Dict[str, Any]:
 
 
 @router.post("/recommendations/generate")
-async def generate_recommendations() -> Dict[str, Any]:
+async def generate_recommendations() -> dict[str, Any]:
     """
     Generate new threshold recommendations.
-    
+
     Analyzes current metrics and generates recommendations
     for threshold adjustments.
     """
@@ -311,21 +311,21 @@ async def generate_recommendations() -> Dict[str, Any]:
 async def approve_recommendation(
     recommendation_id: int,
     request: ApprovalRequest,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Approve and apply a pending recommendation.
-    
+
     This will update the threshold to the recommended value.
     """
     manager = await _get_manager()
     result = await manager.approve_recommendation(recommendation_id, request.admin_user)
-    
+
     if result["status"] == "error":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=result["message"]
         )
-    
+
     return result
 
 
@@ -333,7 +333,7 @@ async def approve_recommendation(
 async def reject_recommendation(
     recommendation_id: int,
     request: ApprovalRequest,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Reject a pending recommendation."""
     manager = await _get_manager()
     result = await manager.reject_recommendation(
@@ -341,13 +341,13 @@ async def reject_recommendation(
         request.admin_user,
         request.reason,
     )
-    
+
     if result["status"] == "error":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=result["message"]
         )
-    
+
     return result
 
 
@@ -356,10 +356,10 @@ async def reject_recommendation(
 # =============================================================================
 
 @router.post("/auto-adjust")
-async def run_auto_adjustment() -> Dict[str, Any]:
+async def run_auto_adjustment() -> dict[str, Any]:
     """
     Manually trigger an auto-adjustment cycle.
-    
+
     Only works in MID or HIGH mode. Respects cooldowns and
     minimum data point requirements.
     """
@@ -369,31 +369,31 @@ async def run_auto_adjustment() -> Dict[str, Any]:
 
 
 @router.post("/circuit-breaker/reset")
-async def reset_circuit_breaker(request: ResetRequest) -> Dict[str, Any]:
+async def reset_circuit_breaker(request: ResetRequest) -> dict[str, Any]:
     """
     Reset the circuit breaker.
-    
+
     Establishes current metrics as the new baseline.
     Only available after cooldown period.
     """
     manager = await _get_manager()
     result = await manager.reset_circuit_breaker(request.admin_user)
-    
+
     if result["status"] == "error":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=result["message"]
         )
-    
+
     return result
 
 
 @router.get("/circuit-breaker/status")
-async def get_circuit_breaker_status() -> Dict[str, Any]:
+async def get_circuit_breaker_status() -> dict[str, Any]:
     """Get circuit breaker status."""
     manager = await _get_manager()
     status_data = await manager.get_full_status()
-    
+
     return {
         "status": "success",
         "circuit_breaker": {
@@ -412,11 +412,11 @@ async def get_circuit_breaker_status() -> Dict[str, Any]:
 @router.get("/audit-log")
 async def get_audit_log(
     limit: int = Query(default=50, ge=1, le=500, description="Maximum entries to return"),
-    threshold: Optional[str] = Query(default=None, description="Filter by threshold name"),
-) -> Dict[str, Any]:
+    threshold: str | None = Query(default=None, description="Filter by threshold name"),
+) -> dict[str, Any]:
     """
     Get audit log entries.
-    
+
     Returns history of all threshold changes and mode changes.
     """
     manager = await _get_manager()

@@ -11,7 +11,7 @@ Este módulo implementa um cache TTL assíncrono seguindo os princípios SOLID:
 
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import structlog
 
@@ -26,11 +26,11 @@ class CacheStorage(ABC):
     """Interface abstrata para armazenamento de cache."""
 
     @abstractmethod
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Recupera valor do storage."""
 
     @abstractmethod
-    async def set(self, key: str, value: Any, ttl: Optional[float] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: float | None = None) -> None:
         """Armazena valor no storage."""
 
     @abstractmethod
@@ -59,7 +59,7 @@ class InMemoryCacheStorage(CacheStorage):
         shard_id = hash(key) % self.num_shards
         return self.shards[shard_id], self.locks[shard_id]
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Recupera valor com verificação de TTL."""
         shard, lock = self._get_shard(key)
 
@@ -75,7 +75,7 @@ class InMemoryCacheStorage(CacheStorage):
             entry.touch()
             return entry.value
 
-    async def set(self, key: str, value: Any, ttl: Optional[float] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: float | None = None) -> None:
         """Armazena valor com TTL opcional."""
         shard, lock = self._get_shard(key)
 
@@ -115,7 +115,7 @@ class CacheTTLManager:
 
     def __init__(self, cleanup_interval: float = 60.0):
         self.cleanup_interval = cleanup_interval
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
         self._stop_cleanup = False
 
     async def start_cleanup_task(self, storage: CacheStorage) -> None:
@@ -216,9 +216,9 @@ class ImprovedAsyncCache:
 
     def __init__(
         self,
-        storage: Optional[CacheStorage] = None,
+        storage: CacheStorage | None = None,
         default_ttl: float = 3600,
-        max_size: Optional[int] = None,
+        max_size: int | None = None,
         cleanup_interval: float = 60.0,
         enable_metrics: bool = True,
     ):
@@ -249,7 +249,7 @@ class ImprovedAsyncCache:
         self._initialized = False
         logger.info("improved_cache_shutdown")
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Recupera valor do cache."""
         value = await self.storage.get(key)
 
@@ -261,7 +261,7 @@ class ImprovedAsyncCache:
 
         return value
 
-    async def set(self, key: str, value: Any, ttl: Optional[float] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: float | None = None) -> None:
         """Armazena valor no cache."""
         effective_ttl = ttl or self.default_ttl
         await self.storage.set(key, value, effective_ttl)

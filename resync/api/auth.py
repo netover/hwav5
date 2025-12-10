@@ -13,7 +13,7 @@ import hashlib
 import hmac
 import secrets
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 import jwt
 from fastapi import Depends, HTTPException, Request, status
@@ -45,7 +45,7 @@ class SecureAuthenticator:
 
     async def verify_credentials(
         self, username: str, password: str, request_ip: str
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """
         Verify credentials with:
         - Constant-time comparison
@@ -181,8 +181,8 @@ authenticator = SecureAuthenticator()
 
 def verify_admin_credentials(
     request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-) -> Optional[str]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> str | None:
     """
     Verify admin credentials for protected endpoints using JWT tokens.
     """
@@ -236,7 +236,7 @@ def verify_admin_credentials(
 
 
 def create_access_token(
-    data: dict[str, Any], expires_delta: Optional[timedelta] = None
+    data: dict[str, Any], expires_delta: timedelta | None = None
 ) -> str:
     """
     Create a new JWT access token.

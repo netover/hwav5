@@ -6,13 +6,14 @@ integrating with the new health checker architecture.
 """
 
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
 from resync.core.health_models import HealthCheckConfig
-from .health_config_manager import HealthCheckConfigurationManager
+
 from .health_checkers.health_checker_factory import HealthCheckerFactory
+from .health_config_manager import HealthCheckConfigurationManager
 
 logger = structlog.get_logger(__name__)
 
@@ -24,7 +25,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
     Provides comprehensive configuration management with health checker integration.
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """
         Initialize the enhanced configuration manager.
 
@@ -32,7 +33,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
             config: Base health check configuration
         """
         super().__init__(config)
-        self._checker_factory: Optional[HealthCheckerFactory] = None
+        self._checker_factory: HealthCheckerFactory | None = None
 
     def set_health_checker_factory(self, factory: HealthCheckerFactory) -> None:
         """
@@ -43,7 +44,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
         """
         self._checker_factory = factory
 
-    def get_checker_specific_config(self, component_name: str) -> Dict[str, Any]:
+    def get_checker_specific_config(self, component_name: str) -> dict[str, Any]:
         """
         Get configuration specific to a health checker component.
 
@@ -61,7 +62,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
         # Fallback to parent implementation
         return super().get_component_config(component_name)
 
-    def validate_all_checkers_config(self) -> Dict[str, List[str]]:
+    def validate_all_checkers_config(self) -> dict[str, list[str]]:
         """
         Validate configuration for all registered health checkers.
 
@@ -75,7 +76,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
 
     def get_component_thresholds_enhanced(
         self, component_name: str
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Get enhanced threshold values for a specific component.
 
@@ -101,7 +102,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
 
         return base_thresholds
 
-    def get_monitoring_intervals_enhanced(self) -> Dict[str, int]:
+    def get_monitoring_intervals_enhanced(self) -> dict[str, int]:
         """
         Get enhanced monitoring intervals including checker-specific intervals.
 
@@ -121,7 +122,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
 
         return base_intervals
 
-    def export_config_enhanced(self) -> Dict[str, Any]:
+    def export_config_enhanced(self) -> dict[str, Any]:
         """
         Export enhanced configuration including checker-specific settings.
 
@@ -152,7 +153,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
 
         return enhanced_export
 
-    def get_config_summary_enhanced(self) -> Dict[str, Any]:
+    def get_config_summary_enhanced(self) -> dict[str, Any]:
         """
         Get enhanced configuration summary.
 
@@ -179,7 +180,7 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
 
         return enhanced_summary
 
-    def optimize_config_for_performance(self) -> Dict[str, Any]:
+    def optimize_config_for_performance(self) -> dict[str, Any]:
         """
         Optimize configuration for better performance.
 

@@ -10,7 +10,7 @@ application only starts with valid configuration.
 import asyncio
 import os
 import time
-from typing import Dict, List, Optional, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -37,7 +37,7 @@ RECOMMENDED_ENV_VARS = {
 class ConfigurationValidationError(Exception):
     """Raised when configuration validation fails."""
 
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
+    def __init__(self, message: str, details: dict[str, Any] | None = None):
         self.message = message
         self.details = details or {}
         super().__init__(self.message)
@@ -45,7 +45,7 @@ class ConfigurationValidationError(Exception):
 class DependencyUnavailableError(Exception):
     """Raised when required dependencies are unavailable."""
 
-    def __init__(self, message: str, dependency: str, details: Optional[Dict[str, Any]] = None):
+    def __init__(self, message: str, dependency: str, details: dict[str, Any] | None = None):
         self.message = message
         self.dependency = dependency
         self.details = details or {}
@@ -54,12 +54,12 @@ class DependencyUnavailableError(Exception):
 class StartupError(Exception):
     """Raised for general startup errors."""
 
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
+    def __init__(self, message: str, details: dict[str, Any] | None = None):
         self.message = message
         self.details = details or {}
         super().__init__(self.message)
 
-def validate_environment_variables() -> Dict[str, str]:
+def validate_environment_variables() -> dict[str, str]:
     """
     Validate required environment variables are present and valid.
 
@@ -71,9 +71,9 @@ def validate_environment_variables() -> Dict[str, str]:
     """
     startup_logger.info("validating_environment_variables_started")
 
-    missing_vars: List[str] = []
-    invalid_vars: List[str] = []
-    validated_vars: Dict[str, str] = {}
+    missing_vars: list[str] = []
+    invalid_vars: list[str] = []
+    validated_vars: dict[str, str] = {}
 
     # Check required variables
     for component, vars_list in REQUIRED_ENV_VARS.items():
@@ -168,7 +168,9 @@ async def validate_redis_connection(max_retries: int = 3, timeout: float = 5.0) 
 
         try:
             # Import here to avoid circular dependencies
-            from redis.asyncio import Redis, ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
+            from redis.asyncio import ConnectionError as RedisConnectionError
+            from redis.asyncio import Redis
+            from redis.asyncio import TimeoutError as RedisTimeoutError
 
             client = Redis.from_url(redis_url, socket_connect_timeout=timeout, socket_timeout=timeout)
 
@@ -226,7 +228,7 @@ async def validate_redis_connection(max_retries: int = 3, timeout: float = 5.0) 
 
     return False
 
-def validate_tws_configuration() -> Dict[str, str]:
+def validate_tws_configuration() -> dict[str, str]:
     """
     Validate TWS configuration parameters.
 
@@ -293,7 +295,7 @@ def validate_tws_configuration() -> Dict[str, str]:
 
     return tws_config
 
-def validate_security_settings() -> Dict[str, str]:
+def validate_security_settings() -> dict[str, str]:
     """
     Validate security-related configuration.
 

@@ -4,7 +4,7 @@ User models for authentication.
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List
+
 from pydantic import BaseModel, Field
 
 
@@ -19,8 +19,8 @@ class UserRole(str, Enum):
 class UserBase(BaseModel):
     """Base user model with common fields."""
     username: str = Field(..., min_length=3, max_length=50)
-    email: Optional[str] = None
-    full_name: Optional[str] = None
+    email: str | None = None
+    full_name: str | None = None
     role: UserRole = UserRole.USER
     is_active: bool = True
 
@@ -32,11 +32,11 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     """Model for updating a user."""
-    email: Optional[str] = None
-    full_name: Optional[str] = None
-    role: Optional[UserRole] = None
-    is_active: Optional[bool] = None
-    password: Optional[str] = None
+    email: str | None = None
+    full_name: str | None = None
+    role: UserRole | None = None
+    is_active: bool | None = None
+    password: str | None = None
 
 
 class UserInDB(UserBase):
@@ -45,8 +45,8 @@ class UserInDB(UserBase):
     hashed_password: str
     created_at: datetime
     updated_at: datetime
-    last_login: Optional[datetime] = None
-    permissions: List[str] = []
+    last_login: datetime | None = None
+    permissions: list[str] = []
 
     class Config:
         from_attributes = True
@@ -56,7 +56,7 @@ class User(UserBase):
     """User model returned to clients (no password)."""
     id: str
     created_at: datetime
-    permissions: List[str] = []
+    permissions: list[str] = []
 
     class Config:
         from_attributes = True
@@ -74,5 +74,5 @@ class TokenPayload(BaseModel):
     sub: str  # User ID
     username: str
     role: str
-    permissions: List[str] = []
+    permissions: list[str] = []
     exp: datetime

@@ -1,0 +1,126 @@
+# Resync Agent Configuration
+# v5.3.2 - Dynamic agent configuration
+#
+# This file defines the AI agents available in the system.
+# Changes to this file are loaded automatically on startup.
+# To add a new agent, copy an existing block and modify the values.
+
+# Available agent types:
+#   - task: For executing specific tasks
+#   - chat: For conversational interactions
+#   - research: For information gathering
+#   - specialist: For domain-specific expertise
+
+# Available tools:
+#   - get_tws_status: Get current TWS workstation and job status
+#   - analyze_tws_failures: Analyze job failures and recommend solutions
+#   - query_knowledge_base: Search the RAG knowledge base
+#   - execute_tws_command: Execute TWS API commands (requires approval)
+
+agents:
+  # TWS Troubleshooting Specialist
+  - id: tws-troubleshooting
+    name: TWS Troubleshooting Agent
+    type: task
+    role: TWS Troubleshooting Specialist
+    goal: Help users identify and resolve TWS system issues
+    backstory: >
+      I am an expert AI assistant specialized in IBM Workload Automation (TWS) 
+      troubleshooting and system monitoring. I can analyze job failures, 
+      identify dependency issues, and recommend corrective actions.
+    tools:
+      - get_tws_status
+      - analyze_tws_failures
+      - query_knowledge_base
+    model: tongyi-deepresearch
+    temperature: 0.7
+    memory: true
+    verbose: false
+
+  # TWS General Assistant
+  - id: tws-general
+    name: TWS General Assistant
+    type: chat
+    role: TWS General Assistant
+    goal: Provide general assistance for TWS operations and monitoring
+    backstory: >
+      I am a helpful AI assistant for IBM Workload Automation (TWS) operations,
+      providing information about system status and job execution. I can answer
+      questions about TWS concepts, best practices, and operational procedures.
+    tools:
+      - get_tws_status
+      - query_knowledge_base
+    model: openrouter-fallback
+    temperature: 0.5
+    memory: true
+    verbose: false
+
+  # Job Analyst Agent
+  - id: job-analyst
+    name: Job Analyst Agent
+    type: specialist
+    role: Job Execution Analyst
+    goal: Analyze job execution patterns and performance metrics
+    backstory: >
+      I specialize in analyzing TWS job execution data, identifying patterns,
+      and providing insights about job performance, resource utilization,
+      and scheduling optimization opportunities.
+    tools:
+      - get_tws_status
+      - analyze_tws_failures
+      - query_knowledge_base
+    model: gpt-4o-mini
+    temperature: 0.3
+    memory: true
+    verbose: false
+
+  # Dependency Specialist Agent
+  - id: dependency-specialist
+    name: Dependency Specialist
+    type: specialist
+    role: Dependency Chain Analyzer
+    goal: Analyze and optimize job dependencies and scheduling chains
+    backstory: >
+      I am an expert in TWS job dependencies and scheduling chains. I can
+      trace dependency paths, identify circular dependencies, and recommend
+      scheduling optimizations to improve throughput.
+    tools:
+      - get_tws_status
+      - query_knowledge_base
+    model: claude-3-haiku-20240307
+    temperature: 0.4
+    memory: true
+    verbose: false
+
+  # Resource Specialist Agent
+  - id: resource-specialist
+    name: Resource Specialist
+    type: specialist
+    role: Resource Allocation Expert
+    goal: Monitor and optimize TWS resource allocation and capacity
+    backstory: >
+      I specialize in TWS resource management, including workstation capacity,
+      job slots, and resource contention. I can recommend optimal resource
+      allocation strategies and identify bottlenecks.
+    tools:
+      - get_tws_status
+      - query_knowledge_base
+    model: gpt-4o-mini
+    temperature: 0.4
+    memory: true
+    verbose: false
+
+# Model aliases for fallback configuration
+model_aliases:
+  tongyi-deepresearch: tongyi/qwen-plus
+  openrouter-fallback: openrouter/mistralai/mistral-7b-instruct
+  gpt-4o-mini: gpt-4o-mini
+  claude-3-haiku-20240307: claude-3-haiku-20240307
+
+# Default settings applied to all agents unless overridden
+defaults:
+  temperature: 0.5
+  memory: true
+  verbose: false
+  max_tokens: 4096
+  timeout_seconds: 30

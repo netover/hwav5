@@ -5,17 +5,16 @@ Provides dependency injection for FastAPI routes using PostgreSQL.
 """
 
 import logging
-from typing import AsyncGenerator, Optional
+from collections.abc import AsyncGenerator
 
-from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from resync.core.database import get_session, get_db_session
+from resync.core.database import get_db_session
 from resync.core.database.repositories import (
-    TWSStore,
     ContextStore,
-    MetricsStore,
     FeedbackStore,
+    MetricsStore,
+    TWSStore,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,10 +28,10 @@ async def get_database() -> AsyncGenerator[AsyncSession, None]:
 
 
 # Store Dependencies
-_tws_store: Optional[TWSStore] = None
-_context_store: Optional[ContextStore] = None
-_metrics_store: Optional[MetricsStore] = None
-_feedback_store: Optional[FeedbackStore] = None
+_tws_store: TWSStore | None = None
+_context_store: ContextStore | None = None
+_metrics_store: MetricsStore | None = None
+_feedback_store: FeedbackStore | None = None
 
 
 async def get_tws_store() -> TWSStore:
@@ -72,13 +71,13 @@ async def get_feedback_store() -> FeedbackStore:
 async def cleanup_dependencies():
     """Cleanup all store dependencies."""
     global _tws_store, _context_store, _metrics_store, _feedback_store
-    
+
     if _tws_store:
         await _tws_store.close()
         _tws_store = None
-    
+
     _context_store = None
     _metrics_store = None
     _feedback_store = None
-    
+
     logger.info("Dependencies cleaned up")

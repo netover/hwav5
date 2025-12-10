@@ -9,7 +9,7 @@ import asyncio
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -27,12 +27,12 @@ class PerformanceMetrics:
     """Performance metrics for TWS operations."""
 
     # API Performance
-    api_response_times: List[float] = field(default_factory=list)
-    api_error_rates: List[float] = field(default_factory=list)
+    api_response_times: list[float] = field(default_factory=list)
+    api_error_rates: list[float] = field(default_factory=list)
 
     # Cache Performance
-    cache_hit_ratios: List[float] = field(default_factory=list)
-    cache_miss_rates: List[float] = field(default_factory=list)
+    cache_hit_ratios: list[float] = field(default_factory=list)
+    cache_miss_rates: list[float] = field(default_factory=list)
 
     # LLM Usage
     llm_calls: int = 0
@@ -62,8 +62,8 @@ class Alert:
     message: str
     timestamp: datetime
     resolved: bool = False
-    resolution_time: Optional[datetime] = None
-    details: Dict[str, Any] = field(default_factory=dict)
+    resolution_time: datetime | None = None
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 class TWSMonitor:
@@ -76,11 +76,11 @@ class TWSMonitor:
             tws_client: TWS client for data collection
         """
         self.tws_client = tws_client
-        self.metrics_history: List[PerformanceMetrics] = []
-        self.alerts: List[Alert] = []
+        self.metrics_history: list[PerformanceMetrics] = []
+        self.alerts: list[Alert] = []
         self.alert_check_interval = 30  # seconds
         self._is_monitoring = False
-        self._monitoring_task: Optional[asyncio.Task] = None
+        self._monitoring_task: asyncio.Task | None = None
 
         # Alert thresholds
         self.alert_thresholds = {
@@ -193,7 +193,7 @@ class TWSMonitor:
         # For now, we'll return a simulated value
         return 0.85  # 85% hit ratio
 
-    async def _measure_llm_usage(self) -> Dict[str, Any]:
+    async def _measure_llm_usage(self) -> dict[str, Any]:
         """Measure LLM usage."""
         # This would typically access LLM metrics
         # For now, we'll return simulated values
@@ -317,7 +317,7 @@ class TWSMonitor:
             )
 
     async def monitor_job_status_change(
-        self, job_data: Dict[str, Any], instance_name: str
+        self, job_data: dict[str, Any], instance_name: str
     ) -> None:
         """Monitor job status changes and send notifications for configured statuses.
 
@@ -366,7 +366,7 @@ class TWSMonitor:
                 exc_info=True,
             )
 
-    def get_performance_report(self) -> Dict[str, Any]:
+    def get_performance_report(self) -> dict[str, Any]:
         """Get comprehensive performance report.
 
         Returns:
@@ -451,7 +451,7 @@ class TWSMonitor:
             logger.error("Error generating performance report", error=str(e))
             raise PerformanceError(f"Failed to generate performance report: {e}") from e
 
-    def get_alerts(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_alerts(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get recent alerts.
 
         Args:
@@ -481,7 +481,7 @@ class TWSMonitor:
 
 
 # Global TWS monitor instance
-_tws_monitor: Optional[TWSMonitor] = None
+_tws_monitor: TWSMonitor | None = None
 
 
 async def get_tws_monitor(tws_client: ITWSClient) -> TWSMonitor:
@@ -511,7 +511,7 @@ async def shutdown_tws_monitor() -> None:
 class TWSMonitorInterface:
     """Interface to provide synchronous access to the TWS monitor."""
 
-    def get_performance_report(self) -> Dict[str, Any]:
+    def get_performance_report(self) -> dict[str, Any]:
         """Get performance report. Requires async initialization."""
         if _tws_monitor is None:
             # Return a default/empty report if monitor is not initialized
@@ -530,7 +530,7 @@ class TWSMonitorInterface:
             }
         return _tws_monitor.get_performance_report()
 
-    def get_alerts(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_alerts(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get recent alerts. Requires async initialization."""
         if _tws_monitor is None:
             return []

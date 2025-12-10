@@ -17,7 +17,7 @@ import random
 import time
 import tracemalloc
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 import psutil
 
@@ -42,7 +42,7 @@ class StressTestMetrics:
     error_rate: float
     cpu_usage_percent: float
     memory_leaks_detected: int = 0
-    anomalies: List[str] = field(default_factory=list)
+    anomalies: list[str] = field(default_factory=list)
     performance_degradation: float = 0.0  # Percentage slowdown
 
 
@@ -66,9 +66,9 @@ class StressTester:
     def __init__(self):
         self.correlation_id = get_global_correlation_id()
         self._process = psutil.Process()
-        self.results: List[StressTestMetrics] = []
+        self.results: list[StressTestMetrics] = []
 
-    async def run_comprehensive_stress_suite(self) -> Dict[str, Any]:
+    async def run_comprehensive_stress_suite(self) -> dict[str, Any]:
         """
         Run comprehensive stress testing suite.
         """
@@ -162,7 +162,7 @@ class StressTester:
         finally:
             runtime_metrics.close_correlation_id(correlation_id)
 
-    async def _cache_stress_test(self) -> List[StressTestMetrics]:
+    async def _cache_stress_test(self) -> list[StressTestMetrics]:
         """Stress test the async cache under high load."""
         results = []
 
@@ -271,7 +271,7 @@ class StressTester:
             await cache.stop()
             runtime_metrics.close_correlation_id(correlation_id)
 
-    async def _agent_manager_stress_test(self) -> List[StressTestMetrics]:
+    async def _agent_manager_stress_test(self) -> list[StressTestMetrics]:
         """Stress test agent manager operations."""
         results = []
 
@@ -376,7 +376,7 @@ class StressTester:
         finally:
             runtime_metrics.close_correlation_id(correlation_id)
 
-    async def _audit_db_stress_test(self) -> List[StressTestMetrics]:
+    async def _audit_db_stress_test(self) -> list[StressTestMetrics]:
         """Stress test audit database operations."""
         results = []
 
@@ -491,7 +491,7 @@ class StressTester:
         finally:
             runtime_metrics.close_correlation_id(correlation_id)
 
-    async def _memory_leak_detection_test(self) -> List[StressTestMetrics]:
+    async def _memory_leak_detection_test(self) -> list[StressTestMetrics]:
         """Test for memory leaks across all components."""
         correlation_id = runtime_metrics.create_correlation_id(
             {"component": "stress_testing", "operation": "memory_leak_detection"}
@@ -551,7 +551,7 @@ class StressTester:
         finally:
             runtime_metrics.close_correlation_id(correlation_id)
 
-    async def _performance_degradation_test(self) -> List[StressTestMetrics]:
+    async def _performance_degradation_test(self) -> list[StressTestMetrics]:
         """Test for performance degradation over time."""
         correlation_id = runtime_metrics.create_correlation_id(
             {"component": "stress_testing", "operation": "performance_degradation"}
@@ -605,7 +605,7 @@ class StressTester:
 
     async def _measure_cache_performance(
         self, cache: AsyncTTLCache, phase: str
-    ) -> List[float]:
+    ) -> list[float]:
         """Measure cache operation latencies."""
         latencies = []
 
@@ -648,6 +648,6 @@ class StressTester:
 stress_tester = StressTester()
 
 
-async def run_stress_testing_suite() -> Dict[str, Any]:
+async def run_stress_testing_suite() -> dict[str, Any]:
     """Convenience function to run comprehensive stress testing."""
     return await stress_tester.run_comprehensive_stress_suite()

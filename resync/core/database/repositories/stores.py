@@ -6,30 +6,30 @@ PostgreSQL implementations for Context, Audit, Analytics, Learning, and Metrics 
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from sqlalchemy import select, func, and_, or_, text
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from .base import BaseRepository, TimestampedRepository
 from ..models import (
-    # Context
-    Conversation,
-    ContextContent,
+    ActiveLearningCandidate,
     # Audit
     AuditEntry,
     AuditQueueItem,
-    # Analytics
-    UserProfile,
-    SessionHistory,
+    ContextContent,
+    # Context
+    Conversation,
     # Learning
     Feedback,
     LearningThreshold,
-    ActiveLearningCandidate,
+    MetricAggregation,
     # Metrics
     MetricDataPoint,
-    MetricAggregation,
+    SessionHistory,
+    # Analytics
+    UserProfile,
 )
+from .base import BaseRepository, TimestampedRepository
 
 logger = logging.getLogger(__name__)
 
@@ -40,18 +40,18 @@ logger = logging.getLogger(__name__)
 
 class ConversationRepository(TimestampedRepository[Conversation]):
     """Repository for conversation history."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(Conversation, session_factory)
-    
+
     async def add_message(
         self,
         session_id: str,
         role: str,
         content: str,
-        user_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        embedding_id: Optional[str] = None
+        user_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        embedding_id: str | None = None
     ) -> Conversation:
         """Add a conversation message."""
         return await self.create(
@@ -62,12 +62,12 @@ class ConversationRepository(TimestampedRepository[Conversation]):
             metadata_=metadata or {},
             embedding_id=embedding_id
         )
-    
+
     async def get_session_history(
         self,
         session_id: str,
         limit: int = 100
-    ) -> List[Conversation]:
+    ) -> list[Conversation]:
         """Get conversation history for a session."""
         return await self.find(
             {"session_id": session_id},
@@ -75,12 +75,12 @@ class ConversationRepository(TimestampedRepository[Conversation]):
             order_by="timestamp",
             desc=False  # Chronological order
         )
-    
+
     async def search_conversations(
         self,
         query: str,
         limit: int = 50
-    ) -> List[Conversation]:
+    ) -> list[Conversation]:
         """Search conversations by content (full-text search)."""
         async with self._get_session() as session:
             # PostgreSQL full-text search
@@ -90,31 +90,31 @@ class ConversationRepository(TimestampedRepository[Conversation]):
                 ).order_by(Conversation.timestamp.desc()).limit(limit)
             )
             return list(result.scalars().all())
-    
-    async def flag_conversation(self, conv_id: int) -> Optional[Conversation]:
+
+    async def flag_conversation(self, conv_id: int) -> Conversation | None:
         """Flag a conversation for review."""
         return await self.update(conv_id, is_flagged=True, is_approved=False)
-    
-    async def approve_conversation(self, conv_id: int) -> Optional[Conversation]:
+
+    async def approve_conversation(self, conv_id: int) -> Conversation | None:
         """Approve a flagged conversation."""
         return await self.update(conv_id, is_approved=True)
 
 
 class ContextContentRepository(BaseRepository[ContextContent]):
     """Repository for context content."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(ContextContent, session_factory)
-    
+
     async def add_content(
         self,
         content_type: str,
         content: str,
-        title: Optional[str] = None,
-        source: Optional[str] = None,
-        summary: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        embedding_id: Optional[str] = None
+        title: str | None = None,
+        source: str | None = None,
+        summary: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        embedding_id: str | None = None
     ) -> ContextContent:
         """Add context content."""
         return await self.create(
@@ -126,13 +126,13 @@ class ContextContentRepository(BaseRepository[ContextContent]):
             metadata_=metadata or {},
             embedding_id=embedding_id
         )
-    
+
     async def search_content(
         self,
         query: str,
-        content_type: Optional[str] = None,
+        content_type: str | None = None,
         limit: int = 50
-    ) -> List[ContextContent]:
+    ) -> list[ContextContent]:
         """Search content."""
         async with self._get_session() as session:
             q = select(ContextContent).where(
@@ -144,10 +144,10 @@ class ContextContentRepository(BaseRepository[ContextContent]):
                     )
                 )
             )
-            
+
             if content_type:
                 q = q.where(ContextContent.content_type == content_type)
-            
+
             q = q.order_by(ContextContent.updated_at.desc()).limit(limit)
             result = await session.execute(q)
             return list(result.scalars().all())
@@ -155,11 +155,11 @@ class ContextContentRepository(BaseRepository[ContextContent]):
 
 class ContextStore:
     """Unified Context Store facade."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         self.conversations = ConversationRepository(session_factory)
         self.content = ContextContentRepository(session_factory)
-    
+
     async def add_conversation(
         self,
         session_id: str,
@@ -169,16 +169,16 @@ class ContextStore:
     ) -> Conversation:
         """Add a conversation message."""
         return await self.conversations.add_message(session_id, role, content, **kwargs)
-    
+
     async def get_relevant_context(
         self,
         query: str,
         limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get relevant context for a query."""
         convs = await self.conversations.search_conversations(query, limit=limit//2)
         content = await self.content.search_content(query, limit=limit//2)
-        
+
         results = []
         for c in convs:
             results.append({
@@ -194,7 +194,7 @@ class ContextStore:
                 "title": c.title,
                 "source": c.source
             })
-        
+
         return results
 
 
@@ -204,21 +204,21 @@ class ContextStore:
 
 class AuditEntryRepository(TimestampedRepository[AuditEntry]):
     """Repository for audit entries."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(AuditEntry, session_factory)
-    
+
     async def log_action(
         self,
         action: str,
-        user_id: Optional[str] = None,
-        entity_type: Optional[str] = None,
-        entity_id: Optional[str] = None,
-        old_value: Optional[Dict] = None,
-        new_value: Optional[Dict] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        metadata: Optional[Dict] = None
+        user_id: str | None = None,
+        entity_type: str | None = None,
+        entity_id: str | None = None,
+        old_value: dict | None = None,
+        new_value: dict | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        metadata: dict | None = None
     ) -> AuditEntry:
         """Log an audit action."""
         return await self.create(
@@ -232,12 +232,12 @@ class AuditEntryRepository(TimestampedRepository[AuditEntry]):
             user_agent=user_agent,
             metadata_=metadata
         )
-    
+
     async def get_user_actions(
         self,
         user_id: str,
         limit: int = 100
-    ) -> List[AuditEntry]:
+    ) -> list[AuditEntry]:
         """Get actions by user."""
         return await self.find(
             {"user_id": user_id},
@@ -245,13 +245,13 @@ class AuditEntryRepository(TimestampedRepository[AuditEntry]):
             order_by="timestamp",
             desc=True
         )
-    
+
     async def get_entity_history(
         self,
         entity_type: str,
         entity_id: str,
         limit: int = 100
-    ) -> List[AuditEntry]:
+    ) -> list[AuditEntry]:
         """Get audit history for an entity."""
         return await self.find(
             {"entity_type": entity_type, "entity_id": entity_id},
@@ -263,14 +263,14 @@ class AuditEntryRepository(TimestampedRepository[AuditEntry]):
 
 class AuditQueueRepository(BaseRepository[AuditQueueItem]):
     """Repository for audit queue."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(AuditQueueItem, session_factory)
-    
+
     async def enqueue(
         self,
         action: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         priority: int = 0
     ) -> AuditQueueItem:
         """Add item to queue."""
@@ -279,8 +279,8 @@ class AuditQueueRepository(BaseRepository[AuditQueueItem]):
             payload=payload,
             priority=priority
         )
-    
-    async def get_pending(self, limit: int = 10) -> List[AuditQueueItem]:
+
+    async def get_pending(self, limit: int = 10) -> list[AuditQueueItem]:
         """Get pending items ordered by priority."""
         async with self._get_session() as session:
             result = await session.execute(
@@ -293,24 +293,24 @@ class AuditQueueRepository(BaseRepository[AuditQueueItem]):
                 .limit(limit)
             )
             return list(result.scalars().all())
-    
-    async def mark_processing(self, item_id: int) -> Optional[AuditQueueItem]:
+
+    async def mark_processing(self, item_id: int) -> AuditQueueItem | None:
         """Mark item as processing."""
         return await self.update(item_id, status="processing")
-    
-    async def mark_completed(self, item_id: int) -> Optional[AuditQueueItem]:
+
+    async def mark_completed(self, item_id: int) -> AuditQueueItem | None:
         """Mark item as completed."""
         return await self.update(
             item_id,
             status="completed",
             completed_at=datetime.utcnow()
         )
-    
+
     async def mark_failed(
         self,
         item_id: int,
         error_message: str
-    ) -> Optional[AuditQueueItem]:
+    ) -> AuditQueueItem | None:
         """Mark item as failed."""
         async with self._get_session() as session:
             item = await session.get(AuditQueueItem, item_id)
@@ -332,17 +332,17 @@ class AuditQueueRepository(BaseRepository[AuditQueueItem]):
 
 class UserProfileRepository(BaseRepository[UserProfile]):
     """Repository for user profiles."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(UserProfile, session_factory)
-    
+
     async def get_or_create(self, user_id: str) -> UserProfile:
         """Get existing profile or create new one."""
         profile = await self.find_one({"user_id": user_id})
         if not profile:
             profile = await self.create(user_id=user_id)
         return profile
-    
+
     async def update_activity(
         self,
         user_id: str,
@@ -351,19 +351,19 @@ class UserProfileRepository(BaseRepository[UserProfile]):
     ) -> UserProfile:
         """Update user activity stats."""
         profile = await self.get_or_create(user_id)
-        
+
         updates = {"last_active": datetime.utcnow()}
         if increment_sessions:
             updates["total_sessions"] = profile.total_sessions + 1
         if increment_queries:
             updates["total_queries"] = profile.total_queries + 1
-        
+
         return await self.update(profile.id, **updates)
-    
+
     async def update_preferences(
         self,
         user_id: str,
-        preferences: Dict[str, Any]
+        preferences: dict[str, Any]
     ) -> UserProfile:
         """Update user preferences."""
         profile = await self.get_or_create(user_id)
@@ -374,10 +374,10 @@ class UserProfileRepository(BaseRepository[UserProfile]):
 
 class SessionHistoryRepository(TimestampedRepository[SessionHistory]):
     """Repository for session history."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(SessionHistory, session_factory)
-    
+
     async def start_session(
         self,
         session_id: str,
@@ -388,8 +388,8 @@ class SessionHistoryRepository(TimestampedRepository[SessionHistory]):
             session_id=session_id,
             user_id=user_id
         )
-    
-    async def end_session(self, session_id: str) -> Optional[SessionHistory]:
+
+    async def end_session(self, session_id: str) -> SessionHistory | None:
         """End a session."""
         session = await self.find_one({"session_id": session_id})
         if session:
@@ -401,8 +401,8 @@ class SessionHistoryRepository(TimestampedRepository[SessionHistory]):
                 duration_seconds=duration
             )
         return None
-    
-    async def increment_queries(self, session_id: str) -> Optional[SessionHistory]:
+
+    async def increment_queries(self, session_id: str) -> SessionHistory | None:
         """Increment query count for session."""
         session = await self.find_one({"session_id": session_id})
         if session:
@@ -415,8 +415,8 @@ class SessionHistoryRepository(TimestampedRepository[SessionHistory]):
 
 class UserBehaviorStore:
     """Unified User Behavior Store facade."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         self.profiles = UserProfileRepository(session_factory)
         self.sessions = SessionHistoryRepository(session_factory)
 
@@ -427,20 +427,20 @@ class UserBehaviorStore:
 
 class FeedbackRepository(TimestampedRepository[Feedback]):
     """Repository for feedback."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(Feedback, session_factory)
-    
+
     async def add_feedback(
         self,
         session_id: str,
-        rating: Optional[int] = None,
+        rating: int | None = None,
         feedback_type: str = "general",
-        feedback_text: Optional[str] = None,
-        query_text: Optional[str] = None,
-        response_text: Optional[str] = None,
-        is_positive: Optional[bool] = None,
-        metadata: Optional[Dict] = None
+        feedback_text: str | None = None,
+        query_text: str | None = None,
+        response_text: str | None = None,
+        is_positive: bool | None = None,
+        metadata: dict | None = None
     ) -> Feedback:
         """Add feedback."""
         return await self.create(
@@ -453,8 +453,8 @@ class FeedbackRepository(TimestampedRepository[Feedback]):
             is_positive=is_positive,
             metadata_=metadata
         )
-    
-    async def get_positive_examples(self, limit: int = 100) -> List[Feedback]:
+
+    async def get_positive_examples(self, limit: int = 100) -> list[Feedback]:
         """Get positive feedback examples."""
         async with self._get_session() as session:
             result = await session.execute(
@@ -466,8 +466,8 @@ class FeedbackRepository(TimestampedRepository[Feedback]):
                 ).order_by(Feedback.created_at.desc()).limit(limit)
             )
             return list(result.scalars().all())
-    
-    async def get_negative_examples(self, limit: int = 100) -> List[Feedback]:
+
+    async def get_negative_examples(self, limit: int = 100) -> list[Feedback]:
         """Get negative feedback examples."""
         async with self._get_session() as session:
             result = await session.execute(
@@ -483,15 +483,15 @@ class FeedbackRepository(TimestampedRepository[Feedback]):
 
 class LearningThresholdRepository(BaseRepository[LearningThreshold]):
     """Repository for learning thresholds."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(LearningThreshold, session_factory)
-    
-    async def get_threshold(self, name: str) -> Optional[float]:
+
+    async def get_threshold(self, name: str) -> float | None:
         """Get threshold value by name."""
         threshold = await self.find_one({"threshold_name": name})
         return threshold.current_value if threshold else None
-    
+
     async def set_threshold(
         self,
         name: str,
@@ -509,34 +509,33 @@ class LearningThresholdRepository(BaseRepository[LearningThreshold]):
                 "new_value": value,
                 "timestamp": datetime.utcnow().isoformat()
             })
-            
+
             return await self.update(
                 threshold.id,
                 current_value=value,
                 last_adjusted=datetime.utcnow(),
                 adjustment_history=history
             )
-        else:
-            return await self.create(
-                threshold_name=name,
-                current_value=value,
-                min_value=min_value,
-                max_value=max_value
-            )
+        return await self.create(
+            threshold_name=name,
+            current_value=value,
+            min_value=min_value,
+            max_value=max_value
+        )
 
 
 class ActiveLearningRepository(BaseRepository[ActiveLearningCandidate]):
     """Repository for active learning candidates."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(ActiveLearningCandidate, session_factory)
-    
+
     async def add_candidate(
         self,
         query_text: str,
         uncertainty_score: float,
-        response_text: Optional[str] = None,
-        metadata: Optional[Dict] = None
+        response_text: str | None = None,
+        metadata: dict | None = None
     ) -> ActiveLearningCandidate:
         """Add a candidate for review."""
         return await self.create(
@@ -545,11 +544,11 @@ class ActiveLearningRepository(BaseRepository[ActiveLearningCandidate]):
             response_text=response_text,
             metadata_=metadata
         )
-    
+
     async def get_top_candidates(
         self,
         limit: int = 10
-    ) -> List[ActiveLearningCandidate]:
+    ) -> list[ActiveLearningCandidate]:
         """Get top uncertain candidates for review."""
         async with self._get_session() as session:
             result = await session.execute(
@@ -559,13 +558,13 @@ class ActiveLearningRepository(BaseRepository[ActiveLearningCandidate]):
                 .limit(limit)
             )
             return list(result.scalars().all())
-    
+
     async def review_candidate(
         self,
         candidate_id: int,
         selected_label: str,
         reviewer_id: str
-    ) -> Optional[ActiveLearningCandidate]:
+    ) -> ActiveLearningCandidate | None:
         """Mark candidate as reviewed."""
         return await self.update(
             candidate_id,
@@ -578,8 +577,8 @@ class ActiveLearningRepository(BaseRepository[ActiveLearningCandidate]):
 
 class FeedbackStore:
     """Unified Feedback/Learning Store facade."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         self.feedback = FeedbackRepository(session_factory)
         self.thresholds = LearningThresholdRepository(session_factory)
         self.active_learning = ActiveLearningRepository(session_factory)
@@ -591,16 +590,16 @@ class FeedbackStore:
 
 class MetricDataPointRepository(TimestampedRepository[MetricDataPoint]):
     """Repository for metric data points."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(MetricDataPoint, session_factory)
-    
+
     async def record_metric(
         self,
         metric_name: str,
         value: float,
-        unit: Optional[str] = None,
-        tags: Optional[Dict[str, str]] = None
+        unit: str | None = None,
+        tags: dict[str, str] | None = None
     ) -> MetricDataPoint:
         """Record a metric data point."""
         return await self.create(
@@ -609,25 +608,25 @@ class MetricDataPointRepository(TimestampedRepository[MetricDataPoint]):
             unit=unit,
             tags=tags
         )
-    
+
     async def get_metric_values(
         self,
         metric_name: str,
         start: datetime,
         end: datetime
-    ) -> List[MetricDataPoint]:
+    ) -> list[MetricDataPoint]:
         """Get metric values in time range."""
         return await self.find_in_range(
             start, end,
             filters={"metric_name": metric_name}
         )
-    
+
     async def get_metric_stats(
         self,
         metric_name: str,
         start: datetime,
         end: datetime
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Get aggregate stats for a metric."""
         async with self._get_session() as session:
             result = await session.execute(
@@ -659,18 +658,18 @@ class MetricDataPointRepository(TimestampedRepository[MetricDataPoint]):
 
 class MetricAggregationRepository(BaseRepository[MetricAggregation]):
     """Repository for pre-aggregated metrics."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         super().__init__(MetricAggregation, session_factory)
 
 
 class MetricsStore:
     """Unified Metrics Store facade."""
-    
-    def __init__(self, session_factory: Optional[async_sessionmaker] = None):
+
+    def __init__(self, session_factory: async_sessionmaker | None = None):
         self.data_points = MetricDataPointRepository(session_factory)
         self.aggregations = MetricAggregationRepository(session_factory)
-    
+
     async def record(
         self,
         metric_name: str,
@@ -679,13 +678,13 @@ class MetricsStore:
     ) -> MetricDataPoint:
         """Record a metric."""
         return await self.data_points.record_metric(metric_name, value, **kwargs)
-    
+
     async def query(
         self,
         metric_name: str,
         start: datetime,
         end: datetime
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Query metric data."""
         points = await self.data_points.get_metric_values(metric_name, start, end)
         return [
@@ -696,7 +695,7 @@ class MetricsStore:
             }
             for p in points
         ]
-    
+
     async def cleanup(self, days: int = 30) -> int:
         """Clean up old metrics."""
         cutoff = datetime.utcnow() - timedelta(days=days)

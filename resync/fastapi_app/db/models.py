@@ -6,10 +6,8 @@ Compatible with PostgreSQL (recommended) and SQLite (development).
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List
-from sqlalchemy import String, Boolean, DateTime, Text, Integer
-from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import JSONB
+
+from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from resync.core.database.engine import Base
@@ -26,19 +24,19 @@ class UserRole(str, Enum):
 class User(Base):
     """
     User model for authentication.
-    
+
     Optimized for PostgreSQL with proper indexes and JSON support.
     """
-    
+
     __tablename__ = "users"
-    
+
     # Primary key - UUID string for better distribution
     id: Mapped[str] = mapped_column(
         String(36),
         primary_key=True,
         index=True,
     )
-    
+
     # Authentication
     username: Mapped[str] = mapped_column(
         String(100),
@@ -56,13 +54,13 @@ class User(Base):
         String(255),
         nullable=False,
     )
-    
+
     # Profile
-    full_name: Mapped[Optional[str]] = mapped_column(
+    full_name: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
     )
-    
+
     # Status
     is_active: Mapped[bool] = mapped_column(
         Boolean,
@@ -73,21 +71,21 @@ class User(Base):
         Boolean,
         default=False,
     )
-    
+
     # Role and permissions
     role: Mapped[str] = mapped_column(
         String(20),
         default=UserRole.USER.value,
         index=True,  # Index for role-based queries
     )
-    
+
     # Use Text for JSON to support both PostgreSQL and SQLite
     # In PostgreSQL, you can change this to JSONB for better performance
-    permissions_json: Mapped[Optional[str]] = mapped_column(
+    permissions_json: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
-    
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -99,35 +97,35 @@ class User(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
     )
-    last_login: Mapped[Optional[datetime]] = mapped_column(
+    last_login: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
     )
-    
+
     # Security
     failed_login_attempts: Mapped[int] = mapped_column(
         Integer,
         default=0,
     )
-    locked_until: Mapped[Optional[datetime]] = mapped_column(
+    locked_until: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
     )
-    
+
     @property
-    def permissions(self) -> List[str]:
+    def permissions(self) -> list[str]:
         """Get permissions as list."""
         if self.permissions_json:
             import json
             return json.loads(self.permissions_json)
         return []
-    
+
     @permissions.setter
-    def permissions(self, value: List[str]):
+    def permissions(self, value: list[str]):
         """Set permissions from list."""
         import json
         self.permissions_json = json.dumps(value) if value else None
-    
+
     def to_dict(self) -> dict:
         """Convert to dictionary."""
         return {
@@ -143,8 +141,8 @@ class User(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "last_login": self.last_login.isoformat() if self.last_login else None,
         }
-    
-    def get_permissions(self) -> List[str]:
+
+    def get_permissions(self) -> list[str]:
         """Get user permissions based on role."""
         role_permissions = {
             UserRole.ADMIN.value: ["read", "write", "delete", "admin", "manage_users"],
@@ -152,12 +150,12 @@ class User(Base):
             UserRole.USER.value: ["read", "write"],
             UserRole.VIEWER.value: ["read"],
         }
-        
+
         base_perms = role_permissions.get(self.role, [])
         custom_perms = self.permissions or []
-        
+
         return list(set(base_perms + custom_perms))
-    
+
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username={self.username}, role={self.role})>"
 
@@ -165,68 +163,68 @@ class User(Base):
 class AuditLog(Base):
     """
     Audit log for tracking user actions.
-    
+
     Stores all important actions for compliance and debugging.
     """
-    
+
     __tablename__ = "audit_logs"
-    
+
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
         autoincrement=True,
     )
-    
+
     # Who
-    user_id: Mapped[Optional[str]] = mapped_column(
+    user_id: Mapped[str | None] = mapped_column(
         String(36),
         index=True,
         nullable=True,
     )
-    username: Mapped[Optional[str]] = mapped_column(
+    username: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
     )
-    
+
     # What
     action: Mapped[str] = mapped_column(
         String(100),
         index=True,
         nullable=False,
     )
-    resource_type: Mapped[Optional[str]] = mapped_column(
+    resource_type: Mapped[str | None] = mapped_column(
         String(100),
         index=True,
         nullable=True,
     )
-    resource_id: Mapped[Optional[str]] = mapped_column(
+    resource_id: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
     )
-    
+
     # Details (JSON as text for compatibility)
-    details_json: Mapped[Optional[str]] = mapped_column(
+    details_json: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
-    
+
     # When
     timestamp: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
         index=True,
     )
-    
+
     # Context
-    ip_address: Mapped[Optional[str]] = mapped_column(
+    ip_address: Mapped[str | None] = mapped_column(
         String(45),  # IPv6 max length
         nullable=True,
     )
-    user_agent: Mapped[Optional[str]] = mapped_column(
+    user_agent: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
     )
-    
+
     @property
     def details(self) -> dict:
         """Get details as dict."""
@@ -234,13 +232,13 @@ class AuditLog(Base):
             import json
             return json.loads(self.details_json)
         return {}
-    
+
     @details.setter
     def details(self, value: dict):
         """Set details from dict."""
         import json
         self.details_json = json.dumps(value) if value else None
-    
+
     def to_dict(self) -> dict:
         """Convert to dictionary."""
         return {

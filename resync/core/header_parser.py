@@ -1,12 +1,11 @@
 import re
-from typing import Dict, Optional
 
 
 class CSPParser:
     """Parser for Content Security Policy headers."""
 
     @staticmethod
-    def parse(csp_header: str) -> Dict[str, list]:
+    def parse(csp_header: str) -> dict[str, list]:
         """Parse CSP header into directives and values."""
         directives = {}
         if not csp_header:
@@ -55,14 +54,14 @@ class SecurityHeaderParser:
     """Parser for security headers."""
 
     @staticmethod
-    def parse_x_frame_options(header_value: str) -> Optional[str]:
+    def parse_x_frame_options(header_value: str) -> str | None:
         """Parse X-Frame-Options header."""
         if not header_value:
             return None
         return header_value.strip().upper()
 
     @staticmethod
-    def parse_x_xss_protection(header_value: str) -> Optional[dict]:
+    def parse_x_xss_protection(header_value: str) -> dict | None:
         """Parse X-XSS-Protection header."""
         if not header_value:
             return None

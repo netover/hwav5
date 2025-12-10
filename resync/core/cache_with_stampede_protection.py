@@ -1,9 +1,10 @@
 
 import asyncio
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from resync.core.structured_logger import get_logger
 
@@ -43,14 +44,14 @@ class CacheConfig:
 class CacheWithStampedeProtection(Generic[T]):
     """Cache implementation with stampede protection."""
 
-    def __init__(self, config: Optional[CacheConfig] = None):
+    def __init__(self, config: CacheConfig | None = None):
         self.config = config or CacheConfig()
-        self._cache: Dict[str, CacheEntry] = {}
-        self._loading: Dict[str, asyncio.Event] = {}
+        self._cache: dict[str, CacheEntry] = {}
+        self._loading: dict[str, asyncio.Event] = {}
         self._lock = asyncio.Lock()
 
     async def get(
-        self, key: str, loader: Callable[[], T], ttl: Optional[int] = None
+        self, key: str, loader: Callable[[], T], ttl: int | None = None
     ) -> T:
         """Get value from cache or load it with stampede protection."""
 
@@ -67,8 +68,7 @@ class CacheWithStampedeProtection(Generic[T]):
         # Implement stampede protection
         if self.config.stampede_protection_level != StampedeProtectionLevel.NONE:
             return await self._get_with_stampede_protection(key, loader, expiry)
-        else:
-            return await self._get_without_protection(key, loader, expiry)
+        return await self._get_without_protection(key, loader, expiry)
 
     async def _get_with_stampede_protection(
         self, key: str, loader: Callable[[], T], expiry: float
@@ -155,7 +155,7 @@ class CacheWithStampedeProtection(Generic[T]):
             self._cache.clear()
             self._loading.clear()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
 
         current_time = time.time()

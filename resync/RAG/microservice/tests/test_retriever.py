@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from resync.RAG.microservice.core.retriever import RagRetriever
-from resync.RAG.microservice.core.interfaces import Embedder, VectorStore
 from resync.RAG.microservice.core.config import CFG
+from resync.RAG.microservice.core.interfaces import Embedder, VectorStore
+from resync.RAG.microservice.core.retriever import RagRetriever
 
 
 @pytest.fixture

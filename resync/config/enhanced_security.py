@@ -3,7 +3,6 @@ Enhanced security configuration for Resync application with production-ready set
 """
 
 import logging
-from typing import List, Optional
 
 from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -33,10 +32,10 @@ class EnhancedSecurityMiddleware(BaseHTTPMiddleware):
         enable_content_type_options: bool = True,
         enable_frame_options: bool = True,
         strict_transport_security_max_age: int = 31536000,  # 1 year
-        content_security_policy: Optional[str] = None,
+        content_security_policy: str | None = None,
         referrer_policy: str = "strict-origin-when-cross-origin",
-        permissions_policy: Optional[str] = None,
-        feature_policy: Optional[str] = None,
+        permissions_policy: str | None = None,
+        feature_policy: str | None = None,
     ):
         """
         Initialize enhanced security middleware.
@@ -243,7 +242,7 @@ class EnhancedSecurityMiddleware(BaseHTTPMiddleware):
 
 def configure_enhanced_security(
     app: FastAPI,
-    security_middleware_config: Optional[dict] = None,
+    security_middleware_config: dict | None = None,
 ) -> None:
     """
     Configure enhanced security for the FastAPI application.
@@ -314,7 +313,7 @@ SECURITY_HEADERS_CHECKLIST = [
 ]
 
 
-def validate_security_headers(response_headers: dict) -> List[str]:
+def validate_security_headers(response_headers: dict) -> list[str]:
     """
     Validate that all recommended security headers are present.
 

@@ -10,7 +10,7 @@ a simplified and consistent API.
 import asyncio
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -51,7 +51,7 @@ class HealthServiceFacade:
     - HealthMonitoringSubject: Observer pattern coordination
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """
         Initialize the health service facade.
 
@@ -70,7 +70,7 @@ class HealthServiceFacade:
         self.monitoring_coordinator = HealthMonitoringCoordinator(self.config)
 
         # Initialize observers
-        self._default_observers: List[HealthMonitorObserver] = [
+        self._default_observers: list[HealthMonitorObserver] = [
             LoggingHealthObserver(),
             AlertingHealthObserver(),
             MetricsHealthObserver(),
@@ -249,7 +249,7 @@ class HealthServiceFacade:
 
     async def get_component_health(
         self, component_name: str
-    ) -> Optional[ComponentHealth]:
+    ) -> ComponentHealth | None:
         """
         Get health status for a specific component.
 
@@ -338,8 +338,8 @@ class HealthServiceFacade:
             return False
 
     async def get_health_history(
-        self, hours: int = 24, max_entries: Optional[int] = None
-    ) -> List[HealthStatusHistory]:
+        self, hours: int = 24, max_entries: int | None = None
+    ) -> list[HealthStatusHistory]:
         """
         Get health status history.
 
@@ -362,7 +362,7 @@ class HealthServiceFacade:
         """Update health check configuration."""
         self.config_manager.update_config(**kwargs)
 
-    def get_service_status(self) -> Dict[str, Any]:
+    def get_service_status(self) -> dict[str, Any]:
         """Get status of all facade-managed services."""
         return {
             "initialized": self._initialized,
@@ -372,7 +372,7 @@ class HealthServiceFacade:
             "service_manager_status": self.service_manager.get_service_status(),
         }
 
-    def get_metrics_summary(self) -> Dict[str, Any]:
+    def get_metrics_summary(self) -> dict[str, Any]:
         """Get metrics summary from all observers."""
         # Find the metrics observer and get its summary
         for observer in self._default_observers:

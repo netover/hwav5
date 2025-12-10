@@ -14,14 +14,14 @@ This module provides intelligent service discovery capabilities including:
 
 
 import asyncio
+import random
 import socket
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
-import random
+from typing import Any
 
 import aiohttp
 
@@ -75,8 +75,8 @@ class ServiceInstance:
     status: ServiceStatus = ServiceStatus.UNKNOWN
 
     # Metadata
-    tags: Set[str] = field(default_factory=set)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tags: set[str] = field(default_factory=set)
+    metadata: dict[str, Any] = field(default_factory=dict)
     weight: int = 1
 
     # Health and performance
@@ -117,10 +117,9 @@ class ServiceInstance:
                 base_score -= min(20, self.consecutive_failures * 5)
 
             return max(0.0, base_score)
-        elif self.status == ServiceStatus.MAINTENANCE:
+        if self.status == ServiceStatus.MAINTENANCE:
             return 50.0  # Reduced but still available
-        else:
-            return 0.0
+        return 0.0
 
 
 @dataclass
@@ -152,7 +151,7 @@ class ServiceDefinition:
     instance_ttl: int = 60  # seconds
 
     # Custom configuration
-    backend_config: Dict[str, Any] = field(default_factory=dict)
+    backend_config: dict[str, Any] = field(default_factory=dict)
 
 
 class DiscoveryBackendInterface(ABC):
@@ -169,7 +168,7 @@ class DiscoveryBackendInterface(ABC):
         """Deregister a service instance."""
 
     @abstractmethod
-    async def discover_services(self, service_name: str) -> List[ServiceInstance]:
+    async def discover_services(self, service_name: str) -> list[ServiceInstance]:
         """Discover all instances of a service."""
 
     @abstractmethod
@@ -184,10 +183,10 @@ class DiscoveryBackendInterface(ABC):
 class ConsulBackend(DiscoveryBackendInterface):
     """Consul service discovery backend."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.consul_url = config.get("url", "http://localhost:8500")
         self.acl_token = config.get("acl_token")
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
 
     async def _ensure_session(self) -> None:
         """Ensure HTTP session exists."""
@@ -243,7 +242,7 @@ class ConsulBackend(DiscoveryBackendInterface):
             logger.error(f"Consul deregistration failed: {e}")
             return False
 
-    async def discover_services(self, service_name: str) -> List[ServiceInstance]:
+    async def discover_services(self, service_name: str) -> list[ServiceInstance]:
         """Discover services from Consul."""
         await self._ensure_session()
 
@@ -307,16 +306,16 @@ class ConsulBackend(DiscoveryBackendInterface):
 class KubernetesBackend(DiscoveryBackendInterface):
     """Kubernetes service discovery backend."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.api_server = config.get("api_server", "https://kubernetes.default.svc")
         self.token = config.get("token", self._get_service_account_token())
         self.namespace = config.get("namespace", "default")
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
 
     def _get_service_account_token(self) -> str:
         """Get service account token from Kubernetes."""
         try:
-            with open("/var/run/secrets/kubernetes.io/serviceaccount/token", "r") as f:
+            with open("/var/run/secrets/kubernetes.io/serviceaccount/token") as f:
                 return f.read().strip()
         except FileNotFoundError:
             return ""
@@ -343,7 +342,7 @@ class KubernetesBackend(DiscoveryBackendInterface):
         logger.info(f"Kubernetes deregistration for {service_name}")
         return True
 
-    async def discover_services(self, service_name: str) -> List[ServiceInstance]:
+    async def discover_services(self, service_name: str) -> list[ServiceInstance]:
         """Discover services from Kubernetes."""
         await self._ensure_session()
 
@@ -410,27 +409,27 @@ class ServiceDiscoveryManager:
     - Metrics and observability
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
 
         # Service management
-        self.services: Dict[str, ServiceDefinition] = {}
-        self.instances: Dict[str, List[ServiceInstance]] = defaultdict(list)
-        self.local_instances: Dict[str, ServiceInstance] = {}
+        self.services: dict[str, ServiceDefinition] = {}
+        self.instances: dict[str, list[ServiceInstance]] = defaultdict(list)
+        self.local_instances: dict[str, ServiceInstance] = {}
 
         # Backend management
-        self.backends: Dict[str, DiscoveryBackendInterface] = {}
-        self.default_backend: Optional[DiscoveryBackend] = None
+        self.backends: dict[str, DiscoveryBackendInterface] = {}
+        self.default_backend: DiscoveryBackend | None = None
 
         # Load balancing state
-        self.round_robin_index: Dict[str, int] = defaultdict(int)
-        self.connection_counts: Dict[str, int] = defaultdict(int)
+        self.round_robin_index: dict[str, int] = defaultdict(int)
+        self.connection_counts: dict[str, int] = defaultdict(int)
 
         # Health monitoring
-        self.health_check_failures: Dict[str, int] = defaultdict(int)
+        self.health_check_failures: dict[str, int] = defaultdict(int)
 
         # Metrics
-        self.metrics: Dict[str, Any] = {
+        self.metrics: dict[str, Any] = {
             "services_registered": 0,
             "instances_discovered": 0,
             "health_checks_performed": 0,
@@ -439,9 +438,9 @@ class ServiceDiscoveryManager:
         }
 
         # Background tasks
-        self._discovery_task: Optional[asyncio.Task] = None
-        self._health_monitor_task: Optional[asyncio.Task] = None
-        self._metrics_task: Optional[asyncio.Task] = None
+        self._discovery_task: asyncio.Task | None = None
+        self._health_monitor_task: asyncio.Task | None = None
+        self._metrics_task: asyncio.Task | None = None
         self._running = False
 
         # Initialize backends
@@ -502,7 +501,7 @@ class ServiceDiscoveryManager:
         logger.info("Service discovery manager stopped")
 
     async def register_service(
-        self, service_def: ServiceDefinition, instance: Optional[ServiceInstance] = None
+        self, service_def: ServiceDefinition, instance: ServiceInstance | None = None
     ) -> str:
         """Register a service."""
         # Generate instance if not provided
@@ -559,8 +558,8 @@ class ServiceDiscoveryManager:
         return False
 
     async def discover_service(
-        self, service_name: str, strategy: Optional[LoadBalancingStrategy] = None
-    ) -> Optional[ServiceInstance]:
+        self, service_name: str, strategy: LoadBalancingStrategy | None = None
+    ) -> ServiceInstance | None:
         """Discover and select a service instance using load balancing."""
         instances = await self.get_service_instances(service_name)
         healthy_instances = [inst for inst in instances if inst.is_healthy]
@@ -584,7 +583,7 @@ class ServiceDiscoveryManager:
 
         return selected_instance
 
-    async def get_service_instances(self, service_name: str) -> List[ServiceInstance]:
+    async def get_service_instances(self, service_name: str) -> list[ServiceInstance]:
         """Get all instances of a service."""
         # Check cache first
         if service_name in self.instances:
@@ -613,8 +612,8 @@ class ServiceDiscoveryManager:
         return []
 
     async def _select_instance(
-        self, instances: List[ServiceInstance], strategy: LoadBalancingStrategy
-    ) -> Optional[ServiceInstance]:
+        self, instances: list[ServiceInstance], strategy: LoadBalancingStrategy
+    ) -> ServiceInstance | None:
         """Select instance using specified load balancing strategy."""
         if not instances:
             return None
@@ -625,16 +624,16 @@ class ServiceDiscoveryManager:
             self.round_robin_index[service_key] = (index + 1) % len(instances)
             return instances[index]
 
-        elif strategy == LoadBalancingStrategy.RANDOM:
+        if strategy == LoadBalancingStrategy.RANDOM:
             return random.choice(instances)
 
-        elif strategy == LoadBalancingStrategy.LEAST_CONNECTIONS:
+        if strategy == LoadBalancingStrategy.LEAST_CONNECTIONS:
             return min(
                 instances,
                 key=lambda inst: self.connection_counts.get(inst.instance_id, 0),
             )
 
-        elif strategy == LoadBalancingStrategy.WEIGHTED_RANDOM:
+        if strategy == LoadBalancingStrategy.WEIGHTED_RANDOM:
             total_weight = sum(inst.weight for inst in instances)
             if total_weight == 0:
                 return random.choice(instances)
@@ -767,7 +766,7 @@ class ServiceDiscoveryManager:
             except Exception as e:
                 logger.error(f"Metrics worker error: {e}")
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive service discovery metrics."""
         return {
             "services": {
@@ -802,7 +801,7 @@ class ServiceDiscoveryManager:
             },
         }
 
-    def get_service_health(self, service_name: str) -> Dict[str, Any]:
+    def get_service_health(self, service_name: str) -> dict[str, Any]:
         """Get detailed health information for a service."""
         instances = self.instances.get(service_name, [])
 

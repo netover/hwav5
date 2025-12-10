@@ -30,7 +30,14 @@ ignore = [
 ]
 
 [lint.per-file-ignores]
-"resync/core/__init__.py" = ["F401"]         # Barrel module - re-exports
-"resync/core/health/__init__.py" = ["F401"]  # Barrel module - re-exports
-"resync/RAG/microservice/core/__init__.py" = ["F401"]
-"resync/core/knowledge_graph/__init__.py" = ["F401"]
+# Barrel modules - re-exports are intentional
+"**/__init__.py" = ["F401", "F403"]  # Allow unused imports and star imports in init files
+# Test files - mock imports may not all be used
+"tests/**/*.py" = ["F401"]
+# Files with conditional imports (try/except for availability checks)
+"resync/RAG/microservice/core/document_parser.py" = ["F401"]  # pypdf, bs4 availability checks
+"resync/RAG/microservice/core/embedding_service.py" = ["F401"]  # litellm availability check
+"resync/core/langfuse/*.py" = ["F401"]  # langfuse availability checks
+"resync/core/specialists/agents.py" = ["F401"]  # agno availability check
+"resync/core/pools/redis_pool.py" = ["F401"]  # redis availability check
+"resync/core/file_ingestor.py" = ["F401"]  # xlrd, bs4 availability checks

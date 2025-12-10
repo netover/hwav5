@@ -7,7 +7,7 @@ an authenticated operator role by default.
 """
 
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 
@@ -43,7 +43,7 @@ async def engine_info(
 
 @router.get("/engine/config", summary="Get engine configuration")
 async def engine_config(
-    key: Optional[str] = Query(None),
+    key: str | None = Query(None),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Retrieve the engine configuration. Optionally filter by key."""
@@ -68,9 +68,9 @@ async def list_groups(
 
 @router.get("/model/jobdefinition", summary="Query job definitions")
 async def query_jobdefinitions(
-    q: Optional[str] = Query(None),
-    folder: Optional[str] = Query(None),
-    limit: Optional[int] = Query(50, ge=1, le=1000),
+    q: str | None = Query(None),
+    folder: str | None = Query(None),
+    limit: int | None = Query(50, ge=1, le=1000),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Search job definitions with optional query, folder and limit."""
@@ -88,9 +88,9 @@ async def get_jobdefinition(
 
 @router.get("/model/jobstream", summary="Query job streams")
 async def query_jobstreams(
-    q: Optional[str] = Query(None),
-    folder: Optional[str] = Query(None),
-    limit: Optional[int] = Query(50, ge=1, le=1000),
+    q: str | None = Query(None),
+    folder: str | None = Query(None),
+    limit: int | None = Query(50, ge=1, le=1000),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Search job streams with optional query, folder and limit."""
@@ -108,8 +108,8 @@ async def get_jobstream(
 
 @router.get("/model/workstation", summary="Query workstations")
 async def query_workstations(
-    q: Optional[str] = Query(None),
-    limit: Optional[int] = Query(50, ge=1, le=1000),
+    q: str | None = Query(None),
+    limit: int | None = Query(50, ge=1, le=1000),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Search workstations with optional query and limit."""
@@ -130,10 +130,10 @@ async def get_workstation(
 # -------------------------------------------------------------------------
 @router.get("/plan/current/job", summary="List current plan jobs")
 async def list_current_plan_jobs(
-    q: Optional[str] = Query(None),
-    folder: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    limit: Optional[int] = Query(50, ge=1, le=1000),
+    q: str | None = Query(None),
+    folder: str | None = Query(None),
+    status: str | None = Query(None),
+    limit: int | None = Query(50, ge=1, le=1000),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """
@@ -184,7 +184,7 @@ async def get_current_plan_job(
 )
 async def get_current_plan_job_predecessors(
     job_id: str,
-    depth: Optional[int] = Query(None, ge=1, le=5),
+    depth: int | None = Query(None, ge=1, le=5),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Return the predecessors of a job in the current plan."""
@@ -197,7 +197,7 @@ async def get_current_plan_job_predecessors(
 )
 async def get_current_plan_job_successors(
     job_id: str,
-    depth: Optional[int] = Query(None, ge=1, le=5),
+    depth: int | None = Query(None, ge=1, le=5),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Return the successors of a job in the current plan."""
@@ -233,9 +233,9 @@ async def get_current_plan_job_model_description(
 # -------------------------------------------------------------------------
 @router.get("/plan/current/jobstream", summary="List current plan job streams")
 async def list_current_plan_jobstreams(
-    q: Optional[str] = Query(None),
-    folder: Optional[str] = Query(None),
-    limit: Optional[int] = Query(50, ge=1, le=1000),
+    q: str | None = Query(None),
+    folder: str | None = Query(None),
+    limit: int | None = Query(50, ge=1, le=1000),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """List or search job streams in the current plan."""
@@ -271,7 +271,7 @@ async def get_current_plan_jobstream(
 )
 async def get_current_plan_jobstream_predecessors(
     jobstream_id: str,
-    depth: Optional[int] = Query(None, ge=1, le=5),
+    depth: int | None = Query(None, ge=1, le=5),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Return the predecessors of a job stream in the current plan."""
@@ -286,7 +286,7 @@ async def get_current_plan_jobstream_predecessors(
 )
 async def get_current_plan_jobstream_successors(
     jobstream_id: str,
-    depth: Optional[int] = Query(None, ge=1, le=5),
+    depth: int | None = Query(None, ge=1, le=5),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """Return the successors of a job stream in the current plan."""
@@ -314,8 +314,8 @@ async def get_current_plan_jobstream_model_description(
 # -------------------------------------------------------------------------
 @router.get("/plan/current/resource", summary="List current plan resources")
 async def list_current_plan_resources(
-    q: Optional[str] = Query(None),
-    limit: Optional[int] = Query(50, ge=1, le=1000),
+    q: str | None = Query(None),
+    limit: int | None = Query(50, ge=1, le=1000),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """List or search resources in the current plan."""
@@ -339,7 +339,7 @@ async def get_current_plan_resource(
     summary="Count objects in a plan folder",
 )
 async def current_plan_folder_objects_count(
-    folder: Optional[str] = Query(None),
+    folder: str | None = Query(None),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """
@@ -357,8 +357,8 @@ async def current_plan_folder_objects_count(
     summary="List consumed job runs in current plan",
 )
 async def list_consumed_jobs_runs(
-    job_name: Optional[str] = Query(None),
-    limit: Optional[int] = Query(50, ge=1, le=1000),
+    job_name: str | None = Query(None),
+    limit: int | None = Query(50, ge=1, le=1000),
     client: OptimizedTWSClient = Depends(get_client),
 ) -> Any:
     """

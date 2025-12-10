@@ -9,12 +9,13 @@ Provides endpoints for managing external connections:
 - Notification channels
 """
 
-from typing import Dict, List, Optional, Any
+import logging
 from enum import Enum
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -45,23 +46,23 @@ class ConnectorCreate(BaseModel):
     """Model for creating a connector."""
     name: str = Field(..., min_length=1, max_length=100)
     type: ConnectorType
-    host: Optional[str] = None
-    port: Optional[int] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
-    config: Dict[str, Any] = Field(default_factory=dict)
+    host: str | None = None
+    port: int | None = None
+    username: str | None = None
+    password: str | None = None
+    config: dict[str, Any] = Field(default_factory=dict)
     enabled: bool = True
 
 
 class ConnectorUpdate(BaseModel):
     """Model for updating a connector."""
-    name: Optional[str] = None
-    host: Optional[str] = None
-    port: Optional[int] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
-    config: Optional[Dict[str, Any]] = None
-    enabled: Optional[bool] = None
+    name: str | None = None
+    host: str | None = None
+    port: int | None = None
+    username: str | None = None
+    password: str | None = None
+    config: dict[str, Any] | None = None
+    enabled: bool | None = None
 
 
 class ConnectorResponse(BaseModel):
@@ -69,12 +70,12 @@ class ConnectorResponse(BaseModel):
     id: str
     name: str
     type: str
-    host: Optional[str]
-    port: Optional[int]
+    host: str | None
+    port: int | None
     enabled: bool
     status: str
-    last_check: Optional[str]
-    error_message: Optional[str]
+    last_check: str | None
+    error_message: str | None
 
 
 class ConnectorTest(BaseModel):
@@ -117,20 +118,20 @@ _connectors = {
 }
 
 
-@router.get("/connectors", response_model=List[ConnectorResponse], tags=["Admin Connectors"])
+@router.get("/connectors", response_model=list[ConnectorResponse], tags=["Admin Connectors"])
 async def list_connectors(
-    type_filter: Optional[ConnectorType] = None,
+    type_filter: ConnectorType | None = None,
     enabled_only: bool = False,
 ):
     """List all connectors."""
     connectors = list(_connectors.values())
-    
+
     if type_filter:
         connectors = [c for c in connectors if c["type"] == type_filter.value]
-    
+
     if enabled_only:
         connectors = [c for c in connectors if c.get("enabled", True)]
-    
+
     return connectors
 
 
@@ -138,16 +139,16 @@ async def list_connectors(
 async def create_connector(connector: ConnectorCreate):
     """Create a new connector."""
     import uuid
-    
+
     # Check for duplicate name
     if any(c["name"] == connector.name for c in _connectors.values()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Connector with this name already exists",
         )
-    
+
     connector_id = str(uuid.uuid4())
-    
+
     new_connector = {
         "id": connector_id,
         "name": connector.name,
@@ -161,14 +162,14 @@ async def create_connector(connector: ConnectorCreate):
         "error_message": None,
         "config": connector.config,
     }
-    
+
     # Don't store password in response
     if connector.password:
         new_connector["config"]["has_password"] = True
-    
+
     _connectors[connector_id] = new_connector
     logger.info(f"Connector created: {connector.name}")
-    
+
     return ConnectorResponse(**new_connector)
 
 
@@ -180,7 +181,7 @@ async def get_connector(connector_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Connector not found",
         )
-    
+
     return ConnectorResponse(**_connectors[connector_id])
 
 
@@ -192,15 +193,15 @@ async def update_connector(connector_id: str, update: ConnectorUpdate):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Connector not found",
         )
-    
+
     connector = _connectors[connector_id]
-    
+
     for field, value in update.dict(exclude_unset=True).items():
         if field == "config" and value:
             connector["config"].update(value)
         else:
             connector[field] = value
-    
+
     logger.info(f"Connector updated: {connector['name']}")
     return ConnectorResponse(**connector)
 
@@ -213,7 +214,7 @@ async def delete_connector(connector_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Connector not found",
         )
-    
+
     name = _connectors[connector_id]["name"]
     del _connectors[connector_id]
     logger.info(f"Connector deleted: {name}")
@@ -223,50 +224,50 @@ async def delete_connector(connector_id: str):
 async def test_connector(connector_id: str, test: ConnectorTest):
     """Test a connector connection."""
     from datetime import datetime
-    
+
     if connector_id not in _connectors:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Connector not found",
         )
-    
+
     connector = _connectors[connector_id]
     connector["last_check"] = datetime.utcnow().isoformat()
-    
+
     # Simulate connection test based on type
     try:
         connector_type = connector["type"]
-        
+
         if connector_type == "tws":
             # Would test TWS connection here
             connector["status"] = "connected"
             connector["error_message"] = None
-            
+
         elif connector_type == "redis":
             # Would test Redis connection here
             connector["status"] = "connected"
             connector["error_message"] = None
-            
+
         elif connector_type == "database":
             # Would test database connection here
             connector["status"] = "connected"
             connector["error_message"] = None
-            
+
         else:
             connector["status"] = "connected"
             connector["error_message"] = None
-        
+
         return {
             "success": True,
             "status": connector["status"],
             "latency_ms": 45,  # Would measure actual latency
             "message": "Connection successful",
         }
-        
+
     except Exception as e:
         connector["status"] = "error"
         connector["error_message"] = str(e)
-        
+
         return {
             "success": False,
             "status": "error",
@@ -282,7 +283,7 @@ async def enable_connector(connector_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Connector not found",
         )
-    
+
     _connectors[connector_id]["enabled"] = True
     logger.info(f"Connector enabled: {_connectors[connector_id]['name']}")
 
@@ -295,7 +296,7 @@ async def disable_connector(connector_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Connector not found",
         )
-    
+
     _connectors[connector_id]["enabled"] = False
     logger.info(f"Connector disabled: {_connectors[connector_id]['name']}")
 
@@ -322,7 +323,7 @@ async def get_connector_types():
 async def get_connectors_status_summary():
     """Get summary of all connectors status."""
     connectors = list(_connectors.values())
-    
+
     return {
         "total": len(connectors),
         "connected": len([c for c in connectors if c["status"] == "connected"]),

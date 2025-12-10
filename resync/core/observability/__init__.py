@@ -12,35 +12,32 @@ Usage:
         get_langfuse_client,
         get_evidently_monitor,
     )
-    
+
     # On startup
     await setup_observability()
-    
+
     # Check status
     status = get_observability_status()
 """
 
 from resync.core.observability.config import (
+    EvidentlyConfig,
+    EvidentlyMonitor,
+    LangFuseConfig,
     # Configuration
     ObservabilityConfig,
-    LangFuseConfig,
-    EvidentlyConfig,
-    get_observability_config,
-    
-    # LangFuse
-    setup_langfuse,
-    shutdown_langfuse,
+    get_evidently_monitor,
     get_langfuse_client,
-    
+    get_observability_config,
+    get_observability_status,
     # Evidently
     setup_evidently,
-    get_evidently_monitor,
-    EvidentlyMonitor,
-    
+    # LangFuse
+    setup_langfuse,
     # Combined
     setup_observability,
+    shutdown_langfuse,
     shutdown_observability,
-    get_observability_status,
 )
 
 __all__ = [
@@ -49,17 +46,17 @@ __all__ = [
     "LangFuseConfig",
     "EvidentlyConfig",
     "get_observability_config",
-    
+
     # LangFuse
     "setup_langfuse",
     "shutdown_langfuse",
     "get_langfuse_client",
-    
+
     # Evidently
     "setup_evidently",
     "get_evidently_monitor",
     "EvidentlyMonitor",
-    
+
     # Combined
     "setup_observability",
     "shutdown_observability",

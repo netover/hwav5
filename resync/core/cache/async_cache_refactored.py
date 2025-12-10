@@ -3,7 +3,7 @@ Refactored AsyncTTLCache using mixins for modular functionality.
 
 This is the modernized version of async_cache.py that uses:
 - CacheMetricsMixin: Metrics collection
-- CacheHealthMixin: Health check capabilities  
+- CacheHealthMixin: Health check capabilities
 - CacheSnapshotMixin: Backup/restore functionality
 - CacheTransactionMixin: Transaction support
 """
@@ -13,12 +13,11 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from time import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from resync.core.exceptions import CacheError
 from resync.core.cache.mixins import (
-    CacheMetricsMixin,
     CacheHealthMixin,
+    CacheMetricsMixin,
     CacheSnapshotMixin,
     CacheTransactionMixin,
 )
@@ -42,13 +41,13 @@ class AsyncTTLCacheRefactored(
 ):
     """
     Refactored async TTL cache with modular functionality via mixins.
-    
+
     Features inherited from mixins:
     - CacheMetricsMixin: hits/misses/evictions tracking
     - CacheHealthMixin: comprehensive health checks
     - CacheSnapshotMixin: backup and restore
     - CacheTransactionMixin: transaction support with rollback
-    
+
     Core features:
     - Async get() and set() methods
     - Sharded locks for concurrency
@@ -65,7 +64,7 @@ class AsyncTTLCacheRefactored(
     ):
         """
         Initialize the cache.
-        
+
         Args:
             ttl_seconds: Default TTL for cache entries
             cleanup_interval: Interval for background cleanup
@@ -76,22 +75,22 @@ class AsyncTTLCacheRefactored(
         self.cleanup_interval = cleanup_interval
         self.num_shards = num_shards
         self.max_entries = max_entries
-        
+
         # Initialize shards
-        self.shards: List[Dict[str, CacheEntry]] = [
+        self.shards: list[dict[str, CacheEntry]] = [
             {} for _ in range(num_shards)
         ]
-        self.shard_locks: List[asyncio.Lock] = [
+        self.shard_locks: list[asyncio.Lock] = [
             asyncio.Lock() for _ in range(num_shards)
         ]
-        
+
         # State
         self.is_running = True
-        self.cleanup_task: Optional[asyncio.Task] = None
-        
+        self.cleanup_task: asyncio.Task | None = None
+
         # Initialize mixins
         self._init_metrics()
-        
+
         logger.info(
             "async_cache_initialized",
             extra={
@@ -105,30 +104,30 @@ class AsyncTTLCacheRefactored(
         """Get shard index for a key using hash."""
         return hash(key) % self.num_shards
 
-    def _get_shard(self, key: str) -> Tuple[Dict[str, CacheEntry], asyncio.Lock]:
+    def _get_shard(self, key: str) -> tuple[dict[str, CacheEntry], asyncio.Lock]:
         """Get shard and lock for a key."""
         idx = self._get_shard_index(key)
         return self.shards[idx], self.shard_locks[idx]
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """
         Get value from cache.
-        
+
         Args:
             key: Cache key
-            
+
         Returns:
             Cached value or None if not found/expired
         """
         shard, lock = self._get_shard(key)
-        
+
         async with lock:
             entry = shard.get(key)
-            
+
             if entry is None:
                 self._record_miss()
                 return None
-            
+
             # Check expiration
             current_time = time()
             if current_time > entry.timestamp + entry.ttl:
@@ -137,7 +136,7 @@ class AsyncTTLCacheRefactored(
                 self._record_miss()
                 self._record_eviction()
                 return None
-            
+
             self._record_hit()
             return entry.data
 
@@ -145,11 +144,11 @@ class AsyncTTLCacheRefactored(
         self,
         key: str,
         value: Any,
-        ttl_seconds: Optional[float] = None,
+        ttl_seconds: float | None = None,
     ) -> None:
         """
         Set value in cache.
-        
+
         Args:
             key: Cache key
             value: Value to cache
@@ -157,16 +156,16 @@ class AsyncTTLCacheRefactored(
         """
         shard, lock = self._get_shard(key)
         ttl = ttl_seconds if ttl_seconds is not None else self.ttl_seconds
-        
+
         async with lock:
             # Log for transaction rollback
             old_value = shard.get(key)
             self._log_operation("set", key, old_value.data if old_value else None)
-            
+
             # Check capacity
             if len(shard) >= self.max_entries // self.num_shards:
                 await self._evict_lru(shard)
-            
+
             shard[key] = CacheEntry(
                 data=value,
                 timestamp=time(),
@@ -176,15 +175,15 @@ class AsyncTTLCacheRefactored(
     async def delete(self, key: str) -> bool:
         """
         Delete value from cache.
-        
+
         Args:
             key: Cache key
-            
+
         Returns:
             True if key was deleted, False if not found
         """
         shard, lock = self._get_shard(key)
-        
+
         async with lock:
             if key in shard:
                 old_value = shard[key]
@@ -198,18 +197,18 @@ class AsyncTTLCacheRefactored(
         for i, shard in enumerate(self.shards):
             async with self.shard_locks[i]:
                 shard.clear()
-        
+
         logger.info("cache_cleared")
 
     def size(self) -> int:
         """Get total number of entries across all shards."""
         return sum(len(shard) for shard in self.shards)
 
-    async def _evict_lru(self, shard: Dict[str, CacheEntry]) -> None:
+    async def _evict_lru(self, shard: dict[str, CacheEntry]) -> None:
         """Evict least recently used entry from shard."""
         if not shard:
             return
-        
+
         # Find oldest entry
         oldest_key = min(shard.keys(), key=lambda k: shard[k].timestamp)
         del shard[oldest_key]
@@ -220,10 +219,10 @@ class AsyncTTLCacheRefactored(
         while self.is_running:
             try:
                 await asyncio.sleep(self.cleanup_interval)
-                
+
                 current_time = time()
                 evicted = 0
-                
+
                 for i, shard in enumerate(self.shards):
                     async with self.shard_locks[i]:
                         expired_keys = [
@@ -233,11 +232,11 @@ class AsyncTTLCacheRefactored(
                         for key in expired_keys:
                             del shard[key]
                             evicted += 1
-                
+
                 if evicted > 0:
                     self._record_eviction(evicted)
                     logger.debug(f"cache_cleanup_completed entries_evicted={evicted}")
-                    
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -259,7 +258,7 @@ class AsyncTTLCacheRefactored(
                 await self.cleanup_task
             except asyncio.CancelledError:
                 pass
-        
+
         logger.info("cache_stopped")
 
     async def __aenter__(self) -> "AsyncTTLCacheRefactored":

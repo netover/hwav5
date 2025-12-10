@@ -7,12 +7,11 @@ detailed health reporting.
 """
 
 
+import asyncio  # Added to support async sleep in retry logic
 import time
 from datetime import datetime
-from typing import Optional
 
 import structlog
-import asyncio  # Added to support async sleep in retry logic
 
 from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
 from resync.settings import settings
@@ -33,8 +32,8 @@ class RedisHealthMonitor:
 
     def __init__(self):
         """Initialize the Redis health monitor."""
-        self._last_check: Optional[datetime] = None
-        self._cached_result: Optional[ComponentHealth] = None
+        self._last_check: datetime | None = None
+        self._cached_result: ComponentHealth | None = None
 
     async def check_redis_health(self) -> ComponentHealth:
         """
@@ -58,7 +57,8 @@ class RedisHealthMonitor:
 
             # Test actual Redis connectivity
             import redis.asyncio as redis_async
-            from redis.exceptions import RedisError, TimeoutError as RedisTimeoutError
+            from redis.exceptions import RedisError
+            from redis.exceptions import TimeoutError as RedisTimeoutError
 
             try:
                 redis_client = redis_async.from_url(settings.REDIS_URL)
@@ -185,7 +185,7 @@ class RedisHealthMonitor:
             last_check=datetime.now(),
         )
 
-    def get_cached_health(self) -> Optional[ComponentHealth]:
+    def get_cached_health(self) -> ComponentHealth | None:
         """
         Get cached health result if available and recent.
 
@@ -197,9 +197,8 @@ class RedisHealthMonitor:
             age = datetime.now() - self._last_check
             if age.total_seconds() < 300:
                 return self._cached_result
-            else:
-                # Cache expired
-                self._cached_result = None
+            # Cache expired
+            self._cached_result = None
 
         return None
 

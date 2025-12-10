@@ -3,12 +3,12 @@
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any
 
-from pydantic import field_validator, StringConstraints as PydanticStringConstraints, Field, ConfigDict
+from pydantic import ConfigDict, Field, field_validator
+from pydantic import StringConstraints as PydanticStringConstraints
 
 from .common import BaseValidatedModel, ValidationPatterns
-from typing_extensions import Annotated
 
 
 class MetricType(str, Enum):
@@ -57,7 +57,7 @@ class HealthStatus(str, Enum):
 class SystemMetricRequest(BaseValidatedModel):
     """System metric request validation."""
 
-    metric_types: List[MetricType] = Field(
+    metric_types: list[MetricType] = Field(
         default_factory=lambda: [MetricType.CPU, MetricType.MEMORY],
         description="Types of metrics to retrieve",
         min_length=1,
@@ -115,21 +115,19 @@ class CustomMetricRequest(BaseValidatedModel):
         default=MetricType.CUSTOM, description="Metric type"
     )
 
-    timestamp: Optional[datetime] = Field(
+    timestamp: datetime | None = Field(
         None, description="Metric timestamp (defaults to now)"
     )
 
-    labels: Optional[Dict[str, str]] = Field(
+    labels: dict[str, str] | None = Field(
         default_factory=dict, description="Metric labels/dimensions", max_length=10
     )
 
-    unit: Optional[str] = Field(
+    unit: str | None = Field(
         None, description="Unit of measurement", pattern=r"^[a-zA-Z0-9_\-/]{1,20}$"
     )
 
-    description: Optional[
-        Annotated[str, PydanticStringConstraints(min_length=1, max_length=500, strip_whitespace=True)]
-    ] = Field(None, description="Metric description")
+    description: Annotated[str, PydanticStringConstraints(min_length=1, max_length=500, strip_whitespace=True)] | None = Field(None, description="Metric description")
 
     model_config = ConfigDict(
         extra="forbid",
@@ -210,17 +208,15 @@ class AlertRequest(BaseValidatedModel):
         ..., description="Detailed alert description"
     )
 
-    metric_name: Optional[
-        Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)]
-    ] = Field(None, description="Related metric name")
+    metric_name: Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)] | None = Field(None, description="Related metric name")
 
-    threshold_value: Optional[float] = Field(
+    threshold_value: float | None = Field(
         None, description="Threshold value that triggered alert"
     )
 
-    current_value: Optional[float] = Field(None, description="Current metric value")
+    current_value: float | None = Field(None, description="Current metric value")
 
-    labels: Optional[Dict[str, str]] = Field(
+    labels: dict[str, str] | None = Field(
         default_factory=dict, description="Alert labels/dimensions", max_length=10
     )
 
@@ -228,7 +224,7 @@ class AlertRequest(BaseValidatedModel):
         default=False, description="Whether alert auto-resolves when condition clears"
     )
 
-    notification_channels: Optional[List[str]] = Field(
+    notification_channels: list[str] | None = Field(
         None, description="Notification channels to use", max_length=5
     )
 
@@ -304,19 +300,15 @@ class AlertRequest(BaseValidatedModel):
 class AlertQueryParams(BaseValidatedModel):
     """Alert query parameters validation."""
 
-    status: Optional[AlertStatus] = Field(None, description="Filter by alert status")
+    status: AlertStatus | None = Field(None, description="Filter by alert status")
 
-    severity: Optional[List[AlertSeverity]] = Field(
+    severity: list[AlertSeverity] | None = Field(
         None, description="Filter by severity levels", max_length=4
     )
 
-    alert_name: Optional[
-        Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)]
-    ] = Field(None, description="Filter by alert name (partial match)")
+    alert_name: Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)] | None = Field(None, description="Filter by alert name (partial match)")
 
-    metric_name: Optional[
-        Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)]
-    ] = Field(None, description="Filter by metric name")
+    metric_name: Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)] | None = Field(None, description="Filter by metric name")
 
     time_range: str = Field(
         default="24h",
@@ -355,7 +347,7 @@ class AlertQueryParams(BaseValidatedModel):
 class HealthCheckRequest(BaseValidatedModel):
     """Health check request validation."""
 
-    component: Optional[Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)]] = (
+    component: Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)] | None = (
         Field(None, description="Specific component to check")
     )
 
@@ -393,15 +385,15 @@ class HealthCheckRequest(BaseValidatedModel):
 class LogQueryParams(BaseValidatedModel):
     """Log query parameters validation."""
 
-    level: Optional[List[str]] = Field(
+    level: list[str] | None = Field(
         None, description="Filter by log levels", max_length=5
     )
 
-    component: Optional[Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)]] = (
+    component: Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)] | None = (
         Field(None, description="Filter by component")
     )
 
-    search: Optional[Annotated[str, PydanticStringConstraints(min_length=1, max_length=200, strip_whitespace=True)]] = (
+    search: Annotated[str, PydanticStringConstraints(min_length=1, max_length=200, strip_whitespace=True)] | None = (
         Field(None, description="Search in log messages")
     )
 
@@ -468,7 +460,7 @@ class PerformanceTestRequest(BaseValidatedModel):
         default=0, ge=0, le=300, description="Ramp up time in seconds"
     )
 
-    success_criteria: Optional[Dict[str, Any]] = Field(
+    success_criteria: dict[str, Any] | None = Field(
         default_factory=dict, description="Success criteria for the test", max_length=10
     )
 

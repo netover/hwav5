@@ -41,7 +41,7 @@ knowledge_graph_dependency = Depends(get_knowledge_graph)
 chat_router = APIRouter()
 
 # Optional: track background tasks for observability (non-blocking)
-_bg_tasks: "weakref.WeakSet[asyncio.Task[Any]]" = weakref.WeakSet()
+_bg_tasks: weakref.WeakSet[asyncio.Task[Any]] = weakref.WeakSet()
 
 
 class SupportsAgentMeta(Protocol):

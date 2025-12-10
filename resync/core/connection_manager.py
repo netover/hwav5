@@ -1,6 +1,6 @@
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -18,7 +18,7 @@ class ConnectionManager:
 
     def __init__(self) -> None:
         """Initializes the ConnectionManager with connection pooling support."""
-        self.active_connections: Dict[str, WebSocket] = {}
+        self.active_connections: dict[str, WebSocket] = {}
         self._pool_manager = None
         logger.info("ConnectionManager initialized with pooling support.")
 
@@ -115,7 +115,7 @@ class ConnectionManager:
                 # Log error but don't stop broadcasting to other clients
                 logger.error("Unexpected error during broadcast.", exc_info=True)
 
-    async def broadcast_json(self, data: Dict[str, Any]) -> None:
+    async def broadcast_json(self, data: dict[str, Any]) -> None:
         """
         Sends a JSON payload to all connected clients.
         Uses the WebSocket pool manager for enhanced broadcasting.
@@ -164,7 +164,7 @@ class ConnectionManager:
             except Exception as _e:
                 logger.error("Unexpected error during JSON broadcast.", exc_info=True)
 
-    def get_connection_stats(self) -> Dict[str, Any]:
+    def get_connection_stats(self) -> dict[str, Any]:
         """
         Get WebSocket connection statistics from the pool manager.
 
@@ -187,9 +187,8 @@ class ConnectionManager:
                     stats.last_cleanup.isoformat() if stats.last_cleanup else None
                 ),
             }
-        else:
-            # Fallback to basic stats if pool manager not available
-            return {
-                "active_connections": len(self.active_connections),
-                "total_connections": len(self.active_connections),
-            }
+        # Fallback to basic stats if pool manager not available
+        return {
+            "active_connections": len(self.active_connections),
+            "total_connections": len(self.active_connections),
+        }

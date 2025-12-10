@@ -16,7 +16,7 @@ import json
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 from resync.core.redis_init import get_redis_initializer
 from resync.core.structured_logger import get_logger
@@ -34,8 +34,8 @@ class CacheEntry:
     created_at: float = field(default_factory=time.time)
     last_accessed: float = field(default_factory=time.time)
     access_count: int = 0
-    dependencies: Set[str] = field(default_factory=set)
-    tags: Set[str] = field(default_factory=set)
+    dependencies: set[str] = field(default_factory=set)
+    tags: set[str] = field(default_factory=set)
     hit_rate: float = 1.0
     size_bytes: int = 0
 
@@ -67,7 +67,7 @@ class CacheEntry:
 
         return False
 
-    def calculate_dynamic_ttl(self, usage_stats: Dict[str, Any]) -> int:
+    def calculate_dynamic_ttl(self, usage_stats: dict[str, Any]) -> int:
         """Calculate dynamic TTL based on usage patterns."""
         base_ttl = self.ttl
 
@@ -129,7 +129,7 @@ class InvalidationRule:
     """Rule for automatic cache invalidation."""
 
     pattern: str  # Key pattern to match
-    dependencies: List[str]  # Keys that depend on this pattern
+    dependencies: list[str]  # Keys that depend on this pattern
     cascade: bool = True  # Whether to invalidate recursively
     ttl_multiplier: float = 1.0  # TTL adjustment for dependent keys
 
@@ -138,35 +138,35 @@ class CacheDependencyGraph:
     """Graph for managing cache dependencies and cascade invalidation."""
 
     def __init__(self):
-        self.dependencies: Dict[str, Set[str]] = defaultdict(set)  # key -> dependents
-        self.reverse_dependencies: Dict[str, Set[str]] = defaultdict(
+        self.dependencies: dict[str, set[str]] = defaultdict(set)  # key -> dependents
+        self.reverse_dependencies: dict[str, set[str]] = defaultdict(
             set
         )  # key -> dependencies
-        self.tags: Dict[str, Set[str]] = defaultdict(set)  # tag -> keys
+        self.tags: dict[str, set[str]] = defaultdict(set)  # tag -> keys
 
     def add_dependency(self, key: str, depends_on: str) -> None:
         """Add a dependency relationship."""
         self.dependencies[depends_on].add(key)
         self.reverse_dependencies[key].add(depends_on)
 
-    def add_tags(self, key: str, tags: List[str]) -> None:
+    def add_tags(self, key: str, tags: list[str]) -> None:
         """Add tags to a key."""
         for tag in tags:
             self.tags[tag].add(key)
 
-    def get_dependents(self, key: str) -> Set[str]:
+    def get_dependents(self, key: str) -> set[str]:
         """Get all keys that depend on the given key."""
         return self.dependencies.get(key, set())
 
-    def get_dependencies(self, key: str) -> Set[str]:
+    def get_dependencies(self, key: str) -> set[str]:
         """Get all keys that the given key depends on."""
         return self.reverse_dependencies.get(key, set())
 
-    def get_keys_by_tag(self, tag: str) -> Set[str]:
+    def get_keys_by_tag(self, tag: str) -> set[str]:
         """Get all keys with a specific tag."""
         return self.tags.get(tag, set())
 
-    def cascade_invalidate(self, key: str) -> Set[str]:
+    def cascade_invalidate(self, key: str) -> set[str]:
         """Get all keys that should be invalidated due to cascade."""
         to_invalidate = set()
         visited = set()
@@ -212,7 +212,7 @@ class AdvancedCacheManager:
     """
 
     def __init__(self):
-        self.memory_cache: Dict[str, CacheEntry] = {}
+        self.memory_cache: dict[str, CacheEntry] = {}
         self.stats = CacheStats()
         self.dependency_graph = CacheDependencyGraph()
 
@@ -221,8 +221,8 @@ class AdvancedCacheManager:
         self.redis_enabled = False
 
         # Background tasks
-        self._cleanup_task: Optional[asyncio.Task] = None
-        self._warming_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
+        self._warming_task: asyncio.Task | None = None
         self._running = False
 
         # Configuration
@@ -235,7 +235,7 @@ class AdvancedCacheManager:
         }
 
         # Invalidation rules
-        self.invalidation_rules: List[InvalidationRule] = []
+        self.invalidation_rules: list[InvalidationRule] = []
 
         # Thread safety
         self._lock = asyncio.Lock()
@@ -296,10 +296,10 @@ class AdvancedCacheManager:
     async def get(
         self,
         key: str,
-        fetch_func: Optional[callable] = None,
-        ttl: Optional[int] = None,
-        dependencies: Optional[List[str]] = None,
-        tags: Optional[List[str]] = None,
+        fetch_func: callable | None = None,
+        ttl: int | None = None,
+        dependencies: list[str] | None = None,
+        tags: list[str] | None = None,
     ) -> Any:
         """
         Get value from cache with intelligent fallback.
@@ -351,9 +351,9 @@ class AdvancedCacheManager:
         self,
         key: str,
         value: Any,
-        ttl: Optional[int] = None,
-        dependencies: Optional[List[str]] = None,
-        tags: Optional[List[str]] = None,
+        ttl: int | None = None,
+        dependencies: list[str] | None = None,
+        tags: list[str] | None = None,
     ) -> None:
         """Set value in cache with metadata."""
         # Determine TTL
@@ -460,7 +460,7 @@ class AdvancedCacheManager:
         logger.info(f"Invalidated {invalidated} entries matching pattern {pattern}")
         return invalidated
 
-    async def warm_cache(self, warming_keys: List[Dict[str, Any]]) -> int:
+    async def warm_cache(self, warming_keys: list[dict[str, Any]]) -> int:
         """
         Warm cache with predefined keys.
 
@@ -503,7 +503,7 @@ class AdvancedCacheManager:
         logger.info(f"Cache warming completed: {warmed} keys warmed")
         return warmed
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get comprehensive cache statistics."""
         return {
             "performance": {
@@ -606,10 +606,9 @@ class AdvancedCacheManager:
         # Default TTL based on value type/size
         if isinstance(value, (list, dict)) and len(str(value)) > 1000:
             return 1800  # Large data - 30 minutes
-        elif isinstance(value, (int, float, str)) and len(str(value)) < 100:
+        if isinstance(value, (int, float, str)) and len(str(value)) < 100:
             return 3600  # Small data - 1 hour
-        else:
-            return 900  # Default - 15 minutes
+        return 900  # Default - 15 minutes
 
     def _calculate_size(self, value: Any) -> int:
         """Calculate approximate memory usage of a value."""

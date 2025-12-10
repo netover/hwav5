@@ -11,8 +11,8 @@ Example:
 """
 
 from .instance import TWSInstance, TWSInstanceConfig
-from .manager import TWSInstanceManager, get_tws_manager
 from .learning import TWSLearningStore
+from .manager import TWSInstanceManager, get_tws_manager
 from .session import TWSSession
 
 __all__ = [

@@ -8,11 +8,12 @@ Provides endpoints for managing multiple TWS/HWA server connections:
 - Session management (tabs)
 """
 
-from typing import Dict, List, Any, Optional
-from fastapi import APIRouter, HTTPException, status, WebSocket, WebSocketDisconnect
+import logging
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -40,24 +41,24 @@ class TWSInstanceCreate(BaseModel):
 
 class TWSInstanceUpdate(BaseModel):
     """Model for updating a TWS instance."""
-    display_name: Optional[str] = None
-    description: Optional[str] = None
-    host: Optional[str] = None
-    port: Optional[int] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
-    ssl_enabled: Optional[bool] = None
-    enabled: Optional[bool] = None
-    color: Optional[str] = None
-    sort_order: Optional[int] = None
-    read_only: Optional[bool] = None
-    learning_enabled: Optional[bool] = None
+    display_name: str | None = None
+    description: str | None = None
+    host: str | None = None
+    port: int | None = None
+    username: str | None = None
+    password: str | None = None
+    ssl_enabled: bool | None = None
+    enabled: bool | None = None
+    color: str | None = None
+    sort_order: int | None = None
+    read_only: bool | None = None
+    learning_enabled: bool | None = None
 
 
 class SessionCreate(BaseModel):
     """Model for creating a session."""
     instance_id: str
-    
+
 
 # Lazy import to avoid circular dependencies
 def _get_manager():
@@ -66,7 +67,7 @@ def _get_manager():
 
 
 def _get_config_class():
-    from resync.core.tws_multi.instance import TWSInstanceConfig, TWSEnvironment
+    from resync.core.tws_multi.instance import TWSEnvironment, TWSInstanceConfig
     return TWSInstanceConfig, TWSEnvironment
 
 
@@ -76,12 +77,12 @@ def _get_config_class():
 async def list_tws_instances():
     """
     List all TWS instances.
-    
+
     Returns all configured TWS/HWA servers with their status.
     """
     manager = _get_manager()
     instances = manager.get_all_instances()
-    
+
     return {
         "instances": [inst.to_dict() for inst in instances],
         "total": len(instances),
@@ -99,14 +100,14 @@ async def get_instances_summary():
 async def create_tws_instance(instance: TWSInstanceCreate):
     """
     Create a new TWS instance.
-    
+
     Example:
     - SAZ → tws.saz.com.br:31116
     - NAZ → tws.naz.com:31116
     """
     manager = _get_manager()
     TWSInstanceConfig, TWSEnvironment = _get_config_class()
-    
+
     try:
         config = TWSInstanceConfig(
             name=instance.name.upper(),
@@ -124,15 +125,15 @@ async def create_tws_instance(instance: TWSInstanceCreate):
             read_only=instance.read_only,
             learning_enabled=instance.learning_enabled,
         )
-        
+
         new_instance = manager.add_instance(config)
-        
+
         return {
             "success": True,
             "instance": new_instance.to_dict(),
             "message": f"TWS instance '{instance.name}' created successfully",
         }
-        
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -145,20 +146,20 @@ async def get_tws_instance(instance_id: str):
     """Get a specific TWS instance."""
     manager = _get_manager()
     instance = manager.get_instance(instance_id)
-    
+
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     # Include learning summary
     learning_store = manager.get_learning_store(instance_id)
     learning_summary = learning_store.get_learning_summary() if learning_store else None
-    
+
     result = instance.to_dict()
     result["learning"] = learning_summary
-    
+
     return result
 
 
@@ -166,16 +167,16 @@ async def get_tws_instance(instance_id: str):
 async def update_tws_instance(instance_id: str, update: TWSInstanceUpdate):
     """Update a TWS instance."""
     manager = _get_manager()
-    
+
     updates = update.dict(exclude_unset=True)
     instance = manager.update_instance(instance_id, updates)
-    
+
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     return {
         "success": True,
         "instance": instance.to_dict(),
@@ -187,17 +188,17 @@ async def update_tws_instance(instance_id: str, update: TWSInstanceUpdate):
 async def delete_tws_instance(instance_id: str):
     """Delete a TWS instance."""
     manager = _get_manager()
-    
+
     instance = manager.get_instance(instance_id)
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     name = instance.config.name
     manager.delete_instance(instance_id)
-    
+
     return {
         "success": True,
         "message": f"Instance '{name}' deleted successfully",
@@ -210,16 +211,16 @@ async def delete_tws_instance(instance_id: str):
 async def connect_tws_instance(instance_id: str):
     """Connect to a TWS instance."""
     manager = _get_manager()
-    
+
     instance = manager.get_instance(instance_id)
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     success = await manager.connect_instance(instance_id)
-    
+
     return {
         "success": success,
         "status": instance.status.value,
@@ -231,16 +232,16 @@ async def connect_tws_instance(instance_id: str):
 async def disconnect_tws_instance(instance_id: str):
     """Disconnect from a TWS instance."""
     manager = _get_manager()
-    
+
     instance = manager.get_instance(instance_id)
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     await manager.disconnect_instance(instance_id)
-    
+
     return {
         "success": True,
         "status": "disconnected",
@@ -252,14 +253,14 @@ async def disconnect_tws_instance(instance_id: str):
 async def test_tws_connection(instance_id: str):
     """Test connection to a TWS instance."""
     manager = _get_manager()
-    
+
     instance = manager.get_instance(instance_id)
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     result = await manager.test_connection(instance_id)
     return result
 
@@ -274,25 +275,25 @@ async def create_session(
 ):
     """
     Create a new session (tab) for a TWS instance.
-    
+
     Each session is isolated and allows the operator to work
     independently on that specific TWS server.
     """
     manager = _get_manager()
-    
+
     instance = manager.get_instance(instance_id)
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     session = manager.create_session(
         instance_id=instance_id,
         user_id=user_id,
         username=username,
     )
-    
+
     return {
         "success": True,
         "session": session.to_dict(),
@@ -305,7 +306,7 @@ async def list_user_sessions(user_id: str = "default"):
     """List all sessions for a user."""
     manager = _get_manager()
     sessions = manager.get_user_sessions(user_id)
-    
+
     return {
         "sessions": [s.to_dict() for s in sessions],
         "total": len(sessions),
@@ -317,7 +318,7 @@ async def close_session(session_id: str):
     """Close a session (tab)."""
     manager = _get_manager()
     manager.close_session(session_id)
-    
+
     return {
         "success": True,
         "message": "Session closed",
@@ -330,21 +331,21 @@ async def close_session(session_id: str):
 async def get_instance_learning(instance_id: str):
     """Get learning data for a specific instance."""
     manager = _get_manager()
-    
+
     instance = manager.get_instance(instance_id)
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     learning_store = manager.get_learning_store(instance_id)
     if not learning_store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Learning store not found",
         )
-    
+
     return {
         "instance_id": instance_id,
         "instance_name": instance.config.name,
@@ -359,15 +360,15 @@ async def get_job_patterns(instance_id: str, limit: int = 100):
     """Get learned job patterns for an instance."""
     manager = _get_manager()
     learning_store = manager.get_learning_store(instance_id)
-    
+
     if not learning_store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     patterns = learning_store.get_all_patterns()[:limit]
-    
+
     return {
         "instance_id": instance_id,
         "patterns": [p.to_dict() for p in patterns],
@@ -380,30 +381,30 @@ async def export_learning_data(instance_id: str):
     """Export learning data for an instance."""
     manager = _get_manager()
     learning_store = manager.get_learning_store(instance_id)
-    
+
     if not learning_store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     return learning_store.export_learning_data()
 
 
 @router.post("/tws-instances/{instance_id}/learning/import", tags=["TWS Learning"])
-async def import_learning_data(instance_id: str, data: Dict[str, Any]):
+async def import_learning_data(instance_id: str, data: dict[str, Any]):
     """Import learning data to an instance."""
     manager = _get_manager()
     learning_store = manager.get_learning_store(instance_id)
-    
+
     if not learning_store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     learning_store.import_learning_data(data)
-    
+
     return {
         "success": True,
         "message": "Learning data imported successfully",
@@ -418,18 +419,18 @@ async def clear_learning_data(instance_id: str, confirm: bool = False):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Set confirm=true to confirm deletion",
         )
-    
+
     manager = _get_manager()
     learning_store = manager.get_learning_store(instance_id)
-    
+
     if not learning_store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instance not found",
         )
-    
+
     learning_store.clear_learning_data()
-    
+
     return {
         "success": True,
         "message": "Learning data cleared",
@@ -443,7 +444,7 @@ async def connect_all_instances():
     """Connect to all enabled instances."""
     manager = _get_manager()
     results = {}
-    
+
     for instance in manager.get_all_instances():
         if instance.config.enabled:
             success = await manager.connect_instance(instance.config.id)
@@ -451,7 +452,7 @@ async def connect_all_instances():
                 "success": success,
                 "status": instance.status.value,
             }
-    
+
     return {
         "results": results,
         "connected": len([r for r in results.values() if r["success"]]),
@@ -463,10 +464,10 @@ async def connect_all_instances():
 async def disconnect_all_instances():
     """Disconnect from all instances."""
     manager = _get_manager()
-    
+
     for instance in manager.get_all_instances():
         await manager.disconnect_instance(instance.config.id)
-    
+
     return {
         "success": True,
         "message": "All instances disconnected",

@@ -10,13 +10,15 @@ different types of system components when they become unhealthy.
 import asyncio
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
-from resync.core.health_models import RecoveryResult
 from resync.core.connection_pool_manager import get_advanced_connection_pool_manager
-from resync.core.pools.pool_manager import get_connection_pool_manager  # Basic pool manager fallback
+from resync.core.health_models import RecoveryResult
+from resync.core.pools.pool_manager import (
+    get_connection_pool_manager,  # Basic pool manager fallback
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -32,7 +34,7 @@ class HealthRecoveryManager:
 
     def __init__(self):
         """Initialize the Health Recovery Manager."""
-        self.recovery_history: List[RecoveryResult] = []
+        self.recovery_history: list[RecoveryResult] = []
         self.max_history_entries = 1000
         self._recovery_lock = asyncio.Lock()
 
@@ -331,7 +333,7 @@ class HealthRecoveryManager:
             await self._add_to_history(result)
             return result
 
-    async def _test_database_connectivity(self) -> Dict[str, Any]:
+    async def _test_database_connectivity(self) -> dict[str, Any]:
         """Test database connectivity and return diagnostic information."""
         try:
             pool_manager = get_connection_pool_manager()
@@ -360,7 +362,7 @@ class HealthRecoveryManager:
             logger.error("exception_caught", error=str(e), exc_info=True)
             return {"success": False, "error": str(e), "error_type": type(e).__name__}
 
-    async def _test_cache_connectivity(self) -> Dict[str, Any]:
+    async def _test_cache_connectivity(self) -> dict[str, Any]:
         """Test cache connectivity and performance."""
         try:
             # Import and test cache implementation
@@ -403,7 +405,7 @@ class HealthRecoveryManager:
             logger.error("exception_caught", error=str(e), exc_info=True)
             return {"success": False, "error": str(e), "needs_restart": True}
 
-    async def _test_external_services(self) -> Dict[str, Any]:
+    async def _test_external_services(self) -> dict[str, Any]:
         """Test external service connectivity."""
         # Placeholder implementation
         return {
@@ -413,7 +415,7 @@ class HealthRecoveryManager:
             "services_unavailable": 0,
         }
 
-    async def _clear_stale_cache_entries(self) -> Dict[str, Any]:
+    async def _clear_stale_cache_entries(self) -> dict[str, Any]:
         """Clear stale cache entries."""
         try:
             # This would implement cache cleanup logic
@@ -427,7 +429,7 @@ class HealthRecoveryManager:
             logger.error("exception_caught", error=str(e), exc_info=True)
             return {"success": False, "error": str(e)}
 
-    async def _restart_cache_connections(self) -> Dict[str, Any]:
+    async def _restart_cache_connections(self) -> dict[str, Any]:
         """Restart cache connections."""
         try:
             # This would implement cache restart logic
@@ -436,7 +438,7 @@ class HealthRecoveryManager:
             logger.error("exception_caught", error=str(e), exc_info=True)
             return {"success": False, "error": str(e)}
 
-    async def _reset_cache_system(self) -> Dict[str, Any]:
+    async def _reset_cache_system(self) -> dict[str, Any]:
         """Reset the entire cache system."""
         try:
             # This would implement full cache reset logic
@@ -445,7 +447,7 @@ class HealthRecoveryManager:
             logger.error("exception_caught", error=str(e), exc_info=True)
             return {"success": False, "error": str(e)}
 
-    async def _check_circuit_breakers(self) -> Dict[str, Any]:
+    async def _check_circuit_breakers(self) -> dict[str, Any]:
         """Check and reset circuit breakers if needed."""
         try:
             # This would check circuit breaker status and reset if appropriate
@@ -454,7 +456,7 @@ class HealthRecoveryManager:
             logger.error("exception_caught", error=str(e), exc_info=True)
             return {"success": False, "error": str(e)}
 
-    async def _validate_health_endpoints(self) -> Dict[str, Any]:
+    async def _validate_health_endpoints(self) -> dict[str, Any]:
         """Validate external service health endpoints."""
         try:
             # This would validate health endpoints of external services
@@ -463,7 +465,7 @@ class HealthRecoveryManager:
             logger.error("exception_caught", error=str(e), exc_info=True)
             return {"success": False, "error": str(e)}
 
-    async def _diagnose_network_issues(self) -> Dict[str, Any]:
+    async def _diagnose_network_issues(self) -> dict[str, Any]:
         """Diagnose network connectivity issues."""
         try:
             # This would implement network diagnostics
@@ -490,10 +492,10 @@ class HealthRecoveryManager:
 
     def get_recovery_history(
         self,
-        component_name: Optional[str] = None,
+        component_name: str | None = None,
         hours: int = 24,
-        limit: Optional[int] = None,
-    ) -> List[RecoveryResult]:
+        limit: int | None = None,
+    ) -> list[RecoveryResult]:
         """
         Get recovery history with optional filtering.
 
@@ -531,7 +533,7 @@ class HealthRecoveryManager:
 
         return filtered_results
 
-    def get_recovery_stats(self) -> Dict[str, Any]:
+    def get_recovery_stats(self) -> dict[str, Any]:
         """Get recovery statistics and success rates."""
         if not self.recovery_history:
             return {"total_attempts": 0, "success_rate": 0.0}

@@ -10,7 +10,7 @@ import hashlib
 import hmac
 import logging
 import secrets
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class SecurityHardeningConfig:
     }
 
     @classmethod
-    def get_security_headers(cls) -> Dict[str, str]:
+    def get_security_headers(cls) -> dict[str, str]:
         """Get comprehensive security headers."""
         return cls.SECURITY_HEADERS.copy()
 
@@ -106,7 +106,7 @@ class SecurityHardeningConfig:
         return cls.CONTENT_SECURITY_POLICY
 
     @classmethod
-    def get_rate_limit_config(cls) -> Dict[str, Any]:
+    def get_rate_limit_config(cls) -> dict[str, Any]:
         """Get rate limiting configuration."""
         return {
             "requests_per_minute": cls.RATE_LIMIT_REQUESTS_PER_MINUTE,
@@ -115,7 +115,7 @@ class SecurityHardeningConfig:
         }
 
     @classmethod
-    def get_input_validation_config(cls) -> Dict[str, Any]:
+    def get_input_validation_config(cls) -> dict[str, Any]:
         """Get input validation configuration."""
         return {
             "max_request_size_mb": cls.MAX_REQUEST_SIZE_MB,
@@ -125,7 +125,7 @@ class SecurityHardeningConfig:
         }
 
     @classmethod
-    def get_password_policy(cls) -> Dict[str, Any]:
+    def get_password_policy(cls) -> dict[str, Any]:
         """Get password security policy."""
         return {
             "min_length": cls.PASSWORD_MIN_LENGTH,
@@ -160,7 +160,7 @@ class SecurityHardeningConfig:
 
     @classmethod
     def hash_password(
-        cls, password: str, salt: Optional[bytes] = None
+        cls, password: str, salt: bytes | None = None
     ) -> tuple[bytes, bytes]:
         """Hash a password using PBKDF2."""
         if salt is None:
@@ -180,7 +180,7 @@ class SecurityHardeningConfig:
         return hmac.compare_digest(hashed, expected_key)
 
     @classmethod
-    def sanitize_input(cls, input_str: str, max_length: Optional[int] = None) -> str:
+    def sanitize_input(cls, input_str: str, max_length: int | None = None) -> str:
         """Sanitize user input to prevent injection attacks."""
         if not input_str:
             return ""
@@ -197,7 +197,7 @@ class SecurityHardeningConfig:
         return sanitized
 
     @classmethod
-    def validate_request_size(cls, content_length: Optional[int]) -> bool:
+    def validate_request_size(cls, content_length: int | None) -> bool:
         """Validate request size against limits."""
         if content_length is None:
             return True
@@ -206,7 +206,7 @@ class SecurityHardeningConfig:
         return content_length <= max_size_bytes
 
     @classmethod
-    def get_threat_detection_config(cls) -> Dict[str, Any]:
+    def get_threat_detection_config(cls) -> dict[str, Any]:
         """Get threat detection configuration."""
         return {
             "blocked_user_agents": list(cls.BLOCKED_USER_AGENTS),

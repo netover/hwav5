@@ -6,7 +6,6 @@ to keep the main settings module more focused and maintainable.
 
 import warnings
 from pathlib import Path
-from typing import Optional
 
 from pydantic import SecretStr, ValidationInfo, field_validator
 
@@ -85,8 +84,8 @@ class SettingsValidators:
     @field_validator("admin_password")
     @classmethod
     def validate_password_strength(
-        cls, v: Optional[SecretStr], info: ValidationInfo
-    ) -> Optional[SecretStr]:
+        cls, v: SecretStr | None, info: ValidationInfo
+    ) -> SecretStr | None:
         """Valida força mínima da senha."""
         env = info.data.get("environment")
 
@@ -105,8 +104,8 @@ class SettingsValidators:
     @field_validator("admin_password")
     @classmethod
     def validate_insecure_in_prod(
-        cls, v: Optional[SecretStr], info: ValidationInfo
-    ) -> Optional[SecretStr]:
+        cls, v: SecretStr | None, info: ValidationInfo
+    ) -> SecretStr | None:
         """Bloqueia senhas inseguras em produção."""
         env = info.data.get("environment")
         if env == Environment.PRODUCTION and v is not None:

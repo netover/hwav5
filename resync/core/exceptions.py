@@ -10,7 +10,7 @@ Este módulo implementa uma hierarquia completa de exceções seguindo as melhor
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class ErrorCode(str, Enum):
@@ -142,10 +142,10 @@ class BaseAppException(Exception):
         message: str,
         error_code: ErrorCode = ErrorCode.INTERNAL_ERROR,
         status_code: int = 500,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
         severity: ErrorSeverity = ErrorSeverity.ERROR,
-        original_exception: Optional[Exception] = None,
+        original_exception: Exception | None = None,
     ):
         """Inicializa a exceção base.
 
@@ -168,7 +168,7 @@ class BaseAppException(Exception):
         self.timestamp = datetime.utcnow()
         self.original_exception = original_exception
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Converte a exceção para dicionário.
 
         Returns:
@@ -209,9 +209,9 @@ class ValidationError(BaseAppException):
     def __init__(
         self,
         message: str = "Validation failed",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -233,9 +233,9 @@ class AuthenticationError(BaseAppException):
     def __init__(
         self,
         message: str = "Authentication failed",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -257,9 +257,9 @@ class AuthorizationError(BaseAppException):
     def __init__(
         self,
         message: str = "Authorization failed",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -281,11 +281,11 @@ class ResourceNotFoundError(BaseAppException):
     def __init__(
         self,
         message: str = "Resource not found",
-        resource_type: Optional[str] = None,
-        resource_id: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -314,9 +314,9 @@ class ResourceConflictError(BaseAppException):
     def __init__(
         self,
         message: str = "Resource conflict",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -338,9 +338,9 @@ class BusinessError(BaseAppException):
     def __init__(
         self,
         message: str = "Business rule violation",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -362,10 +362,10 @@ class RateLimitError(BaseAppException):
     def __init__(
         self,
         message: str = "Rate limit exceeded",
-        retry_after: Optional[int] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        retry_after: int | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -397,9 +397,9 @@ class InternalError(BaseAppException):
     def __init__(
         self,
         message: str = "Internal server error",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -421,10 +421,10 @@ class IntegrationError(BaseAppException):
     def __init__(
         self,
         message: str = "External service integration error",
-        service_name: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        service_name: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -451,10 +451,10 @@ class ServiceUnavailableError(BaseAppException):
     def __init__(
         self,
         message: str = "Service temporarily unavailable",
-        retry_after: Optional[int] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        retry_after: int | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -481,10 +481,10 @@ class CircuitBreakerError(BaseAppException):
     def __init__(
         self,
         message: str = "Circuit breaker is open",
-        service_name: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        service_name: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -511,10 +511,10 @@ class TimeoutError(BaseAppException):
     def __init__(
         self,
         message: str = "Operation timeout",
-        timeout_seconds: Optional[float] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        timeout_seconds: float | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -543,10 +543,10 @@ class ConfigurationError(BaseAppException):
     def __init__(
         self,
         message: str = "Configuration error",
-        config_key: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        config_key: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -570,10 +570,10 @@ class InvalidConfigError(ConfigurationError):
     def __init__(
         self,
         message: str = "Invalid configuration",
-        config_key: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        config_key: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -591,10 +591,10 @@ class MissingConfigError(ConfigurationError):
     def __init__(
         self,
         message: str = "Missing configuration",
-        config_key: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        config_key: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -612,9 +612,9 @@ class RedisError(BaseAppException):
     def __init__(
         self,
         message: str = "Redis error",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -633,9 +633,9 @@ class RedisInitializationError(RedisError):
     def __init__(
         self,
         message: str = "Redis initialization error",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -653,9 +653,9 @@ class RedisConnectionError(RedisInitializationError):
     def __init__(
         self,
         message: str = "Redis connection error",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -672,9 +672,9 @@ class RedisAuthError(RedisInitializationError):
     def __init__(
         self,
         message: str = "Redis authentication error",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -691,10 +691,10 @@ class RedisTimeoutError(RedisInitializationError):
     def __init__(
         self,
         message: str = "Redis timeout error",
-        timeout_seconds: Optional[float] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        timeout_seconds: float | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -716,10 +716,10 @@ class AgentError(BaseAppException):
     def __init__(
         self,
         message: str = "Agent error",
-        agent_id: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        agent_id: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -743,9 +743,9 @@ class TWSConnectionError(IntegrationError):
     def __init__(
         self,
         message: str = "TWS connection error",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -763,10 +763,10 @@ class AgentExecutionError(BaseAppException):
     def __init__(
         self,
         message: str = "Agent execution error",
-        agent_id: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        agent_id: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -790,10 +790,10 @@ class ToolExecutionError(BaseAppException):
     def __init__(
         self,
         message: str = "Tool execution error",
-        tool_name: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        tool_name: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -817,10 +817,10 @@ class ToolConnectionError(ToolExecutionError):
     def __init__(
         self,
         message: str = "Tool connection error",
-        tool_name: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        tool_name: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -838,11 +838,11 @@ class ToolTimeoutError(ToolExecutionError):
     def __init__(
         self,
         message: str = "Tool timeout",
-        tool_name: Optional[str] = None,
-        timeout_seconds: Optional[float] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        tool_name: str | None = None,
+        timeout_seconds: float | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -870,9 +870,9 @@ class KnowledgeGraphError(BaseAppException):
     def __init__(
         self,
         message: str = "Knowledge graph error",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -891,9 +891,9 @@ class AuditError(BaseAppException):
     def __init__(
         self,
         message: str = "Audit system error",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -912,10 +912,10 @@ class FileIngestionError(BaseAppException):
     def __init__(
         self,
         message: str = "File ingestion error",
-        filename: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        filename: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -939,10 +939,10 @@ class FileProcessingError(BaseAppException):
     def __init__(
         self,
         message: str = "File processing error",
-        filename: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        filename: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -966,10 +966,10 @@ class LLMError(IntegrationError):
     def __init__(
         self,
         message: str = "LLM error",
-        model_name: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        model_name: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -992,10 +992,10 @@ class ParsingError(BaseAppException):
     def __init__(
         self,
         message: str = "Parsing error",
-        data_format: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        data_format: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -1023,9 +1023,9 @@ class NetworkError(BaseAppException):
     def __init__(
         self,
         message: str = "Network error",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -1044,9 +1044,9 @@ class WebSocketError(NetworkError):
     def __init__(
         self,
         message: str = "WebSocket error",
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         super().__init__(
             message=message,
@@ -1063,10 +1063,10 @@ class DatabaseError(BaseAppException):
     def __init__(
         self,
         message: str = "Database error",
-        query: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        query: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -1091,10 +1091,10 @@ class CacheError(BaseAppException):
     def __init__(
         self,
         message: str = "Cache error",
-        cache_key: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        cache_key: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -1118,10 +1118,10 @@ class PoolExhaustedError(CacheError):
     def __init__(
         self,
         message: str = "Connection pool exhausted",
-        pool_name: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        pool_name: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -1145,10 +1145,10 @@ class NotificationError(BaseAppException):
     def __init__(
         self,
         message: str = "Notification error",
-        notification_type: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        notification_type: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -1179,12 +1179,12 @@ class PerformanceError(BaseAppException):
     def __init__(
         self,
         message: str = "Performance degradation detected",
-        metric_name: Optional[str] = None,
-        threshold: Optional[float] = None,
-        actual_value: Optional[float] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        metric_name: str | None = None,
+        threshold: float | None = None,
+        actual_value: float | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -1212,10 +1212,10 @@ class HealthCheckError(BaseAppException):
     def __init__(
         self,
         message: str = "Health check error",
-        component: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        component: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         if details is None:
             details = {}
@@ -1235,7 +1235,7 @@ class HealthCheckError(BaseAppException):
 
 class CircuitBreakerOpenError(HealthCheckError):
     """Exceção quando circuit breaker está aberto e rejeitando requisições.
-    
+
     Permite captura seletiva e acesso a informações específicas do circuit breaker.
     """
 
@@ -1243,16 +1243,16 @@ class CircuitBreakerOpenError(HealthCheckError):
         self,
         name: str,
         recovery_timeout: float,
-        message: Optional[str] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        message: str | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         self.name = name
         self.recovery_timeout = recovery_timeout
-        
+
         if message is None:
             message = f"Circuit breaker '{name}' is open for {recovery_timeout}s"
-        
+
         super().__init__(
             message=message,
             component="circuit_breaker",
@@ -1267,26 +1267,26 @@ class CircuitBreakerOpenError(HealthCheckError):
 
 class CacheHealthCheckError(HealthCheckError):
     """Exceção quando health check do cache falha.
-    
+
     Permite distinção de falhas de cache de outras falhas de health check.
     """
 
     def __init__(
         self,
         operation: str,
-        details_info: Optional[str] = None,
-        message: Optional[str] = None,
-        correlation_id: Optional[str] = None,
-        original_exception: Optional[Exception] = None,
+        details_info: str | None = None,
+        message: str | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
     ):
         self.operation = operation
         self.details_info = details_info
-        
+
         if message is None:
             message = f"Cache health check failed: {operation}"
             if details_info:
                 message += f" - {details_info}"
-        
+
         super().__init__(
             message=message,
             component="cache",

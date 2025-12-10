@@ -9,7 +9,6 @@ including CPU usage, memory utilization, and system performance metrics.
 import asyncio
 import time
 from datetime import datetime
-from typing import Dict, Optional
 
 import psutil
 import structlog
@@ -32,8 +31,8 @@ class SystemResourceMonitor:
 
     def __init__(self):
         """Initialize the system resource monitor."""
-        self._last_check: Optional[datetime] = None
-        self._cached_results: Dict[str, ComponentHealth] = {}
+        self._last_check: datetime | None = None
+        self._cached_results: dict[str, ComponentHealth] = {}
 
     async def check_memory_health(self) -> ComponentHealth:
         """
@@ -181,7 +180,7 @@ class SystemResourceMonitor:
                 error_count=1,
             )
 
-    async def check_system_health(self) -> Dict[str, ComponentHealth]:
+    async def check_system_health(self) -> dict[str, ComponentHealth]:
         """
         Check all system resource health metrics.
 
@@ -199,7 +198,7 @@ class SystemResourceMonitor:
             "cpu": cpu_health,
         }
 
-    def get_cached_health(self, component_name: str) -> Optional[ComponentHealth]:
+    def get_cached_health(self, component_name: str) -> ComponentHealth | None:
         """
         Get cached health result for a specific component.
 
@@ -214,9 +213,8 @@ class SystemResourceMonitor:
             age = datetime.now() - self._last_check
             if age and age.total_seconds() < 300:
                 return self._cached_results[component_name]
-            else:
-                # Cache expired
-                self._cached_results.pop(component_name, None)
+            # Cache expired
+            self._cached_results.pop(component_name, None)
 
         return None
 

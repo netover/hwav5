@@ -10,7 +10,7 @@ and search functionality.
 import asyncio
 import time
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 from resync.core.interfaces import IFileIngestor, IKnowledgeGraph
 from resync.core.structured_logger import get_logger
@@ -41,11 +41,11 @@ class RAGHealthCheck:
         """
         self.file_ingestor = file_ingestor
         self.knowledge_graph = knowledge_graph
-        self.check_results: Dict[str, Any] = {}
+        self.check_results: dict[str, Any] = {}
         self.start_time = 0
         self.end_time = 0
 
-    async def run_comprehensive_check(self) -> Dict[str, Any]:
+    async def run_comprehensive_check(self) -> dict[str, Any]:
         """
         Run all RAG health checks.
 
@@ -103,7 +103,7 @@ class RAGHealthCheck:
                 "details": self.check_results,
             }
 
-    async def _check_knowledge_base_directories(self) -> Dict[str, Any]:
+    async def _check_knowledge_base_directories(self) -> dict[str, Any]:
         """
         Check if knowledge base directories exist and are accessible.
 
@@ -148,7 +148,7 @@ class RAGHealthCheck:
                 "error": str(e),
             }
 
-    async def _check_file_system_permissions(self) -> Dict[str, Any]:
+    async def _check_file_system_permissions(self) -> dict[str, Any]:
         """
         Check file system permissions for RAG operations.
 
@@ -205,7 +205,7 @@ class RAGHealthCheck:
                 "error": str(e),
             }
 
-    async def _check_document_processing(self) -> Dict[str, Any]:
+    async def _check_document_processing(self) -> dict[str, Any]:
         """
         Check if document processing capabilities are working.
 
@@ -256,7 +256,7 @@ class RAGHealthCheck:
                 "error": str(e),
             }
 
-    async def _check_knowledge_graph_connectivity(self) -> Dict[str, Any]:
+    async def _check_knowledge_graph_connectivity(self) -> dict[str, Any]:
         """
         Check knowledge graph connectivity and basic operations.
 
@@ -303,7 +303,7 @@ class RAGHealthCheck:
                 "error": str(e),
             }
 
-    async def _check_search_functionality(self) -> Dict[str, Any]:
+    async def _check_search_functionality(self) -> dict[str, Any]:
         """
         Check search functionality in the knowledge graph.
 
@@ -365,7 +365,7 @@ class RAGHealthCheck:
                 "error": str(e),
             }
 
-    async def _check_file_ingestion_pipeline(self) -> Dict[str, Any]:
+    async def _check_file_ingestion_pipeline(self) -> dict[str, Any]:
         """
         Check the complete file ingestion pipeline.
 
@@ -422,7 +422,7 @@ class RAGHealthCheck:
 
 
 # Convenience function to run RAG health check
-async def run_rag_health_check(file_ingestor: IFileIngestor, knowledge_graph: IKnowledgeGraph) -> Dict[str, Any]:
+async def run_rag_health_check(file_ingestor: IFileIngestor, knowledge_graph: IKnowledgeGraph) -> dict[str, Any]:
     """
     Run comprehensive RAG health check.
 
@@ -437,7 +437,7 @@ async def run_rag_health_check(file_ingestor: IFileIngestor, knowledge_graph: IK
     return await checker.run_comprehensive_check()
 
 
-def get_rag_health_summary(results: Dict[str, Any]) -> str:
+def get_rag_health_summary(results: dict[str, Any]) -> str:
     """
     Generate a human-readable summary of RAG health check results.
 

@@ -5,7 +5,7 @@ Incident Response Data Models.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class IncidentSeverity(str, Enum):
@@ -39,25 +39,25 @@ class IncidentCategory(str, Enum):
 @dataclass
 class Incident:
     """Represents a system incident."""
-    
+
     id: str
     title: str
     description: str
     severity: IncidentSeverity
     category: IncidentCategory
     status: IncidentStatus = IncidentStatus.DETECTED
-    
+
     # Timestamps
     detected_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
-    resolved_at: Optional[datetime] = None
-    
+    resolved_at: datetime | None = None
+
     # Tracking
-    affected_components: List[str] = field(default_factory=list)
-    actions_taken: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    
-    def to_dict(self) -> Dict[str, Any]:
+    affected_components: list[str] = field(default_factory=list)
+    actions_taken: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "id": self.id,
@@ -78,15 +78,15 @@ class Incident:
 @dataclass
 class ResponseAction:
     """Represents an action taken in response to an incident."""
-    
+
     name: str
     description: str
     action_type: str
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    parameters: dict[str, Any] = field(default_factory=dict)
     timeout_seconds: int = 300
     requires_approval: bool = False
-    
-    async def execute(self) -> Dict[str, Any]:
+
+    async def execute(self) -> dict[str, Any]:
         """Execute the response action."""
         return {
             "action": self.name,

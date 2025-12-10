@@ -25,6 +25,7 @@ from structlog.types import EventDict, WrappedLogger
 
 from .encoding_utils import can_encode
 
+
 # Lazy import of settings to avoid circular dependencies
 def _get_settings():
     """Lazy import of settings to avoid circular dependencies."""
@@ -392,7 +393,7 @@ class LoggerAdapter:
 
         self.logger.critical(event, **kwargs)
 
-    def bind(self, **kwargs) -> "LoggerAdapter":
+    def bind(self, **kwargs) -> LoggerAdapter:
         """Cria novo logger com contexto adicional.
 
         Args:

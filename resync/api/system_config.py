@@ -23,7 +23,7 @@ Security:
 
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
@@ -52,9 +52,9 @@ class ConfigField(BaseModel):
     type: str  # string, int, float, bool, list
     description: str
     default: Any
-    min_value: Optional[float] = None
-    max_value: Optional[float] = None
-    options: Optional[List[str]] = None  # For select fields
+    min_value: float | None = None
+    max_value: float | None = None
+    options: list[str] | None = None  # For select fields
     requires_restart: bool = False
     category: str
     sensitive: bool = False
@@ -66,13 +66,13 @@ class ConfigCategory(BaseModel):
     display_name: str
     description: str
     icon: str  # FontAwesome icon class
-    fields: List[ConfigField]
+    fields: list[ConfigField]
 
 
 class ConfigUpdateRequest(BaseModel):
     """Request to update configuration values."""
-    updates: Dict[str, Any] = Field(..., description="Field name -> new value pairs")
-    
+    updates: dict[str, Any] = Field(..., description="Field name -> new value pairs")
+
     @field_validator('updates')
     @classmethod
     def validate_updates(cls, v):
@@ -84,9 +84,9 @@ class ConfigUpdateRequest(BaseModel):
 class ConfigUpdateResponse(BaseModel):
     """Response after updating configuration."""
     success: bool
-    updated_fields: List[str]
+    updated_fields: list[str]
     requires_restart: bool
-    errors: Dict[str, str] = Field(default_factory=dict)
+    errors: dict[str, str] = Field(default_factory=dict)
     message: str
 
 
@@ -106,15 +106,15 @@ class SystemResourcesResponse(BaseModel):
 # CONFIGURATION DEFINITIONS
 # =============================================================================
 
-def get_config_definitions() -> List[ConfigCategory]:
+def get_config_definitions() -> list[ConfigCategory]:
     """
     Define all configurable settings with metadata.
-    
+
     This is the single source of truth for what can be configured
     via the web interface.
     """
     settings = get_settings()
-    
+
     return [
         # =====================================================================
         # PERFORMANCE & CACHE
@@ -221,7 +221,7 @@ def get_config_definitions() -> List[ConfigCategory]:
                 ),
             ],
         ),
-        
+
         # =====================================================================
         # TWS MONITORING
         # =====================================================================
@@ -358,7 +358,7 @@ def get_config_definitions() -> List[ConfigCategory]:
                 ),
             ],
         ),
-        
+
         # =====================================================================
         # DATA RETENTION
         # =====================================================================
@@ -406,7 +406,7 @@ def get_config_definitions() -> List[ConfigCategory]:
                 ),
             ],
         ),
-        
+
         # =====================================================================
         # RATE LIMITING
         # =====================================================================
@@ -476,7 +476,7 @@ def get_config_definitions() -> List[ConfigCategory]:
                 ),
             ],
         ),
-        
+
         # =====================================================================
         # RAG SERVICE
         # =====================================================================
@@ -534,7 +534,7 @@ def get_config_definitions() -> List[ConfigCategory]:
                 ),
             ],
         ),
-        
+
         # =====================================================================
         # LITELLM CONFIGURATION
         # =====================================================================
@@ -649,7 +649,7 @@ def get_config_definitions() -> List[ConfigCategory]:
                 ),
             ],
         ),
-        
+
         # =====================================================================
         # LLM COST & BUDGET
         # =====================================================================
@@ -729,7 +729,7 @@ def get_config_definitions() -> List[ConfigCategory]:
                 ),
             ],
         ),
-        
+
         # =====================================================================
         # MODEL ROUTING
         # =====================================================================
@@ -804,7 +804,7 @@ def get_config_definitions() -> List[ConfigCategory]:
                 ),
             ],
         ),
-        
+
         # =====================================================================
         # LOGGING
         # =====================================================================
@@ -848,7 +848,7 @@ def get_config_definitions() -> List[ConfigCategory]:
                 ),
             ],
         ),
-        
+
         # =====================================================================
         # NOTIFICATIONS
         # =====================================================================
@@ -903,7 +903,7 @@ def get_config_definitions() -> List[ConfigCategory]:
                 ),
             ],
         ),
-        
+
         # =====================================================================
         # FEATURE FLAGS
         # =====================================================================
@@ -962,11 +962,11 @@ def get_config_definitions() -> List[ConfigCategory]:
 # API ENDPOINTS
 # =============================================================================
 
-@router.get("/categories", response_model=List[ConfigCategory])
+@router.get("/categories", response_model=list[ConfigCategory])
 async def get_config_categories():
     """
     Get all configuration categories with their fields.
-    
+
     Returns the complete configuration schema organized by category,
     including current values, types, constraints, and metadata.
     """
@@ -987,11 +987,11 @@ async def get_config_category(category_name: str):
     Get a specific configuration category.
     """
     categories = get_config_definitions()
-    
+
     for category in categories:
         if category.name == category_name:
             return category
-    
+
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"Category '{category_name}' not found"
@@ -1002,75 +1002,75 @@ async def get_config_category(category_name: str):
 async def update_config(request: ConfigUpdateRequest):
     """
     Update configuration values.
-    
+
     Validates all updates before applying. Returns which fields were
     updated and whether a restart is required.
     """
     try:
         settings = get_settings()
         categories = get_config_definitions()
-        
+
         # Build field lookup
-        field_lookup: Dict[str, ConfigField] = {}
+        field_lookup: dict[str, ConfigField] = {}
         for category in categories:
             for field in category.fields:
                 field_lookup[field.name] = field
-        
+
         updated_fields = []
         errors = {}
         requires_restart = False
-        
+
         for field_name, new_value in request.updates.items():
             # Check if field exists and is configurable
             if field_name not in field_lookup:
                 errors[field_name] = "Unknown or non-configurable field"
                 continue
-            
+
             field_def = field_lookup[field_name]
-            
+
             # Check if sensitive
             if field_def.sensitive:
                 errors[field_name] = "Cannot update sensitive fields via API"
                 continue
-            
+
             # Validate type and constraints
             try:
                 validated_value = validate_field_value(field_def, new_value)
             except ValueError as e:
                 errors[field_name] = str(e)
                 continue
-            
+
             # Apply update (to environment variable for persistence)
             env_name = f"APP_{field_name.upper()}"
             os.environ[env_name] = str(validated_value)
-            
+
             # Update in-memory settings if possible
             try:
                 setattr(settings, field_name, validated_value)
             except Exception:
                 pass  # Some fields may be computed/read-only
-            
+
             updated_fields.append(field_name)
-            
+
             if field_def.requires_restart:
                 requires_restart = True
-        
+
         # Determine overall success
         success = len(updated_fields) > 0 and len(errors) == 0
-        
+
         if updated_fields:
             logger.info(
                 "config_updated",
                 updated_fields=updated_fields,
                 requires_restart=requires_restart,
             )
-        
+
         message = f"Updated {len(updated_fields)} field(s)"
         if requires_restart:
             message += ". Restart required for some changes to take effect."
         if errors:
             message += f" {len(errors)} field(s) had errors."
-        
+
         return ConfigUpdateResponse(
             success=success,
             updated_fields=updated_fields,
@@ -1078,7 +1078,7 @@ async def update_config(request: ConfigUpdateRequest):
             errors=errors,
             message=message,
         )
-        
+
     except Exception as e:
         logger.error("update_config_error", error=str(e))
         raise HTTPException(
@@ -1094,17 +1094,17 @@ async def get_system_resources():
     """
     try:
         import psutil
-        
+
         process = psutil.Process()
         disk = psutil.disk_usage('/')
-        
+
         # Get worker count (approximate)
         parent = psutil.Process(os.getppid())
         try:
             workers = len([c for c in parent.children() if 'python' in c.name().lower()])
         except Exception:
             workers = 1
-        
+
         return SystemResourcesResponse(
             memory_used_mb=round(process.memory_info().rss / 1024 / 1024, 1),
             memory_percent=round(process.memory_percent(), 1),
@@ -1117,7 +1117,7 @@ async def get_system_resources():
                 (datetime.now() - datetime.fromtimestamp(process.create_time())).total_seconds()
             ),
         )
-        
+
     except ImportError:
         # psutil not available
         return SystemResourcesResponse(
@@ -1144,27 +1144,27 @@ async def trigger_garbage_collection():
     Trigger garbage collection to free memory.
     """
     import gc
-    
+
     before = 0
     try:
         import psutil
         before = psutil.Process().memory_info().rss / 1024 / 1024
     except ImportError:
         pass
-    
+
     collected = gc.collect()
-    
+
     after = 0
     try:
         import psutil
         after = psutil.Process().memory_info().rss / 1024 / 1024
     except ImportError:
         pass
-    
+
     freed = before - after
-    
+
     logger.info("gc_triggered", objects_collected=collected, memory_freed_mb=round(freed, 1))
-    
+
     return {
         "success": True,
         "objects_collected": collected,
@@ -1183,7 +1183,7 @@ async def clear_cache():
         # Clear settings cache
         from resync.settings import clear_settings_cache
         clear_settings_cache()
-        
+
         # Clear metrics store cache if available
         try:
             from resync.core.metrics import get_metrics_store
@@ -1192,11 +1192,11 @@ async def clear_cache():
             await store._flush_buffer()
         except ImportError:
             pass
-        
+
         logger.info("cache_cleared")
-        
+
         return {"success": True, "message": "Caches cleared successfully"}
-        
+
     except Exception as e:
         logger.error("clear_cache_error", error=str(e))
         raise HTTPException(
@@ -1212,14 +1212,14 @@ async def clear_cache():
 def validate_field_value(field: ConfigField, value: Any) -> Any:
     """
     Validate and convert a field value.
-    
+
     Args:
         field: Field definition with constraints
         value: Value to validate
-        
+
     Returns:
         Validated and converted value
-        
+
     Raises:
         ValueError: If validation fails
     """
@@ -1229,31 +1229,31 @@ def validate_field_value(field: ConfigField, value: Any) -> Any:
             value = int(value)
         except (TypeError, ValueError):
             raise ValueError("Must be an integer")
-    
+
     elif field.type == "float":
         try:
             value = float(value)
         except (TypeError, ValueError):
             raise ValueError("Must be a number")
-    
+
     elif field.type == "bool":
         if isinstance(value, str):
             value = value.lower() in ("true", "1", "yes", "on")
         else:
             value = bool(value)
-    
+
     elif field.type == "string":
         value = str(value)
-    
+
     # Range validation for numbers
     if field.type in ("int", "float"):
         if field.min_value is not None and value < field.min_value:
             raise ValueError(f"Must be at least {field.min_value}")
         if field.max_value is not None and value > field.max_value:
             raise ValueError(f"Must be at most {field.max_value}")
-    
+
     # Options validation
     if field.options and value not in field.options:
         raise ValueError(f"Must be one of: {', '.join(field.options)}")
-    
+
     return value

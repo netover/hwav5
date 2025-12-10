@@ -9,18 +9,14 @@ Resync v5.2 - AI Interface for HCL Workload Automation
 - Real-time Event Broadcasting
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, Request
+
+import structlog
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from .api.v1.routes.auth import router as auth_router
-from .api.v1.routes.chat import router as chat_router
-from .api.v1.routes.audit import router as audit_router
-from .api.v1.routes.agents import router as agents_router
-from .api.v1.routes.rag import router as rag_router
-from .api.v1.routes.status import router as status_router
-from .api.v1.routes.admin_config import router as admin_config_router
-from .api.websocket.handlers import websocket_handler
+
+from resync.api.litellm_config import router as litellm_config_router
 
 # Import monitoring dashboard router (replaces Prometheus/Grafana)
 from resync.api.monitoring_dashboard import router as monitoring_router
@@ -30,13 +26,6 @@ from resync.api.monitoring_routes import monitoring_router as proactive_router
 
 # Import system configuration and LiteLLM management routers
 from resync.api.system_config import router as system_config_router
-from resync.api.litellm_config import router as litellm_config_router
-
-# Import TWS multi-instance management router
-from resync.fastapi_app.api.v1.routes.admin_tws_instances import router as tws_instances_router
-
-# Import Threshold Tuning router for Active Learning threshold calibration
-from resync.fastapi_app.api.v1.routes.admin_threshold_tuning import router as threshold_tuning_router
 
 # Import AI Monitoring router (Specialist Agents + Evidently drift detection)
 from resync.fastapi_app.api.v1.routes.admin_ai_monitoring import router as ai_monitoring_router
@@ -50,7 +39,23 @@ from resync.fastapi_app.api.v1.routes.admin_observability import router as obser
 # Import Teams integration router
 from resync.fastapi_app.api.v1.routes.admin_teams import router as teams_router
 
-import structlog
+# Import Threshold Tuning router for Active Learning threshold calibration
+from resync.fastapi_app.api.v1.routes.admin_threshold_tuning import (
+    router as threshold_tuning_router,
+)
+
+# Import TWS multi-instance management router
+from resync.fastapi_app.api.v1.routes.admin_tws_instances import router as tws_instances_router
+
+from .api.v1.routes.admin_config import router as admin_config_router
+from .api.v1.routes.agents import router as agents_router
+from .api.v1.routes.audit import router as audit_router
+from .api.v1.routes.auth import router as auth_router
+from .api.v1.routes.chat import router as chat_router
+from .api.v1.routes.rag import router as rag_router
+from .api.v1.routes.status import router as status_router
+from .api.websocket.handlers import websocket_handler
+
 logger = structlog.get_logger(__name__)
 
 
@@ -58,29 +63,39 @@ logger = structlog.get_logger(__name__)
 async def lifespan(app: FastAPI):
     """
     Lifecycle manager for startup/shutdown events.
-    
+
     Startup:
     - Initialize proactive monitoring system
     - Start background TWS polling
     - Start event bus
-    
+
     Shutdown:
     - Stop background tasks gracefully
     - Close database connections
+
+    RESILIENCE PATTERN:
+    Each service initialization is wrapped in try/except to ensure that
+    failure of one service doesn't prevent others from starting. This is
+    intentional - the application can run in degraded mode with partial
+    functionality rather than failing completely.
+
+    Services that fail to initialize are logged as warnings/errors but
+    the application continues. Check logs for "Could not initialize"
+    messages to identify services that need attention.
     """
     logger.info("Application starting up...")
-    
+
     # Initialize proactive monitoring if TWS client is available
     try:
         from resync.services.tws_service import get_tws_client
         tws_client = get_tws_client()
-        
+
         if tws_client:
-            from resync.core.proactive_init import init_monitoring_system
             from resync.core.monitoring_config import get_monitoring_config
-            
+            from resync.core.proactive_init import init_monitoring_system
+
             config = get_monitoring_config()
-            
+
             await init_monitoring_system(
                 tws_client=tws_client,
                 polling_interval=config.polling_interval_seconds,
@@ -97,15 +112,16 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Could not initialize proactive monitoring: {e}")
     except Exception as e:
         logger.error(f"Error starting proactive monitoring: {e}")
-    
+
     logger.info("Application startup complete")
-    
+
     # Initialize AI Monitoring Service (Evidently)
     try:
-        from resync.core.monitoring import init_monitoring_service, MonitoringConfig
-        from pathlib import Path
         import json
-        
+        from pathlib import Path
+
+        from resync.core.monitoring import MonitoringConfig, init_monitoring_service
+
         ai_config_path = Path("config/ai_config.json")
         if ai_config_path.exists():
             with open(ai_config_path) as f:
@@ -113,7 +129,7 @@ async def lifespan(app: FastAPI):
             monitoring_config = MonitoringConfig(**ai_config.get("monitoring", {}))
         else:
             monitoring_config = MonitoringConfig()
-        
+
         if monitoring_config.enabled:
             await init_monitoring_service(monitoring_config)
             logger.info("ai_monitoring_service_started", schedule=monitoring_config.schedule)
@@ -121,12 +137,12 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Could not initialize AI monitoring: {e}")
     except Exception as e:
         logger.error(f"Error starting AI monitoring: {e}")
-    
+
     # Initialize Specialist Agents Team
     try:
         from resync.core.specialists import create_specialist_team
         from resync.core.specialists.models import TeamConfig
-        
+
         if ai_config_path.exists():
             with open(ai_config_path) as f:
                 ai_config = json.load(f)
@@ -142,7 +158,7 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Could not initialize specialist agents: {e}")
     except Exception as e:
         logger.error(f"Error initializing specialist agents: {e}")
-    
+
     # Initialize Observability (LangFuse + Evidently)
     try:
         from resync.core.observability import setup_observability
@@ -152,7 +168,7 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Could not initialize observability: {e}")
     except Exception as e:
         logger.error(f"Error initializing observability: {e}")
-    
+
     # Start Backup Scheduler
     try:
         from resync.core.backup import get_backup_service
@@ -163,19 +179,19 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Could not start backup scheduler: {e}")
     except Exception as e:
         logger.error(f"Error starting backup scheduler: {e}")
-    
+
     yield  # Application runs here
-    
+
     # Shutdown
     logger.info("Application shutting down...")
-    
+
     try:
         from resync.core.proactive_init import shutdown_monitoring_system
         await shutdown_monitoring_system()
         logger.info("Proactive monitoring stopped")
     except Exception as e:
         logger.error(f"Error stopping proactive monitoring: {e}")
-    
+
     # Shutdown AI Monitoring Service
     try:
         from resync.core.monitoring import get_monitoring_service
@@ -185,7 +201,7 @@ async def lifespan(app: FastAPI):
             logger.info("AI monitoring service stopped")
     except Exception as e:
         logger.error(f"Error stopping AI monitoring: {e}")
-    
+
     # Shutdown Backup Scheduler
     try:
         from resync.core.backup import get_backup_service
@@ -194,7 +210,7 @@ async def lifespan(app: FastAPI):
         logger.info("Backup scheduler stopped")
     except Exception as e:
         logger.error(f"Error stopping backup scheduler: {e}")
-    
+
     # Shutdown Observability
     try:
         from resync.core.observability import shutdown_observability
@@ -202,7 +218,7 @@ async def lifespan(app: FastAPI):
         logger.info("Observability services stopped")
     except Exception as e:
         logger.error(f"Error stopping observability: {e}")
-    
+
     logger.info("Application shutdown complete")
 
 
@@ -218,6 +234,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Setup templates - use absolute path from project root
 import pathlib
+
 project_root = pathlib.Path(__file__).parent.parent.parent
 templates = Jinja2Templates(directory=str(project_root / "templates"))
 
@@ -298,13 +315,13 @@ async def admin_page(request: Request):
 async def monitoring_page(request: Request):
     """
     Internal Monitoring Dashboard - Replaces Prometheus + Grafana
-    
+
     Features:
     - Real-time metrics via WebSocket (5s updates)
     - 2-hour rolling history (~1.4 MB memory)
     - Chart.js visualizations (zero external dependencies)
     - Automatic alerts with browser notifications
-    
+
     Resource Usage:
     - Memory: ~50 MB (vs ~1.2 GB for Prometheus+Grafana)
     - CPU: ~3% (vs ~15-20% for external stack)
@@ -316,7 +333,7 @@ async def monitoring_page(request: Request):
 async def tws_monitor_page(request: Request):
     """
     TWS Real-time Monitor Dashboard
-    
+
     Features:
     - Live TWS status with WebSocket updates
     - Workstation health gauges

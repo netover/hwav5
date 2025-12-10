@@ -20,10 +20,11 @@ import logging
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Iterable, Tuple
-from contextvars import ContextVar
 from bisect import bisect_right
+from collections.abc import Iterable
+from contextvars import ContextVar
+from dataclasses import dataclass, field
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,7 @@ class MetricHistogram:
 
     def __init__(
         self,
-        boundaries: Optional[Iterable[float]] = None,
+        boundaries: Iterable[float] | None = None,
         max_samples: int = 1024,
         help_text: str = "",
     ) -> None:
@@ -127,14 +128,14 @@ class MetricHistogram:
             boundaries = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25,
                           0.5, 1.0, 2.5, 5.0, 10.0]  # pode ajustar conforme o domínio
         b = sorted(set(float(x) for x in boundaries))
-        self.boundaries: List[float] = b
-        self.counts: List[int] = [0] * (len(b) + 1)  # +Inf
-        self.samples: List[float] = []
+        self.boundaries: list[float] = b
+        self.counts: list[int] = [0] * (len(b) + 1)  # +Inf
+        self.samples: list[float] = []
         self.max_samples = int(max_samples)
         self._sum: float = 0.0
         self._count: int = 0
-        self._min: Optional[float] = None
-        self._max: Optional[float] = None
+        self._min: float | None = None
+        self._max: float | None = None
         self._lock = threading.Lock()
         self.help_text = help_text
 
@@ -166,14 +167,14 @@ class MetricHistogram:
         return self._sum
 
     @property
-    def min(self) -> Optional[float]:
+    def min(self) -> float | None:
         return self._min
 
     @property
-    def max(self) -> Optional[float]:
+    def max(self) -> float | None:
         return self._max
 
-    def _quantile(self, q: float) -> Optional[float]:
+    def _quantile(self, q: float) -> float | None:
         """Quantil empírico simples a partir do buffer de amostras."""
         if not self.samples:
             return None
@@ -182,7 +183,7 @@ class MetricHistogram:
         idx = max(0, min(len(s) - 1, idx))
         return s[idx]
 
-    def render_prometheus(self, metric_name: str) -> List[str]:
+    def render_prometheus(self, metric_name: str) -> list[str]:
         """
         Gera linhas de exposição para Prometheus:
           # HELP ...
@@ -192,7 +193,7 @@ class MetricHistogram:
           <name>_sum <sum>
         """
         name = _sanitize_metric_name(metric_name)
-        lines: List[str] = []
+        lines: list[str] = []
         help_txt = self.help_text or f"Histogram for {name}"
         lines.append(f"# HELP {name} {_escape_help(help_txt)}")
         lines.append(f"# TYPE {name} histogram")
@@ -214,7 +215,7 @@ class MetricHistogram:
 # -----------------------------
 # Correlation por contexto (contextvars)
 # -----------------------------
-_current_correlation_id: ContextVar[Optional[str]] = ContextVar("_current_correlation_id", default=None)
+_current_correlation_id: ContextVar[str | None] = ContextVar("_current_correlation_id", default=None)
 
 
 class RuntimeMetrics:
@@ -265,7 +266,7 @@ class RuntimeMetrics:
         self.error_rate = MetricHistogram(help_text="Observed error processing duration seconds")
 
         # Error tracking
-        self.error_counts: Dict[str, MetricCounter] = {}
+        self.error_counts: dict[str, MetricCounter] = {}
         self._error_lock = threading.Lock()
 
         # TWS
@@ -288,11 +289,11 @@ class RuntimeMetrics:
         self.ai_agent_response_time = MetricHistogram(help_text="AI agent response time seconds")
 
         # Correlation tracking
-        self._correlation_context: Dict[str, Dict[str, Any]] = {}
+        self._correlation_context: dict[str, dict[str, Any]] = {}
         self._correlation_lock = threading.Lock()
 
         # Health monitoring
-        self._health_checks: Dict[str, Dict[str, Any]] = {}
+        self._health_checks: dict[str, dict[str, Any]] = {}
         self._health_lock = threading.Lock()
 
         logger.info("RuntimeMetrics initialized")
@@ -300,7 +301,7 @@ class RuntimeMetrics:
     # -------------------------
     # Correlação
     # -------------------------
-    def create_correlation_id(self, context: Optional[Dict[str, Any]] = None) -> str:
+    def create_correlation_id(self, context: dict[str, Any] | None = None) -> str:
         """Cria novo correlation_id e registra contexto; não altera o contextvar atual."""
         cid = str(uuid.uuid4())
         with self._correlation_lock:
@@ -313,15 +314,15 @@ class RuntimeMetrics:
         logger.debug("Created correlation ID: %s", cid)
         return cid
 
-    def set_current_correlation_id(self, correlation_id: Optional[str]) -> None:
+    def set_current_correlation_id(self, correlation_id: str | None) -> None:
         """Define o correlation_id atual (contexto da tarefa/thread)."""
         _current_correlation_id.set(correlation_id)
 
-    def get_current_correlation_id(self) -> Optional[str]:
+    def get_current_correlation_id(self) -> str | None:
         return _current_correlation_id.get()
 
     def add_correlation_event(
-        self, correlation_id: str, event: str, data: Optional[Dict[str, Any]] = None
+        self, correlation_id: str, event: str, data: dict[str, Any] | None = None
     ) -> None:
         """Adiciona evento a um contexto de correlação existente."""
         with self._correlation_lock:
@@ -347,11 +348,11 @@ class RuntimeMetrics:
     # Context manager p/ spans
     class _Span:
         """_ span."""
-        def __init__(self, rm: "RuntimeMetrics", name: str, context: Optional[Dict[str, Any]] = None):
+        def __init__(self, rm: "RuntimeMetrics", name: str, context: dict[str, Any] | None = None):
             self.rm = rm
             self.name = name
             self.context = context or {}
-            self.correlation_id: Optional[str] = None
+            self.correlation_id: str | None = None
             self._t0 = 0.0
 
         def __enter__(self):
@@ -371,7 +372,7 @@ class RuntimeMetrics:
             # limpar contextvar
             self.rm.set_current_correlation_id(None)
 
-    def span(self, name: str, context: Optional[Dict[str, Any]] = None) -> "RuntimeMetrics._Span":
+    def span(self, name: str, context: dict[str, Any] | None = None) -> "RuntimeMetrics._Span":
         """Cria um span de correlação (context manager)."""
         return RuntimeMetrics._Span(self, name, context)
 
@@ -379,7 +380,7 @@ class RuntimeMetrics:
     # Health
     # -------------------------
     def record_health_check(
-        self, component: str, status: str, details: Optional[Dict[str, Any]] = None
+        self, component: str, status: str, details: dict[str, Any] | None = None
     ) -> None:
         with self._health_lock:
             self._health_checks[component] = {
@@ -389,7 +390,7 @@ class RuntimeMetrics:
             }
             logger.debug("Health check for %s: %s", component, status)
 
-    def get_health_status(self) -> Dict[str, Any]:
+    def get_health_status(self) -> dict[str, Any]:
         with self._health_lock:
             return dict(self._health_checks)
 
@@ -426,7 +427,7 @@ class RuntimeMetrics:
             return self.cache_hits.value / total_cache_ops
         return 0.0
 
-    def get_snapshot(self) -> Dict[str, Any]:
+    def get_snapshot(self) -> dict[str, Any]:
         # Erros por tipo
         error_metrics = {}
         with self._error_lock:
@@ -478,8 +479,8 @@ class RuntimeMetrics:
     # -------------------------
     def update_slo_metrics(
         self,
-        availability: Optional[float] = None,
-        tws_connection_success_rate: Optional[float] = None,
+        availability: float | None = None,
+        tws_connection_success_rate: float | None = None,
     ) -> None:
         if availability is not None:
             self.system_availability.set(float(availability))
@@ -489,7 +490,7 @@ class RuntimeMetrics:
     # -------------------------
     # Export Prometheus (formato correto)
     # -------------------------
-    def _iter_metrics(self) -> Iterable[Tuple[str, Any]]:
+    def _iter_metrics(self) -> Iterable[tuple[str, Any]]:
         """Itera sobre atributos que são métricas."""
         for name, obj in self.__dict__.items():
             if name.startswith("_"):
@@ -510,7 +511,7 @@ class RuntimeMetrics:
         - Histogram → TYPE histogram (bucket/sum/count)
         - error_counts → counter com label type
         """
-        lines: List[str] = []
+        lines: list[str] = []
 
         # principais métricas (counters/gauges/histograms)
         for raw_name, metric in sorted(self._iter_metrics(), key=lambda x: x[0]):
@@ -545,7 +546,7 @@ class RuntimeMetrics:
 # -----------------------------
 # Singleton global (unificado)
 # -----------------------------
-_runtime_metrics: Optional[RuntimeMetrics] = None
+_runtime_metrics: RuntimeMetrics | None = None
 _runtime_lock = threading.Lock()
 
 def _get_runtime_metrics() -> RuntimeMetrics:
@@ -615,33 +616,32 @@ def track_llm_metrics(func):
                 raise
         return async_wrapper
 
-    else:
-        @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
-            t0 = _now_perf()
-            runtime_metrics.llm_requests.increment()
-            try:
-                result = func(*args, **kwargs)
-                dt = _now_perf() - t0
-                runtime_metrics.llm_duration.observe(dt)
-                usage = getattr(result, "usage", None)
-                if usage:
-                    if isinstance(usage, dict):
-                        itoks = int(usage.get("prompt_tokens", 0) or 0)
-                        otoks = int(usage.get("completion_tokens", 0) or 0)
-                    else:
-                        itoks = int(getattr(usage, "prompt_tokens", 0) or 0)
-                        otoks = int(getattr(usage, "completion_tokens", 0) or 0)
-                    runtime_metrics.llm_tokens.increment(itoks + otoks)
-                return result
-            except Exception as _e:
-                runtime_metrics.llm_errors.increment()
-                raise
-        return sync_wrapper
+    @functools.wraps(func)
+    def sync_wrapper(*args, **kwargs):
+        t0 = _now_perf()
+        runtime_metrics.llm_requests.increment()
+        try:
+            result = func(*args, **kwargs)
+            dt = _now_perf() - t0
+            runtime_metrics.llm_duration.observe(dt)
+            usage = getattr(result, "usage", None)
+            if usage:
+                if isinstance(usage, dict):
+                    itoks = int(usage.get("prompt_tokens", 0) or 0)
+                    otoks = int(usage.get("completion_tokens", 0) or 0)
+                else:
+                    itoks = int(getattr(usage, "prompt_tokens", 0) or 0)
+                    otoks = int(getattr(usage, "completion_tokens", 0) or 0)
+                runtime_metrics.llm_tokens.increment(itoks + otoks)
+            return result
+        except Exception as _e:
+            runtime_metrics.llm_errors.increment()
+            raise
+    return sync_wrapper
 
 
 def log_with_correlation(
-    level: int, message: str, correlation_id: Optional[str] = None, **kwargs: Any
+    level: int, message: str, correlation_id: str | None = None, **kwargs: Any
 ) -> None:
     """
     Loga com contexto de correlação.

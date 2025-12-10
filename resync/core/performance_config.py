@@ -7,7 +7,7 @@ including connection pooling, caching strategies, and resource limits.
 
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class PerformanceConfig:
     LLM_RATE_LIMIT_TOKENS = 100000  # per minute
 
     @classmethod
-    def get_database_config(cls) -> Dict[str, Any]:
+    def get_database_config(cls) -> dict[str, Any]:
         """Get optimized database connection configuration."""
         return {
             "max_connections": cls.MAX_DB_CONNECTIONS,
@@ -61,7 +61,7 @@ class PerformanceConfig:
         }
 
     @classmethod
-    def get_redis_config(cls) -> Dict[str, Any]:
+    def get_redis_config(cls) -> dict[str, Any]:
         """Get optimized Redis connection configuration."""
         return {
             "max_connections": cls.REDIS_MAX_CONNECTIONS,
@@ -72,7 +72,7 @@ class PerformanceConfig:
         }
 
     @classmethod
-    def get_http_client_config(cls) -> Dict[str, Any]:
+    def get_http_client_config(cls) -> dict[str, Any]:
         """Get optimized HTTP client configuration."""
         return {
             "limits": {
@@ -88,7 +88,7 @@ class PerformanceConfig:
         }
 
     @classmethod
-    def get_task_manager_config(cls) -> Dict[str, Any]:
+    def get_task_manager_config(cls) -> dict[str, Any]:
         """Get optimized task manager configuration."""
         return {
             "max_workers": min(cls.MAX_WORKER_TASKS, 10),  # Conservative default
@@ -97,7 +97,7 @@ class PerformanceConfig:
         }
 
     @classmethod
-    def get_cache_config(cls) -> Dict[str, Any]:
+    def get_cache_config(cls) -> dict[str, Any]:
         """Get optimized cache configuration."""
         return {
             "memory_limit_mb": cls.CACHE_MEMORY_LIMIT_MB,
@@ -106,7 +106,7 @@ class PerformanceConfig:
         }
 
     @classmethod
-    def get_llm_config(cls) -> Dict[str, Any]:
+    def get_llm_config(cls) -> dict[str, Any]:
         """Get optimized LLM configuration."""
         return {
             "max_concurrent_requests": cls.LLM_CONCURRENT_REQUESTS_MAX,

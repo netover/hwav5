@@ -8,8 +8,9 @@ LLM clients, file handles, and other resources that need proper cleanup.
 import asyncio
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any, AsyncIterator, Callable, Generic, Iterator, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ class LLMResourceManager(ResourceManager):
 
 @asynccontextmanager
 async def managed_llm_call(
-    client_factory: Optional[Callable[[], Any]] = None,
+    client_factory: Callable[[], Any] | None = None,
 ) -> AsyncIterator[Any]:
     """
     Context manager for LLM client lifecycle.
@@ -154,7 +155,7 @@ def managed_file_operation(file_path: str, mode: str = "r", **kwargs) -> Iterato
 
 @asynccontextmanager
 async def managed_http_session(
-    session_factory: Optional[Callable[[], Any]] = None,
+    session_factory: Callable[[], Any] | None = None,
 ) -> AsyncIterator[Any]:
     """
     Context manager for HTTP session lifecycle.
@@ -206,7 +207,7 @@ class ResourcePoolManager:
     def __init__(self, resource_manager: ResourceManager[T], max_size: int = 10):
         self.resource_manager = resource_manager
         self.max_size = max_size
-        self.pool: asyncio.Queue[Optional[T]] = asyncio.Queue(maxsize=max_size)
+        self.pool: asyncio.Queue[T | None] = asyncio.Queue(maxsize=max_size)
         self.size = 0
         self._lock = asyncio.Lock()
 

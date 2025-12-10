@@ -3,8 +3,8 @@
 import os
 import re
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 import docx
 import openpyxl
@@ -134,7 +134,7 @@ def read_json(file_path: Path) -> str:
     try:
         import json
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
 
         # Convert JSON to readable text format with optimized string operations
@@ -145,10 +145,9 @@ def read_json(file_path: Path) -> str:
                 for key, value in data.items()
             ]
             return "\n".join(text_parts)
-        elif isinstance(data, list):
+        if isinstance(data, list):
             return json.dumps(data, indent=2)
-        else:
-            return str(data)
+        return str(data)
 
     except FileNotFoundError as e:
         logger.error("json_file_not_found", file_path=str(file_path), error=str(e))
@@ -197,7 +196,7 @@ def read_txt(file_path: Path) -> str:
             "encoding_error_reading_text_file", file_path=str(file_path), error=str(e)
         )
         return ""
-    except (OSError, IOError) as e:
+    except OSError as e:
         logger.critical(
             "unexpected_os_error_reading_text_file",
             file_path=str(file_path),
@@ -348,7 +347,7 @@ def read_md(file_path: Path) -> str:
             error=str(e),
         )
         return ""
-    except (OSError, IOError) as e:
+    except OSError as e:
         logger.critical(
             "unexpected_os_error_reading_markdown_file",
             file_path=str(file_path),
@@ -361,7 +360,7 @@ def read_md(file_path: Path) -> str:
 def read_html(file_path: Path) -> str:
     """
     Extracts text from an HTML file using BeautifulSoup4.
-    
+
     Optimized for IBM/HCL TWS documentation pages.
     Removes navigation, headers, footers, and preserves code blocks.
     """
@@ -370,14 +369,14 @@ def read_html(file_path: Path) -> str:
         # Try to use BeautifulSoup4
         try:
             from bs4 import BeautifulSoup
-            
+
             html_content = file_path.read_text(encoding="utf-8")
             soup = BeautifulSoup(html_content, "html.parser")
-            
+
             # Remove script and style elements
             for element in soup(["script", "style", "noscript"]):
                 element.decompose()
-            
+
             # Remove navigation elements
             nav_selectors = [
                 "nav", "header", "footer",
@@ -390,11 +389,11 @@ def read_html(file_path: Path) -> str:
                 ".ibm-masthead", ".ibm-footer",
                 ".hcl-header", ".hcl-footer",
             ]
-            
+
             for selector in nav_selectors:
                 for element in soup.select(selector):
                     element.decompose()
-            
+
             # Try to find main content
             main_content = None
             main_selectors = [
@@ -404,29 +403,29 @@ def read_html(file_path: Path) -> str:
                 ".ibm-content", ".hcl-content",
                 "[role='main']",
             ]
-            
+
             for selector in main_selectors:
                 main_content = soup.select_one(selector)
                 if main_content:
                     break
-            
+
             # Use main content or fallback to body
             target = main_content or soup.find("body") or soup
-            
+
             # Preserve code blocks
             for code in target.find_all(["code", "pre"]):
                 code_text = code.get_text()
                 code.replace_with(f"\n```\n{code_text}\n```\n")
-            
+
             # Get text with separator
             text = target.get_text(separator="\n")
-            
+
             # Clean up excessive whitespace
             text = re.sub(r"\n{3,}", "\n\n", text)
             text = re.sub(r"[ \t]+", " ", text)
-            
+
             return text.strip()
-            
+
         except ImportError:
             # Fallback: basic HTML parsing without BeautifulSoup
             logger.warning(
@@ -434,9 +433,9 @@ def read_html(file_path: Path) -> str:
                 file_path=str(file_path),
                 message="Install beautifulsoup4 for better HTML parsing"
             )
-            
+
             html_content = file_path.read_text(encoding="utf-8")
-            
+
             # Remove script and style tags
             html_content = re.sub(
                 r"<(script|style)[^>]*>.*?</\1>",
@@ -444,19 +443,19 @@ def read_html(file_path: Path) -> str:
                 html_content,
                 flags=re.DOTALL | re.IGNORECASE
             )
-            
+
             # Remove HTML tags
             text = re.sub(r"<[^>]+>", " ", html_content)
-            
+
             # Decode HTML entities
             import html
             text = html.unescape(text)
-            
+
             # Clean up whitespace
             text = re.sub(r"\s+", " ", text)
-            
+
             return text.strip()
-            
+
     except FileNotFoundError as e:
         logger.error("html_file_not_found", file_path=str(file_path), error=str(e))
         return ""
@@ -515,7 +514,7 @@ def read_html(file_path: Path) -> str:
             error=str(e),
         )
         return ""
-    except (OSError, IOError) as e:
+    except OSError as e:
         logger.critical(
             "unexpected_os_error_reading_markdown_file",
             file_path=str(file_path),
@@ -665,7 +664,7 @@ class FileIngestor(IFileIngestor):
                 shutil.copyfileobj(file_content, buffer)
             logger.info("successfully_saved_file", destination=str(destination))
             return destination
-        except (IOError, OSError) as e:
+        except OSError as e:
             logger.critical(
                 "failed_to_save_uploaded_file",
                 filename=safe_filename,

@@ -7,7 +7,8 @@ ensuring reliable health monitoring even in the face of transient failures.
 
 
 import asyncio
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import structlog
 

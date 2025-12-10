@@ -9,15 +9,15 @@ Provides:
 
 Usage:
     from resync.core.backup import get_backup_service
-    
+
     service = get_backup_service()
-    
+
     # Manual database backup
     backup = await service.create_database_backup()
-    
+
     # System config backup
     config_backup = await service.create_config_backup()
-    
+
     # List all backups
     backups = await service.list_backups()
 """
@@ -25,21 +25,19 @@ Usage:
 from __future__ import annotations
 
 import asyncio
-import gzip
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from resync.core.structured_logger import get_logger
 from resync.core.database.config import get_database_config
+from resync.core.structured_logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -62,7 +60,7 @@ class BackupStatus(str, Enum):
 @dataclass
 class BackupInfo:
     """Information about a backup."""
-    
+
     id: str
     type: BackupType
     status: BackupStatus
@@ -71,13 +69,13 @@ class BackupInfo:
     size_bytes: int = 0
     size_human: str = ""
     created_at: datetime = field(default_factory=datetime.utcnow)
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
     duration_seconds: float = 0
     checksum_sha256: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    error: Optional[str] = None
-    
-    def to_dict(self) -> Dict[str, Any]:
+    metadata: dict[str, Any] = field(default_factory=dict)
+    error: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "id": self.id,
@@ -98,18 +96,18 @@ class BackupInfo:
 @dataclass
 class BackupSchedule:
     """Backup schedule configuration."""
-    
+
     id: str
     name: str
     backup_type: BackupType
     cron_expression: str  # e.g., "0 2 * * *" for 2 AM daily
     enabled: bool = True
     retention_days: int = 30
-    last_run: Optional[datetime] = None
-    next_run: Optional[datetime] = None
+    last_run: datetime | None = None
+    next_run: datetime | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "id": self.id,
@@ -152,7 +150,7 @@ def _calculate_sha256(filepath: str) -> str:
 class BackupService:
     """
     Service for managing database and configuration backups.
-    
+
     Features:
     - PostgreSQL backup via pg_dump
     - Configuration files backup
@@ -160,41 +158,41 @@ class BackupService:
     - Scheduled backups
     - Retention policy
     """
-    
-    _instance: Optional["BackupService"] = None
-    
-    def __new__(cls) -> "BackupService":
+
+    _instance: BackupService | None = None
+
+    def __new__(cls) -> BackupService:
         """Singleton pattern."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
-    
+
     def __init__(self):
         if self._initialized:
             return
-        
+
         # Backup storage directory
         self._backup_dir = Path(os.getenv("BACKUP_DIR", "/var/backups/resync"))
         self._backup_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Subdirectories
         self._db_backup_dir = self._backup_dir / "database"
         self._config_backup_dir = self._backup_dir / "config"
         self._db_backup_dir.mkdir(exist_ok=True)
         self._config_backup_dir.mkdir(exist_ok=True)
-        
+
         # Backup metadata file
         self._metadata_file = self._backup_dir / "backups.json"
-        
+
         # Schedules
-        self._schedules: Dict[str, BackupSchedule] = {}
-        self._scheduler_task: Optional[asyncio.Task] = None
-        
+        self._schedules: dict[str, BackupSchedule] = {}
+        self._scheduler_task: asyncio.Task | None = None
+
         # Load existing metadata
-        self._backups: Dict[str, BackupInfo] = {}
+        self._backups: dict[str, BackupInfo] = {}
         self._load_metadata()
-        
+
         # Configuration paths to backup
         self._config_paths = [
             "config/",
@@ -206,17 +204,17 @@ class BackupService:
             "setup.cfg",
             "ruff.toml",
         ]
-        
+
         self._initialized = True
         logger.info("backup_service_initialized", backup_dir=str(self._backup_dir))
-    
+
     def _load_metadata(self) -> None:
         """Load backup metadata from file."""
         if self._metadata_file.exists():
             try:
-                with open(self._metadata_file, "r") as f:
+                with open(self._metadata_file) as f:
                     data = json.load(f)
-                
+
                 for backup_data in data.get("backups", []):
                     backup = BackupInfo(
                         id=backup_data["id"],
@@ -234,7 +232,7 @@ class BackupService:
                         error=backup_data.get("error"),
                     )
                     self._backups[backup.id] = backup
-                
+
                 for schedule_data in data.get("schedules", []):
                     schedule = BackupSchedule(
                         id=schedule_data["id"],
@@ -247,11 +245,11 @@ class BackupService:
                         next_run=datetime.fromisoformat(schedule_data["next_run"]) if schedule_data.get("next_run") else None,
                     )
                     self._schedules[schedule.id] = schedule
-                
+
                 logger.debug("backup_metadata_loaded", backups=len(self._backups), schedules=len(self._schedules))
             except Exception as e:
                 logger.warning("backup_metadata_load_failed", error=str(e))
-    
+
     def _save_metadata(self) -> None:
         """Save backup metadata to file."""
         try:
@@ -260,14 +258,14 @@ class BackupService:
                 "schedules": [s.to_dict() for s in self._schedules.values()],
                 "updated_at": datetime.utcnow().isoformat(),
             }
-            
+
             with open(self._metadata_file, "w") as f:
                 json.dump(data, f, indent=2)
-            
+
             logger.debug("backup_metadata_saved")
         except Exception as e:
             logger.error("backup_metadata_save_failed", error=str(e))
-    
+
     async def create_database_backup(
         self,
         description: str = "",
@@ -275,27 +273,27 @@ class BackupService:
     ) -> BackupInfo:
         """
         Create a PostgreSQL database backup.
-        
+
         Uses pg_dump to create a SQL dump, then compresses with gzip.
-        
+
         Args:
             description: Optional description for the backup
             compress: Whether to compress the backup (default: True)
-            
+
         Returns:
             BackupInfo with backup details
         """
         backup_id = _generate_backup_id()
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        
+
         # Get database configuration
         db_config = get_database_config()
-        
+
         # Determine filename
         extension = ".sql.gz" if compress else ".sql"
         filename = f"resync_db_{timestamp}{extension}"
         filepath = self._db_backup_dir / filename
-        
+
         backup = BackupInfo(
             id=backup_id,
             type=BackupType.DATABASE,
@@ -305,14 +303,14 @@ class BackupService:
             metadata={"description": description, "database": db_config.name},
         )
         self._backups[backup_id] = backup
-        
+
         start_time = datetime.utcnow()
-        
+
         try:
             # Build pg_dump command
             env = os.environ.copy()
             env["PGPASSWORD"] = db_config.password
-            
+
             pg_dump_cmd = [
                 "pg_dump",
                 "-h", db_config.host,
@@ -323,9 +321,9 @@ class BackupService:
                 "--no-owner",
                 "--no-privileges",
             ]
-            
+
             logger.info("database_backup_started", backup_id=backup_id, database=db_config.name)
-            
+
             if compress:
                 # Pipe to gzip
                 with open(filepath, "wb") as f:
@@ -341,10 +339,10 @@ class BackupService:
                         stdout=f,
                         stderr=subprocess.PIPE,
                     )
-                    
+
                     _, pg_stderr = await pg_dump.communicate()
                     _, gzip_stderr = await gzip_proc.communicate()
-                    
+
                     if pg_dump.returncode != 0:
                         raise RuntimeError(f"pg_dump failed: {pg_stderr.decode()}")
                     if gzip_proc.returncode != 0:
@@ -359,10 +357,10 @@ class BackupService:
                         env=env,
                     )
                     _, stderr = await pg_dump.communicate()
-                    
+
                     if pg_dump.returncode != 0:
                         raise RuntimeError(f"pg_dump failed: {stderr.decode()}")
-            
+
             # Get file info
             stat = os.stat(filepath)
             backup.size_bytes = stat.st_size
@@ -371,28 +369,28 @@ class BackupService:
             backup.status = BackupStatus.COMPLETED
             backup.completed_at = datetime.utcnow()
             backup.duration_seconds = (backup.completed_at - start_time).total_seconds()
-            
+
             logger.info(
                 "database_backup_completed",
                 backup_id=backup_id,
                 size=backup.size_human,
                 duration=backup.duration_seconds,
             )
-            
+
         except Exception as e:
             backup.status = BackupStatus.FAILED
             backup.error = str(e)
             backup.completed_at = datetime.utcnow()
-            
+
             logger.error("database_backup_failed", backup_id=backup_id, error=str(e))
-            
+
             # Clean up partial file
             if filepath.exists():
                 filepath.unlink()
-        
+
         self._save_metadata()
         return backup
-    
+
     async def create_config_backup(
         self,
         description: str = "",
@@ -400,26 +398,26 @@ class BackupService:
     ) -> BackupInfo:
         """
         Create a backup of system configuration files.
-        
+
         Includes:
         - config/ directory
         - prompts/ directory
         - .env files (if include_env=True)
         - requirements.txt, setup.cfg, etc.
-        
+
         Args:
             description: Optional description
             include_env: Whether to include .env files
-            
+
         Returns:
             BackupInfo with backup details
         """
         backup_id = _generate_backup_id()
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        
+
         filename = f"resync_config_{timestamp}.zip"
         filepath = self._config_backup_dir / filename
-        
+
         backup = BackupInfo(
             id=backup_id,
             type=BackupType.CONFIG,
@@ -429,35 +427,35 @@ class BackupService:
             metadata={"description": description, "include_env": include_env},
         )
         self._backups[backup_id] = backup
-        
+
         start_time = datetime.utcnow()
-        
+
         try:
             # Get project root
             project_root = Path(__file__).parent.parent.parent.parent
-            
+
             files_added = []
-            
+
             with zipfile.ZipFile(filepath, "w", zipfile.ZIP_DEFLATED) as zf:
                 for config_path in self._config_paths:
                     full_path = project_root / config_path
-                    
+
                     # Skip .env files if not included
                     if not include_env and config_path.startswith(".env"):
                         continue
-                    
+
                     if full_path.is_file():
                         arcname = config_path
                         zf.write(full_path, arcname)
                         files_added.append(arcname)
-                        
+
                     elif full_path.is_dir() and full_path.exists():
                         for file_path in full_path.rglob("*"):
                             if file_path.is_file() and "__pycache__" not in str(file_path):
                                 arcname = str(file_path.relative_to(project_root))
                                 zf.write(file_path, arcname)
                                 files_added.append(arcname)
-                
+
                 # Add manifest
                 manifest = {
                     "backup_id": backup_id,
@@ -466,7 +464,7 @@ class BackupService:
                     "description": description,
                 }
                 zf.writestr("MANIFEST.json", json.dumps(manifest, indent=2))
-            
+
             # Get file info
             stat = os.stat(filepath)
             backup.size_bytes = stat.st_size
@@ -476,39 +474,39 @@ class BackupService:
             backup.completed_at = datetime.utcnow()
             backup.duration_seconds = (backup.completed_at - start_time).total_seconds()
             backup.metadata["files_count"] = len(files_added)
-            
+
             logger.info(
                 "config_backup_completed",
                 backup_id=backup_id,
                 files=len(files_added),
                 size=backup.size_human,
             )
-            
+
         except Exception as e:
             backup.status = BackupStatus.FAILED
             backup.error = str(e)
             backup.completed_at = datetime.utcnow()
-            
+
             logger.error("config_backup_failed", backup_id=backup_id, error=str(e))
-            
+
             if filepath.exists():
                 filepath.unlink()
-        
+
         self._save_metadata()
         return backup
-    
+
     async def create_full_backup(self, description: str = "") -> BackupInfo:
         """
         Create a full backup (database + config).
-        
+
         Creates both backups and packages them together.
         """
         backup_id = _generate_backup_id()
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        
+
         filename = f"resync_full_{timestamp}.zip"
         filepath = self._backup_dir / filename
-        
+
         backup = BackupInfo(
             id=backup_id,
             type=BackupType.FULL,
@@ -518,22 +516,22 @@ class BackupService:
             metadata={"description": description},
         )
         self._backups[backup_id] = backup
-        
+
         start_time = datetime.utcnow()
-        
+
         try:
             # Create individual backups
             db_backup = await self.create_database_backup(description=f"Part of full backup {backup_id}")
             config_backup = await self.create_config_backup(description=f"Part of full backup {backup_id}")
-            
+
             # Package together
             with zipfile.ZipFile(filepath, "w", zipfile.ZIP_DEFLATED) as zf:
                 if db_backup.status == BackupStatus.COMPLETED:
                     zf.write(db_backup.filepath, f"database/{db_backup.filename}")
-                
+
                 if config_backup.status == BackupStatus.COMPLETED:
                     zf.write(config_backup.filepath, f"config/{config_backup.filename}")
-                
+
                 # Add manifest
                 manifest = {
                     "backup_id": backup_id,
@@ -545,7 +543,7 @@ class BackupService:
                     },
                 }
                 zf.writestr("MANIFEST.json", json.dumps(manifest, indent=2))
-            
+
             # Get file info
             stat = os.stat(filepath)
             backup.size_bytes = stat.st_size
@@ -556,58 +554,58 @@ class BackupService:
             backup.duration_seconds = (backup.completed_at - start_time).total_seconds()
             backup.metadata["db_backup_id"] = db_backup.id
             backup.metadata["config_backup_id"] = config_backup.id
-            
+
             logger.info(
                 "full_backup_completed",
                 backup_id=backup_id,
                 size=backup.size_human,
             )
-            
+
         except Exception as e:
             backup.status = BackupStatus.FAILED
             backup.error = str(e)
             backup.completed_at = datetime.utcnow()
-            
+
             logger.error("full_backup_failed", backup_id=backup_id, error=str(e))
-        
+
         self._save_metadata()
         return backup
-    
+
     async def list_backups(
         self,
-        backup_type: Optional[BackupType] = None,
-        status: Optional[BackupStatus] = None,
+        backup_type: BackupType | None = None,
+        status: BackupStatus | None = None,
         limit: int = 100,
-    ) -> List[BackupInfo]:
+    ) -> list[BackupInfo]:
         """
         List all backups with optional filters.
-        
+
         Args:
             backup_type: Filter by type
             status: Filter by status
             limit: Maximum number of results
-            
+
         Returns:
             List of BackupInfo objects
         """
         backups = list(self._backups.values())
-        
+
         if backup_type:
             backups = [b for b in backups if b.type == backup_type]
-        
+
         if status:
             backups = [b for b in backups if b.status == status]
-        
+
         # Sort by creation date (newest first)
         backups.sort(key=lambda b: b.created_at, reverse=True)
-        
+
         return backups[:limit]
-    
-    def get_backup(self, backup_id: str) -> Optional[BackupInfo]:
+
+    def get_backup(self, backup_id: str) -> BackupInfo | None:
         """Get a specific backup by ID."""
         return self._backups.get(backup_id)
-    
-    def get_backup_filepath(self, backup_id: str) -> Optional[Path]:
+
+    def get_backup_filepath(self, backup_id: str) -> Path | None:
         """Get the file path for a backup."""
         backup = self._backups.get(backup_id)
         if backup and backup.filepath:
@@ -615,59 +613,59 @@ class BackupService:
             if path.exists():
                 return path
         return None
-    
+
     async def delete_backup(self, backup_id: str) -> bool:
         """
         Delete a backup.
-        
+
         Args:
             backup_id: ID of backup to delete
-            
+
         Returns:
             True if deleted, False if not found
         """
         backup = self._backups.get(backup_id)
         if not backup:
             return False
-        
+
         # Delete file
         if backup.filepath:
             path = Path(backup.filepath)
             if path.exists():
                 path.unlink()
-        
+
         # Remove from metadata
         del self._backups[backup_id]
         self._save_metadata()
-        
+
         logger.info("backup_deleted", backup_id=backup_id)
         return True
-    
+
     async def cleanup_old_backups(self, retention_days: int = 30) -> int:
         """
         Delete backups older than retention period.
-        
+
         Args:
             retention_days: Number of days to keep backups
-            
+
         Returns:
             Number of backups deleted
         """
         cutoff = datetime.utcnow() - timedelta(days=retention_days)
         deleted = 0
-        
+
         for backup_id, backup in list(self._backups.items()):
             if backup.created_at < cutoff:
                 await self.delete_backup(backup_id)
                 deleted += 1
-        
+
         logger.info("backup_cleanup_completed", deleted=deleted, retention_days=retention_days)
         return deleted
-    
+
     # =========================================================================
     # SCHEDULING
     # =========================================================================
-    
+
     def create_schedule(
         self,
         name: str,
@@ -677,18 +675,18 @@ class BackupService:
     ) -> BackupSchedule:
         """
         Create a backup schedule.
-        
+
         Args:
             name: Schedule name
             backup_type: Type of backup
             cron_expression: Cron expression (e.g., "0 2 * * *" for 2 AM daily)
             retention_days: How long to keep backups
-            
+
         Returns:
             BackupSchedule object
         """
         schedule_id = _generate_backup_id()
-        
+
         schedule = BackupSchedule(
             id=schedule_id,
             name=name,
@@ -697,23 +695,23 @@ class BackupService:
             retention_days=retention_days,
             next_run=self._calculate_next_run(cron_expression),
         )
-        
+
         self._schedules[schedule_id] = schedule
         self._save_metadata()
-        
+
         logger.info(
             "backup_schedule_created",
             schedule_id=schedule_id,
             name=name,
             cron=cron_expression,
         )
-        
+
         return schedule
-    
-    def list_schedules(self) -> List[BackupSchedule]:
+
+    def list_schedules(self) -> list[BackupSchedule]:
         """List all backup schedules."""
         return list(self._schedules.values())
-    
+
     def delete_schedule(self, schedule_id: str) -> bool:
         """Delete a backup schedule."""
         if schedule_id in self._schedules:
@@ -722,19 +720,19 @@ class BackupService:
             logger.info("backup_schedule_deleted", schedule_id=schedule_id)
             return True
         return False
-    
+
     def update_schedule(
         self,
         schedule_id: str,
-        enabled: Optional[bool] = None,
-        cron_expression: Optional[str] = None,
-        retention_days: Optional[int] = None,
-    ) -> Optional[BackupSchedule]:
+        enabled: bool | None = None,
+        cron_expression: str | None = None,
+        retention_days: int | None = None,
+    ) -> BackupSchedule | None:
         """Update a backup schedule."""
         schedule = self._schedules.get(schedule_id)
         if not schedule:
             return None
-        
+
         if enabled is not None:
             schedule.enabled = enabled
         if cron_expression is not None:
@@ -742,14 +740,14 @@ class BackupService:
             schedule.next_run = self._calculate_next_run(cron_expression)
         if retention_days is not None:
             schedule.retention_days = retention_days
-        
+
         self._save_metadata()
         return schedule
-    
+
     def _calculate_next_run(self, cron_expression: str) -> datetime:
         """
         Calculate next run time from cron expression.
-        
+
         Simplified parser for common patterns:
         - "0 2 * * *" = 2:00 AM daily
         - "0 0 * * 0" = Midnight on Sunday
@@ -759,37 +757,37 @@ class BackupService:
             parts = cron_expression.split()
             if len(parts) != 5:
                 raise ValueError("Invalid cron expression")
-            
+
             minute, hour, day, month, weekday = parts
-            
+
             now = datetime.utcnow()
             next_run = now.replace(second=0, microsecond=0)
-            
+
             # Set hour and minute
             if minute != "*":
                 next_run = next_run.replace(minute=int(minute))
             if hour != "*":
                 next_run = next_run.replace(hour=int(hour))
-            
+
             # If already passed today, move to tomorrow
             if next_run <= now:
                 next_run += timedelta(days=1)
-            
+
             return next_run
-            
+
         except Exception:
             # Default to 2 AM tomorrow
             tomorrow = datetime.utcnow() + timedelta(days=1)
             return tomorrow.replace(hour=2, minute=0, second=0, microsecond=0)
-    
+
     async def start_scheduler(self) -> None:
         """Start the backup scheduler."""
         if self._scheduler_task:
             return
-        
+
         self._scheduler_task = asyncio.create_task(self._run_scheduler())
         logger.info("backup_scheduler_started")
-    
+
     async def stop_scheduler(self) -> None:
         """Stop the backup scheduler."""
         if self._scheduler_task:
@@ -800,17 +798,17 @@ class BackupService:
                 pass
             self._scheduler_task = None
             logger.info("backup_scheduler_stopped")
-    
+
     async def _run_scheduler(self) -> None:
         """Background task that checks and runs scheduled backups."""
         while True:
             try:
                 now = datetime.utcnow()
-                
+
                 for schedule in self._schedules.values():
                     if not schedule.enabled:
                         continue
-                    
+
                     if schedule.next_run and now >= schedule.next_run:
                         # Run backup
                         logger.info(
@@ -818,7 +816,7 @@ class BackupService:
                             schedule_id=schedule.id,
                             name=schedule.name,
                         )
-                        
+
                         try:
                             if schedule.backup_type == BackupType.DATABASE:
                                 await self.create_database_backup(
@@ -832,35 +830,35 @@ class BackupService:
                                 await self.create_full_backup(
                                     description=f"Scheduled: {schedule.name}"
                                 )
-                            
+
                             # Cleanup old backups
                             await self.cleanup_old_backups(schedule.retention_days)
-                            
+
                         except Exception as e:
                             logger.error(
                                 "scheduled_backup_failed",
                                 schedule_id=schedule.id,
                                 error=str(e),
                             )
-                        
+
                         # Update schedule
                         schedule.last_run = now
                         schedule.next_run = self._calculate_next_run(schedule.cron_expression)
                         self._save_metadata()
-                
+
                 # Check every minute
                 await asyncio.sleep(60)
-                
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error("scheduler_error", error=str(e))
                 await asyncio.sleep(60)
-    
-    def get_statistics(self) -> Dict[str, Any]:
+
+    def get_statistics(self) -> dict[str, Any]:
         """Get backup statistics."""
         total_size = sum(b.size_bytes for b in self._backups.values())
-        
+
         by_type = {}
         for bt in BackupType:
             backups = [b for b in self._backups.values() if b.type == bt]
@@ -868,7 +866,7 @@ class BackupService:
                 "count": len(backups),
                 "total_size": sum(b.size_bytes for b in backups),
             }
-        
+
         return {
             "total_backups": len(self._backups),
             "total_size_bytes": total_size,
@@ -883,7 +881,7 @@ class BackupService:
 # SINGLETON ACCESS
 # =============================================================================
 
-_backup_service: Optional[BackupService] = None
+_backup_service: BackupService | None = None
 
 
 def get_backup_service() -> BackupService:

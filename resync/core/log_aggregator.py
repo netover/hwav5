@@ -25,7 +25,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, TextIO
+from typing import Any, TextIO
 
 import aiohttp
 
@@ -64,12 +64,12 @@ class LogEntry:
     message: str
     source: LogSource
     source_name: str
-    trace_id: Optional[str] = None
-    span_id: Optional[str] = None
-    correlation_id: Optional[str] = None
+    trace_id: str | None = None
+    span_id: str | None = None
+    correlation_id: str | None = None
 
     # Structured fields
-    fields: Dict[str, Any] = field(default_factory=dict)
+    fields: dict[str, Any] = field(default_factory=dict)
 
     # Metadata
     hostname: str = field(
@@ -78,14 +78,14 @@ class LogEntry:
         )
     )
     pid: int = field(default_factory=lambda: os.getpid())
-    thread_id: Optional[int] = None
+    thread_id: int | None = None
 
     # Processing metadata
     parsed: bool = False
     indexed: bool = False
-    index_timestamp: Optional[float] = None
+    index_timestamp: float | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert log entry to dictionary."""
         return {
             "@timestamp": datetime.fromtimestamp(self.timestamp).isoformat(),
@@ -104,7 +104,7 @@ class LogEntry:
             **self.fields,
         }
 
-    def to_elasticsearch(self) -> Dict[str, Any]:
+    def to_elasticsearch(self) -> dict[str, Any]:
         """Convert to Elasticsearch document format."""
         doc = self.to_dict()
         # Remove processing metadata from ES document
@@ -120,14 +120,14 @@ class LogParser:
 
     name: str
     pattern: str
-    compiled_pattern: Optional[re.Pattern] = None
-    field_mappings: Dict[str, str] = field(default_factory=dict)
+    compiled_pattern: re.Pattern | None = None
+    field_mappings: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         """Compile the regex pattern."""
         self.compiled_pattern = re.compile(self.pattern, re.MULTILINE | re.DOTALL)
 
-    def parse(self, log_line: str) -> Optional[Dict[str, Any]]:
+    def parse(self, log_line: str) -> dict[str, Any] | None:
         """Parse a log line using the pattern."""
         if not self.compiled_pattern:
             return None
@@ -154,25 +154,25 @@ class LogSourceConfig:
     enabled: bool = True
 
     # File source config
-    file_path: Optional[str] = None
+    file_path: str | None = None
     file_encoding: str = "utf-8"
     follow_file: bool = True
 
     # Network source config
-    network_host: Optional[str] = None
-    network_port: Optional[int] = None
+    network_host: str | None = None
+    network_port: int | None = None
     protocol: str = "tcp"
 
     # Application source config
     application_name: str = ""
 
     # Parsing config
-    parser_name: Optional[str] = None
-    multiline_pattern: Optional[str] = None
+    parser_name: str | None = None
+    multiline_pattern: str | None = None
 
     # Filtering
-    include_patterns: List[str] = field(default_factory=list)
-    exclude_patterns: List[str] = field(default_factory=list)
+    include_patterns: list[str] = field(default_factory=list)
+    exclude_patterns: list[str] = field(default_factory=list)
 
     # Buffering
     buffer_size: int = 1000
@@ -185,13 +185,13 @@ class KibanaDashboard:
 
     title: str
     description: str
-    visualizations: List[Dict[str, Any]] = field(default_factory=list)
-    filters: List[Dict[str, Any]] = field(default_factory=list)
-    time_range: Dict[str, str] = field(
+    visualizations: list[dict[str, Any]] = field(default_factory=list)
+    filters: list[dict[str, Any]] = field(default_factory=list)
+    time_range: dict[str, str] = field(
         default_factory=lambda: {"from": "now-24h", "to": "now"}
     )
 
-    def to_kibana_format(self) -> Dict[str, Any]:
+    def to_kibana_format(self) -> dict[str, Any]:
         """Convert to Kibana saved object format."""
         return {
             "type": "dashboard",
@@ -217,12 +217,12 @@ class LogAggregatorConfig:
     # Elasticsearch configuration
     elasticsearch_url: str = "http://localhost:9200"
     elasticsearch_index_prefix: str = "hwa-logs"
-    elasticsearch_username: Optional[str] = None
-    elasticsearch_password: Optional[str] = None
+    elasticsearch_username: str | None = None
+    elasticsearch_password: str | None = None
 
     # Kibana configuration
-    kibana_url: Optional[str] = None
-    kibana_api_key: Optional[str] = None
+    kibana_url: str | None = None
+    kibana_api_key: str | None = None
     auto_create_dashboards: bool = True
 
     # Log collection
@@ -258,26 +258,26 @@ class LogAggregator:
     - Performance monitoring and optimization
     """
 
-    def __init__(self, config: Optional[LogAggregatorConfig] = None):
+    def __init__(self, config: LogAggregatorConfig | None = None):
         self.config = config or LogAggregatorConfig()
 
         # Core components
-        self.parsers: Dict[str, LogParser] = {}
-        self.sources: Dict[str, LogSourceConfig] = {}
+        self.parsers: dict[str, LogParser] = {}
+        self.sources: dict[str, LogSourceConfig] = {}
         self.log_buffer: deque = deque(maxlen=self.config.max_buffer_size)
 
         # Elasticsearch client
-        self.es_session: Optional[aiohttp.ClientSession] = None
+        self.es_session: aiohttp.ClientSession | None = None
 
         # Kibana integration
-        self.kibana_session: Optional[aiohttp.ClientSession] = None
+        self.kibana_session: aiohttp.ClientSession | None = None
 
         # File monitoring
-        self.file_handles: Dict[str, TextIO] = {}
-        self.file_positions: Dict[str, int] = {}
+        self.file_handles: dict[str, TextIO] = {}
+        self.file_positions: dict[str, int] = {}
 
         # Network listeners
-        self.network_listeners: Dict[str, asyncio.AbstractServer] = {}
+        self.network_listeners: dict[str, asyncio.AbstractServer] = {}
 
         # Processing queues
         self.processing_queue: asyncio.Queue = asyncio.Queue(
@@ -285,13 +285,13 @@ class LogAggregator:
         )
 
         # Background tasks
-        self._collection_task: Optional[asyncio.Task] = None
-        self._processing_tasks: List[asyncio.Task] = []
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._collection_task: asyncio.Task | None = None
+        self._processing_tasks: list[asyncio.Task] = []
+        self._cleanup_task: asyncio.Task | None = None
         self._running = False
 
         # Metrics
-        self.metrics: Dict[str, Any] = {
+        self.metrics: dict[str, Any] = {
             "logs_collected": 0,
             "logs_parsed": 0,
             "logs_indexed": 0,
@@ -441,16 +441,16 @@ class LogAggregator:
         level: LogLevel,
         message: str,
         source: str = "application",
-        trace_id: Optional[str] = None,
-        span_id: Optional[str] = None,
-        correlation_id: Optional[str] = None,
+        trace_id: str | None = None,
+        span_id: str | None = None,
+        correlation_id: str | None = None,
         **fields,
     ) -> None:
         """Add a structured log entry."""
         # Get current trace context if available
         from resync.core.distributed_tracing import (
-            get_current_trace_id,
             get_current_span_id,
+            get_current_trace_id,
         )
 
         if not trace_id:
@@ -481,11 +481,11 @@ class LogAggregator:
     async def search_logs(
         self,
         query: str,
-        start_time: Optional[float] = None,
-        end_time: Optional[float] = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
         size: int = 100,
         sort: str = "@timestamp:desc",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Search logs in Elasticsearch."""
         if not self.es_session:
             return {"error": "Elasticsearch not configured"}
@@ -522,8 +522,7 @@ class LogAggregator:
                         "total": result["hits"]["total"]["value"],
                         "logs": [hit["_source"] for hit in result["hits"]["hits"]],
                     }
-                else:
-                    return {"error": f"Elasticsearch query failed: {response.status}"}
+                return {"error": f"Elasticsearch query failed: {response.status}"}
 
         except Exception as e:
             logger.error(f"Log search failed: {e}")
@@ -715,7 +714,7 @@ class LogAggregator:
             # Open file if not already open
             if source_config.name not in self.file_handles:
                 handle = open(
-                    source_config.file_path, "r", encoding=source_config.file_encoding
+                    source_config.file_path, encoding=source_config.file_encoding
                 )
                 self.file_handles[source_config.name] = handle
                 # Seek to end if following
@@ -831,7 +830,7 @@ class LogAggregator:
                 logger.error(f"Log processing worker error: {e}")
                 self.metrics["indexing_errors"] += 1
 
-    async def _index_log_batch(self, batch: List[LogEntry]) -> None:
+    async def _index_log_batch(self, batch: list[LogEntry]) -> None:
         """Index a batch of log entries to Elasticsearch."""
         if not self.es_session or not batch:
             return
@@ -939,7 +938,7 @@ class LogAggregator:
         except Exception as e:
             logger.error(f"Index cleanup failed: {e}")
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive log aggregation metrics."""
         return {
             "performance": {

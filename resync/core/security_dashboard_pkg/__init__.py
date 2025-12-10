@@ -8,10 +8,10 @@ Modular security monitoring with:
 - ComplianceChecker: Compliance monitoring
 """
 
+from .compliance import ComplianceChecker, ComplianceFramework, ComplianceStatus
 from .dashboard import SecurityDashboard
 from .metrics import SecurityMetrics
 from .threats import ThreatDetector
-from .compliance import ComplianceChecker, ComplianceFramework, ComplianceStatus
 
 __all__ = [
     "SecurityDashboard",

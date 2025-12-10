@@ -1,7 +1,9 @@
 
 import pytest
 from fastapi.testclient import TestClient
+
 import resync.fastapi_app.main as main_module
+
 
 @pytest.fixture(scope="module")
 def client():

@@ -9,11 +9,11 @@ Provides:
 """
 
 
-import psutil
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+import psutil
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -43,24 +43,24 @@ class TimeSeriesPoint(BaseModel):
 class ChartData(BaseModel):
     """Data for a chart visualization."""
     label: str
-    data: List[TimeSeriesPoint]
-    color: Optional[str] = None
+    data: list[TimeSeriesPoint]
+    color: str | None = None
 
 
 class GaugeData(BaseModel):
     """Current value gauge."""
     name: str
     value: float
-    unit: Optional[str] = None
+    unit: str | None = None
     status: str = "ok"  # ok, warning, critical
 
 
 class DashboardResponse(BaseModel):
     """Complete dashboard data response."""
-    summary: Dict[str, Any]
-    charts: Dict[str, List[TimeSeriesPoint]]
-    gauges: List[GaugeData]
-    system: Dict[str, Any]
+    summary: dict[str, Any]
+    charts: dict[str, list[TimeSeriesPoint]]
+    gauges: list[GaugeData]
+    system: dict[str, Any]
     generated_at: str
 
 
@@ -98,21 +98,21 @@ async def get_dashboard_data(
 ):
     """
     Get complete dashboard data.
-    
+
     Returns summary, charts, gauges, and system metrics.
     """
     try:
-        from resync.core.metrics import get_metrics_store, MetricNames
-        
+        from resync.core.metrics import MetricNames, get_metrics_store
+
         store = get_metrics_store()
         await store.initialize()
-        
+
         # Get summary from store
         summary = await store.get_summary()
-        
+
         # Get chart data
         charts = {}
-        
+
         # Query volume chart
         query_data = await store.get_aggregated(
             MetricNames.QUERY_TOTAL,
@@ -126,7 +126,7 @@ async def get_dashboard_data(
             )
             for m in query_data
         ]
-        
+
         # Response time chart
         response_time_data = await store.get_aggregated(
             MetricNames.QUERY_DURATION_MS,
@@ -140,7 +140,7 @@ async def get_dashboard_data(
             )
             for m in response_time_data
         ]
-        
+
         # Feedback chart
         feedback_data = await store.get_aggregated(
             MetricNames.FEEDBACK_TOTAL,
@@ -154,7 +154,7 @@ async def get_dashboard_data(
             )
             for m in feedback_data
         ]
-        
+
         # Enrichment chart
         enrichment_data = await store.get_aggregated(
             MetricNames.ENRICHMENT_TOTAL,
@@ -168,10 +168,10 @@ async def get_dashboard_data(
             )
             for m in enrichment_data
         ]
-        
+
         # Build gauges
         gauges = []
-        
+
         # Review queue gauge
         queue_size = store.get_gauge(MetricNames.REVIEW_QUEUE_SIZE) or 0
         gauges.append(GaugeData(
@@ -180,7 +180,7 @@ async def get_dashboard_data(
             unit="items",
             status="critical" if queue_size > 100 else "warning" if queue_size > 50 else "ok"
         ))
-        
+
         # Feedback rate gauge
         total_feedback = store.get_counter(MetricNames.FEEDBACK_TOTAL)
         positive_feedback = store.get_counter(MetricNames.FEEDBACK_POSITIVE)
@@ -191,7 +191,7 @@ async def get_dashboard_data(
             unit="%",
             status="ok" if positive_rate >= 80 else "warning" if positive_rate >= 60 else "critical"
         ))
-        
+
         # Enrichment rate gauge
         total_queries = store.get_counter(MetricNames.QUERY_TOTAL)
         enriched_queries = store.get_counter(MetricNames.QUERY_WITH_ENRICHMENT)
@@ -202,16 +202,16 @@ async def get_dashboard_data(
             unit="%",
             status="ok" if enrichment_rate >= 30 else "warning" if enrichment_rate >= 10 else "critical"
         ))
-        
+
         # System metrics
         process = psutil.Process()
         system = {
             "memory_mb": round(process.memory_info().rss / 1024 / 1024, 1),
             "cpu_percent": process.cpu_percent(interval=0.1),
-            "db_records": summary.get("storage", {}).get("raw_records", 0) + 
+            "db_records": summary.get("storage", {}).get("raw_records", 0) +
                          summary.get("storage", {}).get("aggregated_records", 0),
         }
-        
+
         # Add DB size
         try:
             # Using PostgreSQL - no local db file
@@ -219,7 +219,7 @@ async def get_dashboard_data(
                 system["db_size_mb"] = 0  # PostgreSQL - use pg_database_size()
         except Exception:
             system["db_size_mb"] = 0
-        
+
         return DashboardResponse(
             summary=summary,
             charts=charts,
@@ -227,7 +227,7 @@ async def get_dashboard_data(
             system=system,
             generated_at=datetime.now(timezone.utc).isoformat(),
         )
-        
+
     except Exception as e:
         logger.error("dashboard_data_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -241,17 +241,17 @@ async def get_metric_series(
 ):
     """Get time series data for a specific metric."""
     try:
-        from resync.core.metrics import get_metrics_store, AggregationPeriod
-        
+        from resync.core.metrics import AggregationPeriod, get_metrics_store
+
         store = get_metrics_store()
         await store.initialize()
-        
+
         data = await store.get_aggregated(
             metric_name,
             period=AggregationPeriod(period),
             hours=hours,
         )
-        
+
         return {
             "metric": metric_name,
             "period": period,
@@ -278,13 +278,13 @@ async def get_metrics_summary():
     """Get summary statistics for all metrics."""
     try:
         from resync.core.metrics import get_metrics_store
-        
+
         store = get_metrics_store()
         await store.initialize()
-        
+
         summary = await store.get_summary()
         metric_names = await store.get_metric_names()
-        
+
         return {
             "summary": summary,
             "available_metrics": metric_names,
@@ -299,13 +299,13 @@ async def get_metrics_summary():
 async def get_current_gauges():
     """Get current values for all gauge metrics."""
     try:
-        from resync.core.metrics import get_metrics_store, MetricNames
-        
+        from resync.core.metrics import MetricNames, get_metrics_store
+
         store = get_metrics_store()
         await store.initialize()
-        
+
         gauges = {}
-        
+
         # Get all gauge values
         gauge_names = [
             MetricNames.REVIEW_QUEUE_SIZE,
@@ -314,12 +314,12 @@ async def get_current_gauges():
             MetricNames.SYSTEM_CPU_PERCENT,
             MetricNames.SYSTEM_DB_SIZE_MB,
         ]
-        
+
         for name in gauge_names:
             value = store.get_gauge(name)
             if value is not None:
                 gauges[name] = value
-        
+
         # Get counter totals
         counter_names = [
             MetricNames.QUERY_TOTAL,
@@ -331,11 +331,11 @@ async def get_current_gauges():
             MetricNames.ENRICHMENT_TOTAL,
             MetricNames.AUDIT_PROCESSED,
         ]
-        
+
         counters = {}
         for name in counter_names:
             counters[name] = store.get_counter(name)
-        
+
         return {
             "gauges": gauges,
             "counters": counters,
@@ -351,22 +351,22 @@ async def metrics_health():
     """Check health of the metrics system."""
     try:
         from resync.core.metrics import get_metrics_store
-        
+
         store = get_metrics_store()
         await store.initialize()
-        
+
         # Get basic stats
         summary = await store.get_summary()
-        
+
         status = "healthy"
         issues = []
-        
+
         # Check if we have recent data
         raw_count = summary.get("storage", {}).get("raw_records", 0)
         if raw_count == 0:
             issues.append("No raw metrics recorded")
             status = "degraded"
-        
+
         return {
             "status": status,
             "issues": issues,
@@ -392,10 +392,10 @@ async def get_cl_dashboard_data(
     """Get continual learning specific dashboard data."""
     try:
         from resync.core.metrics import get_cl_metrics
-        
+
         cl_metrics = get_cl_metrics()
         data = await cl_metrics.get_dashboard_data(hours=hours)
-        
+
         return data
     except Exception as e:
         logger.error("cl_dashboard_error", error=str(e))
@@ -408,41 +408,41 @@ async def get_feedback_analysis(
 ):
     """Get detailed feedback analysis."""
     try:
-        from resync.core.metrics import get_metrics_store, MetricNames, AggregationPeriod
-        
+        from resync.core.metrics import AggregationPeriod, MetricNames, get_metrics_store
+
         store = get_metrics_store()
         await store.initialize()
-        
+
         # Get daily feedback data
         total_data = await store.get_aggregated(
             MetricNames.FEEDBACK_TOTAL,
             period=AggregationPeriod.DAY,
             hours=days * 24,
         )
-        
+
         positive_data = await store.get_aggregated(
             MetricNames.FEEDBACK_POSITIVE,
             period=AggregationPeriod.DAY,
             hours=days * 24,
         )
-        
+
         negative_data = await store.get_aggregated(
             MetricNames.FEEDBACK_NEGATIVE,
             period=AggregationPeriod.DAY,
             hours=days * 24,
         )
-        
+
         # Calculate daily rates
         daily_stats = []
         positive_by_date = {m.period_start.date(): m.sum_value for m in positive_data}
         negative_by_date = {m.period_start.date(): m.sum_value for m in negative_data}
-        
+
         for m in total_data:
             date = m.period_start.date()
             pos = positive_by_date.get(date, 0)
             neg = negative_by_date.get(date, 0)
             rate = (pos / m.sum_value * 100) if m.sum_value > 0 else 0
-            
+
             daily_stats.append({
                 "date": date.isoformat(),
                 "total": m.sum_value,
@@ -450,7 +450,7 @@ async def get_feedback_analysis(
                 "negative": neg,
                 "positive_rate": round(rate, 1),
             })
-        
+
         return {
             "daily_stats": daily_stats,
             "period_days": days,

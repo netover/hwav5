@@ -6,10 +6,9 @@ all health checks across the system.
 """
 
 import logging
-from typing import Optional
 
-from .config import HealthCheckConfig
 from .circuit_breaker import CircuitBreaker
+from .config import HealthCheckConfig
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +16,15 @@ logger = logging.getLogger(__name__)
 class HealthCheckService:
     """
     Main health check service orchestrator.
-    
+
     Coordinates health checks for all system components and provides
     comprehensive health reporting.
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """
         Initialize health check service.
-        
+
         Args:
             config: Optional configuration, uses defaults if not provided
         """
@@ -36,7 +35,7 @@ class HealthCheckService:
         )
         self._is_monitoring = False
         self._health_history = []
-        
+
         logger.info("health_check_service_initialized")
 
     async def start_monitoring(self) -> None:
@@ -52,7 +51,7 @@ class HealthCheckService:
     async def perform_quick_check(self) -> dict:
         """
         Perform quick health check.
-        
+
         Returns basic health status without detailed component checks.
         """
         return {
@@ -63,7 +62,7 @@ class HealthCheckService:
     async def perform_comprehensive_check(self) -> dict:
         """
         Perform comprehensive health check.
-        
+
         Checks all enabled components and returns detailed status.
         """
         results = {
@@ -71,7 +70,7 @@ class HealthCheckService:
             "components": {},
             "checks_enabled": self.config.enabled_checks,
         }
-        
+
         # For now, return basic structure
         # Full implementation delegates to original health_service.py
         for check in self.config.enabled_checks:
@@ -79,7 +78,7 @@ class HealthCheckService:
                 "status": "healthy",
                 "message": "Check passed",
             }
-        
+
         return results
 
     def get_health_history(self) -> list:

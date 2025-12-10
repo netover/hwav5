@@ -8,7 +8,7 @@ predictive analysis and automated recovery of system components.
 
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 
@@ -30,10 +30,10 @@ class ProactiveHealthMonitor:
 
     def __init__(self):
         """Initialize the proactive health monitor."""
-        self._monitoring_history: List[Dict[str, Any]] = []
+        self._monitoring_history: list[dict[str, Any]] = []
         self._max_history_entries = 1000
 
-    async def perform_proactive_health_checks(self) -> Dict[str, Any]:
+    async def perform_proactive_health_checks(self) -> dict[str, Any]:
         """
         Perform proactive health checks for connection pools and critical components.
 
@@ -135,7 +135,7 @@ class ProactiveHealthMonitor:
 
         return results
 
-    async def _check_connection_pool_health(self) -> Dict[str, Any]:
+    async def _check_connection_pool_health(self) -> dict[str, Any]:
         """Check health of all connection pools."""
         try:
             advanced_manager = get_advanced_connection_pool_manager()
@@ -156,38 +156,37 @@ class ProactiveHealthMonitor:
                         "scaling_signals", {}
                     ),
                 }
-            else:
-                # Fallback to basic pool manager
-                # Use pool manager from pools.pool_manager (connection_manager does not define this)
-                from resync.core.pools.pool_manager import get_connection_pool_manager
+            # Fallback to basic pool manager
+            # Use pool manager from pools.pool_manager (connection_manager does not define this)
+            from resync.core.pools.pool_manager import get_connection_pool_manager
 
-                pool_manager = get_connection_pool_manager()
-                if pool_manager:
-                    basic_metrics = {}
-                    for pool_name, pool in pool_manager.pools.items():
-                        stats = pool.get_stats()
-                        basic_metrics[pool_name] = {
-                            "connections": stats.get("total_connections", 0),
-                            "utilization": stats.get("active_connections", 0)
-                            / max(1, stats.get("total_connections", 1)),
-                        }
-                    return basic_metrics
+            pool_manager = get_connection_pool_manager()
+            if pool_manager:
+                basic_metrics = {}
+                for pool_name, pool in pool_manager.pools.items():
+                    stats = pool.get_stats()
+                    basic_metrics[pool_name] = {
+                        "connections": stats.get("total_connections", 0),
+                        "utilization": stats.get("active_connections", 0)
+                        / max(1, stats.get("total_connections", 1)),
+                    }
+                return basic_metrics
 
         except Exception as e:
             logger.warning("connection_pool_health_check_failed", error=str(e))
 
         return {"error": "Unable to check connection pool health"}
 
-    async def _check_circuit_breaker_health(self) -> Dict[str, Any]:
+    async def _check_circuit_breaker_health(self) -> dict[str, Any]:
         """Check health of all circuit breakers."""
         results = {}
 
         # Check TWS circuit breakers
         from resync.core.circuit_breaker import (
-            adaptive_tws_api_breaker,
             adaptive_llm_api_breaker,
-            tws_api_breaker,
+            adaptive_tws_api_breaker,
             llm_api_breaker,
+            tws_api_breaker,
         )
 
         breakers = {
@@ -221,7 +220,7 @@ class ProactiveHealthMonitor:
 
         return results
 
-    async def _perform_predictive_analysis(self) -> List[Dict[str, Any]]:
+    async def _perform_predictive_analysis(self) -> list[dict[str, Any]]:
         """Perform predictive analysis for potential issues."""
         alerts = []
 
@@ -280,7 +279,7 @@ class ProactiveHealthMonitor:
 
         return alerts
 
-    async def _execute_auto_recovery(self) -> List[Dict[str, Any]]:
+    async def _execute_auto_recovery(self) -> list[dict[str, Any]]:
         """Execute automatic recovery actions."""
         actions = []
 
@@ -324,7 +323,7 @@ class ProactiveHealthMonitor:
 
         return actions
 
-    async def _compare_with_baseline(self) -> Dict[str, Any]:
+    async def _compare_with_baseline(self) -> dict[str, Any]:
         """Compare current performance with historical baseline."""
         # This would compare with stored baseline metrics
         # For now, return placeholder structure
@@ -337,7 +336,7 @@ class ProactiveHealthMonitor:
             ],
         }
 
-    async def _add_to_monitoring_history(self, results: Dict[str, Any]) -> None:
+    async def _add_to_monitoring_history(self, results: dict[str, Any]) -> None:
         """Add proactive monitoring results to history."""
         self._monitoring_history.append(
             {"timestamp": datetime.now(), "results": results.copy()}
@@ -351,7 +350,7 @@ class ProactiveHealthMonitor:
 
     def get_monitoring_history(
         self, hours: int = 24, limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get proactive monitoring history.
 
@@ -379,7 +378,7 @@ class ProactiveHealthMonitor:
 
         return filtered_history
 
-    def get_monitoring_stats(self) -> Dict[str, Any]:
+    def get_monitoring_stats(self) -> dict[str, Any]:
         """Get proactive monitoring statistics."""
         if not self._monitoring_history:
             return {"total_checks": 0, "avg_issues_per_check": 0.0}

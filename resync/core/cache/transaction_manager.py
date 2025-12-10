@@ -10,7 +10,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from time import time
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class TransactionState:
     transaction_id: str
     key: str
     start_time: float
-    operations: List[Dict[str, Any]] = field(default_factory=list)
+    operations: list[dict[str, Any]] = field(default_factory=list)
     status: str = "active"  # active, committed, rolled_back
     committed: bool = False
     rolled_back: bool = False
@@ -77,8 +77,8 @@ class CacheTransactionManager:
         self.cleanup_interval = cleanup_interval
 
         # In-memory storage for transaction states
-        self._transactions: Dict[str, TransactionState] = {}
-        self._active_transactions: Set[str] = set()
+        self._transactions: dict[str, TransactionState] = {}
+        self._active_transactions: set[str] = set()
 
         # Cleanup task management
         self._cleanup_task = None
@@ -253,7 +253,7 @@ class CacheTransactionManager:
             )
             return False
 
-    def get_transaction_state(self, transaction_id: str) -> Optional[TransactionState]:
+    def get_transaction_state(self, transaction_id: str) -> TransactionState | None:
         """
         Get the current state of a transaction.
 
@@ -274,7 +274,7 @@ class CacheTransactionManager:
         """
         return len(self._active_transactions)
 
-    def get_transaction_info(self, transaction_id: str) -> Optional[Dict[str, Any]]:
+    def get_transaction_info(self, transaction_id: str) -> dict[str, Any] | None:
         """
         Get detailed information about a transaction.
 
@@ -343,7 +343,7 @@ class CacheTransactionManager:
 
         return cleaned_count
 
-    def get_all_transaction_info(self) -> Dict[str, Dict[str, Any]]:
+    def get_all_transaction_info(self) -> dict[str, dict[str, Any]]:
         """
         Get information about all transactions (for debugging/monitoring).
 

@@ -9,10 +9,11 @@ import dataclasses
 import logging
 from abc import ABC, abstractmethod
 from collections import deque
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
-from typing import AsyncIterator, Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 # --- Logging Setup ---
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class ConnectionPoolStats:
     pool_exhaustions: int = 0
     acquisition_attempts: int = 0  # Nova métrica para contagem de tentativas de aquisição
     session_acquisitions: int = 0   # Nova métrica para contagem de sessões adquiridas com sucesso
-    last_health_check: Optional[datetime] = None
+    last_health_check: datetime | None = None
     average_wait_time: float = 0.0
     peak_connections: int = 0
 

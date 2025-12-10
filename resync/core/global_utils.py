@@ -21,7 +21,7 @@ Warning:
 """
 
 
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from . import CoreBootManager
@@ -74,7 +74,7 @@ def get_global_correlation_id() -> str:
     return _boot_manager.get_global_correlation_id()
 
 
-def get_environment_tags() -> Dict[str, Any]:
+def get_environment_tags() -> dict[str, Any]:
     """
     Get environment tags for mock detection and debugging.
 

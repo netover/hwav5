@@ -2,7 +2,7 @@
 from re import match
 
 from passlib.context import CryptContext
-from pydantic import field_validator, BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 # --- Enhanced Validation Rules ---
 password_hasher = CryptContext(schemes=["bcrypt"], deprecated="auto")

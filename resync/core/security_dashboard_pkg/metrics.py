@@ -4,34 +4,34 @@ Security Metrics Collection.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any
 
 
 @dataclass
 class SecurityMetrics:
     """Collects and manages security metrics."""
-    
+
     # Authentication metrics
     successful_logins: int = 0
     failed_logins: int = 0
     active_sessions: int = 0
-    
+
     # Authorization metrics
     permission_grants: int = 0
     permission_denials: int = 0
-    
+
     # Threat metrics
     threats_detected: int = 0
     threats_blocked: int = 0
     suspicious_activities: int = 0
-    
+
     # Compliance metrics
     compliance_score: float = 100.0
     compliance_violations: int = 0
-    
+
     # Timestamps
     last_updated: datetime = field(default_factory=datetime.now)
-    
+
     def record_login(self, success: bool) -> None:
         """Record login attempt."""
         if success:
@@ -40,7 +40,7 @@ class SecurityMetrics:
         else:
             self.failed_logins += 1
         self.last_updated = datetime.now()
-    
+
     def record_permission_check(self, granted: bool) -> None:
         """Record permission check."""
         if granted:
@@ -48,15 +48,15 @@ class SecurityMetrics:
         else:
             self.permission_denials += 1
         self.last_updated = datetime.now()
-    
+
     def record_threat(self, blocked: bool) -> None:
         """Record threat detection."""
         self.threats_detected += 1
         if blocked:
             self.threats_blocked += 1
         self.last_updated = datetime.now()
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "authentication": {

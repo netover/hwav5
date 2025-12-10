@@ -2,7 +2,7 @@
 Snapshot cleaner for cache management.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 
 class SnapshotCleaner:
@@ -11,7 +11,7 @@ class SnapshotCleaner:
     def __init__(self, max_snapshots: int = 10):
         self.max_snapshots = max_snapshots
 
-    def clean_old_snapshots(self, snapshots: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def clean_old_snapshots(self, snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Clean old snapshots, keeping only the most recent ones."""
         if len(snapshots) <= self.max_snapshots:
             return snapshots

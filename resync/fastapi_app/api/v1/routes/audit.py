@@ -9,15 +9,12 @@ Provides audit functionality including:
 - Metrics tracking
 - Review workflow
 """
-from fastapi import APIRouter, HTTPException, status, Depends
-from typing import List, Optional
-from ..dependencies import get_current_user, get_logger, check_rate_limit
-from ..models.request_models import AuditReviewRequest, AuditFlagsQuery
-from ..models.response_models import (
-    AuditFlagInfo,
-    AuditMetricsResponse,
-    AuditReviewResponse
-)
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from ..dependencies import check_rate_limit, get_current_user, get_logger
+from ..models.request_models import AuditFlagsQuery, AuditReviewRequest
+from ..models.response_models import AuditFlagInfo, AuditMetricsResponse, AuditReviewResponse
 
 router = APIRouter()
 
@@ -28,7 +25,7 @@ _audit_store = {
 }
 
 
-def _create_sample_flags() -> List[dict]:
+def _create_sample_flags() -> list[dict]:
     """Create sample audit flags for demonstration."""
     if not _audit_store["flags"]:
         _audit_store["flags"] = [
@@ -43,7 +40,7 @@ def _create_sample_flags() -> List[dict]:
             },
             {
                 "id": str(uuid4()),
-                "memory_id": "mem_002", 
+                "memory_id": "mem_002",
                 "flag_type": "compliance",
                 "description": "Data retention policy violation",
                 "status": "pending",
@@ -67,31 +64,31 @@ def _calculate_metrics() -> dict:
     }
 
 
-@router.get("/audit/flags", response_model=List[AuditFlagInfo])
+@router.get("/audit/flags", response_model=list[AuditFlagInfo])
 async def get_audit_flags(
     query_params: AuditFlagsQuery = Depends(),
     current_user: dict = Depends(get_current_user),
     logger_instance = Depends(get_logger),
-) -> List[AuditFlagInfo]:
+) -> list[AuditFlagInfo]:
     """Get audit flags for review."""
     # Initialize sample data if empty
     _create_sample_flags()
-    
+
     # Filter flags based on query parameters
     flags = _audit_store["flags"]
-    
+
     if query_params.status_filter:
         flags = [f for f in flags if f.get("status") == query_params.status_filter]
-    
+
     if query_params.query:
         query_lower = query_params.query.lower()
         flags = [f for f in flags if query_lower in f.get("description", "").lower()]
-    
+
     # Apply pagination
     offset = query_params.offset or 0
     limit = query_params.limit or 100
     flags = flags[offset:offset + limit]
-    
+
     # Convert to response model
     audit_flags = [
         AuditFlagInfo(
@@ -125,17 +122,17 @@ async def get_audit_metrics(
     """Get audit metrics summary."""
     # Initialize sample data if empty
     _create_sample_flags()
-    
+
     # Calculate metrics from store
     calculated = _calculate_metrics()
-    
+
     metrics = AuditMetricsResponse(
         pending=calculated["pending"],
         approved=calculated["approved"],
         rejected=calculated["rejected"],
         total=calculated["total"]
     )
-    
+
     logger_instance.info(
         "audit_metrics_retrieved",
         user_id=current_user.get("user_id"),
@@ -157,7 +154,7 @@ async def review_audit_flag(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid action. Must be 'approve' or 'reject'",
         )
-    
+
     # Find and update the flag in store
     flag_found = False
     for flag in _audit_store["flags"]:
@@ -169,20 +166,20 @@ async def review_audit_flag(
             flag["reviewed_by"] = current_user.get("user_id")
             flag_found = True
             break
-    
+
     if not flag_found:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Audit flag with memory_id '{request.memory_id}' not found",
         )
-    
+
     review_response = AuditReviewResponse(
         memory_id=request.memory_id,
         action=request.action,
         status="processed",
         reviewed_at=datetime.now().isoformat(),
     )
-    
+
     logger_instance.info(
         "audit_flag_reviewed",
         user_id=current_user.get("user_id"),
@@ -212,14 +209,14 @@ async def create_audit_flag(
         "created_by": current_user.get("user_id"),
         "severity": severity,
     }
-    
+
     _audit_store["flags"].append(new_flag)
-    
+
     logger_instance.info(
         "audit_flag_created",
         user_id=current_user.get("user_id"),
         memory_id=memory_id,
         flag_type=flag_type,
     )
-    
+
     return {"message": "Audit flag created", "flag": new_flag}

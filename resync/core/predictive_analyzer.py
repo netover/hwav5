@@ -7,7 +7,7 @@ before they become critical problems.
 
 
 import asyncio
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 
@@ -22,7 +22,7 @@ logger = structlog.get_logger(__name__)
 class PredictiveAnalyzer:
     """Predictive analysis engine for health monitoring."""
 
-    async def perform_predictive_analysis(self) -> List[Dict[str, Any]]:
+    async def perform_predictive_analysis(self) -> list[dict[str, Any]]:
         """
         Perform predictive analysis for potential issues.
 
@@ -97,7 +97,7 @@ class PredictiveAnalyzer:
 
         return alerts
 
-    async def _check_connection_pool_health(self) -> Dict[str, Any]:
+    async def _check_connection_pool_health(self) -> dict[str, Any]:
         """Check health of all connection pools."""
         try:
             advanced_manager = get_advanced_connection_pool_manager()
@@ -118,35 +118,34 @@ class PredictiveAnalyzer:
                         "scaling_signals", {}
                     ),
                 }
-            else:
-                # Fallback to basic pool manager
-                pool_manager = get_connection_pool_manager()
-                if pool_manager:
-                    basic_metrics = {}
-                    for pool_name, pool in pool_manager.pools.items():
-                        stats = pool.get_stats()
-                        basic_metrics[pool_name] = {
-                            "connections": stats.get("total_connections", 0),
-                            "utilization": stats.get("active_connections", 0)
-                            / max(1, stats.get("total_connections", 1)),
-                        }
-                    return basic_metrics
+            # Fallback to basic pool manager
+            pool_manager = get_connection_pool_manager()
+            if pool_manager:
+                basic_metrics = {}
+                for pool_name, pool in pool_manager.pools.items():
+                    stats = pool.get_stats()
+                    basic_metrics[pool_name] = {
+                        "connections": stats.get("total_connections", 0),
+                        "utilization": stats.get("active_connections", 0)
+                        / max(1, stats.get("total_connections", 1)),
+                    }
+                return basic_metrics
 
         except Exception as e:
             logger.warning("connection_pool_health_check_failed", error=str(e))
 
         return {"error": "Unable to check connection pool health"}
 
-    async def _check_circuit_breaker_health(self) -> Dict[str, Any]:
+    async def _check_circuit_breaker_health(self) -> dict[str, Any]:
         """Check health of all circuit breakers."""
         results = {}
 
         # Check TWS circuit breakers
         from resync.core.circuit_breaker import (
-            adaptive_tws_api_breaker,
             adaptive_llm_api_breaker,
-            tws_api_breaker,
+            adaptive_tws_api_breaker,
             llm_api_breaker,
+            tws_api_breaker,
         )
 
         breakers = {
@@ -180,7 +179,7 @@ class PredictiveAnalyzer:
 
         return results
 
-    async def _analyze_memory_trends(self) -> List[Dict[str, Any]]:
+    async def _analyze_memory_trends(self) -> list[dict[str, Any]]:
         """Analyze memory usage trends for predictive alerts."""
         alerts = []
 
@@ -222,7 +221,7 @@ class PredictiveAnalyzer:
 
         return alerts
 
-    async def _analyze_cpu_trends(self) -> List[Dict[str, Any]]:
+    async def _analyze_cpu_trends(self) -> list[dict[str, Any]]:
         """Analyze CPU usage trends for predictive alerts."""
         alerts = []
 
@@ -268,7 +267,7 @@ class PredictiveAnalyzer:
 
         return alerts
 
-    async def analyze_performance_degradation(self) -> List[Dict[str, Any]]:
+    async def analyze_performance_degradation(self) -> list[dict[str, Any]]:
         """Analyze system for performance degradation patterns."""
         alerts = []
 

@@ -5,10 +5,11 @@ import re
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Pattern, Union
+from re import Pattern
+from typing import Annotated, Any
 
-from pydantic import field_validator, StringConstraints as PydanticStringConstraints, BaseModel, ConfigDict, Field
-from typing_extensions import Annotated
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import StringConstraints as PydanticStringConstraints
 
 
 class ValidationErrorResponse(BaseModel):
@@ -30,7 +31,7 @@ class ValidationErrorResponse(BaseModel):
         message: str,
         error_type: str = "value_error",
         severity: str = "error",
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> None:
         """Add a validation error detail."""
         error_detail = {
@@ -140,7 +141,7 @@ class UUIDValidator:
             raise ValueError(f"Invalid UUID format: {uuid_str}")
 
     @staticmethod
-    def validate_uuid_list(uuid_list: List[str]) -> List[str]:
+    def validate_uuid_list(uuid_list: list[str]) -> list[str]:
         """Validate list of UUIDs."""
         validated_uuids = []
         for uuid_str in uuid_list:
@@ -314,10 +315,10 @@ def validate_string_length(text: str, min_length: int, max_length: int) -> str:
 
 
 def validate_numeric_range(
-    value: Union[int, float],
-    min_value: Optional[Union[int, float]] = None,
-    max_value: Optional[Union[int, float]] = None,
-) -> Union[int, float]:
+    value: int | float,
+    min_value: int | float | None = None,
+    max_value: int | float | None = None,
+) -> int | float:
     """
     Validate numeric value within specified range.
 
@@ -345,7 +346,7 @@ def validate_numeric_range(
 
 
 def validate_pattern(
-    text: str, pattern: Union[str, Pattern], message: Optional[str] = None
+    text: str, pattern: str | Pattern, message: str | None = None
 ) -> str:
     """
     Validate text against a regex pattern.
@@ -367,8 +368,7 @@ def validate_pattern(
     if not pattern.match(text):
         if message:
             raise ValueError(message)
-        else:
-            raise ValueError(f"Text does not match required pattern: {pattern.pattern}")
+        raise ValueError(f"Text does not match required pattern: {pattern.pattern}")
 
     return text
 
@@ -408,6 +408,6 @@ class FieldValidationRule(BaseModel):
 
     field_name: str
     rule_type: str  # "length", "pattern", "range", "custom"
-    constraint: Union[str, int, float, Dict[str, Any]]
+    constraint: str | int | float | dict[str, Any]
     message: str
     severity: ValidationSeverity = ValidationSeverity.ERROR

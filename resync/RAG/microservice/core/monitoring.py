@@ -5,9 +5,9 @@ Uses internal metrics system instead of prometheus_client.
 """
 
 from resync.core.metrics_internal import (
-    create_histogram,
     create_counter,
     create_gauge,
+    create_histogram,
 )
 
 # Latency metrics

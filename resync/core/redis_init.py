@@ -19,12 +19,17 @@ from resync.settings import settings
 
 try:  # pragma: no cover
     import redis.asyncio as redis  # type: ignore
+
     # Import correct Redis exceptions
     from redis.exceptions import (
-        RedisError,
-        BusyLoadingError,
         AuthenticationError,
+        BusyLoadingError,
+        RedisError,
+    )
+    from redis.exceptions import (
         ConnectionError as RedisConnError,
+    )
+    from redis.exceptions import (
         TimeoutError as RedisTimeoutError,
     )
 except ImportError:  # redis opcional
@@ -80,8 +85,8 @@ class RedisInitializer:
     def __init__(self):
         self._lock = asyncio.Lock()
         self._initialized = False
-        self._client: Optional["redis.Redis"] = None  # type: ignore
-        self._health_task: Optional[asyncio.Task] = None
+        self._client: redis.Redis | None = None  # type: ignore
+        self._health_task: asyncio.Task | None = None
 
     @property
     def initialized(self) -> bool:
@@ -95,7 +100,7 @@ class RedisInitializer:
         max_backoff: float = 10.0,  # pylint: disable=W0613
         health_check_interval: int = 5,
         fatal_on_fail: bool = False,  # pylint: disable=W0613
-        redis_url: Optional[str] = None,
+        redis_url: str | None = None,
     ) -> "redis.Redis":  # type: ignore
         """
         Inicializa cliente Redis com:
@@ -198,7 +203,7 @@ class RedisInitializer:
         raise RedisInitError("Redis initialization failed - unexpected fallthrough")
 
     async def _create_client_with_pool(
-        self, redis_url: Optional[str] = None
+        self, redis_url: str | None = None
     ) -> "redis.Redis":  # type: ignore
         if redis is None:
             raise RedisInitError("redis not installed.")
@@ -255,7 +260,7 @@ class RedisInitializer:
 
 
 # Global Redis initializer instance - lazy initialization
-_redis_initializer: Optional[RedisInitializer] = None
+_redis_initializer: RedisInitializer | None = None
 
 
 async def get_redis_initializer() -> RedisInitializer:

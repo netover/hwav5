@@ -3,7 +3,6 @@ CORS configuration module for Resync application.
 """
 
 import logging
-from typing import List, Optional, Union
 from urllib.parse import urlparse
 
 from fastapi import FastAPI
@@ -30,19 +29,16 @@ def validate_origin(origin: str) -> bool:
 
     try:
         parsed = urlparse(origin.strip())
-        if parsed.scheme in ("http", "https") and parsed.netloc:
+        if parsed.scheme in ("http", "https") and parsed.netloc or origin.strip() == "*":
             return True
-        elif origin.strip() == "*":
-            return True
-        else:
-            logger.warning(f"Invalid origin format: {origin}")
-            return False
+        logger.warning(f"Invalid origin format: {origin}")
+        return False
     except Exception as e:
         logger.warning(f"Error parsing origin '{origin}': {e}")
         return False
 
 
-def parse_cors_origins(cors_origins_setting: Union[str, List[str], None]) -> List[str]:
+def parse_cors_origins(cors_origins_setting: str | list[str] | None) -> list[str]:
     """
     Parse CORS origins from settings, handling both string and list formats.
 
@@ -80,7 +76,7 @@ def parse_cors_origins(cors_origins_setting: Union[str, List[str], None]) -> Lis
     return valid_origins
 
 
-def configure_cors(app: FastAPI, settings_module: Optional[object] = None) -> None:
+def configure_cors(app: FastAPI, settings_module: object | None = None) -> None:
     """
     Configure CORS middleware for the FastAPI application.
 

@@ -8,12 +8,11 @@ e possibilidade de rollback.
 
 import asyncio
 import logging
-from typing import Any, Optional
-
-from resync.core.metrics_compat import Counter, Histogram
+from typing import Any
 
 from resync.core.async_cache import AsyncTTLCache
 from resync.core.improved_cache import ImprovedAsyncCache
+from resync.core.metrics_compat import Counter, Histogram
 from resync.services.tws_client_factory import TWSClientFactory
 from resync.services.tws_service import OptimizedTWSClient
 
@@ -61,8 +60,8 @@ class CacheMigrationManager:
     """
 
     def __init__(self):
-        self.legacy_cache: Optional[AsyncTTLCache] = None
-        self.new_cache: Optional[ImprovedAsyncCache] = None
+        self.legacy_cache: AsyncTTLCache | None = None
+        self.new_cache: ImprovedAsyncCache | None = None
         self.use_new_cache = settings.MIGRATION_USE_NEW_CACHE
         self.enable_metrics = settings.MIGRATION_ENABLE_METRICS
 
@@ -163,7 +162,7 @@ class CacheMigrationManager:
 
         return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[float] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: float | None = None) -> None:
         """Definir valor no cache."""
         start_time = asyncio.get_event_loop().time()
 
@@ -254,8 +253,8 @@ class TWSMigrationManager:
     """
 
     def __init__(self):
-        self.legacy_client: Optional[OptimizedTWSClient] = None
-        self.new_client: Optional[Any] = None
+        self.legacy_client: OptimizedTWSClient | None = None
+        self.new_client: Any | None = None
         self.use_new_client = settings.MIGRATION_USE_NEW_TWS
         self.enable_metrics = settings.MIGRATION_ENABLE_METRICS
 

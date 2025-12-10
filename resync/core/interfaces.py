@@ -1,7 +1,7 @@
 """Interfaces for Resync components."""
 
 from pathlib import Path
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 # Import model types for protocol type hints
 from resync.models.agents import AgentConfig
@@ -27,7 +27,7 @@ class IKnowledgeGraph(Protocol):
         user_query: str,
         agent_response: str,
         agent_id: str,
-        context: Optional[dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> str:
         """Stores a conversation between a user and an agent."""
         ...
@@ -37,7 +37,7 @@ class IKnowledgeGraph(Protocol):
         user_query: str,
         agent_response: str,
         agent_id: str,
-        context: Optional[dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> str:
         """Stores a conversation between a user and an agent."""
         ...
@@ -302,10 +302,10 @@ class ITWSClient(Protocol):
 
     async def validate_connection(
         self,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
+        host: str | None = None,
+        port: int | None = None,
+        user: str | None = None,
+        password: str | None = None,
     ) -> dict[str, bool]:
         """Validates TWS connection parameters."""
         ...

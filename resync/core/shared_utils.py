@@ -1,6 +1,6 @@
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -14,10 +14,10 @@ class TeamsNotification:
     title: str
     message: str
     severity: str  # "info", "warning", "error"
-    job_id: Optional[str] = None
-    job_status: Optional[str] = None
-    instance_name: Optional[str] = None
-    additional_data: Optional[Dict[str, Any]] = None
+    job_id: str | None = None
+    job_status: str | None = None
+    instance_name: str | None = None
+    additional_data: dict[str, Any] | None = None
 
 
 class NotificationError(Exception):
@@ -25,7 +25,7 @@ class NotificationError(Exception):
 
 
 def create_job_status_notification(
-    job_data: Dict[str, Any], instance_name: str, job_status_filters: List[str]
+    job_data: dict[str, Any], instance_name: str, job_status_filters: list[str]
 ) -> TeamsNotification:
     """
     Create a standardized job status notification.

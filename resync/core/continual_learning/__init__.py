@@ -19,7 +19,7 @@ Usage:
     )
 
 Architecture:
-    
+
     Query → Context Enrichment → RAG (with Feedback Reranking) → Response
                                         ↓
                               Active Learning Check
@@ -33,61 +33,55 @@ Architecture:
                               Knowledge Graph Updates
 """
 
-from resync.core.continual_learning.feedback_store import (
-    FeedbackStore,
-    FeedbackRating,
-    FeedbackRecord,
-    DocumentScore,
-    get_feedback_store,
+from resync.core.continual_learning.active_learning import (
+    ActiveLearningDecision,
+    ActiveLearningManager,
+    ReviewItem,
+    ReviewReason,
+    ReviewStatus,
+    check_for_review,
+    get_active_learning_manager,
 )
-
-from resync.core.continual_learning.feedback_retriever import (
-    FeedbackAwareRetriever,
-    create_feedback_aware_retriever,
-)
-
 from resync.core.continual_learning.audit_to_kg_pipeline import (
-    AuditToKGPipeline,
     AuditResult,
-    ErrorTriplet,
+    AuditToKGPipeline,
     ErrorRelationType,
+    ErrorTriplet,
     get_audit_to_kg_pipeline,
     process_audit_finding,
 )
-
 from resync.core.continual_learning.context_enrichment import (
     ContextEnricher,
     EnrichmentResult,
     EntityContext,
-    get_context_enricher,
     enrich_query,
+    get_context_enricher,
 )
-
-from resync.core.continual_learning.active_learning import (
-    ActiveLearningManager,
-    ActiveLearningDecision,
-    ReviewItem,
-    ReviewReason,
-    ReviewStatus,
-    get_active_learning_manager,
-    check_for_review,
+from resync.core.continual_learning.feedback_retriever import (
+    FeedbackAwareRetriever,
+    create_feedback_aware_retriever,
 )
-
+from resync.core.continual_learning.feedback_store import (
+    DocumentScore,
+    FeedbackRating,
+    FeedbackRecord,
+    FeedbackStore,
+    get_feedback_store,
+)
 from resync.core.continual_learning.orchestrator import (
     ContinualLearningOrchestrator,
     ContinualLearningResult,
     get_continual_learning_orchestrator,
     process_with_continual_learning,
 )
-
 from resync.core.continual_learning.threshold_tuning import (
-    ThresholdTuningManager,
+    AuditLogEntry,
     AutoTuningMode,
-    ThresholdConfig,
     ThresholdBounds,
+    ThresholdConfig,
     ThresholdMetrics,
     ThresholdRecommendation,
-    AuditLogEntry,
+    ThresholdTuningManager,
     get_threshold_tuning_manager,
 )
 
@@ -98,11 +92,11 @@ __all__ = [
     "FeedbackRecord",
     "DocumentScore",
     "get_feedback_store",
-    
+
     # Feedback-Aware Retriever
     "FeedbackAwareRetriever",
     "create_feedback_aware_retriever",
-    
+
     # Audit-to-KG Pipeline
     "AuditToKGPipeline",
     "AuditResult",
@@ -110,14 +104,14 @@ __all__ = [
     "ErrorRelationType",
     "get_audit_to_kg_pipeline",
     "process_audit_finding",
-    
+
     # Context Enrichment
     "ContextEnricher",
     "EnrichmentResult",
     "EntityContext",
     "get_context_enricher",
     "enrich_query",
-    
+
     # Active Learning
     "ActiveLearningManager",
     "ActiveLearningDecision",
@@ -126,13 +120,13 @@ __all__ = [
     "ReviewStatus",
     "get_active_learning_manager",
     "check_for_review",
-    
+
     # Orchestrator
     "ContinualLearningOrchestrator",
     "ContinualLearningResult",
     "get_continual_learning_orchestrator",
     "process_with_continual_learning",
-    
+
     # Threshold Tuning
     "ThresholdTuningManager",
     "AutoTuningMode",

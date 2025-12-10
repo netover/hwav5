@@ -8,8 +8,8 @@ easy extension with new cache implementations.
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Any, Dict, Optional
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 from resync.core.cache.base_cache import BaseCache
 
@@ -31,22 +31,22 @@ class CacheEntry:
     data: Any
     timestamp: float = field(default_factory=time.time)
     ttl: float = 300.0
-    
+
     def is_expired(self) -> bool:
         return time.time() > self.timestamp + self.ttl
 
 
 class MemoryCache(BaseCache):
     """In-memory cache implementation."""
-    
-    def __init__(self, config: Optional[SimpleCacheConfig] = None):
+
+    def __init__(self, config: SimpleCacheConfig | None = None):
         self.config = config or SimpleCacheConfig()
-        self._store: Dict[str, CacheEntry] = {}
+        self._store: dict[str, CacheEntry] = {}
         self._lock = asyncio.Lock()
         self._hits = 0
         self._misses = 0
-    
-    async def get(self, key: str) -> Optional[Any]:
+
+    async def get(self, key: str) -> Any | None:
         async with self._lock:
             entry = self._store.get(key)
             if entry is None:
@@ -58,38 +58,38 @@ class MemoryCache(BaseCache):
                 return None
             self._hits += 1
             return entry.data
-    
-    async def set(self, key: str, value: Any, ttl: Optional[float] = None) -> bool:
+
+    async def set(self, key: str, value: Any, ttl: float | None = None) -> bool:
         async with self._lock:
             # Evict if at capacity
             if len(self._store) >= self.config.max_entries:
                 await self._evict_oldest()
-            
+
             self._store[key] = CacheEntry(
                 data=value,
                 ttl=ttl or self.config.ttl_seconds
             )
             return True
-    
+
     async def delete(self, key: str) -> bool:
         async with self._lock:
             if key in self._store:
                 del self._store[key]
                 return True
             return False
-    
+
     async def clear(self) -> None:
         async with self._lock:
             self._store.clear()
-    
+
     async def _evict_oldest(self) -> None:
         """Evict oldest entry."""
         if not self._store:
             return
         oldest_key = min(self._store.keys(), key=lambda k: self._store[k].timestamp)
         del self._store[oldest_key]
-    
-    def get_stats(self) -> Dict[str, Any]:
+
+    def get_stats(self) -> dict[str, Any]:
         total = self._hits + self._misses
         return {
             "hits": self._hits,
@@ -101,28 +101,28 @@ class MemoryCache(BaseCache):
 
 class EnhancedCache(MemoryCache):
     """Enhanced cache with stampede protection."""
-    
-    def __init__(self, config: Optional[SimpleCacheConfig] = None):
+
+    def __init__(self, config: SimpleCacheConfig | None = None):
         super().__init__(config)
-        self._computing: Dict[str, asyncio.Event] = {}
-    
+        self._computing: dict[str, asyncio.Event] = {}
+
     async def get_or_compute(
         self,
         key: str,
         compute_fn: callable,
-        ttl: Optional[float] = None
+        ttl: float | None = None
     ) -> Any:
         """Get value or compute if missing (with stampede protection)."""
         # Check cache first
         value = await self.get(key)
         if value is not None:
             return value
-        
+
         # Check if already computing
         if key in self._computing:
             await self._computing[key].wait()
             return await self.get(key)
-        
+
         # Start computing
         self._computing[key] = asyncio.Event()
         try:
@@ -136,22 +136,22 @@ class EnhancedCache(MemoryCache):
 
 class HybridCache(BaseCache):
     """Hybrid cache combining memory and persistent storage."""
-    
+
     def __init__(
         self,
-        memory_config: Optional[SimpleCacheConfig] = None,
-        persistent_store: Optional[Dict] = None
+        memory_config: SimpleCacheConfig | None = None,
+        persistent_store: dict | None = None
     ):
         self._memory = MemoryCache(memory_config)
         self._persistent = persistent_store or {}
         self._lock = asyncio.Lock()
-    
-    async def get(self, key: str) -> Optional[Any]:
+
+    async def get(self, key: str) -> Any | None:
         # Try memory first
         value = await self._memory.get(key)
         if value is not None:
             return value
-        
+
         # Try persistent
         async with self._lock:
             if key in self._persistent:
@@ -159,16 +159,16 @@ class HybridCache(BaseCache):
                 # Promote to memory
                 await self._memory.set(key, value)
                 return value
-        
+
         return None
-    
-    async def set(self, key: str, value: Any, ttl: Optional[float] = None) -> bool:
+
+    async def set(self, key: str, value: Any, ttl: float | None = None) -> bool:
         # Set in both stores
         await self._memory.set(key, value, ttl)
         async with self._lock:
             self._persistent[key] = value
         return True
-    
+
     async def delete(self, key: str) -> bool:
         await self._memory.delete(key)
         async with self._lock:
@@ -176,7 +176,7 @@ class HybridCache(BaseCache):
                 del self._persistent[key]
                 return True
         return False
-    
+
     async def clear(self) -> None:
         await self._memory.clear()
         async with self._lock:
@@ -208,7 +208,7 @@ class CacheFactory:
             ttl_seconds=getattr(config, 'ttl_seconds', 300),
             max_entries=getattr(config, 'max_entries', 10000),
         ) if config else SimpleCacheConfig()
-        
+
         return EnhancedCache(simple_config)
 
     @staticmethod
@@ -226,7 +226,7 @@ class CacheFactory:
             ttl_seconds=getattr(config, 'ttl_seconds', 300),
             max_entries=getattr(config, 'max_entries', 10000),
         ) if config else SimpleCacheConfig()
-        
+
         return MemoryCache(simple_config)
 
     @staticmethod
@@ -244,5 +244,5 @@ class CacheFactory:
             ttl_seconds=getattr(config, 'ttl_seconds', 300),
             max_entries=getattr(config, 'max_entries', 5000),
         ) if config else SimpleCacheConfig()
-        
+
         return HybridCache(memory_config)

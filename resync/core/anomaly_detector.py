@@ -16,12 +16,12 @@ import hashlib
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any
 
 import numpy as np
 from sklearn.ensemble import IsolationForest
-from sklearn.svm import OneClassSVM
 from sklearn.preprocessing import StandardScaler
+from sklearn.svm import OneClassSVM
 
 from resync.core.structured_logger import get_logger
 
@@ -33,8 +33,8 @@ class AnomalyMetrics:
     """Metrics collected for anomaly detection."""
 
     timestamp: float = field(default_factory=time.time)
-    user_id: Optional[str] = None
-    session_id: Optional[str] = None
+    user_id: str | None = None
+    session_id: str | None = None
     endpoint: str = ""
     method: str = "GET"
     response_time: float = 0.0
@@ -43,8 +43,8 @@ class AnomalyMetrics:
     response_size: int = 0
     user_agent: str = ""
     ip_address: str = ""
-    geo_location: Optional[Dict[str, Any]] = None
-    custom_metrics: Dict[str, Any] = field(default_factory=dict)
+    geo_location: dict[str, Any] | None = None
+    custom_metrics: dict[str, Any] = field(default_factory=dict)
 
     def to_feature_vector(self) -> np.ndarray:
         """Convert metrics to numerical feature vector for ML."""
@@ -80,11 +80,11 @@ class AnomalyScore:
     confidence: float
     risk_level: str  # "low", "medium", "high", "critical"
     detection_method: str
-    feature_importance: Dict[str, float]
+    feature_importance: dict[str, float]
     timestamp: float = field(default_factory=time.time)
     metrics: AnomalyMetrics = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "is_anomaly": self.is_anomaly,
@@ -241,14 +241,13 @@ class IsolationForestDetector:
         """Calculate risk level based on anomaly score."""
         if anomaly_score > 0.9:
             return "critical"
-        elif anomaly_score > 0.7:
+        if anomaly_score > 0.7:
             return "high"
-        elif anomaly_score > 0.5:
+        if anomaly_score > 0.5:
             return "medium"
-        else:
-            return "low"
+        return "low"
 
-    def _get_feature_importance(self) -> Dict[str, float]:
+    def _get_feature_importance(self) -> dict[str, float]:
         """Get feature importance (simplified for Isolation Forest)."""
         # Isolation Forest doesn't provide direct feature importance
         # Return equal weights for all features
@@ -372,14 +371,13 @@ class OneClassSVMDetector:
         """Calculate risk level based on anomaly score."""
         if anomaly_score > 0.8:
             return "critical"
-        elif anomaly_score > 0.6:
+        if anomaly_score > 0.6:
             return "high"
-        elif anomaly_score > 0.4:
+        if anomaly_score > 0.4:
             return "medium"
-        else:
-            return "low"
+        return "low"
 
-    def _get_feature_importance(self) -> Dict[str, float]:
+    def _get_feature_importance(self) -> dict[str, float]:
         """Get feature importance (simplified)."""
         return {
             "response_time": 0.25,
@@ -481,7 +479,7 @@ class AnomalyDetectionEngine:
     - Performance optimized for high-throughput
     """
 
-    def __init__(self, config: Optional[MLModelConfig] = None):
+    def __init__(self, config: MLModelConfig | None = None):
         self.config = config or MLModelConfig()
 
         # Initialize detectors based on configuration
@@ -511,8 +509,8 @@ class AnomalyDetectionEngine:
         self.last_model_update = time.time()
 
         # Background tasks
-        self._processing_task: Optional[asyncio.Task] = None
-        self._training_task: Optional[asyncio.Task] = None
+        self._processing_task: asyncio.Task | None = None
+        self._training_task: asyncio.Task | None = None
         self._running = False
 
         # Thread safety
@@ -590,7 +588,7 @@ class AnomalyDetectionEngine:
             f"{result.timestamp}_{result.metrics.user_id}".encode(),
             digest_size=16
         ).hexdigest()
-        
+
         alert_data = {
             "anomaly_id": anomaly_id,
             "risk_level": result.risk_level,
@@ -694,7 +692,7 @@ class AnomalyDetectionEngine:
             else:
                 break
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get comprehensive anomaly detection statistics."""
         total_anomalies = len([r for r in self.anomaly_history if r.is_anomaly])
         detection_rate = total_anomalies / max(1, len(self.anomaly_history))
@@ -727,7 +725,7 @@ class AnomalyDetectionEngine:
             },
         }
 
-    def update_alert_thresholds(self, thresholds: Dict[str, float]) -> None:
+    def update_alert_thresholds(self, thresholds: dict[str, float]) -> None:
         """Update alert thresholds."""
         self.alert_thresholds.update(thresholds)
         logger.info("Alert thresholds updated", thresholds=thresholds)
@@ -745,7 +743,7 @@ class AnomalyDetectionEngine:
                 f"{result.timestamp}_{result.metrics.user_id}".encode(),
                 digest_size=16
             ).hexdigest() if result.metrics else None
-            
+
             if result_id == anomaly_id:
                 self.false_positives += 1
                 logger.info(f"False positive marked for anomaly {anomaly_id}")

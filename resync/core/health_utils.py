@@ -1,6 +1,6 @@
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 from .health_models import HealthCheckResult, HealthStatus
 
@@ -26,7 +26,7 @@ def initialize_health_result(correlation_id: str) -> HealthCheckResult:
     )
 
 
-def get_health_checks_dict(health_service_instance: Any) -> Dict[str, Any]:
+def get_health_checks_dict(health_service_instance: Any) -> dict[str, Any]:
     """
     Get dictionary of all health check coroutines.
 

@@ -14,11 +14,8 @@ from typing import Any
 
 from .chunking import chunk_text
 from .config import CFG
-from .interfaces import Embedder
-from .interfaces import VectorStore
-from .monitoring import embed_seconds
-from .monitoring import jobs_total
-from .monitoring import upsert_seconds
+from .interfaces import Embedder, VectorStore
+from .monitoring import embed_seconds, jobs_total, upsert_seconds
 
 logger = logging.getLogger(__name__)
 

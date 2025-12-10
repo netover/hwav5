@@ -5,26 +5,38 @@ This module implements the Factory pattern for creating standardized error respo
 based on different exception types, making the code more modular, testable, and maintainable.
 """
 
-from typing import Optional
+
 from fastapi import Request
 
 from resync.core.exceptions import (
     DatabaseError,
     LLMError,
     NotFoundError,
-    ResyncException as BaseResyncException,
     TWSConnectionError,
+)
+from resync.core.exceptions import (
+    ResyncException as BaseResyncException,
 )
 from resync.core.exceptions_enhanced import (
     DatabaseError as EnhancedDatabaseError,
+)
+from resync.core.exceptions_enhanced import (
     LLMError as EnhancedLLMError,
+)
+from resync.core.exceptions_enhanced import (
     NotFoundError as EnhancedNotFoundError,
+)
+from resync.core.exceptions_enhanced import (
     ResyncException as EnhancedResyncException,
+)
+from resync.core.exceptions_enhanced import (
     TWSConnectionError as EnhancedTWSConnectionError,
 )
 from resync.models.error_models import (
     BaseErrorResponse,
 )
+
+
 # Lazy imports to avoid circular dependency
 def _get_error_response_builder():
     """Lazy import to avoid circular dependency."""
@@ -44,59 +56,58 @@ def _get_should_include_stack_trace():
 
 class ErrorFactory:
     """Base factory class for creating error responses."""
-    
+
     @staticmethod
     def create_error_response(
         exception: Exception,
-        request: Optional[Request] = None,
-        correlation_id: Optional[str] = None,
+        request: Request | None = None,
+        correlation_id: str | None = None,
     ) -> BaseErrorResponse:
         """Factory method to create appropriate error response based on exception type."""
         ErrorResponseBuilder = _get_error_response_builder()
         builder = ErrorResponseBuilder()
-        
+
         # Set correlation ID
         if correlation_id:
             builder.with_correlation_id(correlation_id)
         else:
             generate_correlation_id = _get_generate_correlation_id()
             builder.with_correlation_id(generate_correlation_id())
-        
+
         # Set request context
         if request:
             builder.with_request_context(request)
-        
+
         # Enhanced security: only include stack traces in non-production environments
         is_production = getattr(request.state, "app_env", "development") == "production" if request else "production"
         should_include_stack_trace_func = _get_should_include_stack_trace()
         include_stack_trace = should_include_stack_trace_func() and not is_production
-        
+
         # In production, sanitize error messages to prevent information disclosure
         if is_production:
             builder.with_stack_trace(include_stack_trace and is_production is False)
         else:
             builder.with_stack_trace(include_stack_trace)
-        
+
         # Handle different exception types
         if isinstance(exception, EnhancedResyncException):
             return EnhancedResyncExceptionFactory.create_response(builder, exception, is_production)
-        elif isinstance(exception, (TWSConnectionError, EnhancedTWSConnectionError)):
+        if isinstance(exception, (TWSConnectionError, EnhancedTWSConnectionError)):
             return TWSConnectionExceptionFactory.create_response(builder, exception, is_production)
-        elif isinstance(exception, (LLMError, EnhancedLLMError)):
+        if isinstance(exception, (LLMError, EnhancedLLMError)):
             return LLMExceptionFactory.create_response(builder, exception, is_production)
-        elif isinstance(exception, (DatabaseError, EnhancedDatabaseError)):
+        if isinstance(exception, (DatabaseError, EnhancedDatabaseError)):
             return DatabaseExceptionFactory.create_response(builder, exception, is_production)
-        elif isinstance(exception, (NotFoundError, EnhancedNotFoundError)):
+        if isinstance(exception, (NotFoundError, EnhancedNotFoundError)):
             return NotFoundExceptionHandler.create_response(builder, exception, is_production)
-        elif isinstance(exception, BaseResyncException):
+        if isinstance(exception, BaseResyncException):
             return BaseResyncExceptionFactory.create_response(builder, exception, is_production)
-        else:
-            return UnknownExceptionFactory.create_response(builder, exception, is_production)
+        return UnknownExceptionFactory.create_response(builder, exception, is_production)
 
 
 class EnhancedResyncExceptionFactory:
     """Factory for handling enhanced Resync exceptions."""
-    
+
     @staticmethod
     def create_response(
         builder, # ErrorResponseBuilder
@@ -108,7 +119,7 @@ class EnhancedResyncExceptionFactory:
         message = exception.message
         user_friendly_message = exception.user_friendly_message
         details = exception.details.copy()  # Copy to avoid modifying original
-        
+
         # Sanitize details in production to prevent sensitive data leakage
         if is_production:
             # Remove potentially sensitive information
@@ -121,7 +132,7 @@ class EnhancedResyncExceptionFactory:
                         for k, v in details["details"].items()
                         if k not in ["password", "token", "credentials", "key"]
                     }
-        
+
         # Map the enhanced exception to the appropriate response type based on category
         if exception.error_category == "VALIDATION":
             return builder.build_validation_error(
@@ -134,11 +145,11 @@ class EnhancedResyncExceptionFactory:
                 ],
                 sanitize_error_message(user_friendly_message),
             )
-        elif exception.error_category == "BUSINESS_LOGIC":
+        if exception.error_category == "BUSINESS_LOGIC":
             return _handle_business_logic_exception(
                 builder, exception, message, user_friendly_message, details, is_production
             )
-        elif exception.error_category == "EXTERNAL_SERVICE":
+        if exception.error_category == "EXTERNAL_SERVICE":
             service_name = (
                 details.get("service", "External Service")
                 if details
@@ -149,26 +160,25 @@ class EnhancedResyncExceptionFactory:
                 user_friendly_message=sanitize_error_message(user_friendly_message),
                 details=details,
             )
-        elif exception.error_category == "SYSTEM":
+        if exception.error_category == "SYSTEM":
             return builder.build_system_error(
                 "internal_server_error",
                 user_friendly_message=sanitize_error_message(user_friendly_message),
                 details=details,
                 exception=exception if not is_production else None,
             )
-        else:
-            # For other enhanced exceptions
-            return builder.build_system_error(
-                "internal_server_error",
-                exception=exception if not is_production else None,
-                user_friendly_message=sanitize_error_message(user_friendly_message),
-                details=details,
-            )
+        # For other enhanced exceptions
+        return builder.build_system_error(
+            "internal_server_error",
+            exception=exception if not is_production else None,
+            user_friendly_message=sanitize_error_message(user_friendly_message),
+            details=details,
+        )
 
 
 class TWSConnectionExceptionFactory:
     """Factory for handling TWS connection exceptions."""
-    
+
     @staticmethod
     def create_response(
         builder, # ErrorResponseBuilder
@@ -181,7 +191,7 @@ class TWSConnectionExceptionFactory:
 
 class LLMExceptionFactory:
     """Factory for handling LLM exceptions."""
-    
+
     @staticmethod
     def create_response(
         builder, # ErrorResponseBuilder
@@ -194,7 +204,7 @@ class LLMExceptionFactory:
 
 class DatabaseExceptionFactory:
     """Factory for handling database exceptions."""
-    
+
     @staticmethod
     def create_response(
         builder, # ErrorResponseBuilder
@@ -207,7 +217,7 @@ class DatabaseExceptionFactory:
 
 class NotFoundExceptionHandler:
     """Factory for handling not found exceptions."""
-    
+
     @staticmethod
     def create_response(
         builder, # ErrorResponseBuilder
@@ -220,7 +230,7 @@ class NotFoundExceptionHandler:
 
 class BaseResyncExceptionFactory:
     """Factory for handling base Resync exceptions."""
-    
+
     @staticmethod
     def create_response(
         builder, # ErrorResponseBuilder
@@ -235,7 +245,7 @@ class BaseResyncExceptionFactory:
 
 class UnknownExceptionFactory:
     """Factory for handling unknown exceptions."""
-    
+
     @staticmethod
     def create_response(
         builder, # ErrorResponseBuilder
@@ -258,23 +268,22 @@ def _handle_business_logic_exception(
 ) -> BaseErrorResponse:
     """Handle business logic exceptions."""
     from resync.core.exceptions_enhanced import NotFoundError as EnhancedNotFoundError
-    
+
     if isinstance(exception, EnhancedNotFoundError):
         return builder.build_business_logic_error(
             "resource_not_found", resource="Resource"
         )
-    else:
-        return builder.build_business_logic_error(
-            "invalid_operation",
-            user_friendly_message=sanitize_error_message(user_friendly_message),
-            details=details,
-        )
+    return builder.build_business_logic_error(
+        "invalid_operation",
+        user_friendly_message=sanitize_error_message(user_friendly_message),
+        details=details,
+    )
 
 
 def sanitize_error_message(message: str) -> str:
     """
     Sanitize error messages to prevent sensitive information disclosure.
-    
+
     This function is maintained for backward compatibility.
     Use ErrorSanitizer.sanitize() for new code.
     """

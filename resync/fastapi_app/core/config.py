@@ -2,8 +2,9 @@
 """
 Core configuration for FastAPI application
 """
-from typing import List
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
@@ -36,7 +37,7 @@ class Settings(BaseSettings):
     # File upload settings
     upload_dir: str = "uploads"
     max_file_size: int = 10 * 1024 * 1024  # 10MB
-    allowed_extensions: List[str] = [".txt", ".pdf", ".docx", ".md", ".json"]
+    allowed_extensions: list[str] = [".txt", ".pdf", ".docx", ".md", ".json"]
 
     # Rate limiting
     rate_limit_requests: int = 100
@@ -47,10 +48,10 @@ class Settings(BaseSettings):
     structured_logging: bool = True
 
     # CORS settings
-    cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8080"]
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:8080"]
     cors_allow_credentials: bool = True
-    cors_allow_methods: List[str] = ["*"]
-    cors_allow_headers: List[str] = ["*"]
+    cors_allow_methods: list[str] = ["*"]
+    cors_allow_headers: list[str] = ["*"]
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 # Global settings instance

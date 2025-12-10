@@ -76,13 +76,13 @@ class TWS_LLMOptimizer:
 
         if any(word in query_lower for word in ["status", "estado"]):
             return "job_status"
-        elif any(word in query_lower for word in ["failed", "error", "falhou", "erro"]):
+        if any(word in query_lower for word in ["failed", "error", "falhou", "erro"]):
             return "job_failure"
-        elif any(word in query_lower for word in ["health", "saúde", "sistema"]):
+        if any(word in query_lower for word in ["health", "saúde", "sistema"]):
             return "system_health"
-        elif any(word in query_lower for word in ["dependenc", "depende"]):
+        if any(word in query_lower for word in ["dependenc", "depende"]):
             return "job_dependencies"
-        elif any(word in query_lower for word in ["troubleshoot", "problem", "issue"]):
+        if any(word in query_lower for word in ["troubleshoot", "problem", "issue"]):
             return "troubleshooting"
 
         return "custom"
@@ -126,7 +126,7 @@ class TWS_LLMOptimizer:
                     available_models = get_available_models()
                     if any("gpt-4" in model for model in available_models):
                         return self.model_routing["troubleshooting"]
-                    elif any("gpt-4" in model for model in self.model_routing.values()):
+                    if any("gpt-4" in model for model in self.model_routing.values()):
                         return self.model_routing["complex"]
                 except Exception as e:
                     # Log model selection error and fall back to normal selection
@@ -155,8 +155,7 @@ class TWS_LLMOptimizer:
 
         if is_complex:
             return self.model_routing["complex"]
-        else:
-            return self.model_routing["simple"]
+        return self.model_routing["simple"]
 
     async def get_optimized_response(
         self,

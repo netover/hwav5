@@ -8,7 +8,7 @@ database connections, background tasks, and service clients.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import FastAPI
 
@@ -28,8 +28,8 @@ class ResourceManager:
     """
 
     def __init__(self):
-        self._resources: Dict[str, Any] = {}
-        self._cleanup_tasks: List[callable] = []
+        self._resources: dict[str, Any] = {}
+        self._cleanup_tasks: list[callable] = []
 
     def register_resource(
         self, name: str, resource: Any, cleanup_func: callable = None

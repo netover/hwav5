@@ -2,8 +2,9 @@
 
 
 
-from .base import BaseModelWithTime
 from resync.core.health_models import SystemHealthStatus
+
+from .base import BaseModelWithTime
 
 
 class SystemMetric(BaseModelWithTime):

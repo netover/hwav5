@@ -7,10 +7,10 @@ It supports both memory and Redis-based caching with detailed metrics.
 
 import logging
 import secrets
-from typing import Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+
 try:
     from redis import Redis
     from redis.exceptions import ConnectionError, TimeoutError
@@ -99,7 +99,7 @@ class ConnectionPoolValidator:
         return True
 
 
-def get_redis_connection() -> Optional[Redis]:
+def get_redis_connection() -> Redis | None:
     """
     Get a Redis connection using connection pooling and validation.
 
@@ -134,7 +134,7 @@ class RedisCacheManager:
     def __init__(self, redis_client: Redis):
         self.redis_client = redis_client
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         """
         Retrieve a value from Redis cache.
 
@@ -233,7 +233,7 @@ class RedisCacheManager:
 
 
 # Global Redis cache manager instance
-redis_manager: Optional[RedisCacheManager] = None
+redis_manager: RedisCacheManager | None = None
 
 
 def validate_connection_pool() -> bool:
@@ -354,7 +354,7 @@ async def invalidate_tws_cache(
             return CacheInvalidationResponse(
                 status="success", detail="Full TWS system cache invalidated."
             )
-        elif scope == "jobs":
+        if scope == "jobs":
             # Use Redis manager to clear job-related keys if available
             if redis_manager:
                 redis_manager.clear_pattern("tws:jobs:*")
@@ -364,7 +364,7 @@ async def invalidate_tws_cache(
             return CacheInvalidationResponse(
                 status="success", detail="All jobs list cache invalidated."
             )
-        elif scope == "workstations":
+        if scope == "workstations":
             # Use Redis manager to clear workstation-related keys if available
             if redis_manager:
                 redis_manager.clear_pattern("tws:workstations:*")
@@ -374,12 +374,11 @@ async def invalidate_tws_cache(
             return CacheInvalidationResponse(
                 status="success", detail="All workstations list cache invalidated."
             )
-        else:
-            logger.warning(f"Invalid scope '{scope}' provided for cache invalidation")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid scope '{scope}'. Must be 'system', 'jobs', or 'workstations'.",
-            )
+        logger.warning(f"Invalid scope '{scope}' provided for cache invalidation")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid scope '{scope}'. Must be 'system', 'jobs', or 'workstations'.",
+        )
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         raise
@@ -427,7 +426,7 @@ async def get_cache_stats(
 
 def get_database_connection(
     min_connections: int = 1, max_connections: int = 10, timeout: float = 30.0
-) -> Union[object, None]:
+) -> object | None:
     """
     Get a database connection with pool validation.
 

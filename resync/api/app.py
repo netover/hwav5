@@ -7,10 +7,11 @@ for the framework if available.
 """
 
 import json
+import logging
+
 from fastapi import FastAPI
 from starlette.responses import Response
 
-import logging
 logger = logging.getLogger(__name__)
 
 # Internal metrics system
@@ -18,8 +19,8 @@ from resync.core.metrics_internal import registry
 
 try:
     # Optional instrumentation for FastAPI and ASGI frameworks
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 except Exception as e:
     logger.error("exception_caught", error=str(e), exc_info=True)
     FastAPIInstrumentor = None  # type: ignore

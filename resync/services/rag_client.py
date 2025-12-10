@@ -4,7 +4,7 @@ RAG Service Client for API Gateway
 This module provides a client to communicate with the standalone RAG microservice.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from pydantic import BaseModel
@@ -21,8 +21,8 @@ class RAGJobStatus(BaseModel):
     """Model for RAG job status response"""
     job_id: str
     status: str  # queued, processing, completed, failed
-    progress: Optional[int] = None
-    message: Optional[str] = None
+    progress: int | None = None
+    message: str | None = None
 
 
 class RAGUploadResponse(BaseModel):
@@ -35,20 +35,20 @@ class RAGUploadResponse(BaseModel):
 class RAGServiceClient:
     """
     Client to communicate with the RAG microservice.
-    
+
     Implements:
     - HTTP client with retry logic
     - Circuit breaker for protection
     - Timeout configuration
     - Error handling
     """
-    
+
     def __init__(self):
         """Initialize the RAG service client"""
         self.rag_service_url = settings.RAG_SERVICE_URL
         self.max_retries = 3
         self.retry_backoff = 1.0  # seconds
-        
+
         # Initialize HTTP client
         self.http_client = httpx.AsyncClient(
             timeout=httpx.Timeout(timeout=30.0, connect=10.0),
@@ -57,29 +57,29 @@ class RAGServiceClient:
                 max_keepalive_connections=5
             )
         )
-        
+
         # Centralized circuit breaker manager
         self.cbm = CircuitBreakerManager()
         self.cbm.register("rag_service", fail_max=5, reset_timeout=60, exclude=(ValueError,))
-        
+
         logger.info("RAGServiceClient initialized")
-    
+
     async def enqueue_file(self, file: Any) -> str:
         """
         Enqueue a file for RAG processing.
-        
+
         Args:
             file: UploadFile object from FastAPI
-            
+
         Returns:
             str: Generated job_id
-            
+
         Raises:
             ConfigurationError: If RAG service URL is not configured
         """
         if not self.rag_service_url:
             raise ConfigurationError("RAG_SERVICE_URL not configured")
-        
+
         async def _once():
             return await self.http_client.post(
                 f"{self.rag_service_url}/api/v1/upload",
@@ -101,23 +101,23 @@ class RAGServiceClient:
         )
         data = resp.json()
         return data["job_id"]
-    
+
     async def get_job_status(self, job_id: str) -> RAGJobStatus:
         """
         Get the status of a RAG processing job.
-        
+
         Args:
             job_id: The job identifier
-            
+
         Returns:
             RAGJobStatus: Job status information
-            
+
         Raises:
             ConfigurationError: If RAG service URL is not configured
         """
         if not self.rag_service_url:
             raise ConfigurationError("RAG_SERVICE_URL not configured")
-        
+
         async def _once():
             return await self.http_client.get(f"{self.rag_service_url}/api/v1/jobs/{job_id}")
 

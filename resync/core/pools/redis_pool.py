@@ -18,8 +18,9 @@ except ImportError:
     RedisConnectionError = None
     RedisError = None
 
-from resync.core.redis_init import is_redis_available, get_redis_client
 import os
+
+from resync.core.redis_init import get_redis_client, is_redis_available
 
 logger = logging.getLogger(__name__)
 

@@ -2,11 +2,12 @@
 """
 WebSocket handlers for FastAPI
 """
-from fastapi import WebSocket, WebSocketDisconnect
-from typing import Dict, Set
 import json
 import sys
 from pathlib import Path
+
+from fastapi import WebSocket, WebSocketDisconnect
+
 from ..v1.dependencies import get_logger
 
 # Add project root to path for imports
@@ -19,8 +20,8 @@ class ConnectionManager:
     """Manage WebSocket connections"""
 
     def __init__(self):
-        self.active_connections: Dict[str, Set[WebSocket]] = {}
-        self.agent_connections: Dict[str, WebSocket] = {}
+        self.active_connections: dict[str, set[WebSocket]] = {}
+        self.agent_connections: dict[str, WebSocket] = {}
 
     async def connect(self, websocket: WebSocket, agent_id: str):
         """Connect WebSocket for specific agent"""
@@ -131,21 +132,21 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                     try:
                         from resync.services.llm_service import get_llm_service
                         llm_service = get_llm_service()
-                        
+
                         # Agent configuration
                         agent_config = {
                             "name": f"Agente {agent_id}",
                             "type": "general",
                             "description": "Assistente de IA do sistema Resync TWS"
                         }
-                        
+
                         # Generate response using real LLM
                         ai_response = await llm_service.generate_agent_response(
                             agent_id=agent_id,
                             user_message=content,
                             agent_config=agent_config
                         )
-                        
+
                         # Send final response with real AI content
                         final_response = {
                             "type": "message",
@@ -153,7 +154,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                             "agent_id": agent_id,
                             "is_final": True
                         }
-                        
+
                     except Exception as e:
                         logger.error(f"Error generating AI response: {e}")
                         # Fallback to mock response if LLM fails
@@ -163,7 +164,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                             "agent_id": agent_id,
                             "is_final": True
                         }
-                    
+
                     await manager.send_personal_message(json.dumps(final_response), websocket)
 
                 elif message_type == "heartbeat":
@@ -191,21 +192,21 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                         try:
                             from resync.services.llm_service import get_llm_service
                             llm_service = get_llm_service()
-                            
+
                             # Agent configuration
                             agent_config = {
                                 "name": f"Agente {agent_id}",
                                 "type": "general",
                                 "description": "Assistente de IA do sistema Resync TWS"
                             }
-                            
+
                             # Generate response using real LLM
                             ai_response = await llm_service.generate_agent_response(
                                 agent_id=agent_id,
                                 user_message=data,
                                 agent_config=agent_config
                             )
-                            
+
                             # Send final response with real AI content
                             final_response = {
                                 "type": "message",
@@ -213,7 +214,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                                 "agent_id": agent_id,
                                 "is_final": True
                             }
-                            
+
                         except Exception as e:
                             logger.error(f"Error generating AI response: {e}")
                             # Fallback to mock response if LLM fails
@@ -223,7 +224,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                                 "agent_id": agent_id,
                                 "is_final": True
                             }
-                        
+
                         await manager.send_personal_message(json.dumps(final_response), websocket)
                     else:
                         # Unknown JSON message type

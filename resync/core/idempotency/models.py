@@ -4,7 +4,7 @@ Modelos de dados para o sistema de idempotency.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 @dataclass
@@ -13,13 +13,13 @@ class IdempotencyRecord:
 
     idempotency_key: str
     request_hash: str
-    response_data: Dict[str, Any]
+    response_data: dict[str, Any]
     status_code: int
     created_at: datetime
     expires_at: datetime
-    request_metadata: Dict[str, Any] = field(default_factory=dict)
+    request_metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Converte para dicionário para serialização"""
         return {
             "idempotency_key": self.idempotency_key,
@@ -32,7 +32,7 @@ class IdempotencyRecord:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "IdempotencyRecord":
+    def from_dict(cls, data: dict[str, Any]) -> "IdempotencyRecord":
         """Cria instância a partir de dicionário"""
         return cls(
             idempotency_key=data["idempotency_key"],
@@ -51,9 +51,9 @@ class RequestContext:
 
     method: str
     url: str
-    headers: Dict[str, str] = field(default_factory=dict)
-    body: Optional[bytes] = None
-    idempotency_key: Optional[str] = None
+    headers: dict[str, str] = field(default_factory=dict)
+    body: bytes | None = None
+    idempotency_key: str | None = None
 
     def get_request_hash(self) -> str:
         """Gera hash único da requisição"""

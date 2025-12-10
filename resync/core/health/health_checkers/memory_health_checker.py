@@ -7,7 +7,7 @@ This module provides health checking functionality for memory usage monitoring.
 
 import time
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -16,6 +16,7 @@ from resync.core.health_models import (
     ComponentType,
     HealthStatus,
 )
+
 from .base_health_checker import BaseHealthChecker
 
 logger = structlog.get_logger(__name__)
@@ -95,7 +96,7 @@ class MemoryHealthChecker(BaseHealthChecker):
         """Determine health status based on memory exception type."""
         return ComponentType.MEMORY
 
-    def get_component_config(self) -> Dict[str, Any]:
+    def get_component_config(self) -> dict[str, Any]:
         """Get memory-specific configuration."""
         return {
             "timeout_seconds": self.config.timeout_seconds,

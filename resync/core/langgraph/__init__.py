@@ -17,7 +17,7 @@ Architecture:
 
 Usage:
     from resync.core.langgraph import create_tws_agent_graph
-    
+
     graph = await create_tws_agent_graph()
     result = await graph.invoke({"message": "status do TWS"})
 """
@@ -25,19 +25,19 @@ Usage:
 from resync.core.langgraph.agent_graph import (
     AgentGraphConfig,
     AgentState,
-    create_tws_agent_graph,
     create_router_graph,
-)
-from resync.core.langgraph.nodes import (
-    RouterNode,
-    LLMNode,
-    ToolNode,
-    ValidationNode,
-    HumanApprovalNode,
+    create_tws_agent_graph,
 )
 from resync.core.langgraph.checkpointer import (
     PostgresCheckpointer,
     get_checkpointer,
+)
+from resync.core.langgraph.nodes import (
+    HumanApprovalNode,
+    LLMNode,
+    RouterNode,
+    ToolNode,
+    ValidationNode,
 )
 
 __all__ = [

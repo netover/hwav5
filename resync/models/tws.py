@@ -1,6 +1,6 @@
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -50,11 +50,11 @@ class JobExecution(BaseModel):
     job_id: str = Field(..., description="The unique identifier for the job execution")
     status: str = Field(..., description="The status of this execution")
     start_time: datetime = Field(..., description="When the job execution started")
-    end_time: Optional[datetime] = Field(
+    end_time: datetime | None = Field(
         None, description="When the job execution ended"
     )
-    duration: Optional[str] = Field(None, description="Duration of the execution")
-    error_message: Optional[str] = Field(
+    duration: str | None = Field(None, description="Duration of the execution")
+    error_message: str | None = Field(
         None, description="Error message if execution failed"
     )
 
@@ -67,16 +67,16 @@ class JobDetails(BaseModel):
     workstation: str = Field(..., description="The workstation where the job runs")
     status: str = Field(..., description="The current status of the job")
     job_stream: str = Field(..., description="The job stream the job belongs to")
-    full_definition: Dict[str, Any] = Field(
+    full_definition: dict[str, Any] = Field(
         ..., description="Complete job definition from TWS"
     )
-    dependencies: List[str] = Field(
+    dependencies: list[str] = Field(
         default_factory=list, description="List of job dependencies"
     )
-    resource_requirements: Dict[str, Any] = Field(
+    resource_requirements: dict[str, Any] = Field(
         default_factory=dict, description="Resource requirements for the job"
     )
-    execution_history: List[JobExecution] = Field(
+    execution_history: list[JobExecution] = Field(
         default_factory=list, description="Recent execution history"
     )
 
@@ -87,7 +87,7 @@ class PlanDetails(BaseModel):
     plan_id: str = Field(..., description="The unique identifier for the plan")
     creation_date: datetime = Field(..., description="When the plan was created")
     jobs_count: int = Field(..., description="Total number of jobs in the plan")
-    estimated_completion: Optional[datetime] = Field(
+    estimated_completion: datetime | None = Field(
         None, description="Estimated completion time"
     )
     status: str = Field(..., description="Current status of the plan")
@@ -100,12 +100,12 @@ class ResourceStatus(BaseModel):
     resource_type: str = Field(
         ..., description="The type of resource (CPU, memory, etc.)"
     )
-    total_capacity: Optional[float] = Field(
+    total_capacity: float | None = Field(
         None, description="Total capacity of the resource"
     )
-    used_capacity: Optional[float] = Field(None, description="Currently used capacity")
-    available_capacity: Optional[float] = Field(None, description="Available capacity")
-    utilization_percentage: Optional[float] = Field(
+    used_capacity: float | None = Field(None, description="Currently used capacity")
+    available_capacity: float | None = Field(None, description="Available capacity")
+    utilization_percentage: float | None = Field(
         None, description="Utilization as percentage"
     )
 
@@ -119,8 +119,8 @@ class Event(BaseModel):
     severity: str = Field(..., description="The severity level of the event")
     source: str = Field(..., description="The source of the event")
     message: str = Field(..., description="The event message")
-    job_id: Optional[str] = Field(None, description="Associated job ID if applicable")
-    workstation: Optional[str] = Field(
+    job_id: str | None = Field(None, description="Associated job ID if applicable")
+    workstation: str | None = Field(
         None, description="Associated workstation if applicable"
     )
 
@@ -129,7 +129,7 @@ class PerformanceData(BaseModel):
     """Performance metrics for TWS operations."""
 
     timestamp: datetime = Field(..., description="When the metrics were collected")
-    api_response_times: Dict[str, float] = Field(
+    api_response_times: dict[str, float] = Field(
         default_factory=dict, description="API response times by endpoint"
     )
     cache_hit_rate: float = Field(..., description="Cache hit rate percentage")
@@ -143,13 +143,13 @@ class DependencyTree(BaseModel):
     """Represents the dependency tree for a job."""
 
     job_id: str = Field(..., description="The job ID this tree represents")
-    dependencies: List[str] = Field(
+    dependencies: list[str] = Field(
         default_factory=list, description="Direct dependencies"
     )
-    dependents: List[str] = Field(
+    dependents: list[str] = Field(
         default_factory=list, description="Jobs that depend on this job"
     )
-    dependency_graph: Dict[str, List[str]] = Field(
+    dependency_graph: dict[str, list[str]] = Field(
         default_factory=dict, description="Complete dependency graph"
     )
 
@@ -157,6 +157,6 @@ class DependencyTree(BaseModel):
 class SystemStatus(BaseModel):
     """A composite model representing the overall status of the TWS environment."""
 
-    workstations: List[WorkstationStatus]
-    jobs: List[JobStatus]
-    critical_jobs: List[CriticalJob]
+    workstations: list[WorkstationStatus]
+    jobs: list[JobStatus]
+    critical_jobs: list[CriticalJob]

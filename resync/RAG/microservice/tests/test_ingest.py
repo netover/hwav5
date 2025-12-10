@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from resync.RAG.microservice.core.config import CFG
 from resync.RAG.microservice.core.ingest import IngestService
 from resync.RAG.microservice.core.interfaces import Embedder, VectorStore
-from resync.RAG.microservice.core.config import CFG
 
 
 @pytest.fixture
@@ -66,7 +66,7 @@ async def test_ingest_with_deduplication(ingest_service, mock_embedder, mock_vec
     # Simulate one chunk already exists
     def mock_exists(sha, collection):
         # First chunk (hash of "This is a test") is duplicate
-        if sha == hashlib.sha256("This is a test".encode("utf-8")).hexdigest():
+        if sha == hashlib.sha256(b"This is a test").hexdigest():
             return True
         return False
 

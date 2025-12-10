@@ -2,8 +2,9 @@
 """
 Request models for FastAPI endpoints
 """
+
 from pydantic import BaseModel
-from typing import Optional
+
 
 class AuditReviewRequest(BaseModel):
     """Request model for audit review operations."""
@@ -13,8 +14,8 @@ class AuditReviewRequest(BaseModel):
 class ChatMessageRequest(BaseModel):
     """Request model for chat message operations."""
     message: str
-    agent_id: Optional[str] = None  # Deprecated: routing is automatic
-    tws_instance_id: Optional[str] = None  # TWS instance for multi-server queries
+    agent_id: str | None = None  # Deprecated: routing is automatic
+    tws_instance_id: str | None = None  # TWS instance for multi-server queries
 
 class FileUploadRequest(BaseModel):
     """Request model for file upload operations."""
@@ -24,8 +25,8 @@ class FileUploadRequest(BaseModel):
 
 class SystemStatusFilter(BaseModel):
     """System status filter."""
-    workstation_filter: Optional[str] = None
-    job_status_filter: Optional[str] = None
+    workstation_filter: str | None = None
+    job_status_filter: str | None = None
 
 class LoginRequest(BaseModel):
     """Request model for login operations."""
@@ -39,14 +40,14 @@ class RAGUploadRequest(BaseModel):
 
 class AuditFlagsQuery(BaseModel):
     """Query model for audit flags operations."""
-    status_filter: Optional[str] = None
-    query: Optional[str] = None
+    status_filter: str | None = None
+    query: str | None = None
     limit: int = 50
     offset: int = 0
 
 class ChatHistoryQuery(BaseModel):
     """Query model for chat history operations."""
-    agent_id: Optional[str] = None
+    agent_id: str | None = None
     limit: int = 50
 
 class RAGFileQuery(BaseModel):

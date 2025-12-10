@@ -11,12 +11,12 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from time import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from resync.core.cache.memory_manager import CacheMemoryManager
 from resync.core.metrics import log_with_correlation, runtime_metrics
-from resync.core.write_ahead_log import WalEntry, WalOperationType
 from resync.core.shared_types import CacheEntry
+from resync.core.write_ahead_log import WalEntry, WalOperationType
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +30,11 @@ class CacheSetStrategy(ABC):
         key: str,
         value: Any,
         ttl_seconds: float,
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         memory_manager: CacheMemoryManager,
         enable_wal: bool = False,
-        wal: Optional[Any] = None,
+        wal: Any | None = None,
     ) -> None:
         """Execute the set operation strategy."""
 
@@ -47,11 +47,11 @@ class StandardCacheSetStrategy(CacheSetStrategy):
         key: str,
         value: Any,
         ttl_seconds: float,
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         memory_manager: CacheMemoryManager,
         enable_wal: bool = False,
-        wal: Optional[Any] = None,
+        wal: Any | None = None,
     ) -> None:
         """
         Execute set operation with comprehensive bounds checking and LRU eviction.
@@ -117,9 +117,9 @@ class StandardCacheSetStrategy(CacheSetStrategy):
     def _get_shard(
         self,
         key: str,
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
-    ) -> Tuple[Dict[str, CacheEntry], asyncio.Lock]:
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
+    ) -> tuple[dict[str, CacheEntry], asyncio.Lock]:
         """Get the shard and lock for a given key with bounds checking."""
         try:
             key_hash = hash(key)
@@ -142,8 +142,8 @@ class StandardCacheSetStrategy(CacheSetStrategy):
 
     async def _handle_bounds_checking(
         self,
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         memory_manager: CacheMemoryManager,
         current_key: str,
         correlation_id,
@@ -166,10 +166,10 @@ class StandardCacheSetStrategy(CacheSetStrategy):
 
     def _find_lru_key_for_eviction(
         self,
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         exclude_key: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Find the best LRU key to evict across all shards."""
         for i, shard in enumerate(shards):
             if not shard:
@@ -193,8 +193,8 @@ class StandardCacheSetStrategy(CacheSetStrategy):
 
     async def _evict_key(
         self,
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         key: str,
         correlation_id,
     ) -> None:
@@ -220,9 +220,9 @@ class CacheRollbackStrategy(ABC):
     @abstractmethod
     async def execute(
         self,
-        operations: List[Dict[str, Any]],
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        operations: list[dict[str, Any]],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         default_ttl: float,
     ) -> bool:
         """Execute the rollback operation strategy."""
@@ -233,9 +233,9 @@ class StandardCacheRollbackStrategy(CacheRollbackStrategy):
 
     async def execute(
         self,
-        operations: List[Dict[str, Any]],
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        operations: list[dict[str, Any]],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         default_ttl: float,
     ) -> bool:
         """
@@ -295,7 +295,7 @@ class StandardCacheRollbackStrategy(CacheRollbackStrategy):
         finally:
             runtime_metrics.close_correlation_id(correlation_id)
 
-    def _validate_operations(self, operations: List[Dict[str, Any]]) -> bool:
+    def _validate_operations(self, operations: list[dict[str, Any]]) -> bool:
         """Validate the structure and content of rollback operations."""
         if not isinstance(operations, list):
             return False
@@ -331,12 +331,12 @@ class StandardCacheRollbackStrategy(CacheRollbackStrategy):
 
     def _group_operations_by_shard(
         self,
-        operations: List[Dict[str, Any]],
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
-    ) -> Dict[int, List[Dict[str, Any]]]:
+        operations: list[dict[str, Any]],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
+    ) -> dict[int, list[dict[str, Any]]]:
         """Group operations by shard index for efficient processing."""
-        shard_operations: Dict[int, List[Dict[str, Any]]] = {}
+        shard_operations: dict[int, list[dict[str, Any]]] = {}
 
         for op in operations:
             try:
@@ -358,9 +358,9 @@ class StandardCacheRollbackStrategy(CacheRollbackStrategy):
     async def _rollback_shard_operations(
         self,
         shard_idx: int,
-        operations: List[Dict[str, Any]],
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        operations: list[dict[str, Any]],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         default_ttl: float,
         correlation_id,
     ) -> bool:
@@ -396,8 +396,8 @@ class StandardCacheRollbackStrategy(CacheRollbackStrategy):
 
     async def _rollback_set_operation(
         self,
-        operation: Dict[str, Any],
-        shard: Dict[str, CacheEntry],
+        operation: dict[str, Any],
+        shard: dict[str, CacheEntry],
         default_ttl: float,
     ) -> None:
         """Rollback a set operation."""
@@ -417,8 +417,8 @@ class StandardCacheRollbackStrategy(CacheRollbackStrategy):
 
     async def _rollback_delete_operation(
         self,
-        operation: Dict[str, Any],
-        shard: Dict[str, CacheEntry],
+        operation: dict[str, Any],
+        shard: dict[str, CacheEntry],
         default_ttl: float,
     ) -> None:
         """Rollback a delete operation."""
@@ -440,9 +440,9 @@ class CacheRestoreStrategy(ABC):
     @abstractmethod
     async def execute(
         self,
-        snapshot: Dict[str, Any],
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        snapshot: dict[str, Any],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         max_entries: int,
     ) -> bool:
         """Execute the restore operation strategy."""
@@ -453,9 +453,9 @@ class StandardCacheRestoreStrategy(CacheRestoreStrategy):
 
     async def execute(
         self,
-        snapshot: Dict[str, Any],
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        snapshot: dict[str, Any],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         max_entries: int,
     ) -> bool:
         """
@@ -519,7 +519,7 @@ class StandardCacheRestoreStrategy(CacheRestoreStrategy):
         finally:
             runtime_metrics.close_correlation_id(correlation_id)
 
-    def _validate_snapshot(self, snapshot: Dict[str, Any], max_entries: int) -> bool:
+    def _validate_snapshot(self, snapshot: dict[str, Any], max_entries: int) -> bool:
         """Validate snapshot structure and bounds."""
         if not isinstance(snapshot, dict) or "_metadata" not in snapshot:
             return False
@@ -547,7 +547,7 @@ class StandardCacheRestoreStrategy(CacheRestoreStrategy):
         return True
 
     async def _clear_cache(
-        self, shards: List[Dict[str, CacheEntry]], shard_locks: List[asyncio.Lock]
+        self, shards: list[dict[str, CacheEntry]], shard_locks: list[asyncio.Lock]
     ) -> None:
         """Clear all cache shards."""
         tasks = []
@@ -565,9 +565,9 @@ class StandardCacheRestoreStrategy(CacheRestoreStrategy):
     async def _restore_shard(
         self,
         shard_key: str,
-        shard_data: Dict[str, Any],
-        shards: List[Dict[str, CacheEntry]],
-        shard_locks: List[asyncio.Lock],
+        shard_data: dict[str, Any],
+        shards: list[dict[str, CacheEntry]],
+        shard_locks: list[asyncio.Lock],
         correlation_id,
     ) -> int:
         """Restore a single shard from snapshot data."""

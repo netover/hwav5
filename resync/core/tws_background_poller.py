@@ -18,10 +18,11 @@ Versão: 5.2
 
 import asyncio
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -30,7 +31,7 @@ logger = structlog.get_logger(__name__)
 
 class EventType(str, Enum):
     """Tipos de eventos gerados pelo poller."""
-    
+
     # Job Events
     JOB_STARTED = "job_started"
     JOB_COMPLETED = "job_completed"
@@ -38,18 +39,18 @@ class EventType(str, Enum):
     JOB_LATE = "job_late"
     JOB_STUCK = "job_stuck"
     JOB_RERUN = "job_rerun"
-    
+
     # Workstation Events
     WS_ONLINE = "workstation_online"
     WS_OFFLINE = "workstation_offline"
     WS_LINKED = "workstation_linked"
     WS_UNLINKED = "workstation_unlinked"
-    
+
     # System Events
     SYSTEM_HEALTHY = "system_healthy"
     SYSTEM_DEGRADED = "system_degraded"
     SYSTEM_CRITICAL = "system_critical"
-    
+
     # Anomaly Events
     ANOMALY_DETECTED = "anomaly_detected"
     PATTERN_DETECTED = "pattern_detected"
@@ -57,7 +58,7 @@ class EventType(str, Enum):
 
 class AlertSeverity(str, Enum):
     """Severidade dos alertas."""
-    
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -67,18 +68,18 @@ class AlertSeverity(str, Enum):
 @dataclass
 class TWSEvent:
     """Representa um evento do TWS."""
-    
+
     event_id: str
     event_type: EventType
     severity: AlertSeverity
     timestamp: datetime
     source: str  # job_name, workstation_name, etc.
     message: str
-    details: Dict[str, Any] = field(default_factory=dict)
-    previous_state: Optional[str] = None
-    current_state: Optional[str] = None
-    
-    def to_dict(self) -> Dict[str, Any]:
+    details: dict[str, Any] = field(default_factory=dict)
+    previous_state: str | None = None
+    current_state: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
         """Converte evento para dicionário (para JSON)."""
         return {
             "event_id": self.event_id,
@@ -96,19 +97,19 @@ class TWSEvent:
 @dataclass
 class JobStatus:
     """Status de um job."""
-    
+
     job_id: str
     job_name: str
     job_stream: str
     workstation: str
     status: str
-    return_code: Optional[int] = None
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
-    duration_seconds: Optional[float] = None
-    error_message: Optional[str] = None
-    
-    def to_dict(self) -> Dict[str, Any]:
+    return_code: int | None = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+    duration_seconds: float | None = None
+    error_message: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "job_id": self.job_id,
             "job_name": self.job_name,
@@ -123,18 +124,18 @@ class JobStatus:
         }
 
 
-@dataclass  
+@dataclass
 class WorkstationStatus:
     """Status de uma workstation."""
-    
+
     name: str
     status: str  # ONLINE, OFFLINE, LINKED, UNLINKED
     agent_status: str
     jobs_running: int = 0
     jobs_pending: int = 0
-    last_seen: Optional[datetime] = None
-    
-    def to_dict(self) -> Dict[str, Any]:
+    last_seen: datetime | None = None
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "status": self.status,
@@ -148,18 +149,18 @@ class WorkstationStatus:
 @dataclass
 class SystemSnapshot:
     """Snapshot completo do estado do sistema."""
-    
+
     timestamp: datetime
-    workstations: List[WorkstationStatus]
-    jobs: List[JobStatus]
+    workstations: list[WorkstationStatus]
+    jobs: list[JobStatus]
     total_jobs_today: int = 0
     jobs_running: int = 0
     jobs_completed: int = 0
     jobs_failed: int = 0
     jobs_pending: int = 0
     system_health: str = "healthy"  # healthy, degraded, critical
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "timestamp": self.timestamp.isoformat(),
             "workstations": [ws.to_dict() for ws in self.workstations],
@@ -178,7 +179,7 @@ class SystemSnapshot:
 class TWSBackgroundPoller:
     """
     Poller assíncrono para coleta de status do TWS.
-    
+
     Características:
     - Polling configurável (intervalo em segundos)
     - Detecção automática de mudanças
@@ -186,17 +187,17 @@ class TWSBackgroundPoller:
     - Cache de estado anterior para comparação
     - Suporte a múltiplos event handlers
     """
-    
+
     def __init__(
         self,
         tws_client: Any,
         polling_interval: int = 30,
-        status_store: Optional[Any] = None,
-        event_bus: Optional[Any] = None,
+        status_store: Any | None = None,
+        event_bus: Any | None = None,
     ):
         """
         Inicializa o poller.
-        
+
         Args:
             tws_client: Cliente TWS para chamadas API
             polling_interval: Intervalo de polling em segundos (default: 30)
@@ -207,59 +208,59 @@ class TWSBackgroundPoller:
         self.polling_interval = polling_interval
         self.status_store = status_store
         self.event_bus = event_bus
-        
+
         # Estado interno
         self._is_running = False
-        self._polling_task: Optional[asyncio.Task] = None
+        self._polling_task: asyncio.Task | None = None
         self._event_counter = 0
-        
+
         # Cache de estado anterior (para detectar mudanças)
-        self._previous_jobs: Dict[str, JobStatus] = {}
-        self._previous_workstations: Dict[str, WorkstationStatus] = {}
-        self._previous_snapshot: Optional[SystemSnapshot] = None
-        
+        self._previous_jobs: dict[str, JobStatus] = {}
+        self._previous_workstations: dict[str, WorkstationStatus] = {}
+        self._previous_snapshot: SystemSnapshot | None = None
+
         # Event handlers
-        self._event_handlers: List[Callable[[TWSEvent], None]] = []
-        self._snapshot_handlers: List[Callable[[SystemSnapshot], None]] = []
-        
+        self._event_handlers: list[Callable[[TWSEvent], None]] = []
+        self._snapshot_handlers: list[Callable[[SystemSnapshot], None]] = []
+
         # Métricas
         self._polls_count = 0
         self._errors_count = 0
         self._events_generated = 0
-        self._start_time: Optional[datetime] = None
-        
+        self._start_time: datetime | None = None
+
         # Configurações de detecção
         self.job_stuck_threshold_minutes = 60  # Job rodando há mais de 60 min
         self.job_late_threshold_minutes = 30   # Job atrasado mais de 30 min
-        
+
         logger.info(
             "tws_background_poller_initialized",
             polling_interval=polling_interval,
         )
-    
+
     # =========================================================================
     # LIFECYCLE
     # =========================================================================
-    
+
     async def start(self) -> None:
         """Inicia o polling em background."""
         if self._is_running:
             logger.warning("Poller already running")
             return
-        
+
         self._is_running = True
         self._start_time = datetime.now()
         self._polling_task = asyncio.create_task(self._polling_loop())
-        
+
         logger.info(
             "tws_background_poller_started",
             polling_interval=self.polling_interval,
         )
-    
+
     async def stop(self) -> None:
         """Para o polling."""
         self._is_running = False
-        
+
         if self._polling_task:
             self._polling_task.cancel()
             try:
@@ -267,78 +268,78 @@ class TWSBackgroundPoller:
             except asyncio.CancelledError:
                 pass
             self._polling_task = None
-        
+
         logger.info(
             "tws_background_poller_stopped",
             polls_count=self._polls_count,
             events_generated=self._events_generated,
         )
-    
+
     def set_polling_interval(self, interval: int) -> None:
         """Altera o intervalo de polling em runtime."""
         old_interval = self.polling_interval
         self.polling_interval = max(5, min(300, interval))  # 5s a 5min
-        
+
         logger.info(
             "polling_interval_changed",
             old_interval=old_interval,
             new_interval=self.polling_interval,
         )
-    
+
     # =========================================================================
     # EVENT HANDLERS
     # =========================================================================
-    
+
     def add_event_handler(self, handler: Callable[[TWSEvent], None]) -> None:
         """Adiciona um handler para eventos."""
         self._event_handlers.append(handler)
-    
+
     def add_snapshot_handler(self, handler: Callable[[SystemSnapshot], None]) -> None:
         """Adiciona um handler para snapshots."""
         self._snapshot_handlers.append(handler)
-    
+
     def remove_event_handler(self, handler: Callable[[TWSEvent], None]) -> None:
         """Remove um handler de eventos."""
         if handler in self._event_handlers:
             self._event_handlers.remove(handler)
-    
+
     # =========================================================================
     # POLLING LOOP
     # =========================================================================
-    
+
     async def _polling_loop(self) -> None:
         """Loop principal de polling."""
         while self._is_running:
             try:
                 # Coleta snapshot
                 snapshot = await self._collect_snapshot()
-                
+
                 if snapshot:
                     # Detecta mudanças e gera eventos
                     events = self._detect_changes(snapshot)
-                    
+
                     # Persiste snapshot
                     if self.status_store:
                         await self._persist_snapshot(snapshot)
-                    
+
                     # Notifica handlers
                     await self._notify_snapshot_handlers(snapshot)
-                    
+
                     for event in events:
                         await self._notify_event_handlers(event)
-                        
+
                         # Publica no event bus
                         if self.event_bus:
                             await self.event_bus.publish(event)
-                    
+
                     # Atualiza cache
                     self._update_cache(snapshot)
-                    
+
                     self._polls_count += 1
-                
+
                 # Aguarda próximo ciclo
                 await asyncio.sleep(self.polling_interval)
-                
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -351,27 +352,27 @@ class TWSBackgroundPoller:
                 )
                 # Aguarda um pouco antes de tentar novamente
                 await asyncio.sleep(min(self.polling_interval, 10))
-    
-    async def _collect_snapshot(self) -> Optional[SystemSnapshot]:
+
+    async def _collect_snapshot(self) -> SystemSnapshot | None:
         """Coleta snapshot atual do TWS."""
         try:
             # Coleta workstations
             ws_data = await self.tws_client.query_workstations(limit=100)
             workstations = self._parse_workstations(ws_data)
-            
+
             # Coleta jobs ativos (running + recent)
             jobs_data = await self.tws_client.get_plan_jobs(
                 status=["EXEC", "READY", "HOLD", "ABEND", "SUCC"],
                 limit=500
             )
             jobs = self._parse_jobs(jobs_data)
-            
+
             # Calcula métricas
             jobs_running = sum(1 for j in jobs if j.status == "EXEC")
             jobs_completed = sum(1 for j in jobs if j.status == "SUCC")
             jobs_failed = sum(1 for j in jobs if j.status == "ABEND")
             jobs_pending = sum(1 for j in jobs if j.status in ["READY", "HOLD"])
-            
+
             # Determina saúde do sistema
             ws_offline = sum(1 for ws in workstations if ws.status != "LINKED")
             system_health = "healthy"
@@ -379,7 +380,7 @@ class TWSBackgroundPoller:
                 system_health = "critical"
             elif jobs_failed > 5 or ws_offline > 0:
                 system_health = "degraded"
-            
+
             snapshot = SystemSnapshot(
                 timestamp=datetime.now(),
                 workstations=workstations,
@@ -391,22 +392,22 @@ class TWSBackgroundPoller:
                 jobs_pending=jobs_pending,
                 system_health=system_health,
             )
-            
+
             return snapshot
-            
+
         except Exception as e:
             logger.error("snapshot_collection_failed", error=str(e))
             return None
-    
-    def _parse_workstations(self, data: Any) -> List[WorkstationStatus]:
+
+    def _parse_workstations(self, data: Any) -> list[WorkstationStatus]:
         """Converte dados da API para WorkstationStatus."""
         workstations = []
-        
+
         if not data:
             return workstations
-        
+
         items = data if isinstance(data, list) else data.get("items", [])
-        
+
         for item in items:
             ws = WorkstationStatus(
                 name=item.get("name", item.get("workstation", "unknown")),
@@ -417,18 +418,18 @@ class TWSBackgroundPoller:
                 last_seen=datetime.now(),
             )
             workstations.append(ws)
-        
+
         return workstations
-    
-    def _parse_jobs(self, data: Any) -> List[JobStatus]:
+
+    def _parse_jobs(self, data: Any) -> list[JobStatus]:
         """Converte dados da API para JobStatus."""
         jobs = []
-        
+
         if not data:
             return jobs
-        
+
         items = data if isinstance(data, list) else data.get("items", [])
-        
+
         for item in items:
             # Parse timestamps
             start_time = None
@@ -440,7 +441,7 @@ class TWSBackgroundPoller:
                     )
                 except (ValueError, TypeError):
                     pass
-            
+
             if item.get("endTime"):
                 try:
                     end_time = datetime.fromisoformat(
@@ -448,14 +449,14 @@ class TWSBackgroundPoller:
                     )
                 except (ValueError, TypeError):
                     pass
-            
+
             # Calcula duração
             duration = None
             if start_time and end_time:
                 duration = (end_time - start_time).total_seconds()
             elif start_time:
                 duration = (datetime.now() - start_time).total_seconds()
-            
+
             job = JobStatus(
                 job_id=str(item.get("id", item.get("jobId", ""))),
                 job_name=item.get("name", item.get("jobName", "unknown")),
@@ -469,41 +470,41 @@ class TWSBackgroundPoller:
                 error_message=item.get("errorMessage", item.get("message")),
             )
             jobs.append(job)
-        
+
         return jobs
-    
+
     # =========================================================================
     # CHANGE DETECTION
     # =========================================================================
-    
-    def _detect_changes(self, snapshot: SystemSnapshot) -> List[TWSEvent]:
+
+    def _detect_changes(self, snapshot: SystemSnapshot) -> list[TWSEvent]:
         """Detecta mudanças comparando com estado anterior."""
         events = []
-        
+
         # Detecta mudanças em jobs
         events.extend(self._detect_job_changes(snapshot.jobs))
-        
+
         # Detecta mudanças em workstations
         events.extend(self._detect_workstation_changes(snapshot.workstations))
-        
+
         # Detecta mudanças de sistema
         events.extend(self._detect_system_changes(snapshot))
-        
+
         # Detecta anomalias
         events.extend(self._detect_anomalies(snapshot))
-        
+
         self._events_generated += len(events)
-        
+
         return events
-    
-    def _detect_job_changes(self, jobs: List[JobStatus]) -> List[TWSEvent]:
+
+    def _detect_job_changes(self, jobs: list[JobStatus]) -> list[TWSEvent]:
         """Detecta mudanças em jobs."""
         events = []
         current_jobs = {j.job_id: j for j in jobs}
-        
+
         for job_id, job in current_jobs.items():
             prev_job = self._previous_jobs.get(job_id)
-            
+
             if not prev_job:
                 # Novo job detectado
                 if job.status == "EXEC":
@@ -538,11 +539,11 @@ class TWSBackgroundPoller:
                             previous_state=prev_job.status,
                             current_state=job.status,
                         ))
-            
+
             # Detecta job stuck (rodando há muito tempo)
             if (
-                job.status == "EXEC" 
-                and job.duration_seconds 
+                job.status == "EXEC"
+                and job.duration_seconds
                 and job.duration_seconds > self.job_stuck_threshold_minutes * 60
             ):
                 # Só gera evento se não foi gerado antes
@@ -556,19 +557,19 @@ class TWSBackgroundPoller:
                         {"job": job.to_dict()},
                         current_state=job.status,
                     ))
-        
+
         return events
-    
+
     def _detect_workstation_changes(
-        self, workstations: List[WorkstationStatus]
-    ) -> List[TWSEvent]:
+        self, workstations: list[WorkstationStatus]
+    ) -> list[TWSEvent]:
         """Detecta mudanças em workstations."""
         events = []
         current_ws = {ws.name: ws for ws in workstations}
-        
+
         for ws_name, ws in current_ws.items():
             prev_ws = self._previous_workstations.get(ws_name)
-            
+
             if prev_ws and prev_ws.status != ws.status:
                 if ws.status == "LINKED":
                     events.append(self._create_event(
@@ -600,28 +601,28 @@ class TWSBackgroundPoller:
                         previous_state=prev_ws.status,
                         current_state=ws.status,
                     ))
-        
+
         return events
-    
-    def _detect_system_changes(self, snapshot: SystemSnapshot) -> List[TWSEvent]:
+
+    def _detect_system_changes(self, snapshot: SystemSnapshot) -> list[TWSEvent]:
         """Detecta mudanças no estado geral do sistema."""
         events = []
-        
+
         if self._previous_snapshot:
             prev_health = self._previous_snapshot.system_health
             curr_health = snapshot.system_health
-            
+
             if prev_health != curr_health:
                 severity = AlertSeverity.INFO
                 event_type = EventType.SYSTEM_HEALTHY
-                
+
                 if curr_health == "degraded":
                     severity = AlertSeverity.WARNING
                     event_type = EventType.SYSTEM_DEGRADED
                 elif curr_health == "critical":
                     severity = AlertSeverity.CRITICAL
                     event_type = EventType.SYSTEM_CRITICAL
-                
+
                 events.append(self._create_event(
                     event_type,
                     severity,
@@ -631,20 +632,20 @@ class TWSBackgroundPoller:
                         "jobs_failed": snapshot.jobs_failed,
                         "jobs_running": snapshot.jobs_running,
                         "workstations_offline": sum(
-                            1 for ws in snapshot.workstations 
+                            1 for ws in snapshot.workstations
                             if ws.status != "LINKED"
                         ),
                     },
                     previous_state=prev_health,
                     current_state=curr_health,
                 ))
-        
+
         return events
-    
-    def _detect_anomalies(self, snapshot: SystemSnapshot) -> List[TWSEvent]:
+
+    def _detect_anomalies(self, snapshot: SystemSnapshot) -> list[TWSEvent]:
         """Detecta anomalias no sistema."""
         events = []
-        
+
         # Taxa de falha alta
         if snapshot.total_jobs_today > 0:
             failure_rate = snapshot.jobs_failed / snapshot.total_jobs_today
@@ -660,26 +661,26 @@ class TWSBackgroundPoller:
                         "total_jobs": snapshot.total_jobs_today,
                     },
                 ))
-        
+
         return events
-    
+
     # =========================================================================
     # HELPERS
     # =========================================================================
-    
+
     def _create_event(
         self,
         event_type: EventType,
         severity: AlertSeverity,
         source: str,
         message: str,
-        details: Dict[str, Any],
-        previous_state: Optional[str] = None,
-        current_state: Optional[str] = None,
+        details: dict[str, Any],
+        previous_state: str | None = None,
+        current_state: str | None = None,
     ) -> TWSEvent:
         """Cria um novo evento."""
         self._event_counter += 1
-        
+
         return TWSEvent(
             event_id=f"evt_{int(time.time())}_{self._event_counter}",
             event_type=event_type,
@@ -691,13 +692,13 @@ class TWSBackgroundPoller:
             previous_state=previous_state,
             current_state=current_state,
         )
-    
+
     def _update_cache(self, snapshot: SystemSnapshot) -> None:
         """Atualiza cache com estado atual."""
         self._previous_jobs = {j.job_id: j for j in snapshot.jobs}
         self._previous_workstations = {ws.name: ws for ws in snapshot.workstations}
         self._previous_snapshot = snapshot
-    
+
     async def _notify_event_handlers(self, event: TWSEvent) -> None:
         """Notifica todos os handlers de evento."""
         for handler in self._event_handlers:
@@ -712,7 +713,7 @@ class TWSBackgroundPoller:
                     error=str(e),
                     event_type=event.event_type.value,
                 )
-    
+
     async def _notify_snapshot_handlers(self, snapshot: SystemSnapshot) -> None:
         """Notifica todos os handlers de snapshot."""
         for handler in self._snapshot_handlers:
@@ -723,7 +724,7 @@ class TWSBackgroundPoller:
                     handler(snapshot)
             except Exception as e:
                 logger.error("snapshot_handler_error", error=str(e))
-    
+
     async def _persist_snapshot(self, snapshot: SystemSnapshot) -> None:
         """Persiste snapshot no store."""
         if self.status_store:
@@ -731,21 +732,21 @@ class TWSBackgroundPoller:
                 await self.status_store.save_snapshot(snapshot)
             except Exception as e:
                 logger.error("snapshot_persistence_error", error=str(e))
-    
+
     # =========================================================================
     # PUBLIC API
     # =========================================================================
-    
-    def get_current_snapshot(self) -> Optional[SystemSnapshot]:
+
+    def get_current_snapshot(self) -> SystemSnapshot | None:
         """Retorna o snapshot mais recente."""
         return self._previous_snapshot
-    
-    def get_metrics(self) -> Dict[str, Any]:
+
+    def get_metrics(self) -> dict[str, Any]:
         """Retorna métricas do poller."""
         uptime = None
         if self._start_time:
             uptime = (datetime.now() - self._start_time).total_seconds()
-        
+
         return {
             "is_running": self._is_running,
             "polling_interval": self.polling_interval,
@@ -756,8 +757,8 @@ class TWSBackgroundPoller:
             "cached_jobs": len(self._previous_jobs),
             "cached_workstations": len(self._previous_workstations),
         }
-    
-    async def force_poll(self) -> Optional[SystemSnapshot]:
+
+    async def force_poll(self) -> SystemSnapshot | None:
         """Força uma coleta imediata."""
         return await self._collect_snapshot()
 
@@ -766,10 +767,10 @@ class TWSBackgroundPoller:
 # SINGLETON INSTANCE
 # =============================================================================
 
-_poller_instance: Optional[TWSBackgroundPoller] = None
+_poller_instance: TWSBackgroundPoller | None = None
 
 
-def get_tws_poller() -> Optional[TWSBackgroundPoller]:
+def get_tws_poller() -> TWSBackgroundPoller | None:
     """Retorna instância singleton do poller."""
     return _poller_instance
 
@@ -782,12 +783,12 @@ def init_tws_poller(
 ) -> TWSBackgroundPoller:
     """Inicializa o poller singleton."""
     global _poller_instance
-    
+
     _poller_instance = TWSBackgroundPoller(
         tws_client=tws_client,
         polling_interval=polling_interval,
         status_store=status_store,
         event_bus=event_bus,
     )
-    
+
     return _poller_instance

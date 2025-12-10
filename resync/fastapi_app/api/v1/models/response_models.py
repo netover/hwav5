@@ -2,16 +2,18 @@
 """
 Response models for FastAPI endpoints
 """
-from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
 from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel
+
 
 class WorkstationInfo(BaseModel):
     """Information model for workstation."""
     id: str
     name: str
     status: str
-    last_seen: Optional[datetime] = None
+    last_seen: datetime | None = None
 
 class JobInfo(BaseModel):
     """Information model for job."""
@@ -19,13 +21,13 @@ class JobInfo(BaseModel):
     name: str
     status: str
     workstation_id: str
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
 
 class SystemStatusResponse(BaseModel):
     """Response model for system status operations."""
-    workstations: List[WorkstationInfo]
-    jobs: List[JobInfo]
+    workstations: list[WorkstationInfo]
+    jobs: list[JobInfo]
     timestamp: datetime
 
 class AgentInfo(BaseModel):
@@ -33,18 +35,18 @@ class AgentInfo(BaseModel):
     id: str
     name: str
     status: str
-    description: Optional[str] = None
+    description: str | None = None
 
 class AgentListResponse(BaseModel):
     """Response model for agent list operations."""
-    agents: List[AgentInfo]
+    agents: list[AgentInfo]
     total: int
 
 class FileUploadResponse(BaseModel):
     """Response model for file upload operations."""
     filename: str
     status: str
-    file_id: Optional[str] = None
+    file_id: str | None = None
     upload_time: datetime
 
 class AuditFlagInfo(BaseModel):
@@ -53,10 +55,10 @@ class AuditFlagInfo(BaseModel):
     status: str
     user_query: str
     agent_response: str
-    ia_audit_reason: Optional[str] = None
-    ia_audit_confidence: Optional[float] = None
+    ia_audit_reason: str | None = None
+    ia_audit_confidence: float | None = None
     created_at: datetime
-    reviewed_at: Optional[datetime] = None
+    reviewed_at: datetime | None = None
 
 class AuditMetricsResponse(BaseModel):
     """Response model for audit metrics operations."""
@@ -76,9 +78,9 @@ class ChatMessageResponse(BaseModel):
     """Response model for chat message operations."""
     message: str
     timestamp: datetime
-    agent_id: Optional[str] = None  # Now represents the handler that processed the message
+    agent_id: str | None = None  # Now represents the handler that processed the message
     is_final: bool = False
-    metadata: Optional[Dict[str, Any]] = None  # Intent classification and routing info
+    metadata: dict[str, Any] | None = None  # Intent classification and routing info
 
 class HealthResponse(BaseModel):
     """Response model for health operations."""
@@ -92,12 +94,12 @@ class LoginResponse(BaseModel):
 
 class StatusResponse(BaseModel):
     """Response model for status operations."""
-    workstations: List[Any]
-    jobs: List[Any]
+    workstations: list[Any]
+    jobs: list[Any]
 
 class AuditFlagsResponse(BaseModel):
     """Response model for audit flags operations."""
-    flags: List[Dict[str, Any]]
+    flags: list[dict[str, Any]]
 
 class RAGUploadResponse(BaseModel):
     """Response model for r a g upload operations."""

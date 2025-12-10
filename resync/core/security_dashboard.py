@@ -18,7 +18,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 from resync.core.structured_logger import get_logger
 
@@ -70,8 +70,8 @@ class SecurityMetric:
     data_points: deque = field(default_factory=lambda: deque(maxlen=1000))
 
     # Thresholds and alerting
-    warning_threshold: Optional[float] = None
-    critical_threshold: Optional[float] = None
+    warning_threshold: float | None = None
+    critical_threshold: float | None = None
     alert_enabled: bool = True
 
     # Historical data
@@ -100,20 +100,18 @@ class SecurityMetric:
 
         if second_half > first_half * 1.1:
             return "increasing"
-        elif second_half < first_half * 0.9:
+        if second_half < first_half * 0.9:
             return "decreasing"
-        else:
-            return "stable"
+        return "stable"
 
     @property
     def status(self) -> str:
         """Get metric status based on thresholds."""
         if self.critical_threshold and self.current_value >= self.critical_threshold:
             return "critical"
-        elif self.warning_threshold and self.current_value >= self.warning_threshold:
+        if self.warning_threshold and self.current_value >= self.warning_threshold:
             return "warning"
-        else:
-            return "normal"
+        return "normal"
 
     @property
     def percentage_change(self) -> float:
@@ -123,7 +121,7 @@ class SecurityMetric:
 
         return ((self.current_value - self.previous_value) / self.previous_value) * 100
 
-    def update_value(self, new_value: float, timestamp: Optional[float] = None) -> None:
+    def update_value(self, new_value: float, timestamp: float | None = None) -> None:
         """Update metric value."""
         self.previous_value = self.current_value
         self.current_value = new_value
@@ -133,7 +131,7 @@ class SecurityMetric:
         self.data_points.append((self.last_updated, new_value))
         self.historical_values.append((self.last_updated, new_value))
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get metric summary."""
         return {
             "metric_id": self.metric_id,
@@ -161,15 +159,15 @@ class DashboardWidget:
     widget_id: str
     title: str
     widget_type: str  # chart, gauge, table, alert, etc.
-    metrics: List[str]  # Metric IDs to display
-    position: Dict[str, int] = field(default_factory=dict)  # x, y, width, height
-    config: Dict[str, Any] = field(default_factory=dict)  # Widget-specific config
+    metrics: list[str]  # Metric IDs to display
+    position: dict[str, int] = field(default_factory=dict)  # x, y, width, height
+    config: dict[str, Any] = field(default_factory=dict)  # Widget-specific config
     refresh_interval: int = 30  # seconds
-    roles: Set[str] = field(
+    roles: set[str] = field(
         default_factory=lambda: {"admin", "security"}
     )  # Access control
 
-    def can_access(self, user_roles: Set[str]) -> bool:
+    def can_access(self, user_roles: set[str]) -> bool:
         """Check if user can access this widget."""
         return bool(self.roles.intersection(user_roles))
 
@@ -181,17 +179,17 @@ class Dashboard:
     dashboard_id: str
     name: str
     description: str
-    widgets: List[DashboardWidget] = field(default_factory=list)
-    roles: Set[str] = field(default_factory=lambda: {"admin", "security"})
+    widgets: list[DashboardWidget] = field(default_factory=list)
+    roles: set[str] = field(default_factory=lambda: {"admin", "security"})
     is_default: bool = False
     created_at: float = field(default_factory=time.time)
     last_modified: float = field(default_factory=time.time)
 
-    def can_access(self, user_roles: Set[str]) -> bool:
+    def can_access(self, user_roles: set[str]) -> bool:
         """Check if user can access this dashboard."""
         return bool(self.roles.intersection(user_roles))
 
-    def get_visible_widgets(self, user_roles: Set[str]) -> List[DashboardWidget]:
+    def get_visible_widgets(self, user_roles: set[str]) -> list[DashboardWidget]:
         """Get widgets visible to user."""
         return [w for w in self.widgets if w.can_access(user_roles)]
 
@@ -209,8 +207,8 @@ class AlertRule:
     severity: str  # low, medium, high, critical
     enabled: bool = True
     cooldown_minutes: int = 15
-    notification_channels: List[str] = field(default_factory=lambda: ["email"])
-    last_triggered: Optional[float] = None
+    notification_channels: list[str] = field(default_factory=lambda: ["email"])
+    last_triggered: float | None = None
 
     def should_trigger(self, metric: SecurityMetric) -> bool:
         """Check if alert should trigger."""
@@ -228,15 +226,15 @@ class AlertRule:
 
         if self.condition == ">":
             return value > self.threshold
-        elif self.condition == "<":
+        if self.condition == "<":
             return value < self.threshold
-        elif self.condition == ">=":
+        if self.condition == ">=":
             return value >= self.threshold
-        elif self.condition == "<=":
+        if self.condition == "<=":
             return value <= self.threshold
-        elif self.condition == "==":
+        if self.condition == "==":
             return value == self.threshold
-        elif self.condition == "!=":
+        if self.condition == "!=":
             return value != self.threshold
 
         return False
@@ -258,14 +256,14 @@ class ComplianceReport:
 
     # Report sections
     executive_summary: str = ""
-    findings: List[Dict[str, Any]] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    metrics_summary: Dict[str, Any] = field(default_factory=dict)
+    findings: list[dict[str, Any]] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
+    metrics_summary: dict[str, Any] = field(default_factory=dict)
     compliance_score: float = 0.0
 
     # Metadata
     author: str = "Security Dashboard"
-    reviewers: List[str] = field(default_factory=list)
+    reviewers: list[str] = field(default_factory=list)
     status: str = "draft"  # draft, reviewed, approved, published
 
 
@@ -290,7 +288,7 @@ class SecurityDashboardConfig:
 
     # Reporting
     auto_generate_reports: bool = True
-    report_schedule: Dict[str, str] = field(
+    report_schedule: dict[str, str] = field(
         default_factory=lambda: {
             "daily": "08:00",
             "weekly": "Monday 09:00",
@@ -313,7 +311,7 @@ class MetricCollector:
 
     def __init__(self, config: SecurityDashboardConfig):
         self.config = config
-        self.metrics: Dict[str, SecurityMetric] = {}
+        self.metrics: dict[str, SecurityMetric] = {}
 
         # Initialize standard security metrics
         self._initialize_standard_metrics()
@@ -465,25 +463,25 @@ class MetricCollector:
             self.metrics[metric.metric_id] = metric
 
     def update_metric(
-        self, metric_id: str, value: float, timestamp: Optional[float] = None
+        self, metric_id: str, value: float, timestamp: float | None = None
     ) -> None:
         """Update a metric value."""
         if metric_id in self.metrics:
             self.metrics[metric_id].update_value(value, timestamp)
 
-    def get_metric(self, metric_id: str) -> Optional[SecurityMetric]:
+    def get_metric(self, metric_id: str) -> SecurityMetric | None:
         """Get a specific metric."""
         return self.metrics.get(metric_id)
 
-    def get_metrics_by_category(self, category: MetricCategory) -> List[SecurityMetric]:
+    def get_metrics_by_category(self, category: MetricCategory) -> list[SecurityMetric]:
         """Get all metrics in a category."""
         return [m for m in self.metrics.values() if m.category == category]
 
-    def get_all_metrics(self) -> List[SecurityMetric]:
+    def get_all_metrics(self) -> list[SecurityMetric]:
         """Get all metrics."""
         return list(self.metrics.values())
 
-    def get_metrics_summary(self) -> Dict[str, Any]:
+    def get_metrics_summary(self) -> dict[str, Any]:
         """Get summary of all metrics."""
         summary = {
             "total_metrics": len(self.metrics),
@@ -509,8 +507,8 @@ class AlertManager:
 
     def __init__(self, config: SecurityDashboardConfig):
         self.config = config
-        self.alert_rules: Dict[str, AlertRule] = {}
-        self.active_alerts: Dict[str, Dict[str, Any]] = {}
+        self.alert_rules: dict[str, AlertRule] = {}
+        self.active_alerts: dict[str, dict[str, Any]] = {}
         self.alert_history: deque = deque(maxlen=10000)
 
         # Initialize standard alert rules
@@ -565,8 +563,8 @@ class AlertManager:
             self.alert_rules[rule.rule_id] = rule
 
     async def check_alerts(
-        self, metrics: Dict[str, SecurityMetric]
-    ) -> List[Dict[str, Any]]:
+        self, metrics: dict[str, SecurityMetric]
+    ) -> list[dict[str, Any]]:
         """Check all alert rules and return triggered alerts."""
         triggered_alerts = []
 
@@ -631,13 +629,13 @@ class AlertManager:
             return True
         return False
 
-    def get_active_alerts(self) -> List[Dict[str, Any]]:
+    def get_active_alerts(self) -> list[dict[str, Any]]:
         """Get all active alerts."""
         return list(self.active_alerts.values())
 
     def get_alert_history(
-        self, limit: int = 100, severity_filter: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self, limit: int = 100, severity_filter: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get alert history with optional filtering."""
         alerts = list(self.alert_history)[-limit:]
 
@@ -747,7 +745,7 @@ class SecurityDashboard:
     - Integration APIs for external tools
     """
 
-    def __init__(self, config: Optional[SecurityDashboardConfig] = None):
+    def __init__(self, config: SecurityDashboardConfig | None = None):
         self.config = config or SecurityDashboardConfig()
 
         # Core components
@@ -756,13 +754,13 @@ class SecurityDashboard:
         self.report_generator = ReportGenerator(self.config)
 
         # Dashboard management
-        self.dashboards: Dict[str, Dashboard] = {}
-        self.default_dashboard: Optional[Dashboard] = None
+        self.dashboards: dict[str, Dashboard] = {}
+        self.default_dashboard: Dashboard | None = None
 
         # Background tasks
-        self._collection_task: Optional[asyncio.Task] = None
-        self._alert_task: Optional[asyncio.Task] = None
-        self._reporting_task: Optional[asyncio.Task] = None
+        self._collection_task: asyncio.Task | None = None
+        self._alert_task: asyncio.Task | None = None
+        self._reporting_task: asyncio.Task | None = None
         self._running = False
 
         # Initialize default dashboard
@@ -869,23 +867,23 @@ class SecurityDashboard:
         self.metric_collector.update_metric(metric_id, value)
 
     def get_dashboard(
-        self, dashboard_id: str, user_roles: Set[str]
-    ) -> Optional[Dashboard]:
+        self, dashboard_id: str, user_roles: set[str]
+    ) -> Dashboard | None:
         """Get a dashboard if user has access."""
         dashboard = self.dashboards.get(dashboard_id)
         if dashboard and dashboard.can_access(user_roles):
             return dashboard
         return None
 
-    def get_default_dashboard(self, user_roles: Set[str]) -> Optional[Dashboard]:
+    def get_default_dashboard(self, user_roles: set[str]) -> Dashboard | None:
         """Get the default dashboard for user."""
         if self.default_dashboard and self.default_dashboard.can_access(user_roles):
             return self.default_dashboard
         return None
 
     def get_dashboard_data(
-        self, dashboard: Dashboard, user_roles: Set[str], time_range: str = "24h"
-    ) -> Dict[str, Any]:
+        self, dashboard: Dashboard, user_roles: set[str], time_range: str = "24h"
+    ) -> dict[str, Any]:
         """Get data for a dashboard."""
         visible_widgets = dashboard.get_visible_widgets(user_roles)
 
@@ -924,10 +922,10 @@ class SecurityDashboard:
 
     def get_metrics_data(
         self,
-        metric_ids: Optional[List[str]] = None,
-        category: Optional[MetricCategory] = None,
+        metric_ids: list[str] | None = None,
+        category: MetricCategory | None = None,
         time_range: str = "24h",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get metrics data for API consumption."""
         if metric_ids:
             metrics = [self.metric_collector.get_metric(mid) for mid in metric_ids]
@@ -945,7 +943,7 @@ class SecurityDashboard:
 
     def get_alerts_data(
         self, include_history: bool = False, limit: int = 50
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get alerts data."""
         data = {
             "active_alerts": self.alert_manager.get_active_alerts(),
@@ -977,23 +975,22 @@ class SecurityDashboard:
         """Resolve an alert."""
         return self.alert_manager.resolve_alert(alert_id, resolution)
 
-    async def generate_report(self, report_type: str) -> Optional[ComplianceReport]:
+    async def generate_report(self, report_type: str) -> ComplianceReport | None:
         """Generate a compliance report."""
         if report_type == "daily":
             return await self.report_generator.generate_daily_report()
-        elif report_type == "weekly":
+        if report_type == "weekly":
             return await self.report_generator.generate_weekly_report()
-        elif report_type == "monthly":
+        if report_type == "monthly":
             return await self.report_generator.generate_monthly_report()
-        else:
-            return None
+        return None
 
     def create_custom_dashboard(
         self,
         name: str,
         description: str,
-        widgets: List[DashboardWidget],
-        roles: Set[str],
+        widgets: list[DashboardWidget],
+        roles: set[str],
     ) -> str:
         """Create a custom dashboard."""
         dashboard_id = f"dashboard_{int(time.time())}_{hash(name) % 10000}"
@@ -1062,7 +1059,7 @@ class SecurityDashboard:
             except Exception as e:
                 logger.error(f"Alert checking worker error: {e}")
 
-    async def _handle_triggered_alert(self, alert: Dict[str, Any]) -> None:
+    async def _handle_triggered_alert(self, alert: dict[str, Any]) -> None:
         """Handle a triggered alert."""
         # This would send notifications via email, Slack, etc.
         logger.warning(

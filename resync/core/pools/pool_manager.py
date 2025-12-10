@@ -5,7 +5,7 @@ Manages various connection pools using PostgreSQL.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .db_pool import DatabasePool, get_db_pool
 
@@ -17,36 +17,36 @@ __all__ = ["PoolManager", "get_pool_manager"]
 class PoolManager:
     """
     Pool Manager - PostgreSQL Backend.
-    
+
     Manages database and other connection pools.
     """
-    
+
     def __init__(self):
         """Initialize the pool manager."""
-        self._db_pool: Optional[DatabasePool] = None
+        self._db_pool: DatabasePool | None = None
         self._initialized = False
-    
+
     async def initialize(self) -> None:
         """Initialize all pools."""
         self._db_pool = get_db_pool()
         await self._db_pool.initialize()
         self._initialized = True
         logger.info("PoolManager initialized (PostgreSQL)")
-    
+
     async def close(self) -> None:
         """Close all pools."""
         if self._db_pool:
             await self._db_pool.close()
         self._initialized = False
-    
+
     @property
     def db_pool(self) -> DatabasePool:
         """Get the database pool."""
         if not self._db_pool:
             self._db_pool = get_db_pool()
         return self._db_pool
-    
-    def get_status(self) -> Dict[str, Any]:
+
+    def get_status(self) -> dict[str, Any]:
         """Get status of all pools."""
         return {
             "database": self._db_pool.get_pool_status() if self._db_pool else {"status": "not_initialized"},
@@ -54,7 +54,7 @@ class PoolManager:
         }
 
 
-_instance: Optional[PoolManager] = None
+_instance: PoolManager | None = None
 
 def get_pool_manager() -> PoolManager:
     """Get the singleton PoolManager instance."""

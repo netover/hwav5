@@ -10,10 +10,11 @@ All modules should import these types from here rather than defining their own.
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Generic, List, Optional, TypeVar, Callable
+from typing import Any, Generic, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +29,9 @@ T = TypeVar("T")
 class CacheEntry(Generic[T]):
     """
     Represents a single entry in the cache with timestamp and TTL.
-    
+
     This is the canonical definition - all cache implementations should use this.
-    
+
     Attributes:
         data: The cached value (also accessible via .value property)
         timestamp: Unix timestamp when the entry was created (also accessible via .created_at)
@@ -51,12 +52,12 @@ class CacheEntry(Generic[T]):
     def value(self) -> T:
         """Alias for data field."""
         return self.data
-    
+
     @property
     def created_at(self) -> float:
         """Alias for timestamp field."""
         return self.timestamp
-    
+
     @property
     def last_accessed(self) -> float:
         """Alias for last_access field."""
@@ -87,7 +88,7 @@ class CacheEntry(Generic[T]):
 class CacheStats:
     """
     Statistics for cache performance monitoring.
-    
+
     Attributes:
         hits: Number of cache hits
         misses: Number of cache misses
@@ -117,7 +118,7 @@ class CacheStats:
 class CircuitBreakerState(str, Enum):
     """
     States for circuit breaker pattern.
-    
+
     CLOSED: Normal operation, requests pass through
     OPEN: Circuit is open, requests fail fast
     HALF_OPEN: Testing if service has recovered
@@ -131,7 +132,7 @@ class CircuitBreakerState(str, Enum):
 class CircuitBreakerConfig:
     """
     Configuration for circuit breaker.
-    
+
     Attributes:
         failure_threshold: Number of failures before opening circuit
         success_threshold: Successes needed in half-open to close
@@ -160,7 +161,7 @@ class AlertSeverity(str, Enum):
 class AlertRule:
     """
     Rule for triggering alerts.
-    
+
     Attributes:
         name: Unique identifier for this rule
         condition: Lambda or callable that returns True when alert should trigger
@@ -175,14 +176,14 @@ class AlertRule:
     message_template: str = ""
     cooldown_seconds: int = 300
     enabled: bool = True
-    last_triggered: Optional[float] = None
+    last_triggered: float | None = None
 
 
-@dataclass  
+@dataclass
 class Alert:
     """
     Represents a triggered alert.
-    
+
     Attributes:
         rule_name: Name of the rule that triggered this alert
         severity: Severity level
@@ -195,7 +196,7 @@ class Alert:
     severity: AlertSeverity
     message: str
     timestamp: datetime = field(default_factory=datetime.now)
-    context: Dict[str, Any] = field(default_factory=dict)
+    context: dict[str, Any] = field(default_factory=dict)
     acknowledged: bool = False
 
 
@@ -215,7 +216,7 @@ class MetricType(str, Enum):
 class PerformanceMetrics:
     """
     Performance metrics snapshot.
-    
+
     Attributes:
         cpu_percent: CPU utilization percentage
         memory_percent: Memory utilization percentage
@@ -244,7 +245,7 @@ class PerformanceMetrics:
 class LoginRequest:
     """
     Standard login request structure.
-    
+
     Attributes:
         username: User's username or email
         password: User's password (should be transmitted securely)
@@ -254,29 +255,29 @@ class LoginRequest:
     username: str
     password: str
     remember_me: bool = False
-    mfa_code: Optional[str] = None
+    mfa_code: str | None = None
 
 
 @dataclass
 class APIKeyRequest:
     """
     Request for API key operations.
-    
+
     Attributes:
         name: Descriptive name for the API key
         scopes: List of permission scopes
         expires_in_days: Number of days until expiration (None = never)
     """
     name: str
-    scopes: List[str] = field(default_factory=list)
-    expires_in_days: Optional[int] = None
+    scopes: list[str] = field(default_factory=list)
+    expires_in_days: int | None = None
 
 
 @dataclass
 class FileUploadRequest:
     """
     Request for file upload operations.
-    
+
     Attributes:
         filename: Original filename
         content_type: MIME type of the file
@@ -286,7 +287,7 @@ class FileUploadRequest:
     filename: str
     content_type: str
     size_bytes: int
-    checksum: Optional[str] = None
+    checksum: str | None = None
 
 
 # =============================================================================
@@ -305,7 +306,7 @@ class HealthStatus(str, Enum):
 class ComponentHealth:
     """
     Health status of a single component.
-    
+
     Attributes:
         name: Component name
         status: Health status
@@ -319,7 +320,7 @@ class ComponentHealth:
     message: str = ""
     latency_ms: float = 0.0
     last_check: datetime = field(default_factory=datetime.now)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 # =============================================================================

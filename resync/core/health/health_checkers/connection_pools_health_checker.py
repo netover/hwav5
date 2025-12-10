@@ -7,7 +7,7 @@ This module provides health checking functionality for connection pools.
 
 import time
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -16,6 +16,7 @@ from resync.core.health_models import (
     ComponentType,
     HealthStatus,
 )
+
 from .base_health_checker import BaseHealthChecker
 
 logger = structlog.get_logger(__name__)
@@ -138,7 +139,7 @@ class ConnectionPoolsHealthChecker(BaseHealthChecker):
         """Determine health status based on connection pool exception type."""
         return ComponentType.CONNECTION_POOL
 
-    def get_component_config(self) -> Dict[str, Any]:
+    def get_component_config(self) -> dict[str, Any]:
         """Get connection pools-specific configuration."""
         return {
             "timeout_seconds": self.config.timeout_seconds,

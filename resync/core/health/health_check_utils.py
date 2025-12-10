@@ -8,7 +8,8 @@ check patterns.
 
 
 import asyncio
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import structlog
 
@@ -78,7 +79,7 @@ class HealthCheckUtils:
 
     @staticmethod
     def calculate_overall_status(
-        components: Dict[str, ComponentHealth],
+        components: dict[str, ComponentHealth],
     ) -> HealthStatus:
         """
         Calculate overall health status from component health results.
@@ -105,7 +106,7 @@ class HealthCheckUtils:
         return worst_status
 
     @staticmethod
-    def generate_summary(components: Dict[str, ComponentHealth]) -> Dict[str, int]:
+    def generate_summary(components: dict[str, ComponentHealth]) -> dict[str, int]:
         """
         Generate summary statistics from component health results.
 
@@ -115,7 +116,7 @@ class HealthCheckUtils:
         Returns:
             Dictionary with health status counts
         """
-        summary: Dict[str, int] = {
+        summary: dict[str, int] = {
             "healthy": 0,
             "degraded": 0,
             "unhealthy": 0,
@@ -137,9 +138,9 @@ class HealthCheckUtils:
 
     @staticmethod
     def check_alerts(
-        components: Dict[str, ComponentHealth],
-        thresholds: Optional[Dict[str, float]] = None,
-    ) -> List[str]:
+        components: dict[str, ComponentHealth],
+        thresholds: dict[str, float] | None = None,
+    ) -> list[str]:
         """
         Check for alert conditions in component health results.
 
@@ -150,7 +151,7 @@ class HealthCheckUtils:
         Returns:
             List of alert messages
         """
-        alerts: List[str] = []
+        alerts: list[str] = []
         default_thresholds = {
             "database_connection_threshold_percent": 80.0,
             "memory_usage_threshold_percent": 85.0,
@@ -200,7 +201,7 @@ class HealthCheckUtils:
         return alerts
 
     @staticmethod
-    def get_component_type_mapping() -> Dict[str, ComponentType]:
+    def get_component_type_mapping() -> dict[str, ComponentType]:
         """
         Get mapping of component names to component types.
 
@@ -235,8 +236,8 @@ class HealthCheckUtils:
 
     @staticmethod
     def calculate_performance_metrics(
-        components: Dict[str, ComponentHealth],
-    ) -> Dict[str, Any]:
+        components: dict[str, ComponentHealth],
+    ) -> dict[str, Any]:
         """
         Calculate performance metrics from component health results.
 
@@ -277,7 +278,7 @@ class HealthCheckUtils:
         }
 
     @staticmethod
-    def format_component_metadata(component: ComponentHealth) -> Dict[str, Any]:
+    def format_component_metadata(component: ComponentHealth) -> dict[str, Any]:
         """
         Format component metadata for consistent output.
 

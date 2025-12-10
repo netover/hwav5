@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 # Soft import for aiofiles (optional dependency)
 try:
@@ -39,12 +39,12 @@ class WalEntry:
 
     operation: WalOperationType
     key: str
-    value: Optional[Any] = None
+    value: Any | None = None
     timestamp: float = field(default_factory=time.time)
-    ttl: Optional[float] = None
-    checksum: Optional[str] = None
+    ttl: float | None = None
+    checksum: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the WAL entry to a dictionary for serialization."""
         result = {
             "operation": self.operation.value,
@@ -59,7 +59,7 @@ class WalEntry:
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "WalEntry":
+    def from_dict(cls, data: dict[str, Any]) -> "WalEntry":
         """Create a WAL entry from a dictionary."""
         operation = WalOperationType(data["operation"])
         entry = cls(
@@ -91,7 +91,7 @@ class WriteAheadLog:
     """Write-Ahead Logging system for cache operations."""
 
     def __init__(
-        self, log_path: Union[str, Path], max_log_size: int = 10 * 1024 * 1024
+        self, log_path: str | Path, max_log_size: int = 10 * 1024 * 1024
     ):  # 10MB default
         """
         Initialize the WAL system.
@@ -217,7 +217,7 @@ class WriteAheadLog:
                 logger.error(f"Failed to log operation to WAL: {e}")
                 return False
 
-    async def read_log(self, log_file_path: Union[str, Path]) -> List[WalEntry]:
+    async def read_log(self, log_file_path: str | Path) -> list[WalEntry]:
         """
         Read and parse all entries from a WAL file.
 

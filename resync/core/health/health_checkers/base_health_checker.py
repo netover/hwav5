@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 import structlog
 
@@ -26,7 +26,7 @@ class BaseHealthChecker(ABC):
     health checkers must implement.
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """
         Initialize the health checker.
 
@@ -56,7 +56,7 @@ class BaseHealthChecker(ABC):
         """
 
     async def check_health_with_timeout(
-        self, timeout_seconds: Optional[float] = None
+        self, timeout_seconds: float | None = None
     ) -> ComponentHealth:
         """
         Perform health check with timeout protection.
@@ -112,7 +112,7 @@ class BaseHealthChecker(ABC):
         # Default to UNKNOWN for most exceptions
         return ComponentType.UNKNOWN
 
-    def get_component_config(self) -> Dict[str, Any]:
+    def get_component_config(self) -> dict[str, Any]:
         """
         Get configuration specific to this component.
 

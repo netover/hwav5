@@ -2,16 +2,12 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any
 
-from pydantic import field_validator, StringConstraints as PydanticStringConstraints, Field, ConfigDict
+from pydantic import ConfigDict, Field, field_validator
+from pydantic import StringConstraints as PydanticStringConstraints
 
-from .common import (
-    BaseValidatedModel,
-    NumericConstraints,
-    StringConstraints,
-    ValidationPatterns,  ValidationInfo)
-from typing_extensions import Annotated
+from .common import BaseValidatedModel, NumericConstraints, StringConstraints, ValidationPatterns
 
 
 class MessageType(str, Enum):
@@ -55,19 +51,19 @@ class ChatMessage(BaseValidatedModel):
         ..., description="Message sender identifier", examples=["user123"]
     )
 
-    recipient: Optional[StringConstraints.SAFE_TEXT] = Field(
+    recipient: StringConstraints.SAFE_TEXT | None = Field(
         None, description="Message recipient identifier", examples=["agent_tws_specialist"]
     )
 
-    session_id: Optional[StringConstraints.AGENT_ID] = Field(
+    session_id: StringConstraints.AGENT_ID | None = Field(
         None, description="Chat session identifier"
     )
 
-    parent_message_id: Optional[str] = Field(
+    parent_message_id: str | None = Field(
         None, description="ID of the parent message (for threading)"
     )
 
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional message metadata", max_length=20
     )
 
@@ -150,21 +146,15 @@ class WebSocketMessage(BaseValidatedModel):
 
     sender: StringConstraints.SAFE_TEXT = Field(..., description="Message sender")
 
-    message: Optional[
-        Annotated[str, PydanticStringConstraints(
-            min_length=1,
-            max_length=NumericConstraints.MAX_MESSAGE_LENGTH,
-            strip_whitespace=True,
-        )]
-    ] = Field(None, description="Message content")
+    message: Annotated[str, PydanticStringConstraints(min_length=1, max_length=NumericConstraints.MAX_MESSAGE_LENGTH, strip_whitespace=True)] | None = Field(None, description="Message content")
 
     agent_id: StringConstraints.AGENT_ID = Field(..., description="Target agent ID")
 
-    session_id: Optional[StringConstraints.AGENT_ID] = Field(
+    session_id: StringConstraints.AGENT_ID | None = Field(
         None, description="WebSocket session ID"
     )
 
-    correlation_id: Optional[str] = Field(
+    correlation_id: str | None = Field(
         None, description="Correlation ID for request tracking"
     )
 
@@ -172,7 +162,7 @@ class WebSocketMessage(BaseValidatedModel):
         default=False, description="Whether this is the final message in a stream"
     )
 
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional message metadata", max_length=10
     )
 
@@ -236,11 +226,11 @@ class ChatSession(BaseValidatedModel):
         description="Session status",
     )
 
-    context: Dict[str, Any] = Field(
+    context: dict[str, Any] = Field(
         default_factory=dict, description="Session context", max_length=10
     )
 
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Session metadata", max_length=10
     )
 
@@ -248,9 +238,9 @@ class ChatSession(BaseValidatedModel):
         default_factory=datetime.utcnow, description="Session creation timestamp"
     )
 
-    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
+    updated_at: datetime | None = Field(None, description="Last update timestamp")
 
-    expires_at: Optional[datetime] = Field(
+    expires_at: datetime | None = Field(
         None, description="Session expiration timestamp"
     )
 
@@ -263,31 +253,29 @@ class ChatSession(BaseValidatedModel):
 class ChatHistoryRequest(BaseValidatedModel):
     """Chat history request validation model."""
 
-    session_id: Optional[StringConstraints.AGENT_ID] = Field(
+    session_id: StringConstraints.AGENT_ID | None = Field(
         None, description="Filter by session ID"
     )
 
-    user_id: Optional[StringConstraints.SAFE_TEXT] = Field(
+    user_id: StringConstraints.SAFE_TEXT | None = Field(
         None, description="Filter by user ID"
     )
 
-    agent_id: Optional[StringConstraints.AGENT_ID] = Field(
+    agent_id: StringConstraints.AGENT_ID | None = Field(
         None, description="Filter by agent ID"
     )
 
-    start_date: Optional[datetime] = Field(
+    start_date: datetime | None = Field(
         None, description="Start date for history range"
     )
 
-    end_date: Optional[datetime] = Field(None, description="End date for history range")
+    end_date: datetime | None = Field(None, description="End date for history range")
 
-    message_types: Optional[List[MessageType]] = Field(
+    message_types: list[MessageType] | None = Field(
         None, description="Filter by message types", max_length=5
     )
 
-    search_query: Optional[
-        Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)]
-    ] = Field(None, description="Search query for message content")
+    search_query: Annotated[str, PydanticStringConstraints(min_length=1, max_length=100, strip_whitespace=True)] | None = Field(None, description="Search query for message content")
 
     limit: int = Field(
         default=50, ge=1, le=500, description="Maximum number of messages to return"
@@ -376,7 +364,7 @@ class ChatExportRequest(BaseValidatedModel):
         default=True, description="Whether to include message metadata"
     )
 
-    date_range: Optional[Dict[str, datetime]] = Field(
+    date_range: dict[str, datetime] | None = Field(
         None, description="Date range for export"
     )
 

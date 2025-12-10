@@ -7,7 +7,7 @@ This module provides health checking functionality for cache hierarchy.
 
 import time
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -17,6 +17,7 @@ from resync.core.health_models import (
     ComponentType,
     HealthStatus,
 )
+
 from .base_health_checker import BaseHealthChecker
 
 logger = structlog.get_logger(__name__)
@@ -109,7 +110,7 @@ class CacheHealthChecker(BaseHealthChecker):
         """Determine health status based on cache exception type."""
         return ComponentType.CACHE
 
-    def get_component_config(self) -> Dict[str, Any]:
+    def get_component_config(self) -> dict[str, Any]:
         """Get cache-specific configuration."""
         return {
             "timeout_seconds": self.config.timeout_seconds,

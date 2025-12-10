@@ -9,10 +9,9 @@ Provides REST endpoints for:
 """
 
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Body
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from resync.core.structured_logger import get_logger
@@ -31,9 +30,9 @@ class FeedbackRequest(BaseModel):
     query: str = Field(..., description="The original query")
     doc_id: str = Field(..., description="Document ID that was retrieved")
     rating: int = Field(..., ge=-2, le=2, description="Rating from -2 (very bad) to +2 (very good)")
-    user_id: Optional[str] = Field(None, description="User identifier")
-    response_text: Optional[str] = Field(None, description="Generated response text")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    user_id: str | None = Field(None, description="User identifier")
+    response_text: str | None = Field(None, description="Generated response text")
+    metadata: dict[str, Any] | None = Field(None, description="Additional metadata")
 
 
 class FeedbackResponse(BaseModel):
@@ -46,8 +45,8 @@ class ReviewSubmission(BaseModel):
     """Request model for submitting a human review."""
     status: str = Field(..., description="New status: approved, corrected, rejected")
     reviewer_id: str = Field(..., description="ID of the reviewer")
-    correction: Optional[str] = Field(None, description="Corrected response (if status is corrected)")
-    feedback: Optional[str] = Field(None, description="Additional feedback from reviewer")
+    correction: str | None = Field(None, description="Corrected response (if status is corrected)")
+    feedback: str | None = Field(None, description="Additional feedback from reviewer")
 
 
 class ReviewItemResponse(BaseModel):
@@ -55,33 +54,33 @@ class ReviewItemResponse(BaseModel):
     id: str
     query: str
     response: str
-    reasons: List[str]
-    confidence_scores: Dict[str, float]
+    reasons: list[str]
+    confidence_scores: dict[str, float]
     status: str
     created_at: str
-    reviewed_at: Optional[str]
-    reviewed_by: Optional[str]
+    reviewed_at: str | None
+    reviewed_by: str | None
 
 
 class StatsResponse(BaseModel):
     """Response model for system statistics."""
-    feedback: Dict[str, Any]
-    active_learning: Optional[Dict[str, Any]]
-    config: Dict[str, bool]
+    feedback: dict[str, Any]
+    active_learning: dict[str, Any] | None
+    config: dict[str, bool]
 
 
 class EnrichmentRequest(BaseModel):
     """Request model for query enrichment."""
     query: str = Field(..., description="Query to enrich")
-    instance_id: Optional[str] = Field(None, description="TWS instance ID")
+    instance_id: str | None = Field(None, description="TWS instance ID")
 
 
 class EnrichmentResponse(BaseModel):
     """Response model for query enrichment."""
     original_query: str
     enriched_query: str
-    context_added: List[str]
-    entities_found: Dict[str, List[str]]
+    context_added: list[str]
+    entities_found: dict[str, list[str]]
     enrichment_source: str
 
 
@@ -93,14 +92,14 @@ class EnrichmentResponse(BaseModel):
 async def record_feedback(request: FeedbackRequest):
     """
     Record user feedback for a query-document pair.
-    
+
     This feedback is used to improve RAG retrieval over time by:
     - Boosting documents with positive feedback
     - Penalizing documents with negative feedback
     """
     try:
         from resync.core.continual_learning import get_feedback_store
-        
+
         store = get_feedback_store()
         feedback_id = await store.record_feedback(
             query=request.query,
@@ -110,7 +109,7 @@ async def record_feedback(request: FeedbackRequest):
             response_text=request.response_text,
             metadata=request.metadata,
         )
-        
+
         return FeedbackResponse(
             feedback_id=feedback_id,
             message="Feedback recorded successfully"
@@ -125,10 +124,10 @@ async def get_feedback_stats():
     """Get statistics about recorded feedback."""
     try:
         from resync.core.continual_learning import get_feedback_store
-        
+
         store = get_feedback_store()
         stats = await store.get_feedback_stats()
-        
+
         return stats
     except Exception as e:
         logger.error("feedback_stats_error", error=str(e))
@@ -143,13 +142,13 @@ async def get_low_quality_documents(
     """Get documents with consistently negative feedback."""
     try:
         from resync.core.continual_learning import get_feedback_store
-        
+
         store = get_feedback_store()
         docs = await store.get_low_quality_documents(
             threshold=threshold,
             min_feedback=min_feedback,
         )
-        
+
         return [
             {
                 "doc_id": d.doc_id,
@@ -170,17 +169,17 @@ async def get_low_quality_documents(
 # REVIEW QUEUE ENDPOINTS
 # =============================================================================
 
-@router.get("/review/pending", response_model=List[ReviewItemResponse])
+@router.get("/review/pending", response_model=list[ReviewItemResponse])
 async def get_pending_reviews(
     limit: int = Query(50, ge=1, le=200, description="Maximum items to return"),
-    reason: Optional[str] = Query(None, description="Filter by reason"),
+    reason: str | None = Query(None, description="Filter by reason"),
 ):
     """Get pending items from the human review queue."""
     try:
-        from resync.core.continual_learning import get_active_learning_manager, ReviewReason
-        
+        from resync.core.continual_learning import ReviewReason, get_active_learning_manager
+
         manager = get_active_learning_manager()
-        
+
         reason_filter = None
         if reason:
             try:
@@ -190,12 +189,12 @@ async def get_pending_reviews(
                     status_code=400,
                     detail=f"Invalid reason. Valid values: {[r.value for r in ReviewReason]}"
                 )
-        
+
         items = await manager.get_pending_reviews(
             limit=limit,
             reason_filter=reason_filter,
         )
-        
+
         return [
             ReviewItemResponse(
                 id=item.id,
@@ -221,10 +220,10 @@ async def get_pending_reviews(
 async def submit_review(review_id: str, submission: ReviewSubmission):
     """Submit a human review for a queued item."""
     try:
-        from resync.core.continual_learning import get_active_learning_manager, ReviewStatus
-        
+        from resync.core.continual_learning import ReviewStatus, get_active_learning_manager
+
         manager = get_active_learning_manager()
-        
+
         try:
             status = ReviewStatus(submission.status)
         except ValueError:
@@ -232,7 +231,7 @@ async def submit_review(review_id: str, submission: ReviewSubmission):
                 status_code=400,
                 detail=f"Invalid status. Valid values: {[s.value for s in ReviewStatus]}"
             )
-        
+
         success = await manager.submit_review(
             review_id=review_id,
             status=status,
@@ -240,12 +239,11 @@ async def submit_review(review_id: str, submission: ReviewSubmission):
             correction=submission.correction,
             feedback=submission.feedback,
         )
-        
+
         if success:
             return {"message": "Review submitted successfully", "review_id": review_id}
-        else:
-            raise HTTPException(status_code=404, detail="Review item not found")
-            
+        raise HTTPException(status_code=404, detail="Review item not found")
+
     except HTTPException:
         raise
     except Exception as e:
@@ -258,10 +256,10 @@ async def get_review_stats():
     """Get statistics about the review queue."""
     try:
         from resync.core.continual_learning import get_active_learning_manager
-        
+
         manager = get_active_learning_manager()
         stats = await manager.get_queue_stats()
-        
+
         return stats
     except Exception as e:
         logger.error("review_stats_error", error=str(e))
@@ -273,10 +271,10 @@ async def expire_old_reviews():
     """Expire old pending reviews that haven't been processed."""
     try:
         from resync.core.continual_learning import get_active_learning_manager
-        
+
         manager = get_active_learning_manager()
         expired_count = await manager.expire_old_reviews()
-        
+
         return {"expired_count": expired_count, "message": f"Expired {expired_count} reviews"}
     except Exception as e:
         logger.error("expire_reviews_error", error=str(e))
@@ -291,19 +289,19 @@ async def expire_old_reviews():
 async def enrich_query(request: EnrichmentRequest):
     """
     Enrich a query with learned context.
-    
+
     Uses job patterns, error history, and dependencies to add
     relevant context to the query before RAG retrieval.
     """
     try:
         from resync.core.continual_learning import get_context_enricher
-        
+
         enricher = get_context_enricher()
         result = await enricher.enrich_query(
             query=request.query,
             instance_id=request.instance_id,
         )
-        
+
         return EnrichmentResponse(
             original_query=result.original_query,
             enriched_query=result.enriched_query,
@@ -325,10 +323,10 @@ async def get_system_stats():
     """Get comprehensive statistics from all continual learning components."""
     try:
         from resync.core.continual_learning import get_continual_learning_orchestrator
-        
+
         orchestrator = get_continual_learning_orchestrator()
         stats = await orchestrator.get_system_stats()
-        
+
         return StatsResponse(**stats)
     except Exception as e:
         logger.error("system_stats_error", error=str(e))
@@ -342,7 +340,7 @@ async def health_check():
         "status": "healthy",
         "components": {},
     }
-    
+
     try:
         from resync.core.continual_learning import get_feedback_store
         store = get_feedback_store()
@@ -351,7 +349,7 @@ async def health_check():
     except Exception as e:
         health["components"]["feedback_store"] = f"error: {str(e)}"
         health["status"] = "degraded"
-    
+
     try:
         from resync.core.continual_learning import get_active_learning_manager
         manager = get_active_learning_manager()
@@ -360,7 +358,7 @@ async def health_check():
     except Exception as e:
         health["components"]["active_learning"] = f"error: {str(e)}"
         health["status"] = "degraded"
-    
+
     try:
         from resync.core.continual_learning import get_context_enricher
         enricher = get_context_enricher()
@@ -368,7 +366,7 @@ async def health_check():
     except Exception as e:
         health["components"]["context_enricher"] = f"error: {str(e)}"
         health["status"] = "degraded"
-    
+
     return health
 
 
@@ -378,21 +376,21 @@ async def health_check():
 
 @router.get("/audit/error-patterns")
 async def get_error_patterns(
-    entity: Optional[str] = Query(None, description="Filter by entity"),
+    entity: str | None = Query(None, description="Filter by entity"),
     min_confidence: float = Query(0.5, description="Minimum confidence"),
     limit: int = Query(100, ge=1, le=500),
 ):
     """Get known error patterns from the knowledge graph."""
     try:
         from resync.core.continual_learning import get_audit_to_kg_pipeline
-        
+
         pipeline = get_audit_to_kg_pipeline()
         patterns = await pipeline.get_error_patterns(
             entity=entity,
             min_confidence=min_confidence,
             limit=limit,
         )
-        
+
         return patterns
     except Exception as e:
         logger.error("error_patterns_error", error=str(e))

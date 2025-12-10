@@ -7,11 +7,12 @@ connection issues, monitors pool utilization, and performs predictive analysis.
 
 
 import time
-from typing import Any, Dict
+from typing import Any
+
 import structlog
 
-from resync.core.connection_pool_manager import get_advanced_connection_pool_manager
 from resync.core.circuit_breaker import CircuitBreaker
+from resync.core.connection_pool_manager import get_advanced_connection_pool_manager
 
 logger = structlog.get_logger(__name__)
 
@@ -36,7 +37,7 @@ class ProactiveMonitoringSystem:
             "tws_monitor": CircuitBreaker(),
         }
 
-    async def perform_proactive_health_checks(self) -> Dict[str, Any]:
+    async def perform_proactive_health_checks(self) -> dict[str, Any]:
         """
         Perform proactive health checks for connection pools and critical components.
 
@@ -120,7 +121,7 @@ class ProactiveMonitoringSystem:
 
         return results
 
-    async def _check_connection_pool_health(self) -> Dict[str, Any]:
+    async def _check_connection_pool_health(self) -> dict[str, Any]:
         """Check health of all connection pools."""
         try:
             advanced_manager = get_advanced_connection_pool_manager()
@@ -141,43 +142,42 @@ class ProactiveMonitoringSystem:
                         "scaling_signals", {}
                     ),
                 }
-            else:
-                # Fallback to basic pool manager
-                try:
-                    from resync.core.connection_pool_manager import (
-                        get_connection_pool_manager,
-                    )
+            # Fallback to basic pool manager
+            try:
+                from resync.core.connection_pool_manager import (
+                    get_connection_pool_manager,
+                )
 
-                    pool_manager = get_connection_pool_manager()
-                    if pool_manager:
-                        basic_metrics = {}
-                        for pool_name, pool in pool_manager.pools.items():
-                            stats = pool.get_stats()
-                            basic_metrics[pool_name] = {
-                                "connections": stats.get("total_connections", 0),
-                                "utilization": stats.get("active_connections", 0)
-                                / max(1, stats.get("total_connections", 1)),
-                            }
-                        return basic_metrics
-                except ImportError:
-                    pass
+                pool_manager = get_connection_pool_manager()
+                if pool_manager:
+                    basic_metrics = {}
+                    for pool_name, pool in pool_manager.pools.items():
+                        stats = pool.get_stats()
+                        basic_metrics[pool_name] = {
+                            "connections": stats.get("total_connections", 0),
+                            "utilization": stats.get("active_connections", 0)
+                            / max(1, stats.get("total_connections", 1)),
+                        }
+                    return basic_metrics
+            except ImportError:
+                pass
 
         except Exception as e:
             logger.warning("connection_pool_health_check_failed", error=str(e))
 
         return {"error": "Unable to check connection pool health"}
 
-    async def _check_circuit_breaker_health(self) -> Dict[str, Any]:
+    async def _check_circuit_breaker_health(self) -> dict[str, Any]:
         """Check health of all circuit breakers."""
         results = {}
 
         # Check TWS circuit breakers
         try:
             from resync.core.circuit_breaker import (
-                adaptive_tws_api_breaker,
                 adaptive_llm_api_breaker,
-                tws_api_breaker,
+                adaptive_tws_api_breaker,
                 llm_api_breaker,
+                tws_api_breaker,
             )
 
             breakers = {
@@ -214,7 +214,7 @@ class ProactiveMonitoringSystem:
 
         return results
 
-    async def _compare_with_baseline(self) -> Dict[str, Any]:
+    async def _compare_with_baseline(self) -> dict[str, Any]:
         """Compare current performance with historical baseline."""
         # This would compare with stored baseline metrics
         # For now, return placeholder structure
@@ -227,7 +227,7 @@ class ProactiveMonitoringSystem:
             ],
         }
 
-    def get_circuit_breakers(self) -> Dict[str, CircuitBreaker]:
+    def get_circuit_breakers(self) -> dict[str, CircuitBreaker]:
         """Get all circuit breakers managed by this system."""
         return self.circuit_breakers.copy()
 

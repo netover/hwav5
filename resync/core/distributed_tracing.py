@@ -19,16 +19,17 @@ import asyncio
 import contextlib
 import functools
 import time
+from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any
 from urllib.parse import urlparse
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.trace.sampling import Sampler, SamplingResult, Decision
-from opentelemetry.trace import Status, StatusCode, SpanKind
+from opentelemetry.sdk.trace.sampling import Decision, Sampler, SamplingResult
+from opentelemetry.trace import SpanKind, Status, StatusCode
 
 try:
     from opentelemetry.trace.propagation.tracecontext import TraceContextPropagator
@@ -74,10 +75,10 @@ logger = get_logger(__name__)
 
 
 # Context variables for trace context propagation
-current_trace_id: ContextVar[Optional[str]] = ContextVar(
+current_trace_id: ContextVar[str | None] = ContextVar(
     "current_trace_id", default=None
 )
-current_span_id: ContextVar[Optional[str]] = ContextVar("current_span_id", default=None)
+current_span_id: ContextVar[str | None] = ContextVar("current_span_id", default=None)
 
 
 class IntelligentSampler(Sampler):
@@ -100,7 +101,7 @@ class IntelligentSampler(Sampler):
         self.error_threshold = 0.05  # 5%
 
         # Sampling decisions cache
-        self._decisions: Dict[str, SamplingResult] = {}
+        self._decisions: dict[str, SamplingResult] = {}
 
     def get_description(self) -> str:
         """Return a description of the sampling strategy."""
@@ -112,13 +113,13 @@ class IntelligentSampler(Sampler):
 
     def should_sample(
         self,
-        parent_context: Optional[trace.SpanContext],
+        parent_context: trace.SpanContext | None,
         trace_id: int,
         name: str,
-        kind: Optional[SpanKind] = None,
-        attributes: Optional[Dict[str, Any]] = None,
-        links: Optional[List[trace.Link]] = None,
-        trace_state: Optional[trace.TraceState] = None,
+        kind: SpanKind | None = None,
+        attributes: dict[str, Any] | None = None,
+        links: list[trace.Link] | None = None,
+        trace_state: trace.TraceState | None = None,
     ) -> SamplingResult:
         """Determine if a trace should be sampled."""
 
@@ -150,8 +151,7 @@ class IntelligentSampler(Sampler):
 
         if should_sample:
             return SamplingResult(Decision.RECORD_AND_SAMPLE)
-        else:
-            return SamplingResult(Decision.DROP)
+        return SamplingResult(Decision.DROP)
 
     def _calculate_adaptive_rate(self) -> float:
         """Calculate adaptive sampling rate based on current conditions."""
@@ -189,7 +189,7 @@ class TraceConfiguration:
     # Jaeger configuration
     jaeger_endpoint: str = "http://localhost:14268/api/traces"
     jaeger_service_name: str = "hwa-new"
-    jaeger_tags: Dict[str, str] = field(
+    jaeger_tags: dict[str, str] = field(
         default_factory=lambda: {"service.version": "1.0.0"}
     )
 
@@ -210,8 +210,8 @@ class TraceConfiguration:
     auto_instrument_external_calls: bool = True
 
     # Custom configuration
-    custom_span_processors: List[Any] = field(default_factory=list)
-    custom_instrumentations: List[Any] = field(default_factory=list)
+    custom_span_processors: list[Any] = field(default_factory=list)
+    custom_instrumentations: list[Any] = field(default_factory=list)
 
 
 class DistributedTracingManager:
@@ -228,20 +228,20 @@ class DistributedTracingManager:
     - Metrics extraction from traces
     """
 
-    def __init__(self, config: Optional[TraceConfiguration] = None):
+    def __init__(self, config: TraceConfiguration | None = None):
         self.config = config or TraceConfiguration()
 
         # Core components
-        self.tracer_provider: Optional[TracerProvider] = None
-        self.tracer: Optional[trace.Tracer] = None
-        self.jaeger_exporter: Optional[JaegerExporter] = None
+        self.tracer_provider: TracerProvider | None = None
+        self.tracer: trace.Tracer | None = None
+        self.jaeger_exporter: JaegerExporter | None = None
 
         # Instrumentation state
         self._instrumented = False
         self._running = False
 
         # Performance tracking
-        self.trace_metrics: Dict[str, Any] = {
+        self.trace_metrics: dict[str, Any] = {
             "traces_created": 0,
             "spans_created": 0,
             "export_errors": 0,
@@ -422,7 +422,7 @@ class DistributedTracingManager:
                     "performance.duration_ms", span.end_time - span.start_time
                 )
 
-    def trace_method(self, operation_name: Optional[str] = None):
+    def trace_method(self, operation_name: str | None = None):
         """Decorator for tracing method calls."""
 
         def decorator(func: Callable):
@@ -484,8 +484,7 @@ class DistributedTracingManager:
 
             if asyncio.iscoroutinefunction(func):
                 return async_wrapper
-            else:
-                return sync_wrapper
+            return sync_wrapper
 
         return decorator
 
@@ -527,26 +526,26 @@ class DistributedTracingManager:
             self.trace_metrics["spans_created"] += 1
             return child_span
 
-    def inject_context(self, carrier: Dict[str, str]) -> None:
+    def inject_context(self, carrier: dict[str, str]) -> None:
         """Inject trace context into carrier (headers, etc.)."""
         span = trace.get_current_span()
         if span and span.get_span_context().is_valid:
             self.propagator.inject(carrier, context=trace.get_current_context())
 
-    def extract_context(self, carrier: Dict[str, str]) -> Optional[trace.SpanContext]:
+    def extract_context(self, carrier: dict[str, str]) -> trace.SpanContext | None:
         """Extract trace context from carrier."""
         context = self.propagator.extract(carrier)
         span_context = trace.get_current_span(context).get_span_context()
         return span_context if span_context.is_valid else None
 
-    def get_current_trace_id(self) -> Optional[str]:
+    def get_current_trace_id(self) -> str | None:
         """Get current trace ID from context."""
         span = trace.get_current_span()
         if span and span.get_span_context().is_valid:
             return format(span.get_span_context().trace_id, "032x")
         return None
 
-    def get_current_span_id(self) -> Optional[str]:
+    def get_current_span_id(self) -> str | None:
         """Get current span ID from context."""
         span = trace.get_current_span()
         if span and span.get_span_context().is_valid:
@@ -560,7 +559,7 @@ class DistributedTracingManager:
             span.set_attribute(key, value)
 
     def add_span_event(
-        self, name: str, attributes: Optional[Dict[str, Any]] = None
+        self, name: str, attributes: dict[str, Any] | None = None
     ) -> None:
         """Add event to current span."""
         span = trace.get_current_span()
@@ -574,7 +573,7 @@ class DistributedTracingManager:
             span.record_exception(exception)
             span.set_status(Status(StatusCode.ERROR, str(exception)))
 
-    def get_trace_metrics(self) -> Dict[str, Any]:
+    def get_trace_metrics(self) -> dict[str, Any]:
         """Get comprehensive tracing metrics."""
         return {
             "performance": {
@@ -625,7 +624,7 @@ async def get_distributed_tracing_manager() -> DistributedTracingManager:
 
 
 # Convenience functions for easy usage
-def trace_method(operation_name: Optional[str] = None):
+def trace_method(operation_name: str | None = None):
     """Convenience decorator for tracing methods."""
     return distributed_tracing_manager.trace_method(operation_name)
 
@@ -635,7 +634,7 @@ def trace_context(operation_name: str, **attributes):
     return distributed_tracing_manager.trace_context(operation_name, **attributes)
 
 
-def get_current_trace_id() -> Optional[str]:
+def get_current_trace_id() -> str | None:
     """Get current trace ID."""
     return distributed_tracing_manager.get_current_trace_id()
 
@@ -645,7 +644,7 @@ def add_span_attribute(key: str, value: Any) -> None:
     distributed_tracing_manager.add_span_attribute(key, value)
 
 
-async def setup_tracing(config: Optional[TraceConfiguration] = None) -> DistributedTracingManager:
+async def setup_tracing(config: TraceConfiguration | None = None) -> DistributedTracingManager:
     """
     Initialize and setup distributed tracing.
 
@@ -679,12 +678,11 @@ def traced(operation_name: str, **attributes):
                 with manager.trace_context(operation_name, **attributes):
                     return await func(*args, **kwargs)
             return async_wrapper
-        else:
-            @functools.wraps(func)
-            def sync_wrapper(*args, **kwargs):
-                # For sync functions, we'll use a simplified approach
-                return func(*args, **kwargs)
-            return sync_wrapper
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            # For sync functions, we'll use a simplified approach
+            return func(*args, **kwargs)
+        return sync_wrapper
 
     return decorator
 

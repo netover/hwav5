@@ -7,7 +7,6 @@ identifying, diagnosing, and resolving specific types of incidents.
 """
 
 import datetime
-from typing import Dict, List, Optional
 
 
 class IncidentRunbook:
@@ -19,7 +18,7 @@ class IncidentRunbook:
         self.created_at = datetime.datetime.utcnow()
         self.last_updated = datetime.datetime.utcnow()
 
-    def execute(self, context: Dict) -> Dict:
+    def execute(self, context: dict) -> dict:
         """Execute the runbook with the given context"""
         raise NotImplementedError("Subclasses must implement execute method")
 
@@ -37,7 +36,7 @@ class TWSConnectionFailureRunbook(IncidentRunbook):
             description="Handles incidents where the Resync system cannot connect to TWS/HWA",
         )
 
-    def execute(self, context: Dict) -> Dict:
+    def execute(self, context: dict) -> dict:
         """
         Execute the TWS Connection Failure runbook
 
@@ -105,7 +104,7 @@ class HighErrorRateRunbook(IncidentRunbook):
             description="Handles incidents where the system experiences elevated error rates",
         )
 
-    def execute(self, context: Dict) -> Dict:
+    def execute(self, context: dict) -> dict:
         """
         Execute the High Error Rate runbook
 
@@ -173,7 +172,7 @@ class PerformanceDegradationRunbook(IncidentRunbook):
             description="Handles incidents where system performance is degraded",
         )
 
-    def execute(self, context: Dict) -> Dict:
+    def execute(self, context: dict) -> dict:
         """
         Execute the Performance Degradation runbook
 
@@ -241,7 +240,7 @@ class SecurityIncidentRunbook(IncidentRunbook):
             description="Handles security-related incidents like unauthorized access or suspicious activity",
         )
 
-    def execute(self, context: Dict) -> Dict:
+    def execute(self, context: dict) -> dict:
         """
         Execute the Security Incident runbook
 
@@ -307,7 +306,7 @@ class DataConsistencyRunbook(IncidentRunbook):
             description="Handles incidents where data consistency issues are detected",
         )
 
-    def execute(self, context: Dict) -> Dict:
+    def execute(self, context: dict) -> dict:
         """
         Execute the Data Consistency runbook
 
@@ -365,7 +364,7 @@ class RunbookRegistry:
     """
 
     def __init__(self):
-        self.runbooks: Dict[str, IncidentRunbook] = {}
+        self.runbooks: dict[str, IncidentRunbook] = {}
         self._register_default_runbooks()
 
     def _register_default_runbooks(self):
@@ -382,13 +381,13 @@ class RunbookRegistry:
         """Register an incident response runbook"""
         self.runbooks[name] = runbook
 
-    def execute_runbook(self, name: str, context: Dict) -> Optional[Dict]:
+    def execute_runbook(self, name: str, context: dict) -> dict | None:
         """Execute a registered runbook with the given name and context"""
         if name in self.runbooks:
             return self.runbooks[name].execute(context)
         return None
 
-    def list_runbooks(self) -> List[str]:
+    def list_runbooks(self) -> list[str]:
         """List all available runbooks"""
         return list(self.runbooks.keys())
 

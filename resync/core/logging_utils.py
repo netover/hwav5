@@ -1,8 +1,8 @@
 """Logging utilities for the Resync application."""
 
-import re
 import logging
-from typing import Any, Dict
+import re
+from typing import Any
 
 
 class SecretRedactor(logging.Filter):
@@ -103,12 +103,11 @@ class SecretRedactor(logging.Filter):
                 else:
                     redacted_args.append(arg)
             return redacted_args if isinstance(args, list) else tuple(redacted_args)
-        elif isinstance(args, dict):
+        if isinstance(args, dict):
             return self._redact_dict(args)
-        else:
-            return args
+        return args
 
-    def _redact_dict(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _redact_dict(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Recursively redact sensitive data from a dictionary.
 
@@ -130,8 +129,8 @@ class SecretRedactor(logging.Filter):
             elif isinstance(value, dict):
                 redacted[key] = self._redact_dict(value)
             elif isinstance(value, list):
-                redacted[key] = [self._redact_dict(item) if isinstance(item, dict) else 
-                                self._redact_sensitive_data(str(item)) if isinstance(item, str) else 
+                redacted[key] = [self._redact_dict(item) if isinstance(item, dict) else
+                                self._redact_sensitive_data(str(item)) if isinstance(item, str) else
                                 item for item in value]
             elif isinstance(value, str):
                 redacted[key] = self._redact_sensitive_data(value)

@@ -8,7 +8,6 @@ status reporting.
 
 
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 
 import structlog
 
@@ -35,10 +34,10 @@ class HealthAlerting:
             alert_enabled: Whether alerting is enabled
         """
         self.alert_enabled = alert_enabled
-        self.alert_history: List[Dict[str, any]] = []
+        self.alert_history: list[dict[str, any]] = []
         self.max_alert_history = 1000
 
-    def check_alerts(self, components: Dict[str, ComponentHealth]) -> List[str]:
+    def check_alerts(self, components: dict[str, ComponentHealth]) -> list[str]:
         """
         Check for alerts based on component health status.
 
@@ -51,7 +50,7 @@ class HealthAlerting:
         if not self.alert_enabled:
             return []
 
-        alerts: List[str] = []
+        alerts: list[str] = []
 
         for name, comp in components.items():
             if comp.status == HealthStatus.UNHEALTHY:
@@ -74,7 +73,7 @@ class HealthAlerting:
         return alerts
 
     def _add_to_alert_history(
-        self, alerts: List[str], components: Dict[str, ComponentHealth]
+        self, alerts: list[str], components: dict[str, ComponentHealth]
     ) -> None:
         """Add alerts to history for tracking and analysis."""
         alert_entry = {
@@ -96,8 +95,8 @@ class HealthAlerting:
             self.alert_history = self.alert_history[-self.max_alert_history :]
 
     def get_alert_history(
-        self, hours: int = 24, limit: Optional[int] = None
-    ) -> List[Dict[str, any]]:
+        self, hours: int = 24, limit: int | None = None
+    ) -> list[dict[str, any]]:
         """
         Get alert history for the specified time period.
 
@@ -123,7 +122,7 @@ class HealthAlerting:
 
         return filtered_history
 
-    def get_alert_stats(self) -> Dict[str, any]:
+    def get_alert_stats(self) -> dict[str, any]:
         """Get alert statistics and patterns."""
         if not self.alert_history:
             return {"total_alerts": 0, "alert_rate": 0.0}
@@ -159,13 +158,13 @@ class HealthReporting:
 
     def __init__(self):
         """Initialize the health reporting system."""
-        self._report_cache: Optional[Dict[str, any]] = None
-        self._last_report_time: Optional[datetime] = None
+        self._report_cache: dict[str, any] | None = None
+        self._last_report_time: datetime | None = None
         self.cache_duration_seconds = 30  # Cache reports for 30 seconds
 
     def generate_summary(
-        self, components: Dict[str, ComponentHealth]
-    ) -> Dict[str, int]:
+        self, components: dict[str, ComponentHealth]
+    ) -> dict[str, int]:
         """
         Generate a summary of health status counts.
 
@@ -175,7 +174,7 @@ class HealthReporting:
         Returns:
             Dictionary with health status counts
         """
-        summary: Dict[str, int] = {
+        summary: dict[str, int] = {
             "healthy": 0,
             "degraded": 0,
             "unhealthy": 0,
@@ -196,10 +195,10 @@ class HealthReporting:
 
     def generate_detailed_report(
         self,
-        components: Dict[str, ComponentHealth],
+        components: dict[str, ComponentHealth],
         overall_status: HealthStatus,
         timestamp: float,
-    ) -> Dict[str, any]:
+    ) -> dict[str, any]:
         """
         Generate a detailed health report.
 
@@ -254,7 +253,7 @@ class HealthReporting:
 
         return report
 
-    def get_cached_report(self) -> Optional[Dict[str, any]]:
+    def get_cached_report(self) -> dict[str, any] | None:
         """
         Get cached report if available and recent.
 
@@ -275,7 +274,7 @@ class HealthReporting:
         self._report_cache = None
         self._last_report_time = None
 
-    def format_report_for_console(self, report: Dict[str, any]) -> str:
+    def format_report_for_console(self, report: dict[str, any]) -> str:
         """
         Format a health report for console output.
 
@@ -332,12 +331,12 @@ class HealthStatusAggregator:
 
     def __init__(self):
         """Initialize the health status aggregator."""
-        self._aggregation_cache: Optional[Dict[str, any]] = None
-        self._last_aggregation: Optional[datetime] = None
+        self._aggregation_cache: dict[str, any] | None = None
+        self._last_aggregation: datetime | None = None
 
     def aggregate_health_status(
-        self, health_results: List[Dict[str, any]]
-    ) -> Dict[str, any]:
+        self, health_results: list[dict[str, any]]
+    ) -> dict[str, any]:
         """
         Aggregate health status from multiple health check results.
 
@@ -386,7 +385,7 @@ class HealthStatusAggregator:
         return aggregation
 
     def _calculate_aggregated_status(
-        self, components: Dict[str, ComponentHealth]
+        self, components: dict[str, ComponentHealth]
     ) -> str:
         """Calculate overall status from component health results."""
         if not components:
@@ -410,8 +409,8 @@ class HealthStatusAggregator:
         return worst_status.value
 
     def _calculate_health_trends(
-        self, components: Dict[str, ComponentHealth]
-    ) -> Dict[str, any]:
+        self, components: dict[str, ComponentHealth]
+    ) -> dict[str, any]:
         """Calculate health trends and patterns."""
         trends = {
             "improving": 0,
@@ -424,7 +423,7 @@ class HealthStatusAggregator:
         # For now, return basic structure
         return trends
 
-    def get_aggregation_cache(self) -> Optional[Dict[str, any]]:
+    def get_aggregation_cache(self) -> dict[str, any] | None:
         """Get cached aggregation if available."""
         if self._aggregation_cache is None or self._last_aggregation is None:
             return None

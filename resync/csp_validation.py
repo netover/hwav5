@@ -4,9 +4,7 @@ import json
 import re
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
-
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 if TYPE_CHECKING:
     from fastapi import Request
@@ -72,18 +70,18 @@ class CSPReport:
     document_uri: str
     violated_directive: str
     original_policy: str
-    blocked_uri: Optional[str] = None
-    status_code: Optional[int] = None
-    referrer: Optional[str] = None
-    script_sample: Optional[str] = None
-    disposition: Optional[Literal["enforce", "report"]] = None
-    line_number: Optional[int] = None
-    column_number: Optional[int] = None
-    source_file: Optional[str] = None
-    effective_directive: Optional[str] = None
+    blocked_uri: str | None = None
+    status_code: int | None = None
+    referrer: str | None = None
+    script_sample: str | None = None
+    disposition: Literal["enforce", "report"] | None = None
+    line_number: int | None = None
+    column_number: int | None = None
+    source_file: str | None = None
+    effective_directive: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> Optional["CSPReport"]:
+    def from_dict(cls, data: dict[str, Any]) -> Optional["CSPReport"]:
         """Create CSPReport instance from dictionary data."""
         try:
             # Extract nested csp-report if present
@@ -268,8 +266,8 @@ def _is_safe_directive_value(value: str) -> bool:
 
 
 def sanitize_csp_report(
-    report_data: Dict[str, Any],
-) -> Dict[str, Union[str, int, float, None]]:
+    report_data: dict[str, Any],
+) -> dict[str, str | int | float | None]:
     """
     Sanitize CSP report data to prevent XSS and other injection attacks.
 
@@ -279,7 +277,7 @@ def sanitize_csp_report(
     Returns:
         Dict[str, Any]: Sanitized report data
     """
-    sanitized: Dict[str, Union[str, int, float, None]] = {}
+    sanitized: dict[str, str | int | float | None] = {}
 
     # Fields that should remain as strings
     string_fields = [
@@ -315,9 +313,7 @@ def sanitize_csp_report(
                 .replace("'", "&#x27;")
             )
             sanitized[safe_key] = safe_value
-        elif safe_key in int_fields and isinstance(value, (int, float)):
-            sanitized[safe_key] = value
-        elif safe_key in enum_fields and value in enum_fields[safe_key]:
+        elif safe_key in int_fields and isinstance(value, (int, float)) or safe_key in enum_fields and value in enum_fields[safe_key]:
             sanitized[safe_key] = value
         elif safe_key == "csp-report":
             # Handle nested csp-report structure
@@ -346,7 +342,7 @@ async def csp_report_context(request: "Request") -> "Request":
         pass
 
 
-async def process_csp_report(request: "Request") -> Dict[str, Any]:
+async def process_csp_report(request: "Request") -> dict[str, Any]:
     """
     Process a CSP violation report with enhanced validation and security.
 

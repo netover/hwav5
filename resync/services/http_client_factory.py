@@ -9,6 +9,7 @@ import logging
 
 import httpx
 from httpx import AsyncClient
+
 from resync.core.constants import (
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_MAX_CONNECTIONS,
@@ -17,6 +18,7 @@ from resync.core.constants import (
     DEFAULT_READ_TIMEOUT,
     DEFAULT_WRITE_TIMEOUT,
 )
+
 # ---------------------------------------------------------------------------
 # Import application settings
 #

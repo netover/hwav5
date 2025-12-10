@@ -1,4 +1,5 @@
 from functools import lru_cache
+
 from fastapi import Depends
 
 from resync.config.app_settings import AppSettings

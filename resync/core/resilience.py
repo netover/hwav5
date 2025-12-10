@@ -17,11 +17,12 @@ Date: October 2025
 
 import asyncio
 import random
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from functools import wraps
-from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar, Iterable
+from typing import Any, TypeVar
 
 from resync.core.exceptions import CircuitBreakerError
 from resync.core.structured_logger import get_logger
@@ -57,8 +58,8 @@ class CircuitBreakerMetrics:
     successful_calls: int = 0
     failed_calls: int = 0
     consecutive_failures: int = 0
-    last_failure_time: Optional[datetime] = None
-    last_success_time: Optional[datetime] = None
+    last_failure_time: datetime | None = None
+    last_success_time: datetime | None = None
     state_changes: int = 0
 
 
@@ -117,13 +118,12 @@ class CircuitBreaker:
                     raise CircuitBreakerError(
                         f"Circuit breaker '{self.config.name}' is OPEN"
                     )
-                else:
-                    self.state = CircuitBreakerState.HALF_OPEN
-                    self.metrics.state_changes += 1
-                    logger.info(
-                        "Circuit breaker transitioning to HALF_OPEN",
-                        name=self.config.name,
-                    )
+                self.state = CircuitBreakerState.HALF_OPEN
+                self.metrics.state_changes += 1
+                logger.info(
+                    "Circuit breaker transitioning to HALF_OPEN",
+                    name=self.config.name,
+                )
 
         try:
             result = await func(*args, **kwargs)
@@ -190,7 +190,7 @@ class CircuitBreaker:
                     threshold=self.config.failure_threshold,
                 )
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Retorna métricas atuais do circuit breaker"""
         return {
             "name": self.config.name,
@@ -324,7 +324,7 @@ class RetryWithBackoff:
         # Nunca deveria chegar aqui, mas por segurança
         raise last_exception
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Retorna métricas de retry"""
         return {
             "total_attempts": self.metrics.total_attempts,
@@ -353,7 +353,7 @@ class TimeoutManager:
     async def with_timeout(
         coro: Awaitable[T],
         timeout_seconds: float,
-        timeout_exception: Optional[Exception] = None,
+        timeout_exception: Exception | None = None,
     ) -> T:
         """
         Executa coroutine com timeout
@@ -462,7 +462,7 @@ def retry_with_backoff(
     return decorator
 
 
-def with_timeout(timeout_seconds: float, timeout_exception: Optional[Exception] = None):
+def with_timeout(timeout_seconds: float, timeout_exception: Exception | None = None):
     """
     Decorador para aplicar timeout
 
@@ -486,7 +486,7 @@ def with_timeout(timeout_seconds: float, timeout_exception: Optional[Exception] 
 # Funções utilitárias para monitoramento
 
 
-def get_all_circuit_breakers() -> Dict[str, CircuitBreaker]:
+def get_all_circuit_breakers() -> dict[str, CircuitBreaker]:
     """
     Retorna todos os circuit breakers registrados
 
@@ -504,7 +504,7 @@ def get_all_circuit_breakers() -> Dict[str, CircuitBreaker]:
     return breakers
 
 
-def get_circuit_breaker_metrics() -> Dict[str, Dict[str, Any]]:
+def get_circuit_breaker_metrics() -> dict[str, dict[str, Any]]:
     """
     Retorna métricas de todos os circuit breakers
     """
@@ -532,7 +532,7 @@ class CircuitBreakerManager:
     Registry-based Circuit Breaker manager (client-side), inspired by Resilience4j's registry.
     """
     def __init__(self) -> None:
-        self._breakers: Dict[str, CircuitBreaker] = {}
+        self._breakers: dict[str, CircuitBreaker] = {}
 
     def register(
         self,

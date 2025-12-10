@@ -11,48 +11,45 @@ Components:
 - PgVectorStore: PostgreSQL pgvector-based storage (replaces Qdrant)
 """
 
+from .document_parser import (
+    DocumentationFetcher,
+    DocumentChunk,
+    DocumentParser,
+    DocumentType,
+    HTMLParser,
+    ParsedDocument,
+    PDFParser,
+    create_document_parser,
+    create_html_parser,
+    create_pdf_parser,
+)
 from .embedding_service import (
+    EmbeddingConfig,
+    EmbeddingProvider,
     EmbeddingService,
     MultiProviderEmbeddingService,
-    EmbeddingProvider,
-    EmbeddingConfig,
     create_embedding_service,
 )
-from .document_parser import (
-    DocumentParser,
-    PDFParser,
-    HTMLParser,
-    DocumentType,
-    ParsedDocument,
-    DocumentChunk,
-    DocumentationFetcher,
-    create_document_parser,
-    create_pdf_parser,
-    create_html_parser,
-)
 from .ingest import IngestService
-from .interfaces import Embedder
-from .interfaces import Retriever
-from .interfaces import VectorStore
-from .retriever import RagRetriever
+from .interfaces import Embedder, Retriever, VectorStore
 
 # Use pgvector store (PostgreSQL) instead of Qdrant
-from .pgvector_store import PgVectorStore
-from .pgvector_store import get_default_store
+from .pgvector_store import PgVectorStore, get_default_store
+from .retriever import RagRetriever
 
 __all__ = [
     # Interfaces
     "Embedder",
     "VectorStore",
     "Retriever",
-    
+
     # Embedding Service (LiteLLM multi-provider)
     "EmbeddingService",
     "MultiProviderEmbeddingService",
     "EmbeddingProvider",
     "EmbeddingConfig",
     "create_embedding_service",
-    
+
     # Document Parsing (PDF/HTML/Markdown)
     "DocumentParser",
     "PDFParser",
@@ -64,14 +61,14 @@ __all__ = [
     "create_document_parser",
     "create_pdf_parser",
     "create_html_parser",
-    
+
     # Vector Store (pgvector)
     "PgVectorStore",
     "get_default_store",
-    
+
     # Retrieval
     "RagRetriever",
-    
+
     # Ingestion
     "IngestService",
 ]

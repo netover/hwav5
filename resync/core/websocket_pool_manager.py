@@ -3,7 +3,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -66,17 +66,17 @@ class WebSocketPoolStats:
     total_bytes_received: int = 0
     connection_errors: int = 0
     cleanup_cycles: int = 0
-    last_cleanup: Optional[datetime] = None
+    last_cleanup: datetime | None = None
 
 
 class WebSocketPoolManager:
     """Enhanced WebSocket connection manager with pooling capabilities."""
 
     def __init__(self):
-        self.connections: Dict[str, WebSocketConnectionInfo] = {}
+        self.connections: dict[str, WebSocketConnectionInfo] = {}
         self.stats = WebSocketPoolStats()
         self._lock = asyncio.Lock()
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
         self._initialized = False
         self._shutdown = False
 
@@ -418,14 +418,13 @@ class WebSocketPoolManager:
                 )
                 conn_info.mark_error()
                 return False
-            else:
-                logger.error(f"Runtime error during broadcast to {client_id}: {e}")
-                return False
+            logger.error(f"Runtime error during broadcast to {client_id}: {e}")
+            return False
         except Exception as e:
             logger.error(f"Unexpected error during broadcast to {client_id}: {e}")
             return False
 
-    async def broadcast_json(self, data: Dict[str, Any]) -> int:
+    async def broadcast_json(self, data: dict[str, Any]) -> int:
         """
         Send JSON data to all connected clients.
 
@@ -467,7 +466,7 @@ class WebSocketPoolManager:
         return successful_sends
 
     async def _send_json_with_error_handling(
-        self, client_id: str, data: Dict[str, Any]
+        self, client_id: str, data: dict[str, Any]
     ) -> bool:
         """Send JSON data with proper error handling and connection cleanup."""
         conn_info = self.connections.get(client_id)
@@ -506,18 +505,17 @@ class WebSocketPoolManager:
                 )
                 conn_info.mark_error()
                 return False
-            else:
-                logger.error(f"Runtime error during JSON broadcast to {client_id}: {e}")
-                return False
+            logger.error(f"Runtime error during JSON broadcast to {client_id}: {e}")
+            return False
         except Exception as e:
             logger.error(f"Unexpected error during JSON broadcast to {client_id}: {e}")
             return False
 
-    def get_connection_info(self, client_id: str) -> Optional[WebSocketConnectionInfo]:
+    def get_connection_info(self, client_id: str) -> WebSocketConnectionInfo | None:
         """Get information about a specific connection."""
         return self.connections.get(client_id)
 
-    def get_all_connections(self) -> Dict[str, WebSocketConnectionInfo]:
+    def get_all_connections(self) -> dict[str, WebSocketConnectionInfo]:
         """Get information about all connections."""
         return self.connections.copy()
 
@@ -567,7 +565,7 @@ class WebSocketPoolManager:
 
 
 # Global WebSocket pool manager instance
-_websocket_pool_manager: Optional[WebSocketPoolManager] = None
+_websocket_pool_manager: WebSocketPoolManager | None = None
 
 
 async def get_websocket_pool_manager() -> WebSocketPoolManager:

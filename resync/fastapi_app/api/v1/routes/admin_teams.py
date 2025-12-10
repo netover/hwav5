@@ -9,19 +9,17 @@ Provides REST endpoints for managing Teams integration:
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from resync.core.structured_logger import get_logger
 from resync.core.teams_integration import (
-    TeamsIntegration,
     TeamsNotification,
-    TeamsConfig,
     get_teams_integration,
     send_teams_alert,
 )
-from resync.core.structured_logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -35,13 +33,13 @@ router = APIRouter(prefix="/admin/teams", tags=["Teams Integration"])
 class TeamsConfigResponse(BaseModel):
     """Teams configuration response."""
     enabled: bool
-    channel_name: Optional[str] = None
+    channel_name: str | None = None
     bot_name: str
     enable_conversation_learning: bool
     enable_job_notifications: bool
-    monitored_tws_instances: List[str]
-    job_status_filters: List[str]
-    notification_types: List[str]
+    monitored_tws_instances: list[str]
+    job_status_filters: list[str]
+    notification_types: list[str]
     rate_limit_enabled: bool
     webhook_configured: bool
     webhook_masked: str
@@ -49,15 +47,15 @@ class TeamsConfigResponse(BaseModel):
 
 class TeamsConfigUpdate(BaseModel):
     """Teams configuration update request."""
-    enabled: Optional[bool] = None
-    channel_name: Optional[str] = None
-    bot_name: Optional[str] = None
-    enable_conversation_learning: Optional[bool] = None
-    enable_job_notifications: Optional[bool] = None
-    monitored_tws_instances: Optional[List[str]] = None
-    job_status_filters: Optional[List[str]] = None
-    notification_types: Optional[List[str]] = None
-    rate_limit_enabled: Optional[bool] = None
+    enabled: bool | None = None
+    channel_name: str | None = None
+    bot_name: str | None = None
+    enable_conversation_learning: bool | None = None
+    enable_job_notifications: bool | None = None
+    monitored_tws_instances: list[str] | None = None
+    job_status_filters: list[str] | None = None
+    notification_types: list[str] | None = None
+    rate_limit_enabled: bool | None = None
 
 
 class NotificationRequest(BaseModel):
@@ -65,17 +63,17 @@ class NotificationRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     message: str = Field(..., min_length=1, max_length=5000)
     severity: str = Field(default="info", pattern="^(info|success|warning|error|critical)$")
-    job_id: Optional[str] = None
-    instance_name: Optional[str] = None
-    additional_data: Dict[str, Any] = Field(default_factory=dict)
-    actions: List[Dict[str, str]] = Field(default_factory=list)
+    job_id: str | None = None
+    instance_name: str | None = None
+    additional_data: dict[str, Any] = Field(default_factory=dict)
+    actions: list[dict[str, str]] = Field(default_factory=list)
 
 
 class NotificationResponse(BaseModel):
     """Response from notification send."""
     success: bool
     message: str
-    notification_id: Optional[str] = None
+    notification_id: str | None = None
     timestamp: str
 
 
@@ -83,14 +81,14 @@ class TeamsHealthResponse(BaseModel):
     """Teams integration health check response."""
     enabled: bool
     configured: bool
-    webhook_accessible: Optional[bool] = None
-    webhook_error: Optional[str] = None
+    webhook_accessible: bool | None = None
+    webhook_error: str | None = None
     conversation_learning: bool
     job_notifications: bool
     monitored_instances: int
     rate_limiting: bool
     last_check: str
-    statistics: Dict[str, Any]
+    statistics: dict[str, Any]
 
 
 class TeamsStatsResponse(BaseModel):
@@ -100,7 +98,7 @@ class TeamsStatsResponse(BaseModel):
     retries: int
     rate_limit_waits: int
     success_rate: float
-    last_notification: Optional[str] = None
+    last_notification: str | None = None
 
 
 class TestNotificationResponse(BaseModel):
@@ -118,12 +116,12 @@ class TestNotificationResponse(BaseModel):
 async def get_teams_config():
     """
     Get current Teams integration configuration.
-    
+
     Returns the current configuration with webhook URL masked for security.
     """
     integration = await get_teams_integration()
     config = integration.config
-    
+
     return TeamsConfigResponse(
         enabled=config.enabled,
         channel_name=config.channel_name,
@@ -143,13 +141,13 @@ async def get_teams_config():
 async def update_teams_config(update: TeamsConfigUpdate):
     """
     Update Teams integration configuration.
-    
+
     Updates only the provided fields. Webhook URL cannot be updated via API
     for security reasons - use environment variables or config file.
     """
     integration = await get_teams_integration()
     config = integration.config
-    
+
     if update.enabled is not None:
         config.enabled = update.enabled
     if update.channel_name is not None:
@@ -168,9 +166,9 @@ async def update_teams_config(update: TeamsConfigUpdate):
         config.notification_types = update.notification_types
     if update.rate_limit_enabled is not None:
         config.rate_limit_enabled = update.rate_limit_enabled
-    
+
     logger.info("teams_config_updated", updates=update.dict(exclude_unset=True))
-    
+
     return TeamsConfigResponse(
         enabled=config.enabled,
         channel_name=config.channel_name,
@@ -190,16 +188,16 @@ async def update_teams_config(update: TeamsConfigUpdate):
 async def enable_teams_integration():
     """Enable Teams integration."""
     integration = await get_teams_integration()
-    
+
     if not integration.config.webhook_url:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot enable Teams integration: webhook URL not configured"
         )
-    
+
     integration.config.enabled = True
     logger.info("teams_integration_enabled")
-    
+
     return {"status": "enabled", "message": "Teams integration enabled successfully"}
 
 
@@ -209,7 +207,7 @@ async def disable_teams_integration():
     integration = await get_teams_integration()
     integration.config.enabled = False
     logger.info("teams_integration_disabled")
-    
+
     return {"status": "disabled", "message": "Teams integration disabled"}
 
 
@@ -217,23 +215,23 @@ async def disable_teams_integration():
 async def send_notification(request: NotificationRequest):
     """
     Send a notification to Microsoft Teams.
-    
+
     Sends an Adaptive Card notification to the configured Teams channel.
     """
     integration = await get_teams_integration()
-    
+
     if not integration.config.enabled:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Teams integration is not enabled"
         )
-    
+
     if not integration.config.webhook_url:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Teams webhook URL not configured"
         )
-    
+
     notification = TeamsNotification(
         title=request.title,
         message=request.message,
@@ -243,10 +241,10 @@ async def send_notification(request: NotificationRequest):
         additional_data=request.additional_data,
         actions=request.actions,
     )
-    
+
     try:
         success = await integration.send_notification(notification)
-        
+
         return NotificationResponse(
             success=success,
             message="Notification sent successfully" if success else "Notification failed",
@@ -265,25 +263,25 @@ async def send_notification(request: NotificationRequest):
 async def send_test_notification():
     """
     Send a test notification to verify Teams integration.
-    
+
     Sends a simple test message and returns timing information.
     """
     import time
-    
+
     integration = await get_teams_integration()
-    
+
     if not integration.config.webhook_url:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Teams webhook URL not configured"
         )
-    
+
     # Temporarily enable for test
     was_enabled = integration.config.enabled
     integration.config.enabled = True
-    
+
     start_time = time.time()
-    
+
     try:
         notification = TeamsNotification(
             title="🧪 Test Notification",
@@ -294,16 +292,16 @@ async def send_test_notification():
                 "Test Time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             },
         )
-        
+
         success = await integration.send_notification(notification)
         response_time = (time.time() - start_time) * 1000
-        
+
         return TestNotificationResponse(
             success=success,
             message="Test notification sent successfully!" if success else "Test notification failed",
             response_time_ms=round(response_time, 2),
         )
-    
+
     except Exception as e:
         response_time = (time.time() - start_time) * 1000
         logger.error("test_notification_error", error=str(e))
@@ -312,7 +310,7 @@ async def send_test_notification():
             message=f"Test failed: {str(e)}",
             response_time_ms=round(response_time, 2),
         )
-    
+
     finally:
         # Restore original state
         integration.config.enabled = was_enabled
@@ -322,12 +320,12 @@ async def send_test_notification():
 async def check_teams_health():
     """
     Perform health check on Teams integration.
-    
+
     Checks webhook accessibility and returns current status.
     """
     integration = await get_teams_integration()
     health = await integration.health_check()
-    
+
     return TeamsHealthResponse(**health)
 
 
@@ -335,12 +333,12 @@ async def check_teams_health():
 async def get_teams_stats():
     """
     Get Teams notification statistics.
-    
+
     Returns counts of sent/failed notifications and success rate.
     """
     integration = await get_teams_integration()
     stats = integration.get_stats()
-    
+
     return TeamsStatsResponse(
         notifications_sent=stats.get("notifications_sent", 0),
         notifications_failed=stats.get("notifications_failed", 0),
@@ -360,9 +358,9 @@ async def reset_teams_stats():
         "retries": 0,
         "rate_limit_waits": 0,
     }
-    
+
     logger.info("teams_stats_reset")
-    
+
     return {"status": "success", "message": "Statistics reset successfully"}
 
 
@@ -371,12 +369,12 @@ async def send_quick_alert(
     title: str,
     message: str,
     severity: str = "warning",
-    job_id: Optional[str] = None,
-    instance_name: Optional[str] = None,
+    job_id: str | None = None,
+    instance_name: str | None = None,
 ):
     """
     Quick endpoint to send an alert.
-    
+
     Convenience method for sending simple alerts without full notification object.
     """
     success = await send_teams_alert(
@@ -386,7 +384,7 @@ async def send_quick_alert(
         job_id=job_id,
         instance_name=instance_name,
     )
-    
+
     return {
         "success": success,
         "message": "Alert sent" if success else "Alert failed",
@@ -398,7 +396,7 @@ async def send_quick_alert(
 async def get_notification_filters():
     """Get available notification filters and their current settings."""
     integration = await get_teams_integration()
-    
+
     return {
         "job_status_filters": integration.config.job_status_filters,
         "notification_types": integration.config.notification_types,
@@ -410,26 +408,26 @@ async def get_notification_filters():
 
 @router.put("/filters")
 async def update_notification_filters(
-    job_status_filters: Optional[List[str]] = None,
-    notification_types: Optional[List[str]] = None,
-    monitored_instances: Optional[List[str]] = None,
+    job_status_filters: list[str] | None = None,
+    notification_types: list[str] | None = None,
+    monitored_instances: list[str] | None = None,
 ):
     """Update notification filters."""
     integration = await get_teams_integration()
-    
+
     if job_status_filters is not None:
         integration.config.job_status_filters = job_status_filters
     if notification_types is not None:
         integration.config.notification_types = notification_types
     if monitored_instances is not None:
         integration.config.monitored_tws_instances = monitored_instances
-    
+
     logger.info(
         "teams_filters_updated",
         job_status_filters=integration.config.job_status_filters,
         notification_types=integration.config.notification_types,
     )
-    
+
     return {
         "status": "updated",
         "job_status_filters": integration.config.job_status_filters,

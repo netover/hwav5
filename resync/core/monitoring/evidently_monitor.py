@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import structlog
 from pydantic import BaseModel, Field
@@ -42,7 +42,7 @@ try:
         DatasetDriftMetric,
     )
     from evidently.report import Report
-    
+
     EVIDENTLY_AVAILABLE = True
     logger.info("evidently_available", version="0.4+")
 except ImportError:
@@ -57,7 +57,7 @@ except ImportError:
 
 class DriftType(str, Enum):
     """Types of drift that can be monitored."""
-    
+
     DATA = "data"           # Input query patterns
     PREDICTION = "prediction"  # Model output patterns
     TARGET = "target"       # User feedback/outcomes
@@ -66,7 +66,7 @@ class DriftType(str, Enum):
 
 class MonitoringSchedule(str, Enum):
     """Monitoring schedule options."""
-    
+
     HOURLY = "hourly"
     EVERY_4_HOURS = "every_4_hours"
     DAILY = "daily"
@@ -76,7 +76,7 @@ class MonitoringSchedule(str, Enum):
 
 class AlertSeverity(str, Enum):
     """Alert severity levels."""
-    
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -86,7 +86,7 @@ class AlertSeverity(str, Enum):
 @dataclass
 class DriftAlert:
     """Represents a drift detection alert."""
-    
+
     alert_id: str
     drift_type: DriftType
     severity: AlertSeverity
@@ -95,9 +95,9 @@ class DriftAlert:
     threshold: float
     message: str
     timestamp: datetime = field(default_factory=datetime.utcnow)
-    details: Dict[str, Any] = field(default_factory=dict)
-    
-    def to_dict(self) -> Dict[str, Any]:
+    details: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "alert_id": self.alert_id,
             "drift_type": self.drift_type.value,
@@ -113,7 +113,7 @@ class DriftAlert:
 
 class ResourceLimits(BaseModel):
     """Resource limits for monitoring jobs."""
-    
+
     max_cpu_percent: float = Field(
         default=25.0,
         ge=5.0,
@@ -142,12 +142,12 @@ class ResourceLimits(BaseModel):
 
 class MonitoringConfig(BaseModel):
     """Configuration for AI monitoring."""
-    
+
     enabled: bool = Field(
         default=True,
         description="Enable/disable monitoring"
     )
-    
+
     # Drift detection settings
     data_drift_enabled: bool = Field(
         default=True,
@@ -161,7 +161,7 @@ class MonitoringConfig(BaseModel):
         default=True,
         description="Monitor target/feedback drift"
     )
-    
+
     # Thresholds
     drift_threshold: float = Field(
         default=0.15,
@@ -175,7 +175,7 @@ class MonitoringConfig(BaseModel):
         le=0.5,
         description="Alert trigger threshold"
     )
-    
+
     # Scheduling
     schedule: MonitoringSchedule = Field(
         default=MonitoringSchedule.DAILY,
@@ -186,13 +186,13 @@ class MonitoringConfig(BaseModel):
         pattern=r"^\d{2}:\d{2}$",
         description="Time to run scheduled monitoring (HH:MM)"
     )
-    
+
     # Resource limits
     resource_limits: ResourceLimits = Field(
         default_factory=ResourceLimits,
         description="Resource usage limits"
     )
-    
+
     # Data retention
     reference_window_days: int = Field(
         default=7,
@@ -206,7 +206,7 @@ class MonitoringConfig(BaseModel):
         le=168,
         description="Hours of current data to compare"
     )
-    
+
     # Storage
     reports_path: str = Field(
         default="data/evidently_reports",
@@ -218,7 +218,7 @@ class MonitoringConfig(BaseModel):
         le=365,
         description="Maximum reports to retain"
     )
-    
+
     class Config:
         use_enum_values = True
 
@@ -234,14 +234,14 @@ DEFAULT_MONITORING_CONFIG = MonitoringConfig()
 class MonitoringDataCollector:
     """
     Collects and stores data for drift monitoring.
-    
+
     Stores:
     - Query embeddings (for semantic drift)
     - Query metadata (length, intent, entities)
     - Response metadata (length, confidence, latency)
     - User feedback (ratings, actions taken)
     """
-    
+
     def __init__(
         self,
         storage_path: str = "data/monitoring_data",
@@ -250,22 +250,22 @@ class MonitoringDataCollector:
         self.storage_path = Path(storage_path)
         self.storage_path.mkdir(parents=True, exist_ok=True)
         self.max_records = max_records
-        
+
         # In-memory buffer
-        self._query_buffer: List[Dict[str, Any]] = []
-        self._response_buffer: List[Dict[str, Any]] = []
-        self._feedback_buffer: List[Dict[str, Any]] = []
-        
+        self._query_buffer: list[dict[str, Any]] = []
+        self._response_buffer: list[dict[str, Any]] = []
+        self._feedback_buffer: list[dict[str, Any]] = []
+
         self._lock = threading.Lock()
-    
+
     def record_query(
         self,
         query_id: str,
         query_text: str,
-        query_embedding: Optional[List[float]] = None,
-        intent: Optional[str] = None,
-        entities: Optional[Dict[str, List[str]]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        query_embedding: list[float] | None = None,
+        intent: str | None = None,
+        entities: dict[str, list[str]] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Record a query for monitoring."""
         record = {
@@ -280,27 +280,27 @@ class MonitoringDataCollector:
             "has_error_entity": bool(entities and entities.get("error_codes")),
             **(metadata or {}),
         }
-        
+
         # Store embedding separately (large)
         if query_embedding:
             record["embedding_dim"] = len(query_embedding)
             # Only store embedding hash for drift detection
             record["embedding_hash"] = hash(tuple(query_embedding[:10]))
-        
+
         with self._lock:
             self._query_buffer.append(record)
             if len(self._query_buffer) >= 1000:
                 self._flush_queries()
-    
+
     def record_response(
         self,
         query_id: str,
         response_text: str,
-        specialists_used: List[str],
+        specialists_used: list[str],
         confidence: float,
         latency_ms: int,
         success: bool,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Record a response for monitoring."""
         record = {
@@ -314,19 +314,19 @@ class MonitoringDataCollector:
             "success": success,
             **(metadata or {}),
         }
-        
+
         with self._lock:
             self._response_buffer.append(record)
             if len(self._response_buffer) >= 1000:
                 self._flush_responses()
-    
+
     def record_feedback(
         self,
         query_id: str,
-        rating: Optional[int] = None,  # 1-5
-        helpful: Optional[bool] = None,
-        action_taken: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        rating: int | None = None,  # 1-5
+        helpful: bool | None = None,
+        action_taken: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Record user feedback for monitoring."""
         record = {
@@ -337,78 +337,78 @@ class MonitoringDataCollector:
             "action_taken": action_taken,
             **(metadata or {}),
         }
-        
+
         with self._lock:
             self._feedback_buffer.append(record)
             if len(self._feedback_buffer) >= 500:
                 self._flush_feedback()
-    
+
     def _flush_queries(self) -> None:
         """Flush query buffer to storage."""
         if not self._query_buffer:
             return
-        
+
         file_path = self.storage_path / f"queries_{datetime.now().strftime('%Y%m%d_%H')}.jsonl"
         with open(file_path, "a") as f:
             for record in self._query_buffer:
                 f.write(json.dumps(record) + "\n")
-        
+
         self._query_buffer.clear()
-    
+
     def _flush_responses(self) -> None:
         """Flush response buffer to storage."""
         if not self._response_buffer:
             return
-        
+
         file_path = self.storage_path / f"responses_{datetime.now().strftime('%Y%m%d_%H')}.jsonl"
         with open(file_path, "a") as f:
             for record in self._response_buffer:
                 f.write(json.dumps(record) + "\n")
-        
+
         self._response_buffer.clear()
-    
+
     def _flush_feedback(self) -> None:
         """Flush feedback buffer to storage."""
         if not self._feedback_buffer:
             return
-        
+
         file_path = self.storage_path / f"feedback_{datetime.now().strftime('%Y%m%d_%H')}.jsonl"
         with open(file_path, "a") as f:
             for record in self._feedback_buffer:
                 f.write(json.dumps(record) + "\n")
-        
+
         self._feedback_buffer.clear()
-    
+
     def flush_all(self) -> None:
         """Flush all buffers."""
         with self._lock:
             self._flush_queries()
             self._flush_responses()
             self._flush_feedback()
-    
+
     def get_data(
         self,
         data_type: str,
         start_date: datetime,
         end_date: datetime,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get stored data for a date range.
-        
+
         Args:
             data_type: "queries", "responses", or "feedback"
             start_date: Start of range
             end_date: End of range
-            
+
         Returns:
             List of records
         """
         # Flush buffers first
         self.flush_all()
-        
+
         records = []
         pattern = f"{data_type}_*.jsonl"
-        
+
         for file_path in sorted(self.storage_path.glob(pattern)):
             # Check if file is in date range
             file_date_str = file_path.stem.split("_")[1]
@@ -418,7 +418,7 @@ class MonitoringDataCollector:
                     continue
             except ValueError:
                 continue
-            
+
             with open(file_path) as f:
                 for line in f:
                     try:
@@ -428,7 +428,7 @@ class MonitoringDataCollector:
                             records.append(record)
                     except (json.JSONDecodeError, KeyError):
                         continue
-        
+
         return records
 
 
@@ -440,7 +440,7 @@ class DriftDetector:
     """
     Detects drift in AI system data using Evidently.
     """
-    
+
     def __init__(
         self,
         config: MonitoringConfig,
@@ -450,165 +450,165 @@ class DriftDetector:
         self.data_collector = data_collector
         self.reports_path = Path(config.reports_path)
         self.reports_path.mkdir(parents=True, exist_ok=True)
-    
+
     def detect_data_drift(
         self,
-        reference_data: List[Dict],
-        current_data: List[Dict],
-    ) -> Tuple[bool, float, Optional[Any]]:
+        reference_data: list[dict],
+        current_data: list[dict],
+    ) -> tuple[bool, float, Any | None]:
         """
         Detect drift in query/input data.
-        
+
         Returns:
             (drift_detected, drift_score, report)
         """
         if not EVIDENTLY_AVAILABLE:
             logger.warning("evidently_not_available", operation="data_drift")
             return False, 0.0, None
-        
+
         if len(reference_data) < 50 or len(current_data) < 20:
             logger.info("insufficient_data_for_drift", ref=len(reference_data), cur=len(current_data))
             return False, 0.0, None
-        
+
         try:
             # Convert to DataFrames
             ref_df = pd.DataFrame(reference_data)
             cur_df = pd.DataFrame(current_data)
-            
+
             # Select numeric columns for drift detection
             numeric_cols = ["query_length", "word_count", "entity_count"]
             available_cols = [c for c in numeric_cols if c in ref_df.columns and c in cur_df.columns]
-            
+
             if not available_cols:
                 return False, 0.0, None
-            
+
             # Create drift report
             report = Report(metrics=[
                 DatasetDriftMetric(),
                 DataDriftTable(),
             ])
-            
+
             report.run(
                 reference_data=ref_df[available_cols],
                 current_data=cur_df[available_cols],
             )
-            
+
             # Extract results
             result = report.as_dict()
             drift_score = result.get("metrics", [{}])[0].get("result", {}).get("drift_share", 0.0)
             drift_detected = drift_score >= self.config.drift_threshold
-            
+
             # Save report
             report_path = self.reports_path / f"data_drift_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
             report.save_html(str(report_path))
-            
+
             return drift_detected, drift_score, report
-            
+
         except Exception as e:
             logger.error("data_drift_detection_error", error=str(e))
             return False, 0.0, None
-    
+
     def detect_prediction_drift(
         self,
-        reference_data: List[Dict],
-        current_data: List[Dict],
-    ) -> Tuple[bool, float, Optional[Any]]:
+        reference_data: list[dict],
+        current_data: list[dict],
+    ) -> tuple[bool, float, Any | None]:
         """
         Detect drift in model predictions/responses.
         """
         if not EVIDENTLY_AVAILABLE:
             return False, 0.0, None
-        
+
         if len(reference_data) < 50 or len(current_data) < 20:
             return False, 0.0, None
-        
+
         try:
             ref_df = pd.DataFrame(reference_data)
             cur_df = pd.DataFrame(current_data)
-            
+
             # Response metrics
             response_cols = ["response_length", "confidence", "latency_ms", "specialists_count"]
             available_cols = [c for c in response_cols if c in ref_df.columns and c in cur_df.columns]
-            
+
             if not available_cols:
                 return False, 0.0, None
-            
+
             report = Report(metrics=[
                 DatasetDriftMetric(),
             ])
-            
+
             report.run(
                 reference_data=ref_df[available_cols],
                 current_data=cur_df[available_cols],
             )
-            
+
             result = report.as_dict()
             drift_score = result.get("metrics", [{}])[0].get("result", {}).get("drift_share", 0.0)
             drift_detected = drift_score >= self.config.drift_threshold
-            
+
             report_path = self.reports_path / f"prediction_drift_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
             report.save_html(str(report_path))
-            
+
             return drift_detected, drift_score, report
-            
+
         except Exception as e:
             logger.error("prediction_drift_detection_error", error=str(e))
             return False, 0.0, None
-    
+
     def detect_target_drift(
         self,
-        reference_data: List[Dict],
-        current_data: List[Dict],
-    ) -> Tuple[bool, float, Optional[Any]]:
+        reference_data: list[dict],
+        current_data: list[dict],
+    ) -> tuple[bool, float, Any | None]:
         """
         Detect drift in user feedback/outcomes.
         """
         if not EVIDENTLY_AVAILABLE:
             return False, 0.0, None
-        
+
         if len(reference_data) < 30 or len(current_data) < 10:
             return False, 0.0, None
-        
+
         try:
             ref_df = pd.DataFrame(reference_data)
             cur_df = pd.DataFrame(current_data)
-            
+
             # Convert boolean to int for analysis
             for df in [ref_df, cur_df]:
                 if "helpful" in df.columns:
                     df["helpful_int"] = df["helpful"].map({True: 1, False: 0, None: -1})
-            
+
             feedback_cols = ["rating", "helpful_int"]
             available_cols = [c for c in feedback_cols if c in ref_df.columns and c in cur_df.columns]
-            
+
             if not available_cols:
                 return False, 0.0, None
-            
+
             # Filter out null values
             ref_df = ref_df.dropna(subset=available_cols)
             cur_df = cur_df.dropna(subset=available_cols)
-            
+
             if len(ref_df) < 10 or len(cur_df) < 5:
                 return False, 0.0, None
-            
+
             report = Report(metrics=[
                 DatasetDriftMetric(),
             ])
-            
+
             report.run(
                 reference_data=ref_df[available_cols],
                 current_data=cur_df[available_cols],
             )
-            
+
             result = report.as_dict()
             drift_score = result.get("metrics", [{}])[0].get("result", {}).get("drift_share", 0.0)
             drift_detected = drift_score >= self.config.drift_threshold
-            
+
             report_path = self.reports_path / f"target_drift_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
             report.save_html(str(report_path))
-            
+
             return drift_detected, drift_score, report
-            
+
         except Exception as e:
             logger.error("target_drift_detection_error", error=str(e))
             return False, 0.0, None
@@ -621,82 +621,82 @@ class DriftDetector:
 class AIMonitoringService:
     """
     Main service for AI monitoring and drift detection.
-    
+
     Features:
     - Scheduled drift detection
     - Resource-limited execution
     - Alert generation
     - Report storage
     """
-    
+
     def __init__(
         self,
-        config: Optional[MonitoringConfig] = None,
+        config: MonitoringConfig | None = None,
     ):
         self.config = config or DEFAULT_MONITORING_CONFIG
         self.data_collector = MonitoringDataCollector(
             storage_path=str(Path(self.config.reports_path).parent / "monitoring_data")
         )
         self.drift_detector = DriftDetector(self.config, self.data_collector)
-        
-        self._alerts: List[DriftAlert] = []
-        self._last_run: Optional[datetime] = None
-        self._scheduler_task: Optional[asyncio.Task] = None
+
+        self._alerts: list[DriftAlert] = []
+        self._last_run: datetime | None = None
+        self._scheduler_task: asyncio.Task | None = None
         self._running = False
-        
+
         logger.info(
             "ai_monitoring_service_initialized",
             enabled=self.config.enabled,
             schedule=self.config.schedule,
             evidently_available=EVIDENTLY_AVAILABLE,
         )
-    
+
     async def start(self) -> None:
         """Start the monitoring service."""
         if not self.config.enabled:
             logger.info("monitoring_disabled")
             return
-        
+
         if self._running:
             return
-        
+
         self._running = True
-        
+
         if self.config.schedule != MonitoringSchedule.MANUAL:
             self._scheduler_task = asyncio.create_task(self._scheduler_loop())
             logger.info("monitoring_scheduler_started", schedule=self.config.schedule)
-    
+
     async def stop(self) -> None:
         """Stop the monitoring service."""
         self._running = False
-        
+
         if self._scheduler_task:
             self._scheduler_task.cancel()
             try:
                 await self._scheduler_task
             except asyncio.CancelledError:
                 pass
-        
+
         # Flush any remaining data
         self.data_collector.flush_all()
         logger.info("monitoring_service_stopped")
-    
+
     async def _scheduler_loop(self) -> None:
         """Run scheduled monitoring."""
         while self._running:
             try:
                 interval = self._get_schedule_interval()
                 await asyncio.sleep(interval)
-                
+
                 if self._running:
                     await self.run_monitoring()
-                    
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error("scheduler_error", error=str(e))
                 await asyncio.sleep(60)  # Wait before retry
-    
+
     def _get_schedule_interval(self) -> int:
         """Get interval in seconds based on schedule."""
         intervals = {
@@ -706,21 +706,21 @@ class AIMonitoringService:
             MonitoringSchedule.WEEKLY: 604800,
         }
         return intervals.get(self.config.schedule, 86400)
-    
-    async def run_monitoring(self) -> Dict[str, Any]:
+
+    async def run_monitoring(self) -> dict[str, Any]:
         """
         Run a complete monitoring cycle.
-        
+
         Returns:
             Results of drift detection
         """
         start_time = time.time()
-        
+
         logger.info("monitoring_run_started")
-        
+
         # Apply resource limits
         self._apply_resource_limits()
-        
+
         results = {
             "timestamp": datetime.utcnow().isoformat(),
             "data_drift": None,
@@ -729,7 +729,7 @@ class AIMonitoringService:
             "alerts": [],
             "duration_seconds": 0,
         }
-        
+
         try:
             # Define time windows
             now = datetime.utcnow()
@@ -737,12 +737,12 @@ class AIMonitoringService:
             reference_end = now - timedelta(hours=self.config.current_window_hours)
             current_start = reference_end
             current_end = now
-            
+
             # Data drift
             if self.config.data_drift_enabled:
                 ref_queries = self.data_collector.get_data("queries", reference_start, reference_end)
                 cur_queries = self.data_collector.get_data("queries", current_start, current_end)
-                
+
                 detected, score, _ = self.drift_detector.detect_data_drift(ref_queries, cur_queries)
                 results["data_drift"] = {
                     "detected": detected,
@@ -750,15 +750,15 @@ class AIMonitoringService:
                     "reference_count": len(ref_queries),
                     "current_count": len(cur_queries),
                 }
-                
+
                 if detected and score >= self.config.alert_threshold:
                     self._create_alert(DriftType.DATA, "data_drift_score", score)
-            
+
             # Prediction drift
             if self.config.prediction_drift_enabled:
                 ref_responses = self.data_collector.get_data("responses", reference_start, reference_end)
                 cur_responses = self.data_collector.get_data("responses", current_start, current_end)
-                
+
                 detected, score, _ = self.drift_detector.detect_prediction_drift(ref_responses, cur_responses)
                 results["prediction_drift"] = {
                     "detected": detected,
@@ -766,15 +766,15 @@ class AIMonitoringService:
                     "reference_count": len(ref_responses),
                     "current_count": len(cur_responses),
                 }
-                
+
                 if detected and score >= self.config.alert_threshold:
                     self._create_alert(DriftType.PREDICTION, "prediction_drift_score", score)
-            
+
             # Target drift
             if self.config.target_drift_enabled:
                 ref_feedback = self.data_collector.get_data("feedback", reference_start, reference_end)
                 cur_feedback = self.data_collector.get_data("feedback", current_start, current_end)
-                
+
                 detected, score, _ = self.drift_detector.detect_target_drift(ref_feedback, cur_feedback)
                 results["target_drift"] = {
                     "detected": detected,
@@ -782,44 +782,44 @@ class AIMonitoringService:
                     "reference_count": len(ref_feedback),
                     "current_count": len(cur_feedback),
                 }
-                
+
                 if detected and score >= self.config.alert_threshold:
                     self._create_alert(DriftType.TARGET, "target_drift_score", score)
-            
+
             results["alerts"] = [a.to_dict() for a in self._alerts[-10:]]
-            
+
         except Exception as e:
             logger.error("monitoring_run_error", error=str(e))
             results["error"] = str(e)
-        
+
         results["duration_seconds"] = time.time() - start_time
         self._last_run = datetime.utcnow()
-        
+
         logger.info(
             "monitoring_run_completed",
             duration=results["duration_seconds"],
             alerts=len(results["alerts"]),
         )
-        
+
         return results
-    
+
     def _apply_resource_limits(self) -> None:
         """Apply resource limits before running monitoring."""
         limits = self.config.resource_limits
-        
+
         try:
             # Set nice level (lower priority)
             os.nice(limits.nice_level)
         except (OSError, AttributeError):
             pass
-        
+
         try:
             # Set memory limit
             mem_limit = limits.max_memory_mb * 1024 * 1024
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         except (ValueError, AttributeError):
             pass
-    
+
     def _create_alert(
         self,
         drift_type: DriftType,
@@ -832,7 +832,7 @@ class AIMonitoringService:
             else AlertSeverity.ERROR if value >= 0.35
             else AlertSeverity.WARNING
         )
-        
+
         alert = DriftAlert(
             alert_id=f"alert_{int(time.time())}_{drift_type.value}",
             drift_type=drift_type,
@@ -842,9 +842,9 @@ class AIMonitoringService:
             threshold=self.config.alert_threshold,
             message=f"{drift_type.value.title()} drift detected: {metric_name} = {value:.3f} (threshold: {self.config.alert_threshold})",
         )
-        
+
         self._alerts.append(alert)
-        
+
         logger.warning(
             "drift_alert_created",
             alert_id=alert.alert_id,
@@ -852,28 +852,28 @@ class AIMonitoringService:
             severity=severity.value,
             value=value,
         )
-        
+
         return alert
-    
+
     def get_alerts(
         self,
-        since: Optional[datetime] = None,
-        drift_type: Optional[DriftType] = None,
-        severity: Optional[AlertSeverity] = None,
-    ) -> List[DriftAlert]:
+        since: datetime | None = None,
+        drift_type: DriftType | None = None,
+        severity: AlertSeverity | None = None,
+    ) -> list[DriftAlert]:
         """Get alerts with optional filtering."""
         alerts = self._alerts
-        
+
         if since:
             alerts = [a for a in alerts if a.timestamp >= since]
         if drift_type:
             alerts = [a for a in alerts if a.drift_type == drift_type]
         if severity:
             alerts = [a for a in alerts if a.severity == severity]
-        
+
         return alerts
-    
-    def get_status(self) -> Dict[str, Any]:
+
+    def get_status(self) -> dict[str, Any]:
         """Get monitoring service status."""
         return {
             "enabled": self.config.enabled,
@@ -890,31 +890,31 @@ class AIMonitoringService:
 # SINGLETON AND FACTORY
 # ============================================================================
 
-_monitoring_service_instance: Optional[AIMonitoringService] = None
+_monitoring_service_instance: AIMonitoringService | None = None
 
 
-def get_monitoring_service() -> Optional[AIMonitoringService]:
+def get_monitoring_service() -> AIMonitoringService | None:
     """Get the singleton monitoring service instance."""
     return _monitoring_service_instance
 
 
 async def init_monitoring_service(
-    config: Optional[MonitoringConfig] = None,
+    config: MonitoringConfig | None = None,
 ) -> AIMonitoringService:
     """
     Initialize and start the monitoring service.
-    
+
     Args:
         config: Monitoring configuration
-        
+
     Returns:
         Initialized AIMonitoringService
     """
     global _monitoring_service_instance
-    
+
     _monitoring_service_instance = AIMonitoringService(config=config)
     await _monitoring_service_instance.start()
-    
+
     return _monitoring_service_instance
 
 

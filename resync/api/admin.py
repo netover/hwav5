@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
@@ -62,11 +62,11 @@ class TeamsConfigUpdate(BaseModel):
 class AdminConfigResponse(BaseModel):
     """Admin configuration response model."""
 
-    teams: Dict[str, Any] = Field(
+    teams: dict[str, Any] = Field(
         default_factory=dict, description="Teams integration configuration"
     )
-    tws: Dict[str, Any] = Field(default_factory=dict, description="TWS configuration")
-    system: Dict[str, Any] = Field(
+    tws: dict[str, Any] = Field(default_factory=dict, description="TWS configuration")
+    system: dict[str, Any] = Field(
         default_factory=dict, description="System configuration"
     )
     last_updated: str = Field(
@@ -78,7 +78,7 @@ class AdminConfigResponse(BaseModel):
 class TeamsHealthResponse(BaseModel):
     """Teams integration health check response."""
 
-    status: Dict[str, Any] = Field(
+    status: dict[str, Any] = Field(
         default_factory=dict, description="Teams integration status"
     )
     timestamp: str = Field(
@@ -291,7 +291,7 @@ async def test_teams_notification(
     request: Request,
     message: str = "Test notification from Resync",
     teams_integration: TeamsIntegration = teams_integration_dependency,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Send test notification to Microsoft Teams.
 
     Sends a test notification to verify Teams integration is working correctly.
@@ -319,12 +319,11 @@ async def test_teams_notification(
                 "message": "Test notification sent successfully",
                 "timestamp": datetime.now().isoformat(),
             }
-        else:
-            return {
-                "status": "error",
-                "message": "Failed to send test notification",
-                "timestamp": datetime.now().isoformat(),
-            }
+        return {
+            "status": "error",
+            "message": "Failed to send test notification",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     except Exception as e:
         logger.error(f"Failed to send test Teams notification: {e}", exc_info=True)
@@ -343,7 +342,7 @@ async def get_admin_status(
     request: Request,
     tws_client: ITWSClient = tws_client_dependency,
     teams_integration: TeamsIntegration = teams_integration_dependency,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get overall system status for administration.
 
     Returns comprehensive status information for system administration.
@@ -529,7 +528,7 @@ async def get_system_logs(
     lines: int = 100,
     level: str | None = None,
     search: str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Retrieve system logs with filtering options.
 
     Args:
@@ -541,7 +540,6 @@ async def get_system_logs(
         Dictionary containing log entries and metadata
     """
     try:
-        pass
 
         # Limit maximum lines
         lines = min(lines, 1000)
@@ -556,7 +554,7 @@ async def get_system_logs(
             }
 
         # Read log file
-        with open(log_file, "r", encoding="utf-8") as f:
+        with open(log_file, encoding="utf-8") as f:
             all_lines = f.readlines()
 
         # Get last N lines
@@ -593,7 +591,7 @@ async def get_system_logs(
 async def clear_cache(
     request: Request,
     cache_type: str = "all",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Clear application cache.
 
     Args:
@@ -642,7 +640,7 @@ async def clear_cache(
     summary="Create Configuration Backup",
     dependencies=[Depends(verify_admin_credentials)],
 )
-async def create_backup(request: Request) -> Dict[str, Any]:
+async def create_backup(request: Request) -> dict[str, Any]:
     """Create a backup of current configuration.
 
     Returns:
@@ -678,7 +676,7 @@ async def create_backup(request: Request) -> Dict[str, Any]:
     summary="List Configuration Backups",
     dependencies=[Depends(verify_admin_credentials)],
 )
-async def list_backups(request: Request) -> Dict[str, Any]:
+async def list_backups(request: Request) -> dict[str, Any]:
     """List all available configuration backups.
 
     Returns:
@@ -719,7 +717,7 @@ async def list_backups(request: Request) -> Dict[str, Any]:
     summary="Restore Configuration from Backup",
     dependencies=[Depends(verify_admin_credentials)],
 )
-async def restore_backup(request: Request, backup_filename: str) -> Dict[str, Any]:
+async def restore_backup(request: Request, backup_filename: str) -> dict[str, Any]:
     """Restore configuration from a specific backup file.
 
     Args:
@@ -786,7 +784,7 @@ class SystemHealthResponse(BaseModel):
     """Complete system health response."""
 
     overall_status: str = Field(description="Overall system status")
-    components: Dict[str, ComponentHealth] = Field(
+    components: dict[str, ComponentHealth] = Field(
         default_factory=dict, description="Individual component health"
     )
     timestamp: str = Field(
@@ -816,7 +814,7 @@ async def get_system_health(request: Request) -> SystemHealthResponse:
     """
     import time
 
-    components: Dict[str, ComponentHealth] = {}
+    components: dict[str, ComponentHealth] = {}
     overall_healthy = True
 
     # 1. Check Database (SQLite/ContextStore)
@@ -915,11 +913,11 @@ async def get_system_health(request: Request) -> SystemHealthResponse:
         # pgvector is now part of PostgreSQL - check vector extension
         try:
             from resync.core.vector import get_vector_service
-            
+
             vector_service = await get_vector_service()
             stats = await vector_service.get_collection_stats("tws_docs")
             latency = (time.perf_counter() - start) * 1000
-            
+
             components["rag"] = ComponentHealth(
                 status="healthy",
                 latency_ms=round(latency, 2),
@@ -1043,7 +1041,7 @@ async def get_admin_audit_logs(
     limit: int = 50,
     offset: int = 0,
     action: str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get audit logs for admin dashboard.
 
     This endpoint proxies to the main audit logs endpoint, providing

@@ -5,13 +5,13 @@ Provides robust detection of stream encoding capabilities and safe symbol render
 Uses only standard library, avoiding external dependencies.
 """
 
-from typing import Optional, TextIO
-
 import logging
+from typing import TextIO
+
 logger = logging.getLogger(__name__)
 
 
-def _get_encoding(stream: Optional[TextIO]) -> Optional[str]:
+def _get_encoding(stream: TextIO | None) -> str | None:
     """Safely retrieve encoding from a text stream, handling edge cases."""
     try:
         return getattr(stream, "encoding", None) if stream else None
@@ -21,7 +21,7 @@ def _get_encoding(stream: Optional[TextIO]) -> Optional[str]:
 
 
 def can_encode(
-    text: str, stream: Optional[TextIO] = None, encoding: Optional[str] = None
+    text: str, stream: TextIO | None = None, encoding: str | None = None
 ) -> bool:
     """
     Check if text can be encoded with the given encoding/stream.
@@ -38,7 +38,7 @@ def can_encode(
 
 
 def symbol(
-    ok: bool, stream: Optional[TextIO] = None, encoding: Optional[str] = None
+    ok: bool, stream: TextIO | None = None, encoding: str | None = None
 ) -> str:
     """
     Return appropriate status symbol based on stream encoding support.

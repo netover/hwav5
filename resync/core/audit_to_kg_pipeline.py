@@ -22,11 +22,10 @@ import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
 from enum import Enum
+from typing import Any
 
 from resync.core.structured_logger import get_logger
-from resync.settings import settings
 
 logger = get_logger(__name__)
 
@@ -50,8 +49,8 @@ class AuditFinding:
     agent_response: str
     reason: str
     confidence: float
-    error_type: Optional[ErrorType] = None
-    extracted_entities: Dict[str, List[str]] = field(default_factory=dict)
+    error_type: ErrorType | None = None
+    extracted_entities: dict[str, list[str]] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.utcnow)
 
 
@@ -71,7 +70,7 @@ class ErrorTriplet:
 class AuditToKGPipeline:
     """
     Pipeline that converts audit findings into Knowledge Graph knowledge.
-    
+
     Process:
     1. Receive audit finding
     2. Classify error type
@@ -80,7 +79,7 @@ class AuditToKGPipeline:
     5. Add to KG as negative knowledge
     6. Notify RAG for document penalization
     """
-    
+
     # Error patterns for classification
     ERROR_PATTERNS = {
         ErrorType.TECHNICAL_INACCURACY: [
@@ -110,7 +109,7 @@ class AuditToKGPipeline:
             r"(?:non[\s-]?existent|fictional)",
         ],
     }
-    
+
     # TWS-specific entity patterns
     ENTITY_PATTERNS = {
         "job": [
@@ -131,25 +130,25 @@ class AuditToKGPipeline:
             r"(?:run|execute|submit)\s+['\"]?([A-Za-z0-9_]+)['\"]?",
         ],
     }
-    
+
     def __init__(self):
         self._kg = None
         self._rag_feedback = None
         self._llm = None
         self._processing_lock = asyncio.Lock()
-        
+
         # Statistics
         self._processed_count = 0
         self._triplets_created = 0
-        self._errors_by_type: Dict[ErrorType, int] = {}
-    
+        self._errors_by_type: dict[ErrorType, int] = {}
+
     async def _get_kg(self):
         """Get Knowledge Graph instance."""
         if self._kg is None:
             from resync.core.knowledge_graph.graph import get_kg_instance
             self._kg = await get_kg_instance()
         return self._kg
-    
+
     async def _get_rag_feedback(self):
         """Get RAG feedback store."""
         if self._rag_feedback is None:
@@ -157,18 +156,18 @@ class AuditToKGPipeline:
             self._rag_feedback = get_feedback_store()
             await self._rag_feedback.initialize()
         return self._rag_feedback
-    
+
     async def _get_llm(self):
         """Get LLM client."""
         if self._llm is None:
             from resync.services.llm_service import get_llm_service
             self._llm = get_llm_service()
         return self._llm
-    
+
     # =========================================================================
     # MAIN PIPELINE
     # =========================================================================
-    
+
     async def process_audit_finding(
         self,
         memory_id: str,
@@ -176,17 +175,17 @@ class AuditToKGPipeline:
         agent_response: str,
         reason: str,
         confidence: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Process an audit finding and convert to KG knowledge.
-        
+
         Args:
             memory_id: ID of the audited memory
             user_query: Original user query
             agent_response: Agent's response that was flagged
             reason: Reason for flagging
             confidence: Audit confidence (0.0-1.0)
-            
+
         Returns:
             Processing result with created triplets and actions
         """
@@ -198,31 +197,31 @@ class AuditToKGPipeline:
                 reason=reason,
                 confidence=confidence,
             )
-            
+
             # Step 1: Classify error type
             finding.error_type = self._classify_error_type(reason)
-            
+
             # Step 2: Extract entities
             finding.extracted_entities = self._extract_entities(
                 user_query + " " + agent_response + " " + reason
             )
-            
+
             # Step 3: Generate triplets
             triplets = await self._generate_error_triplets(finding)
-            
+
             # Step 4: Add to KG
             kg_results = await self._add_triplets_to_kg(triplets)
-            
+
             # Step 5: Notify RAG
             rag_results = await self._penalize_rag_documents(finding)
-            
+
             # Update statistics
             self._processed_count += 1
             self._triplets_created += len(triplets)
             self._errors_by_type[finding.error_type] = (
                 self._errors_by_type.get(finding.error_type, 0) + 1
             )
-            
+
             logger.info(
                 "audit_finding_processed",
                 memory_id=memory_id,
@@ -230,7 +229,7 @@ class AuditToKGPipeline:
                 triplets_created=len(triplets),
                 entities_found=sum(len(v) for v in finding.extracted_entities.values()),
             )
-            
+
             return {
                 "memory_id": memory_id,
                 "error_type": finding.error_type.value if finding.error_type else None,
@@ -240,31 +239,31 @@ class AuditToKGPipeline:
                 "kg_results": kg_results,
                 "rag_penalized": rag_results,
             }
-    
+
     # =========================================================================
     # ERROR CLASSIFICATION
     # =========================================================================
-    
+
     def _classify_error_type(self, reason: str) -> ErrorType:
         """Classify error type based on audit reason."""
         reason_lower = reason.lower()
-        
+
         for error_type, patterns in self.ERROR_PATTERNS.items():
             for pattern in patterns:
                 if re.search(pattern, reason_lower, re.IGNORECASE):
                     return error_type
-        
+
         # Default to technical inaccuracy
         return ErrorType.TECHNICAL_INACCURACY
-    
+
     # =========================================================================
     # ENTITY EXTRACTION
     # =========================================================================
-    
-    def _extract_entities(self, text: str) -> Dict[str, List[str]]:
+
+    def _extract_entities(self, text: str) -> dict[str, list[str]]:
         """Extract TWS-related entities from text."""
-        entities: Dict[str, List[str]] = {}
-        
+        entities: dict[str, list[str]] = {}
+
         for entity_type, patterns in self.ENTITY_PATTERNS.items():
             found = set()
             for pattern in patterns:
@@ -272,48 +271,48 @@ class AuditToKGPipeline:
                 found.update(m.upper() if isinstance(m, str) else m[0].upper() for m in matches)
             if found:
                 entities[entity_type] = list(found)
-        
+
         return entities
-    
+
     # =========================================================================
     # TRIPLET GENERATION
     # =========================================================================
-    
+
     async def _generate_error_triplets(
         self,
         finding: AuditFinding
-    ) -> List[ErrorTriplet]:
+    ) -> list[ErrorTriplet]:
         """Generate error triplets from audit finding."""
-        triplets: List[ErrorTriplet] = []
-        
+        triplets: list[ErrorTriplet] = []
+
         # Generate triplets based on error type and entities
         if finding.error_type == ErrorType.WRONG_RECOMMENDATION:
             triplets.extend(self._generate_recommendation_triplets(finding))
-        
+
         if finding.error_type == ErrorType.TECHNICAL_INACCURACY:
             triplets.extend(self._generate_technical_triplets(finding))
-        
+
         if finding.error_type == ErrorType.IRRELEVANT_RESPONSE:
             triplets.extend(self._generate_relevance_triplets(finding))
-        
+
         # Use LLM for complex cases with high confidence
         if finding.confidence > 0.8 and len(triplets) < 2:
             llm_triplets = await self._generate_triplets_with_llm(finding)
             triplets.extend(llm_triplets)
-        
+
         return triplets
-    
+
     def _generate_recommendation_triplets(
         self,
         finding: AuditFinding
-    ) -> List[ErrorTriplet]:
+    ) -> list[ErrorTriplet]:
         """Generate triplets for wrong recommendation errors."""
         triplets = []
-        
+
         jobs = finding.extracted_entities.get("job", [])
         commands = finding.extracted_entities.get("command", [])
         error_codes = finding.extracted_entities.get("error_code", [])
-        
+
         # Job + Error Code = Wrong recommendation
         for job in jobs:
             for error_code in error_codes:
@@ -327,7 +326,7 @@ class AuditToKGPipeline:
                     confidence=finding.confidence,
                     source_memory_id=finding.memory_id,
                 ))
-        
+
         # Command + Error = Wrong approach
         for command in commands:
             for error_code in error_codes:
@@ -341,20 +340,20 @@ class AuditToKGPipeline:
                     confidence=finding.confidence,
                     source_memory_id=finding.memory_id,
                 ))
-        
+
         return triplets
-    
+
     def _generate_technical_triplets(
         self,
         finding: AuditFinding
-    ) -> List[ErrorTriplet]:
+    ) -> list[ErrorTriplet]:
         """Generate triplets for technical inaccuracy errors."""
         triplets = []
-        
+
         jobs = finding.extracted_entities.get("job", [])
         workstations = finding.extracted_entities.get("workstation", [])
         commands = finding.extracted_entities.get("command", [])
-        
+
         # Job + Workstation = Incorrect association
         for job in jobs:
             for ws in workstations:
@@ -368,7 +367,7 @@ class AuditToKGPipeline:
                     confidence=finding.confidence,
                     source_memory_id=finding.memory_id,
                 ))
-        
+
         # Command + Job = Incorrect usage
         for command in commands:
             for job in jobs:
@@ -382,20 +381,20 @@ class AuditToKGPipeline:
                     confidence=finding.confidence,
                     source_memory_id=finding.memory_id,
                 ))
-        
+
         return triplets
-    
+
     def _generate_relevance_triplets(
         self,
         finding: AuditFinding
-    ) -> List[ErrorTriplet]:
+    ) -> list[ErrorTriplet]:
         """Generate triplets for irrelevant response errors."""
         triplets = []
-        
+
         # Extract query intent keywords
         query_words = set(finding.user_query.lower().split())
         response_words = set(finding.agent_response.lower().split())
-        
+
         # Find entities mentioned in response but not query
         for entity_type, entities in finding.extracted_entities.items():
             for entity in entities:
@@ -410,17 +409,17 @@ class AuditToKGPipeline:
                         confidence=finding.confidence,
                         source_memory_id=finding.memory_id,
                     ))
-        
+
         return triplets
-    
+
     async def _generate_triplets_with_llm(
         self,
         finding: AuditFinding
-    ) -> List[ErrorTriplet]:
+    ) -> list[ErrorTriplet]:
         """Use LLM to extract additional triplets."""
         try:
             llm = await self._get_llm()
-            
+
             prompt = f"""Analyze this error identified by an AI auditor in a TWS (Workload Automation) system.
 
 User Query: "{finding.user_query}"
@@ -448,10 +447,10 @@ Return only valid JSON, no markdown."""
                 max_tokens=500,
                 temperature=0.1,  # Low temp for consistency
             )
-            
+
             # Parse response
             triplet_data = json.loads(response.strip())
-            
+
             triplets = []
             for t in triplet_data[:3]:  # Max 3
                 triplets.append(ErrorTriplet(
@@ -464,27 +463,27 @@ Return only valid JSON, no markdown."""
                     confidence=finding.confidence * 0.9,  # Slight discount for LLM
                     source_memory_id=finding.memory_id,
                 ))
-            
+
             return triplets
-            
+
         except Exception as e:
             logger.warning("llm_triplet_extraction_failed", error=str(e))
             return []
-    
+
     # =========================================================================
     # KG INTEGRATION
     # =========================================================================
-    
+
     async def _add_triplets_to_kg(
         self,
-        triplets: List[ErrorTriplet]
-    ) -> Dict[str, Any]:
+        triplets: list[ErrorTriplet]
+    ) -> dict[str, Any]:
         """Add error triplets to Knowledge Graph."""
         kg = await self._get_kg()
-        
+
         added = 0
         failed = 0
-        
+
         for triplet in triplets:
             try:
                 # Add nodes if they don't exist
@@ -493,13 +492,13 @@ Return only valid JSON, no markdown."""
                     node_type=triplet.subject_type,
                     properties={"source": "audit_pipeline"}
                 )
-                
+
                 await kg.add_node(
                     node_id=triplet.object,
                     node_type=triplet.object_type,
                     properties={"source": "audit_pipeline"}
                 )
-                
+
                 # Add error edge with metadata
                 await kg.add_edge(
                     source=triplet.subject,
@@ -513,9 +512,9 @@ Return only valid JSON, no markdown."""
                         "created_at": datetime.utcnow().isoformat(),
                     }
                 )
-                
+
                 added += 1
-                
+
             except Exception as e:
                 logger.warning(
                     "triplet_add_failed",
@@ -525,43 +524,43 @@ Return only valid JSON, no markdown."""
                     error=str(e)
                 )
                 failed += 1
-        
+
         return {"added": added, "failed": failed}
-    
+
     # =========================================================================
     # RAG INTEGRATION
     # =========================================================================
-    
+
     async def _penalize_rag_documents(
         self,
         finding: AuditFinding
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Penalize RAG documents related to the error."""
         try:
             rag_feedback = await self._get_rag_feedback()
-            
+
             # Record negative feedback for the query
             # This will affect future retrievals for similar queries
             penalized = 0
-            
+
             # Extract document references from response if any
             doc_patterns = [
                 r"document[:\s]+([A-Za-z0-9_]+)",
                 r"source[:\s]+([A-Za-z0-9_]+)",
                 r"(?:from|see)\s+([A-Za-z0-9_]+\.(?:md|pdf|txt))",
             ]
-            
+
             doc_refs = set()
             for pattern in doc_patterns:
                 matches = re.findall(pattern, finding.agent_response, re.IGNORECASE)
                 doc_refs.update(matches)
-            
+
             # If no specific docs found, use a synthetic ID based on entities
             if not doc_refs:
                 for entity_type, entities in finding.extracted_entities.items():
                     for entity in entities[:3]:  # Max 3 per type
                         doc_refs.add(f"entity_{entity_type}_{entity}")
-            
+
             # Record negative feedback
             for doc_ref in doc_refs:
                 success = await rag_feedback.record_feedback(
@@ -572,18 +571,18 @@ Return only valid JSON, no markdown."""
                 )
                 if success:
                     penalized += 1
-            
+
             return {"documents_penalized": penalized, "doc_refs": list(doc_refs)}
-            
+
         except Exception as e:
             logger.warning("rag_penalization_failed", error=str(e))
             return {"documents_penalized": 0, "error": str(e)}
-    
+
     # =========================================================================
     # UTILITIES
     # =========================================================================
-    
-    def _triplet_to_dict(self, triplet: ErrorTriplet) -> Dict[str, Any]:
+
+    def _triplet_to_dict(self, triplet: ErrorTriplet) -> dict[str, Any]:
         """Convert triplet to dictionary."""
         return {
             "subject": triplet.subject,
@@ -594,8 +593,8 @@ Return only valid JSON, no markdown."""
             "error_reason": triplet.error_reason,
             "confidence": triplet.confidence,
         }
-    
-    def get_statistics(self) -> Dict[str, Any]:
+
+    def get_statistics(self) -> dict[str, Any]:
         """Get pipeline statistics."""
         return {
             "findings_processed": self._processed_count,
@@ -611,7 +610,7 @@ Return only valid JSON, no markdown."""
 
 
 # Global instance
-_pipeline: Optional[AuditToKGPipeline] = None
+_pipeline: AuditToKGPipeline | None = None
 
 
 def get_audit_kg_pipeline() -> AuditToKGPipeline:
@@ -632,10 +631,10 @@ async def process_audit_result_to_kg(
     agent_response: str,
     reason: str,
     confidence: float,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Convenience function to process an audit result.
-    
+
     Call this from ia_auditor when an error is detected.
     """
     pipeline = get_audit_kg_pipeline()

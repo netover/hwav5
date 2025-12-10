@@ -7,7 +7,7 @@ Command Query Responsibility Segregation (CQRS) pattern in Resync.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar, Union
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -79,7 +79,7 @@ class CommandResult(BaseModel):
     success: bool
     message: str = ""
     data: Any = None
-    error: Union[str, None] = None
+    error: str | None = None
 
 
 class QueryResult(BaseModel):
@@ -89,4 +89,4 @@ class QueryResult(BaseModel):
 
     success: bool
     data: Any = None
-    error: Union[str, None] = None
+    error: str | None = None

@@ -5,11 +5,9 @@ Provides learning storage for TWS multi-instance using PostgreSQL.
 """
 
 import logging
-from datetime import datetime
-from typing import Any, Dict, List, Optional
 
+from resync.core.database.models import Feedback
 from resync.core.database.repositories import FeedbackStore
-from resync.core.database.models import Feedback, LearningThreshold
 
 logger = logging.getLogger(__name__)
 
@@ -18,25 +16,25 @@ __all__ = ["TWSLearningStore", "get_tws_learning_store"]
 
 class TWSLearningStore:
     """TWS Learning Store - PostgreSQL Backend."""
-    
-    def __init__(self, db_path: Optional[str] = None):
+
+    def __init__(self, db_path: str | None = None):
         """Initialize. db_path is ignored - uses PostgreSQL."""
         if db_path:
             logger.debug(f"db_path ignored, using PostgreSQL: {db_path}")
         self._store = FeedbackStore()
         self._initialized = False
-    
+
     async def initialize(self) -> None:
         """Initialize the store."""
         self._initialized = True
         logger.info("TWSLearningStore initialized (PostgreSQL)")
-    
+
     async def close(self) -> None:
         """Close the store."""
         self._initialized = False
-    
+
     async def record_outcome(self, job_name: str, action: str, outcome: str,
-                            details: Optional[Dict] = None) -> Feedback:
+                            details: dict | None = None) -> Feedback:
         """Record an action outcome for learning."""
         return await self._store.feedback.add_feedback(
             session_id=f"tws_{job_name}",
@@ -46,13 +44,13 @@ class TWSLearningStore:
             is_positive=outcome == "success",
             metadata={"job_name": job_name, "details": details or {}}
         )
-    
-    async def get_job_outcomes(self, job_name: str, limit: int = 100) -> List[Feedback]:
+
+    async def get_job_outcomes(self, job_name: str, limit: int = 100) -> list[Feedback]:
         """Get outcomes for a job."""
         all_feedback = await self._store.feedback.get_all(limit=limit * 2)
-        return [f for f in all_feedback 
+        return [f for f in all_feedback
                 if f.metadata_ and f.metadata_.get("job_name") == job_name][:limit]
-    
+
     async def get_success_rate(self, job_name: str, window: int = 100) -> float:
         """Get success rate for a job."""
         outcomes = await self.get_job_outcomes(job_name, limit=window)
@@ -62,7 +60,7 @@ class TWSLearningStore:
         return successes / len(outcomes)
 
 
-_instance: Optional[TWSLearningStore] = None
+_instance: TWSLearningStore | None = None
 
 def get_tws_learning_store() -> TWSLearningStore:
     """Get the singleton TWSLearningStore instance."""

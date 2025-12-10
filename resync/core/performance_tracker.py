@@ -11,7 +11,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 
@@ -71,7 +71,7 @@ class PerformanceTracker:
         self.cache_stats = CacheStatistics()
 
         # Component-specific metrics
-        self.component_metrics: Dict[str, CacheStatistics] = defaultdict(
+        self.component_metrics: dict[str, CacheStatistics] = defaultdict(
             CacheStatistics
         )
 
@@ -79,7 +79,7 @@ class PerformanceTracker:
         self.response_times: deque = deque(maxlen=1000)
 
         # Error tracking
-        self.error_counts: Dict[str, int] = defaultdict(int)
+        self.error_counts: dict[str, int] = defaultdict(int)
 
         # Throughput tracking
         self.request_counts: deque = deque(maxlen=1000)
@@ -132,7 +132,7 @@ class PerformanceTracker:
         async with self._lock:
             self.request_counts.append(time.time())
 
-    def get_cache_statistics(self) -> Dict[str, Any]:
+    def get_cache_statistics(self) -> dict[str, Any]:
         """Get current cache statistics."""
         return {
             "overall": {
@@ -154,7 +154,7 @@ class PerformanceTracker:
             },
         }
 
-    def get_performance_summary(self) -> Dict[str, Any]:
+    def get_performance_summary(self) -> dict[str, Any]:
         """Get performance summary statistics."""
         if not self.performance_history:
             return {"message": "No performance data available"}
@@ -246,7 +246,7 @@ class PerformanceTracker:
             return 0.0
 
     def _calculate_response_time_score(
-        self, metrics: List[PerformanceMetrics]
+        self, metrics: list[PerformanceMetrics]
     ) -> float:
         """Calculate score based on response times (lower is better)."""
         if not metrics:
@@ -258,10 +258,9 @@ class PerformanceTracker:
         # Perfect score for < 100ms, degrades linearly to 0 at 1000ms
         if avg_response_time < 100:
             return 1.0
-        elif avg_response_time > 1000:
+        if avg_response_time > 1000:
             return 0.0
-        else:
-            return 1.0 - ((avg_response_time - 100) / 900)
+        return 1.0 - ((avg_response_time - 100) / 900)
 
     def _calculate_error_score(self) -> float:
         """Calculate score based on error rates (lower errors is better)."""
@@ -276,12 +275,11 @@ class PerformanceTracker:
         # Perfect score for < 1% errors, degrades linearly to 0 at 10% errors
         if error_rate < 0.01:
             return 1.0
-        elif error_rate > 0.1:
+        if error_rate > 0.1:
             return 0.0
-        else:
-            return 1.0 - ((error_rate - 0.01) / 0.09)
+        return 1.0 - ((error_rate - 0.01) / 0.09)
 
-    def _calculate_resource_score(self, metrics: List[PerformanceMetrics]) -> float:
+    def _calculate_resource_score(self, metrics: list[PerformanceMetrics]) -> float:
         """Calculate score based on resource usage."""
         if not metrics:
             return 0.0
@@ -322,7 +320,7 @@ class PerformanceTracker:
 
         return len(self.request_counts) / total_time
 
-    def _percentile(self, data: List[float], percentile: float) -> float:
+    def _percentile(self, data: list[float], percentile: float) -> float:
         """Calculate percentile from data."""
         if not data:
             return 0.0
@@ -332,14 +330,13 @@ class PerformanceTracker:
 
         if index.is_integer():
             return sorted_data[int(index)]
-        else:
-            lower_index = int(index)
-            upper_index = lower_index + 1
-            weight = index - lower_index
-            return (
-                sorted_data[lower_index] * (1 - weight)
-                + sorted_data[upper_index] * weight
-            )
+        lower_index = int(index)
+        upper_index = lower_index + 1
+        weight = index - lower_index
+        return (
+            sorted_data[lower_index] * (1 - weight)
+            + sorted_data[upper_index] * weight
+        )
 
     async def _cleanup_old_metrics(self) -> None:
         """Clean up old performance metrics."""
@@ -371,7 +368,7 @@ class PerformanceTracker:
         except Exception as e:
             logger.warning("failed_to_cleanup_metrics", error=str(e))
 
-    def get_detailed_report(self) -> Dict[str, Any]:
+    def get_detailed_report(self) -> dict[str, Any]:
         """Get detailed performance report."""
         return {
             "summary": self.get_performance_summary(),
@@ -395,5 +392,4 @@ class PerformanceTracker:
             import json
 
             return json.dumps(data, indent=2, default=str)
-        else:
-            return str(data)
+        return str(data)

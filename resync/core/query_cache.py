@@ -15,7 +15,7 @@ import hashlib
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 from resync.core.advanced_cache import get_advanced_cache_manager
 from resync.core.structured_logger import get_logger
@@ -28,7 +28,7 @@ class QueryFingerprint:
     """Fingerprint of a database query for caching."""
 
     sql: str
-    parameters: Tuple[Any, ...]
+    parameters: tuple[Any, ...]
     connection_id: str
 
     @property
@@ -41,7 +41,7 @@ class QueryFingerprint:
         return f"query:{hash_value}"
 
     @property
-    def table_names(self) -> Set[str]:
+    def table_names(self) -> set[str]:
         """Extract table names from SQL query."""
         import re
 
@@ -72,8 +72,8 @@ class QueryExecutionStats:
     total_execution_time: float = 0.0
     last_execution_time: float = 0.0
     result_change_count: int = 0
-    last_result_hash: Optional[str] = None
-    table_dependencies: Set[str] = field(default_factory=set)
+    last_result_hash: str | None = None
+    table_dependencies: set[str] = field(default_factory=set)
 
     @property
     def avg_execution_time(self) -> float:
@@ -114,7 +114,7 @@ class QueryResult:
     timestamp: float = field(default_factory=time.time)
     result_hash: str = ""
     row_count: int = 0
-    execution_stats: Optional[QueryExecutionStats] = None
+    execution_stats: QueryExecutionStats | None = None
 
     def __post_init__(self):
         """Calculate result hash and row count after initialization."""
@@ -137,7 +137,7 @@ class TableChangeTracker:
     table_name: str
     last_change_timestamp: float = 0.0
     change_count: int = 0
-    tracked_queries: Set[str] = field(
+    tracked_queries: set[str] = field(
         default_factory=set
     )  # Query fingerprints affected
 
@@ -166,9 +166,9 @@ class QueryCacheManager:
 
     def __init__(self):
         self.cache_manager = None
-        self.query_stats: Dict[str, QueryExecutionStats] = {}
-        self.table_trackers: Dict[str, TableChangeTracker] = {}
-        self.batch_queries: Dict[str, List[asyncio.Future]] = defaultdict(list)
+        self.query_stats: dict[str, QueryExecutionStats] = {}
+        self.table_trackers: dict[str, TableChangeTracker] = {}
+        self.batch_queries: dict[str, list[asyncio.Future]] = defaultdict(list)
 
         # Configuration
         self.enable_change_tracking = True
@@ -196,10 +196,10 @@ class QueryCacheManager:
     async def execute_query(
         self,
         sql: str,
-        parameters: Tuple[Any, ...] = (),
+        parameters: tuple[Any, ...] = (),
         connection_id: str = "default",
         force_refresh: bool = False,
-        ttl_override: Optional[int] = None,
+        ttl_override: int | None = None,
     ) -> QueryResult:
         """
         Execute query with intelligent caching.
@@ -263,8 +263,8 @@ class QueryCacheManager:
             raise
 
     async def execute_batch(
-        self, queries: List[Tuple[str, Tuple[Any, ...]]], connection_id: str = "default"
-    ) -> List[QueryResult]:
+        self, queries: list[tuple[str, tuple[Any, ...]]], connection_id: str = "default"
+    ) -> list[QueryResult]:
         """
         Execute multiple queries with batch optimization.
 
@@ -339,7 +339,7 @@ class QueryCacheManager:
             if change_type in ["delete", "update"]:
                 await self.invalidate_table_cache(table_name)
 
-    def get_cache_statistics(self) -> Dict[str, Any]:
+    def get_cache_statistics(self) -> dict[str, Any]:
         """Get comprehensive query cache statistics."""
         total_queries = self.total_queries_cached + self.total_queries_executed
 
@@ -368,7 +368,7 @@ class QueryCacheManager:
             "ttl_distribution": self._calculate_ttl_distribution(),
         }
 
-    async def _get_cached_result(self, cache_key: str) -> Optional[QueryResult]:
+    async def _get_cached_result(self, cache_key: str) -> QueryResult | None:
         """Get cached query result if valid."""
         if not self.cache_manager:
             return None
@@ -379,9 +379,8 @@ class QueryCacheManager:
                 # Check if result is still valid based on table changes
                 if await self._is_result_still_valid(cached, cache_key):
                     return cached
-                else:
-                    # Result invalidated due to table changes
-                    await self.cache_manager.invalidate(cache_key, cascade=False)
+                # Result invalidated due to table changes
+                await self.cache_manager.invalidate(cache_key, cascade=False)
         except Exception as e:
             logger.warning(f"Cache retrieval error for {cache_key}: {e}")
 
@@ -392,7 +391,7 @@ class QueryCacheManager:
         cache_key: str,
         result: QueryResult,
         fingerprint: QueryFingerprint,
-        ttl_override: Optional[int],
+        ttl_override: int | None,
     ) -> None:
         """Cache query result with appropriate TTL."""
         if not self.cache_manager:
@@ -477,7 +476,7 @@ class QueryCacheManager:
         logger.info("Database change tracking setup completed")
 
     async def _simulate_query_execution(
-        self, sql: str, parameters: Tuple[Any, ...]
+        self, sql: str, parameters: tuple[Any, ...]
     ) -> Any:
         """Simulate query execution (replace with actual database calls)."""
         # Simulate execution time based on query complexity
@@ -489,14 +488,13 @@ class QueryCacheManager:
         # Return mock data based on query type
         if "select" in sql.lower():
             return [{"id": 1, "name": "Sample Data", "value": 42}]
-        elif "count" in sql.lower():
+        if "count" in sql.lower():
             return 42
-        else:
-            return {"affected_rows": 1}
+        return {"affected_rows": 1}
 
     async def _execute_optimized_batch(
-        self, queries: List[Tuple[str, Tuple[Any, ...]]], connection_id: str
-    ) -> List[QueryResult]:
+        self, queries: list[tuple[str, tuple[Any, ...]]], connection_id: str
+    ) -> list[QueryResult]:
         """Execute large batch of queries with optimization."""
         # Group similar queries for optimization
         query_groups = defaultdict(list)
@@ -529,8 +527,8 @@ class QueryCacheManager:
         ]
 
     async def _execute_batch_select(
-        self, queries: List[Tuple[str, Tuple[Any, ...]]], connection_id: str
-    ) -> List[QueryResult]:
+        self, queries: list[tuple[str, tuple[Any, ...]]], connection_id: str
+    ) -> list[QueryResult]:
         """Execute batch SELECT queries efficiently."""
         # For now, execute individually
         # In a real implementation, this could combine queries or use batch APIs
@@ -538,7 +536,7 @@ class QueryCacheManager:
             *[self.execute_query(sql, params, connection_id) for sql, params in queries]
         )
 
-    def _calculate_ttl_distribution(self) -> Dict[str, int]:
+    def _calculate_ttl_distribution(self) -> dict[str, int]:
         """Calculate distribution of TTL values."""
         ttl_ranges = {
             "0-5min": 0,

@@ -17,7 +17,7 @@ Versão: 5.2
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import structlog
 
@@ -27,32 +27,32 @@ logger = structlog.get_logger(__name__)
 @dataclass
 class QueryIntent:
     """Intent extraído de uma query."""
-    
+
     intent_type: str  # summary, failures, patterns, job_history, workstation, comparison
-    time_range: Tuple[datetime, datetime]
-    entities: List[str]  # job names, workstation names
-    filters: Dict[str, Any]
+    time_range: tuple[datetime, datetime]
+    entities: list[str]  # job names, workstation names
+    filters: dict[str, Any]
     original_query: str
 
 
 @dataclass
 class QueryResult:
     """Resultado de uma query RAG."""
-    
+
     success: bool
     summary: str
-    details: List[Dict[str, Any]]
-    suggestions: List[str]
-    metadata: Dict[str, Any]
+    details: list[dict[str, Any]]
+    suggestions: list[str]
+    metadata: dict[str, Any]
 
 
 class TWSQueryProcessor:
     """
     Processa queries em linguagem natural sobre o TWS.
-    
+
     Extrai intent, busca dados relevantes e gera resposta.
     """
-    
+
     # Padrões de tempo
     TIME_PATTERNS = {
         r"ontem": lambda: (
@@ -88,7 +88,7 @@ class TWSQueryProcessor:
             datetime.now()
         ),
     }
-    
+
     # Padrões de intent
     INTENT_PATTERNS = {
         "failures": [
@@ -132,29 +132,29 @@ class TWSQueryProcessor:
             r"versus|vs",
         ],
     }
-    
+
     def __init__(self, status_store: Any = None):
         """
         Inicializa o processador.
-        
+
         Args:
             status_store: TWSStatusStore para queries
         """
         self.status_store = status_store
-    
+
     async def process_query(self, query: str) -> QueryResult:
         """
         Processa uma query em linguagem natural.
-        
+
         Args:
             query: Pergunta em linguagem natural
-            
+
         Returns:
             Resultado da query
         """
         # 1. Extrai intent
         intent = self._extract_intent(query)
-        
+
         logger.info(
             "query_processed",
             intent_type=intent.intent_type,
@@ -164,30 +164,29 @@ class TWSQueryProcessor:
             ),
             entities=intent.entities,
         )
-        
+
         # 2. Busca dados baseado no intent
         if intent.intent_type == "summary":
             return await self._handle_summary_query(intent)
-        elif intent.intent_type == "failures":
+        if intent.intent_type == "failures":
             return await self._handle_failures_query(intent)
-        elif intent.intent_type == "patterns":
+        if intent.intent_type == "patterns":
             return await self._handle_patterns_query(intent)
-        elif intent.intent_type == "job_history":
+        if intent.intent_type == "job_history":
             return await self._handle_job_history_query(intent)
-        elif intent.intent_type == "workstation":
+        if intent.intent_type == "workstation":
             return await self._handle_workstation_query(intent)
-        elif intent.intent_type == "comparison":
+        if intent.intent_type == "comparison":
             return await self._handle_comparison_query(intent)
-        else:
-            return await self._handle_general_query(intent)
-    
+        return await self._handle_general_query(intent)
+
     def _extract_intent(self, query: str) -> QueryIntent:
         """Extrai intent da query."""
         query_lower = query.lower()
-        
+
         # Extrai range de tempo
         time_range = self._extract_time_range(query_lower)
-        
+
         # Extrai tipo de intent
         intent_type = "general"
         for itype, patterns in self.INTENT_PATTERNS.items():
@@ -197,10 +196,10 @@ class TWSQueryProcessor:
                     break
             if intent_type != "general":
                 break
-        
+
         # Extrai entidades (nomes de jobs, workstations)
         entities = self._extract_entities(query)
-        
+
         return QueryIntent(
             intent_type=intent_type,
             time_range=time_range,
@@ -208,10 +207,10 @@ class TWSQueryProcessor:
             filters={},
             original_query=query,
         )
-    
+
     def _extract_time_range(
         self, query: str
-    ) -> Tuple[datetime, datetime]:
+    ) -> tuple[datetime, datetime]:
         """Extrai range de tempo da query."""
         for pattern, time_func in self.TIME_PATTERNS.items():
             match = re.search(pattern, query)
@@ -222,31 +221,31 @@ class TWSQueryProcessor:
                         return time_func(match)
                     except TypeError:
                         return time_func()
-        
+
         # Default: últimas 24 horas
         return (
             datetime.now() - timedelta(hours=24),
             datetime.now()
         )
-    
-    def _extract_entities(self, query: str) -> List[str]:
+
+    def _extract_entities(self, query: str) -> list[str]:
         """Extrai entidades (nomes de jobs, workstations)."""
         entities = []
-        
+
         # Padrão para nomes de jobs (geralmente uppercase com underscores)
         job_pattern = r'\b([A-Z][A-Z0-9_]{2,})\b'
         entities.extend(re.findall(job_pattern, query))
-        
+
         # Padrão para workstations
         ws_pattern = r'\b(WS[A-Z0-9]+|[A-Z]+SRV[0-9]+)\b'
         entities.extend(re.findall(ws_pattern, query, re.IGNORECASE))
-        
+
         return list(set(entities))
-    
+
     async def _handle_summary_query(self, intent: QueryIntent) -> QueryResult:
         """Processa query de resumo."""
         start, end = intent.time_range
-        
+
         # Busca dados
         if self.status_store:
             events = await self.status_store.get_events_in_range(
@@ -254,33 +253,33 @@ class TWSQueryProcessor:
                 end_time=end,
                 limit=500,
             )
-            
+
             # Agrupa por tipo
             event_counts = {}
             for event in events:
                 etype = event.get("event_type", "unknown")
                 event_counts[etype] = event_counts.get(etype, 0) + 1
-            
+
             # Conta falhas
             failures = [e for e in events if e.get("severity") in ["error", "critical"]]
-            
+
             # Gera resumo
             period = self._format_period(start, end)
-            
+
             summary = f"**Resumo {period}:**\n\n"
             summary += f"- Total de eventos: {len(events)}\n"
             summary += f"- Eventos críticos/erros: {len(failures)}\n"
-            
+
             if event_counts:
                 summary += "\n**Por tipo:**\n"
                 for etype, count in sorted(event_counts.items(), key=lambda x: -x[1])[:5]:
                     summary += f"- {etype}: {count}\n"
-            
+
             if failures:
                 summary += "\n**Principais problemas:**\n"
                 for f in failures[:5]:
                     summary += f"- {f.get('message', 'N/A')}\n"
-            
+
             return QueryResult(
                 success=True,
                 summary=summary,
@@ -296,7 +295,7 @@ class TWSQueryProcessor:
                     "failures": len(failures),
                 },
             )
-        
+
         return QueryResult(
             success=False,
             summary="Status store não disponível",
@@ -304,11 +303,11 @@ class TWSQueryProcessor:
             suggestions=["Verificar configuração do sistema"],
             metadata={},
         )
-    
+
     async def _handle_failures_query(self, intent: QueryIntent) -> QueryResult:
         """Processa query de falhas."""
         start, end = intent.time_range
-        
+
         if self.status_store:
             events = await self.status_store.get_events_in_range(
                 start_time=start,
@@ -316,7 +315,7 @@ class TWSQueryProcessor:
                 event_types=["job_abend"],
                 limit=100,
             )
-            
+
             # Filtra por entidades se especificadas
             if intent.entities:
                 events = [
@@ -326,7 +325,7 @@ class TWSQueryProcessor:
                         for ent in intent.entities
                     )
                 ]
-            
+
             # Agrupa por job
             jobs_failed = {}
             for event in events:
@@ -334,16 +333,16 @@ class TWSQueryProcessor:
                 if job not in jobs_failed:
                     jobs_failed[job] = []
                 jobs_failed[job].append(event)
-            
+
             period = self._format_period(start, end)
-            
+
             if not events:
                 summary = f"🎉 Nenhuma falha encontrada {period}!"
             else:
                 summary = f"**Falhas {period}:**\n\n"
                 summary += f"- Total de falhas: {len(events)}\n"
                 summary += f"- Jobs afetados: {len(jobs_failed)}\n\n"
-                
+
                 summary += "**Jobs que falharam:**\n"
                 for job, failures in sorted(jobs_failed.items(), key=lambda x: -len(x[1]))[:10]:
                     summary += f"- **{job}**: {len(failures)}x\n"
@@ -351,7 +350,7 @@ class TWSQueryProcessor:
                         last_error = failures[0].get("details", {}).get("job", {}).get("error_message")
                         if last_error:
                             summary += f"  └ Último erro: {last_error[:100]}\n"
-            
+
             # Busca soluções sugeridas
             suggestions = []
             if jobs_failed and self.status_store:
@@ -364,7 +363,7 @@ class TWSQueryProcessor:
                         suggestions.append(
                             f"Para {job}: {solution.get('solution', 'N/A')}"
                         )
-            
+
             return QueryResult(
                 success=True,
                 summary=summary,
@@ -379,7 +378,7 @@ class TWSQueryProcessor:
                     "jobs_affected": len(jobs_failed),
                 },
             )
-        
+
         return QueryResult(
             success=False,
             summary="Status store não disponível",
@@ -387,14 +386,14 @@ class TWSQueryProcessor:
             suggestions=[],
             metadata={},
         )
-    
+
     async def _handle_patterns_query(self, intent: QueryIntent) -> QueryResult:
         """Processa query de padrões."""
         if self.status_store:
             patterns = await self.status_store.get_patterns(
                 min_confidence=0.5
             )
-            
+
             # Filtra por entidades se especificadas
             if intent.entities:
                 patterns = [
@@ -404,14 +403,14 @@ class TWSQueryProcessor:
                         for ent in intent.entities
                     )
                 ]
-            
+
             if not patterns:
                 summary = "Nenhum padrão significativo detectado no momento."
                 summary += "\n\nIsso pode significar que o sistema está operando normalmente "
                 summary += "ou que não há dados suficientes para detectar padrões."
             else:
                 summary = f"**{len(patterns)} padrões detectados:**\n\n"
-                
+
                 for i, p in enumerate(patterns[:5], 1):
                     summary += f"**{i}. {p.get('pattern_type', 'unknown')}** "
                     summary += f"({p.get('confidence', 0)*100:.0f}% confiança)\n"
@@ -419,7 +418,7 @@ class TWSQueryProcessor:
                     if p.get('suggested_action'):
                         summary += f"   💡 {p.get('suggested_action')}\n"
                     summary += "\n"
-            
+
             return QueryResult(
                 success=True,
                 summary=summary,
@@ -432,7 +431,7 @@ class TWSQueryProcessor:
                     "patterns_count": len(patterns),
                 },
             )
-        
+
         return QueryResult(
             success=False,
             summary="Status store não disponível",
@@ -440,7 +439,7 @@ class TWSQueryProcessor:
             suggestions=[],
             metadata={},
         )
-    
+
     async def _handle_job_history_query(self, intent: QueryIntent) -> QueryResult:
         """Processa query de histórico de job."""
         if not intent.entities:
@@ -451,17 +450,17 @@ class TWSQueryProcessor:
                 suggestions=["Exemplo: 'histórico do job BATCH_PROCESS_001'"],
                 metadata={},
             )
-        
+
         job_name = intent.entities[0]
         days = 7  # Default
-        
+
         if self.status_store:
             history = await self.status_store.get_job_history(
                 job_name=job_name,
                 days=days,
                 limit=50,
             )
-            
+
             if not history:
                 summary = f"Nenhum histórico encontrado para o job **{job_name}** nos últimos {days} dias."
             else:
@@ -470,26 +469,26 @@ class TWSQueryProcessor:
                 success = sum(1 for h in history if h.get("status") == "SUCC")
                 failed = sum(1 for h in history if h.get("status") == "ABEND")
                 success_rate = (success / total * 100) if total > 0 else 0
-                
+
                 # Duração média
                 durations = [
                     h.get("duration_seconds") for h in history
                     if h.get("duration_seconds")
                 ]
                 avg_duration = sum(durations) / len(durations) if durations else 0
-                
+
                 summary = f"**Histórico do job {job_name}** (últimos {days} dias):\n\n"
                 summary += f"- Execuções: {total}\n"
                 summary += f"- Sucessos: {success} ({success_rate:.1f}%)\n"
                 summary += f"- Falhas: {failed}\n"
                 summary += f"- Duração média: {avg_duration/60:.1f} min\n"
-                
+
                 if failed > 0:
                     summary += "\n**Últimas falhas:**\n"
                     failures = [h for h in history if h.get("status") == "ABEND"][:3]
                     for f in failures:
                         summary += f"- {f.get('timestamp', 'N/A')}: {f.get('error_message', 'N/A')[:50]}\n"
-            
+
             return QueryResult(
                 success=True,
                 summary=summary,
@@ -503,7 +502,7 @@ class TWSQueryProcessor:
                     "total_executions": len(history),
                 },
             )
-        
+
         return QueryResult(
             success=False,
             summary="Status store não disponível",
@@ -511,11 +510,11 @@ class TWSQueryProcessor:
             suggestions=[],
             metadata={},
         )
-    
+
     async def _handle_workstation_query(self, intent: QueryIntent) -> QueryResult:
         """Processa query de workstation."""
         start, end = intent.time_range
-        
+
         if self.status_store:
             events = await self.status_store.get_events_in_range(
                 start_time=start,
@@ -523,7 +522,7 @@ class TWSQueryProcessor:
                 event_types=["workstation_offline", "workstation_unlinked", "ws_offline", "ws_unlinked"],
                 limit=100,
             )
-            
+
             # Filtra por entidade se especificada
             if intent.entities:
                 events = [
@@ -533,9 +532,9 @@ class TWSQueryProcessor:
                         for ent in intent.entities
                     )
                 ]
-            
+
             period = self._format_period(start, end)
-            
+
             if not events:
                 summary = f"✅ Nenhum problema com workstations {period}."
             else:
@@ -546,14 +545,14 @@ class TWSQueryProcessor:
                     if ws not in ws_issues:
                         ws_issues[ws] = []
                     ws_issues[ws].append(event)
-                
+
                 summary = f"**Problemas com workstations {period}:**\n\n"
                 summary += f"- Total de incidentes: {len(events)}\n"
                 summary += f"- Workstations afetadas: {len(ws_issues)}\n\n"
-                
+
                 for ws, issues in sorted(ws_issues.items(), key=lambda x: -len(x[1])):
                     summary += f"- **{ws}**: {len(issues)} incidente(s)\n"
-            
+
             return QueryResult(
                 success=True,
                 summary=summary,
@@ -567,7 +566,7 @@ class TWSQueryProcessor:
                     "total_issues": len(events),
                 },
             )
-        
+
         return QueryResult(
             success=False,
             summary="Status store não disponível",
@@ -575,16 +574,16 @@ class TWSQueryProcessor:
             suggestions=[],
             metadata={},
         )
-    
+
     async def _handle_comparison_query(self, intent: QueryIntent) -> QueryResult:
         """Processa query de comparação."""
         start, end = intent.time_range
         period_length = end - start
-        
+
         # Período anterior de mesmo tamanho
         prev_start = start - period_length
         prev_end = start
-        
+
         if self.status_store:
             # Dados do período atual
             current_events = await self.status_store.get_events_in_range(
@@ -596,7 +595,7 @@ class TWSQueryProcessor:
                 e for e in current_events
                 if e.get("severity") in ["error", "critical"]
             ]
-            
+
             # Dados do período anterior
             prev_events = await self.status_store.get_events_in_range(
                 start_time=prev_start,
@@ -607,14 +606,14 @@ class TWSQueryProcessor:
                 e for e in prev_events
                 if e.get("severity") in ["error", "critical"]
             ]
-            
+
             # Calcula diferenças
             event_diff = len(current_events) - len(prev_events)
             failure_diff = len(current_failures) - len(prev_failures)
-            
+
             event_trend = "📈 aumentou" if event_diff > 0 else "📉 diminuiu" if event_diff < 0 else "→ estável"
             failure_trend = "📈 aumentou" if failure_diff > 0 else "📉 diminuiu" if failure_diff < 0 else "→ estável"
-            
+
             summary = "**Comparação com período anterior:**\n\n"
             summary += f"**Período atual:** {self._format_period(start, end)}\n"
             summary += f"- Eventos: {len(current_events)}\n"
@@ -622,10 +621,10 @@ class TWSQueryProcessor:
             summary += f"**Período anterior:** {self._format_period(prev_start, prev_end)}\n"
             summary += f"- Eventos: {len(prev_events)}\n"
             summary += f"- Falhas: {len(prev_failures)}\n\n"
-            summary += f"**Tendência:**\n"
+            summary += "**Tendência:**\n"
             summary += f"- Eventos: {event_trend} ({abs(event_diff):+d})\n"
             summary += f"- Falhas: {failure_trend} ({abs(failure_diff):+d})\n"
-            
+
             return QueryResult(
                 success=True,
                 summary=summary,
@@ -641,7 +640,7 @@ class TWSQueryProcessor:
                     "failure_change": failure_diff,
                 },
             )
-        
+
         return QueryResult(
             success=False,
             summary="Status store não disponível",
@@ -649,29 +648,29 @@ class TWSQueryProcessor:
             suggestions=[],
             metadata={},
         )
-    
+
     async def _handle_general_query(self, intent: QueryIntent) -> QueryResult:
         """Processa query genérica."""
         # Tenta buscar eventos relevantes
         start, end = intent.time_range
-        
+
         if self.status_store:
             # Busca textual se possível
             events = await self.status_store.search_events(
                 intent.original_query,
                 limit=20,
             )
-            
+
             if events:
                 summary = f"**Resultados para:** \"{intent.original_query}\"\n\n"
                 summary += f"Encontrei {len(events)} eventos relacionados:\n\n"
-                
+
                 for e in events[:5]:
                     summary += f"- [{e.get('timestamp', 'N/A')}] {e.get('message', 'N/A')}\n"
             else:
                 # Fallback para resumo geral
                 return await self._handle_summary_query(intent)
-            
+
             return QueryResult(
                 success=True,
                 summary=summary,
@@ -682,7 +681,7 @@ class TWSQueryProcessor:
                 ],
                 metadata={},
             )
-        
+
         return QueryResult(
             success=False,
             summary="Status store não disponível",
@@ -690,23 +689,23 @@ class TWSQueryProcessor:
             suggestions=[],
             metadata={},
         )
-    
+
     def _format_period(self, start: datetime, end: datetime) -> str:
         """Formata período para exibição."""
         now = datetime.now()
-        
+
         # Verifica se é hoje
         if start.date() == now.date():
             return "hoje"
-        
+
         # Verifica se é ontem
         if start.date() == (now - timedelta(days=1)).date():
             return "ontem"
-        
+
         # Período curto
         if (end - start).days <= 1:
             return f"em {start.strftime('%d/%m/%Y')}"
-        
+
         return f"de {start.strftime('%d/%m')} a {end.strftime('%d/%m')}"
 
 
@@ -717,17 +716,17 @@ class TWSQueryProcessor:
 async def process_tws_query(query: str) -> QueryResult:
     """
     Processa uma query sobre o TWS.
-    
+
     Função de conveniência para uso na API.
-    
+
     Args:
         query: Pergunta em linguagem natural
-        
+
     Returns:
         Resultado da query
     """
     from resync.core.tws_status_store import get_status_store
-    
+
     processor = TWSQueryProcessor(status_store=get_status_store())
     return await processor.process_query(query)
 

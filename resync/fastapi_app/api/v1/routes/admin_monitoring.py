@@ -10,14 +10,15 @@ Provides real-time monitoring dashboard data:
 """
 
 import asyncio
-import psutil
+import logging
 import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from datetime import datetime
+from typing import Any
+
+import psutil
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -52,9 +53,9 @@ class ServiceHealth(BaseModel):
     """Health of a service."""
     name: str
     status: str  # healthy, degraded, unhealthy
-    latency_ms: Optional[float]
+    latency_ms: float | None
     last_check: str
-    error_message: Optional[str]
+    error_message: str | None
 
 
 class MonitoringDashboard(BaseModel):
@@ -62,19 +63,19 @@ class MonitoringDashboard(BaseModel):
     timestamp: str
     system: SystemMetrics
     application: ApplicationMetrics
-    services: List[ServiceHealth]
-    alerts: List[Dict[str, Any]]
+    services: list[ServiceHealth]
+    alerts: list[dict[str, Any]]
 
 
 # In-memory metrics store
-_metrics_history: List[Dict] = []
-_request_times: List[float] = []
+_metrics_history: list[dict] = []
+_request_times: list[float] = []
 _error_count: int = 0
 _total_requests: int = 0
 _start_time = time.time()
 
 # WebSocket connections for real-time updates
-_ws_connections: List[WebSocket] = []
+_ws_connections: list[WebSocket] = []
 
 
 def _get_system_metrics() -> SystemMetrics:
@@ -82,7 +83,7 @@ def _get_system_metrics() -> SystemMetrics:
     memory = psutil.virtual_memory()
     disk = psutil.disk_usage('/')
     net = psutil.net_io_counters()
-    
+
     return SystemMetrics(
         cpu_percent=psutil.cpu_percent(interval=0.1),
         memory_percent=memory.percent,
@@ -100,17 +101,17 @@ def _get_system_metrics() -> SystemMetrics:
 def _get_application_metrics() -> ApplicationMetrics:
     """Get current application metrics."""
     global _request_times, _error_count, _total_requests
-    
+
     # Calculate requests per minute
     recent_requests = [t for t in _request_times if t > time.time() - 60]
     rpm = len(recent_requests)
-    
+
     # Calculate average response time
     avg_response = sum(_request_times[-100:]) / len(_request_times[-100:]) if _request_times else 0
-    
+
     # Calculate error rate
     error_rate = (_error_count / _total_requests * 100) if _total_requests > 0 else 0
-    
+
     return ApplicationMetrics(
         total_requests=_total_requests,
         requests_per_minute=rpm,
@@ -121,10 +122,10 @@ def _get_application_metrics() -> ApplicationMetrics:
     )
 
 
-def _get_services_health() -> List[ServiceHealth]:
+def _get_services_health() -> list[ServiceHealth]:
     """Get health of all services."""
     services = []
-    
+
     # TWS Service
     services.append(ServiceHealth(
         name="TWS Primary",
@@ -133,7 +134,7 @@ def _get_services_health() -> List[ServiceHealth]:
         last_check=datetime.utcnow().isoformat(),
         error_message=None,
     ))
-    
+
     # Database
     services.append(ServiceHealth(
         name="PostgreSQL",
@@ -142,7 +143,7 @@ def _get_services_health() -> List[ServiceHealth]:
         last_check=datetime.utcnow().isoformat(),
         error_message=None,
     ))
-    
+
     # Redis
     services.append(ServiceHealth(
         name="Redis Cache",
@@ -151,7 +152,7 @@ def _get_services_health() -> List[ServiceHealth]:
         last_check=datetime.utcnow().isoformat(),
         error_message=None,
     ))
-    
+
     # RAG Service
     services.append(ServiceHealth(
         name="RAG/pgvector",
@@ -160,14 +161,14 @@ def _get_services_health() -> List[ServiceHealth]:
         last_check=datetime.utcnow().isoformat(),
         error_message=None,
     ))
-    
+
     return services
 
 
-def _get_active_alerts() -> List[Dict[str, Any]]:
+def _get_active_alerts() -> list[dict[str, Any]]:
     """Get active alerts."""
     alerts = []
-    
+
     # Check for high CPU
     cpu = psutil.cpu_percent()
     if cpu > 80:
@@ -177,7 +178,7 @@ def _get_active_alerts() -> List[Dict[str, Any]]:
             "message": f"CPU usage is high: {cpu}%",
             "timestamp": datetime.utcnow().isoformat(),
         })
-    
+
     # Check for high memory
     memory = psutil.virtual_memory()
     if memory.percent > 85:
@@ -187,7 +188,7 @@ def _get_active_alerts() -> List[Dict[str, Any]]:
             "message": f"Memory usage is high: {memory.percent}%",
             "timestamp": datetime.utcnow().isoformat(),
         })
-    
+
     return alerts
 
 
@@ -215,7 +216,7 @@ async def get_application_metrics():
     return _get_application_metrics()
 
 
-@router.get("/monitoring/services", response_model=List[ServiceHealth], tags=["Monitoring"])
+@router.get("/monitoring/services", response_model=list[ServiceHealth], tags=["Monitoring"])
 async def get_services_health():
     """Get health of all services."""
     return _get_services_health()
@@ -245,9 +246,9 @@ async def monitoring_websocket(websocket: WebSocket):
     """WebSocket endpoint for real-time monitoring updates."""
     await websocket.accept()
     _ws_connections.append(websocket)
-    
+
     logger.info(f"Monitoring WebSocket connected. Total: {len(_ws_connections)}")
-    
+
     try:
         while True:
             # Send metrics every 5 seconds
@@ -258,10 +259,10 @@ async def monitoring_websocket(websocket: WebSocket):
                 services=_get_services_health(),
                 alerts=_get_active_alerts(),
             )
-            
+
             await websocket.send_json(dashboard.model_dump())
             await asyncio.sleep(5)
-            
+
     except WebSocketDisconnect:
         _ws_connections.remove(websocket)
         logger.info(f"Monitoring WebSocket disconnected. Total: {len(_ws_connections)}")
@@ -277,18 +278,18 @@ async def get_monitoring_summary():
     system = _get_system_metrics()
     services = _get_services_health()
     alerts = _get_active_alerts()
-    
+
     # Determine overall status
     unhealthy_services = [s for s in services if s.status == "unhealthy"]
     critical_alerts = [a for a in alerts if a.get("severity") == "critical"]
-    
+
     if critical_alerts or unhealthy_services:
         overall_status = "critical"
     elif alerts:
         overall_status = "warning"
     else:
         overall_status = "healthy"
-    
+
     return {
         "status": overall_status,
         "cpu_percent": system.cpu_percent,
@@ -307,15 +308,15 @@ async def record_request(
 ):
     """Record a request for metrics (internal use)."""
     global _request_times, _error_count, _total_requests
-    
+
     _request_times.append(response_time_ms / 1000)
     _total_requests += 1
-    
+
     if is_error:
         _error_count += 1
-    
+
     # Keep only last 10000 requests
     if len(_request_times) > 10000:
         _request_times = _request_times[-10000:]
-    
+
     return {"recorded": True}

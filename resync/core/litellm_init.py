@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from resync.settings import settings
 
@@ -56,10 +56,10 @@ class LiteLLMManager:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._router: Optional[RouterLike] = None
+        self._router: RouterLike | None = None
         self._metrics = LiteLLMMetrics()
 
-    def get_router(self) -> Optional[RouterLike]:
+    def get_router(self) -> RouterLike | None:
         """Retorna instância singleton (thread-safe)."""
         with self._lock:
             if self._router is None:
@@ -71,7 +71,7 @@ class LiteLLMManager:
         with self._lock:
             self._router = None
 
-    def _initialize_litellm(self) -> Optional[RouterLike]:
+    def _initialize_litellm(self) -> RouterLike | None:
         """Inicializa LiteLLM Router com base em settings."""
         strict = bool(getattr(settings, "LITELLM_STRICT_INIT", False))
         try:
@@ -169,7 +169,7 @@ class RouterLike(Protocol):
         """Método de completion do router LiteLLM."""
 
 
-def _set_env(name: str, value: Optional[str], *, overwrite: bool = False) -> bool:
+def _set_env(name: str, value: str | None, *, overwrite: bool = False) -> bool:
     """
     Define uma variável de ambiente se houver valor. Por padrão, não sobrescreve.
     Retorna True se a variável foi definida/alterada.
@@ -219,7 +219,7 @@ def _apply_env_from_settings(*, overwrite: bool = False) -> dict[str, bool]:
 
 
 # Funções de compatibilidade mantendo a API pública original
-def get_litellm_router() -> Optional[RouterLike]:
+def get_litellm_router() -> RouterLike | None:
     """
     Retorna instância singleton (thread-safe).
     """
@@ -233,7 +233,7 @@ def reset_litellm_router() -> None:
     _LITELLM_MANAGER.reset_router()
 
 
-def initialize_litellm(*, overwrite_env: bool = False) -> Optional[RouterLike]:
+def initialize_litellm(*, overwrite_env: bool = False) -> RouterLike | None:
     """
     Inicializa LiteLLM Router com base em settings.
     overwrite_env: se True, sobrescreve variáveis de ambiente existentes.

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from resync.core.agent_manager import agent_manager
 from resync.services.mock_tws_service import MockTWSClient

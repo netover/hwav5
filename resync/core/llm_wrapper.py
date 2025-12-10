@@ -4,7 +4,7 @@ with the agent system using the LLM optimizer.
 """
 
 
-from typing import Any, Dict
+from typing import Any
 
 from resync.core.llm_optimizer import TWS_LLMOptimizer
 from resync.core.structured_logger import get_logger
@@ -27,7 +27,7 @@ class OptimizedLLMWrapper:
     async def get_response(
         self,
         query: str,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] = None,
         use_cache: bool = True,
         stream: bool = False,
     ) -> str:
@@ -55,7 +55,7 @@ class OptimizedLLMWrapper:
 
             return await call_llm(query, model="gpt-3.5-turbo")
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics from the optimizer."""
         return self.optimizer.get_cache_stats()
 

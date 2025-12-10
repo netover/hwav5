@@ -17,33 +17,32 @@ Usage:
         increment_counter,
         record_timing,
     )
-    
+
     # Record metrics
     await increment_counter("query_count")
     await record_timing("response_time_ms", 150.5)
-    
+
     # Get dashboard data
     metrics = get_cl_metrics()
     data = await metrics.get_dashboard_data(hours=24)
 """
-
-from resync.core.metrics.lightweight_store import (
-    LightweightMetricsStore,
-    MetricType,
-    MetricPoint,
-    AggregatedMetric,
-    AggregationPeriod,
-    get_metrics_store,
-    record_metric,
-    increment_counter,
-    record_timing,
-)
 
 from resync.core.metrics.continual_learning_metrics import (
     ContinualLearningMetrics,
     MetricNames,
     QueryMetrics,
     get_cl_metrics,
+)
+from resync.core.metrics.lightweight_store import (
+    AggregatedMetric,
+    AggregationPeriod,
+    LightweightMetricsStore,
+    MetricPoint,
+    MetricType,
+    get_metrics_store,
+    increment_counter,
+    record_metric,
+    record_timing,
 )
 
 __all__ = [

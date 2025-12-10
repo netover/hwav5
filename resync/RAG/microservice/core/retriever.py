@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import math
 from typing import Any
-from typing import List
 
 from .config import CFG
-from .interfaces import Embedder
-from .interfaces import Retriever
-from .interfaces import VectorStore
+from .interfaces import Embedder, Retriever, VectorStore
 from .monitoring import query_seconds
 
 
@@ -39,7 +36,7 @@ class RagRetriever(Retriever):
         # Lightweight re-rank (cosine with vector from pgvector, if returned)
         if hits and "vector" in hits[0]:
 
-            def cos(a: List[float], b: List[float]) -> float:
+            def cos(a: list[float], b: list[float]) -> float:
                 import math
 
                 da = math.sqrt(sum(x * x for x in a))

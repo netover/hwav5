@@ -16,17 +16,16 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from resync.api.auth import verify_admin_credentials
 from resync.core.langfuse import (
-    get_prompt_manager,
     PromptConfig,
     PromptType,
+    get_prompt_manager,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,25 +40,25 @@ prompt_router = APIRouter(prefix="/admin/prompts", tags=["Admin - Prompts"])
 
 class PromptListResponse(BaseModel):
     """Response for listing prompts."""
-    
-    prompts: List[Dict[str, Any]]
+
+    prompts: list[dict[str, Any]]
     total: int
 
 
 class PromptDetailResponse(BaseModel):
     """Response for a single prompt."""
-    
+
     id: str
     name: str
     type: str
     version: str
     content: str
     description: str
-    variables: List[str]
-    default_values: Dict[str, str]
-    model_hint: Optional[str]
-    temperature_hint: Optional[float]
-    max_tokens_hint: Optional[int]
+    variables: list[str]
+    default_values: dict[str, str]
+    model_hint: str | None
+    temperature_hint: float | None
+    max_tokens_hint: int | None
     is_active: bool
     is_default: bool
     created_at: str
@@ -68,47 +67,47 @@ class PromptDetailResponse(BaseModel):
 
 class PromptCreateRequest(BaseModel):
     """Request to create a new prompt."""
-    
+
     id: str = Field(..., min_length=1, max_length=100)
     name: str = Field(..., min_length=1, max_length=200)
     type: str = Field(default="system")
     version: str = Field(default="1.0.0")
     content: str = Field(..., min_length=1)
     description: str = Field(default="")
-    variables: List[str] = Field(default_factory=list)
-    default_values: Dict[str, str] = Field(default_factory=dict)
-    model_hint: Optional[str] = None
-    temperature_hint: Optional[float] = Field(None, ge=0, le=2)
-    max_tokens_hint: Optional[int] = Field(None, gt=0)
+    variables: list[str] = Field(default_factory=list)
+    default_values: dict[str, str] = Field(default_factory=dict)
+    model_hint: str | None = None
+    temperature_hint: float | None = Field(None, ge=0, le=2)
+    max_tokens_hint: int | None = Field(None, gt=0)
     is_active: bool = True
     is_default: bool = False
 
 
 class PromptUpdateRequest(BaseModel):
     """Request to update a prompt."""
-    
-    name: Optional[str] = None
-    content: Optional[str] = None
-    description: Optional[str] = None
-    variables: Optional[List[str]] = None
-    default_values: Optional[Dict[str, str]] = None
-    model_hint: Optional[str] = None
-    temperature_hint: Optional[float] = Field(None, ge=0, le=2)
-    max_tokens_hint: Optional[int] = Field(None, gt=0)
-    is_active: Optional[bool] = None
-    is_default: Optional[bool] = None
+
+    name: str | None = None
+    content: str | None = None
+    description: str | None = None
+    variables: list[str] | None = None
+    default_values: dict[str, str] | None = None
+    model_hint: str | None = None
+    temperature_hint: float | None = Field(None, ge=0, le=2)
+    max_tokens_hint: int | None = Field(None, gt=0)
+    is_active: bool | None = None
+    is_default: bool | None = None
 
 
 class PromptTestRequest(BaseModel):
     """Request to test a prompt."""
-    variables: Dict[str, str] = Field(default_factory=dict)
+    variables: dict[str, str] = Field(default_factory=dict)
 
 
 class PromptTestResponse(BaseModel):
     """Response from testing a prompt."""
     compiled: str
-    variables_used: Dict[str, str]
-    missing_variables: List[str]
+    variables_used: dict[str, str]
+    missing_variables: list[str]
 
 
 # =============================================================================
@@ -117,14 +116,14 @@ class PromptTestResponse(BaseModel):
 
 @prompt_router.get("", response_model=PromptListResponse, summary="List all prompts")
 async def list_prompts(
-    prompt_type: Optional[str] = None,
+    prompt_type: str | None = None,
     active_only: bool = True,
     _: str = Depends(verify_admin_credentials),
 ) -> PromptListResponse:
     """List all prompts."""
     try:
         prompt_manager = get_prompt_manager()
-        
+
         type_filter = None
         if prompt_type:
             try:
@@ -134,9 +133,9 @@ async def list_prompts(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Invalid prompt type: {prompt_type}",
                 )
-        
+
         prompts = await prompt_manager.list_prompts(prompt_type=type_filter, active_only=active_only)
-        
+
         return PromptListResponse(
             prompts=[
                 {
@@ -166,10 +165,10 @@ async def get_prompt(
     """Get a specific prompt by ID."""
     prompt_manager = get_prompt_manager()
     template = await prompt_manager.get_prompt(prompt_id)
-    
+
     if not template:
         raise HTTPException(status_code=404, detail=f"Prompt '{prompt_id}' not found")
-    
+
     config = template.config
     return PromptDetailResponse(
         id=config.id,
@@ -200,7 +199,7 @@ async def create_prompt(
         prompt_type = PromptType(request.type)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid prompt type: {request.type}")
-    
+
     prompt_manager = get_prompt_manager()
     config = PromptConfig(
         id=request.id,
@@ -217,12 +216,12 @@ async def create_prompt(
         is_active=request.is_active,
         is_default=request.is_default,
     )
-    
+
     try:
         created = await prompt_manager.create_prompt(config)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
     return PromptDetailResponse(
         id=created.id,
         name=created.name,
@@ -251,15 +250,15 @@ async def update_prompt(
     """Update an existing prompt."""
     prompt_manager = get_prompt_manager()
     updates = {k: v for k, v in request.model_dump().items() if v is not None}
-    
+
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
-    
+
     updated = await prompt_manager.update_prompt(prompt_id, updates)
-    
+
     if not updated:
         raise HTTPException(status_code=404, detail=f"Prompt '{prompt_id}' not found")
-    
+
     return PromptDetailResponse(
         id=updated.id,
         name=updated.name,
@@ -287,11 +286,11 @@ async def delete_prompt(
     """Delete a prompt."""
     prompt_manager = get_prompt_manager()
     deleted = await prompt_manager.delete_prompt(prompt_id)
-    
+
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Prompt '{prompt_id}' not found")
-    
-    return None
+
+    return
 
 
 @prompt_router.post("/{prompt_id}/test", response_model=PromptTestResponse, summary="Test a prompt")
@@ -303,22 +302,22 @@ async def test_prompt(
     """Test a prompt by compiling it."""
     prompt_manager = get_prompt_manager()
     template = await prompt_manager.get_prompt(prompt_id)
-    
+
     if not template:
         raise HTTPException(status_code=404, detail=f"Prompt '{prompt_id}' not found")
-    
+
     required = set(template.config.variables)
     provided = set(request.variables.keys())
     defaults = set(template.config.default_values.keys())
     missing = required - provided - defaults
-    
+
     final_vars = {**template.config.default_values, **request.variables}
-    
+
     try:
         compiled = template.compile(**final_vars)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
     return PromptTestResponse(
         compiled=compiled,
         variables_used=final_vars,
@@ -327,6 +326,6 @@ async def test_prompt(
 
 
 @prompt_router.get("/types", summary="Get prompt types")
-async def get_prompt_types() -> Dict[str, Any]:
+async def get_prompt_types() -> dict[str, Any]:
     """Get valid prompt types."""
     return {"types": [{"value": t.value, "name": t.name} for t in PromptType]}

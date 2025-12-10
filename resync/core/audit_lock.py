@@ -7,8 +7,9 @@ to prevent race conditions during concurrent memory processing.
 
 import logging
 import uuid
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Optional, cast
+from typing import Any, cast
 
 from redis.asyncio import Redis as AsyncRedis
 from redis.exceptions import RedisError
@@ -27,7 +28,7 @@ class DistributedAuditLock:
     IA Auditor processes attempt to process the same memory simultaneously.
     """
 
-    def __init__(self, redis_url: Optional[str] = None) -> None:
+    def __init__(self, redis_url: str | None = None) -> None:
         """
         Initialize the distributed audit lock.
 
@@ -39,9 +40,9 @@ class DistributedAuditLock:
             or getattr(settings, "REDIS_URL", "redis://localhost:6379/1")
             or "redis://localhost:6379/1"
         )
-        self.client: Optional[AsyncRedis] = None
+        self.client: AsyncRedis | None = None
         self._lock_prefix: str = "audit_lock"
-        self.release_script_sha: Optional[str] = None
+        self.release_script_sha: str | None = None
 
         logger.info(
             "DistributedAuditLock initialized with Redis", redis_url=self.redis_url
@@ -218,7 +219,7 @@ class AuditLockContext:
         client: AsyncRedis,
         lock_key: str,
         timeout: int,
-        release_script_sha: Optional[str] = None,
+        release_script_sha: str | None = None,
     ) -> None:
         """
         Initialize the lock context.
@@ -231,9 +232,9 @@ class AuditLockContext:
         self.client: AsyncRedis = client
         self.lock_key: str = lock_key
         self.timeout: int = timeout
-        self.lock_value: Optional[str] = None
+        self.lock_value: str | None = None
         self._locked: bool = False
-        self.release_script_sha: Optional[str] = release_script_sha
+        self.release_script_sha: str | None = release_script_sha
 
     async def __aenter__(self) -> "AuditLockContext":
         """Acquire the lock."""
@@ -251,8 +252,7 @@ class AuditLockContext:
             self._locked = True
             logger.debug("Acquired audit lock: %s", self.lock_key)
             return self
-        else:
-            raise AuditError(f"Could not acquire audit lock: {self.lock_key}")
+        raise AuditError(f"Could not acquire audit lock: {self.lock_key}")
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Release the lock."""

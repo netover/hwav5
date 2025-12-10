@@ -12,15 +12,16 @@ import logging
 import random
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict
+from typing import Any
 from unittest.mock import patch
 
-from resync.core import get_environment_tags, get_global_correlation_id  
+from resync.core import get_environment_tags, get_global_correlation_id
 from resync.core.agent_manager import AgentManager
 from resync.core.async_cache import AsyncTTLCache
-from resync.core.audit_db import add_audit_records_batch  
-from resync.core.audit_log import get_audit_log_manager  
+from resync.core.audit_db import add_audit_records_batch
+from resync.core.audit_log import get_audit_log_manager
 from resync.core.metrics import log_with_correlation, runtime_metrics
 
 logger = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ class ChaosEngineer:
     def __init__(self) -> None:
         self.correlation_id = get_global_correlation_id()
         self.results: list[ChaosTestResult] = []
-        self.active_tests: Dict[str, asyncio.Task[Any]] = {}
+        self.active_tests: dict[str, asyncio.Task[Any]] = {}
         self._lock = threading.RLock()
 
     async def run_full_chaos_suite(
@@ -291,7 +292,7 @@ class ChaosEngineer:
 
         # Simulate getting agent details
         try:
-            metrics = manager.get_detailed_metrics()  
+            metrics = manager.get_detailed_metrics()
             if "total_agents" not in metrics:
                 raise ValueError("Metrics missing total_agents")
         except Exception as e:
@@ -489,7 +490,7 @@ class ChaosEngineer:
                         operations += 1
 
                         # Try to get metrics
-                        metrics = manager.get_detailed_metrics()  
+                        metrics = manager.get_detailed_metrics()
                         if not isinstance(metrics, dict):
                             anomalies.append(f"Metrics not dict at iteration {i}")
 
@@ -564,7 +565,7 @@ class ChaosEngineer:
                         ):
                             try:
                                 manager = AgentManager()
-                                metrics = manager.get_detailed_metrics()  
+                                metrics = manager.get_detailed_metrics()
                                 operations += 1
                             except Exception as e:
                                 logger.error("exception_caught", error=str(e), exc_info=True)
@@ -580,7 +581,6 @@ class ChaosEngineer:
                             side_effect=Exception("Simulated DB failure"),
                         ):
                             try:
-                                pass
 
                                 audit_manager = get_audit_log_manager()
                                 metrics = audit_manager.get_audit_metrics()

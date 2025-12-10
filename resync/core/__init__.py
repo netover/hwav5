@@ -25,9 +25,16 @@ VALIDATION_CACHE_TTL = 60  # seconds
 # Import from local modules
 # Direct imports of exceptions for stability and simplicity
 from resync.core.exceptions import (
-    AuditError, DatabaseError, PoolExhaustedError, ToolProcessingError,
-    BaseAppException, InvalidConfigError, AgentExecutionError,
-    AuthenticationError, LLMError, RedisConnectionError
+    AgentExecutionError,
+    AuditError,
+    AuthenticationError,
+    BaseAppException,
+    DatabaseError,
+    InvalidConfigError,
+    LLMError,
+    PoolExhaustedError,
+    RedisConnectionError,
+    ToolProcessingError,
 )
 
 # Initialize logger early
@@ -36,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 class CorrelationIdFilter(logging.Filter):
     """Logging filter to inject correlation_id into all log records."""
-    
+
     def __init__(self, correlation_id_getter=None):
         super().__init__()
         self.correlation_id_getter = correlation_id_getter
@@ -95,15 +102,15 @@ class CoreBootManager:
     health validation."""
 
     def __init__(self):
-        self._components: Dict[str, Any] = {}
-        self._boot_times: Dict[str, float] = {}
-        self._health_status: Dict[str, Dict[str, Any]] = {}
+        self._components: dict[str, Any] = {}
+        self._boot_times: dict[str, float] = {}
+        self._health_status: dict[str, dict[str, Any]] = {}
         self._boot_lock = threading.RLock()
         # Global correlation ID for distributed tracing
         self._correlation_id = (
             f"core_boot_{int(time.time())}_{os.urandom(4).hex()}"
         )
-        self._failed_imports: Set[str] = set()
+        self._failed_imports: set[str] = set()
         self._global_correlation_context = {
             "boot_id": self._correlation_id,
             "environment": "unknown",  # Will be set by env_detector
@@ -127,7 +134,7 @@ class CoreBootManager:
         """Get a registered component."""
         return self._components.get(name)
 
-    def get_boot_status(self) -> Dict[str, Any]:
+    def get_boot_status(self) -> dict[str, Any]:
         """Get boot status for all components."""
         with self._boot_lock:
             return {
@@ -138,14 +145,14 @@ class CoreBootManager:
             }
 
     def add_global_event(
-        self, event: str, data: Optional[Dict[str, Any]] = None
+        self, event: str, data: dict[str, Any] | None = None
     ) -> None:
         """Add a trace event to the global correlation context."""
         with self._boot_lock:
             # Sanitize inputs to prevent injection or malformed data
             sanitized_event = self._sanitize_log_data(event)
             sanitized_data = self._sanitize_log_data(data or {})
-            
+
             self._global_correlation_context["events"].append(
                 {"timestamp": time.time(), "event": sanitized_event, "data": sanitized_data}
             )
@@ -156,7 +163,7 @@ class CoreBootManager:
         if isinstance(obj, str):
             # Remove potential control characters that could mess up logs
             return obj.replace("\x00", "").replace("\n", "\\n").replace("\r", "\\r")
-        elif isinstance(obj, dict):
+        if isinstance(obj, dict):
             sanitized = {}
             for key, value in obj.items():
                 # Sanitize both keys and values
@@ -164,17 +171,16 @@ class CoreBootManager:
                 sanitized_value = self._sanitize_log_data(value)
                 sanitized[sanitized_key] = sanitized_value
             return sanitized
-        elif isinstance(obj, (list, tuple)):
+        if isinstance(obj, (list, tuple)):
             return [self._sanitize_log_data(item) for item in obj]
-        else:
-            # For other types, return as-is or convert to string as appropriate
-            return obj
+        # For other types, return as-is or convert to string as appropriate
+        return obj
 
     def get_global_correlation_id(self) -> str:
         """Get the global correlation ID for distributed tracing."""
         return self._correlation_id
 
-    def get_environment_tags(self) -> Dict[str, Any]:
+    def get_environment_tags(self) -> dict[str, Any]:
         """Get environment tags for mock detection and debugging."""
         return {
             "is_mock": getattr(self, "_is_mock", False),
@@ -193,7 +199,7 @@ class EnvironmentDetector:
         self._validation_cache = {}
         self._last_validation = 0
 
-    def detect_environment(self) -> Dict[str, Any]:
+    def detect_environment(self) -> dict[str, Any]:
         """Detect execution environment characteristics."""
         return {
             "platform": os.name,
@@ -276,13 +282,13 @@ def get_global_correlation_id() -> str:
     return get_boot_manager().get_global_correlation_id()
 
 
-def get_environment_tags() -> Dict[str, Any]:
+def get_environment_tags() -> dict[str, Any]:
     """Get environment tags for mock detection and debugging."""
     return get_boot_manager().get_environment_tags()
 
 
 def add_global_trace_event(
-    event: str, data: Optional[Dict[str, Any]] = None
+    event: str, data: dict[str, Any] | None = None
 ) -> None:
     """Add a trace event to the global correlation context."""
     get_boot_manager().add_global_event(event, data)

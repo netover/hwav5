@@ -9,7 +9,7 @@ integrating various health monitoring components into a unified service.
 import asyncio
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -36,7 +36,7 @@ class HealthServiceOrchestrator:
     - Providing a unified health check interface
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """
         Initialize the health service orchestrator.
 
@@ -44,15 +44,15 @@ class HealthServiceOrchestrator:
             config: Health check configuration (uses default if None)
         """
         self.config = config or HealthCheckConfig()
-        self.last_health_check: Optional[datetime] = None
-        self._component_results: Dict[str, ComponentHealth] = {}
+        self.last_health_check: datetime | None = None
+        self._component_results: dict[str, ComponentHealth] = {}
         self._lock = asyncio.Lock()
 
     async def perform_comprehensive_health_check(
         self,
-        proactive_monitor: Optional[Any] = None,
-        performance_collector: Optional[Any] = None,
-        cache_manager: Optional[Any] = None,
+        proactive_monitor: Any | None = None,
+        performance_collector: Any | None = None,
+        cache_manager: Any | None = None,
     ) -> HealthCheckResult:
         """
         Perform comprehensive health check with coordination of all subsystems.
@@ -178,7 +178,7 @@ class HealthServiceOrchestrator:
 
         return result
 
-    async def _get_health_checks_dict(self) -> Dict[str, Any]:
+    async def _get_health_checks_dict(self) -> dict[str, Any]:
         """Get dictionary of all health check coroutines."""
         return {
             "database": self._check_database_health(),
@@ -336,7 +336,8 @@ class HealthServiceOrchestrator:
 
             # Test actual Redis connectivity
             import redis.asyncio as redis_async
-            from redis.exceptions import RedisError, TimeoutError as RedisTimeoutError
+            from redis.exceptions import RedisError
+            from redis.exceptions import TimeoutError as RedisTimeoutError
 
             try:
                 redis_client = redis_async.from_url(settings.REDIS_URL)
@@ -808,7 +809,7 @@ class HealthServiceOrchestrator:
         return mapping.get(name, ComponentType.OTHER)
 
     def _calculate_overall_status(
-        self, components: Dict[str, ComponentHealth]
+        self, components: dict[str, ComponentHealth]
     ) -> HealthStatus:
         """Calculate overall health status from component results."""
         # Simple aggregation: worst status wins
@@ -825,8 +826,8 @@ class HealthServiceOrchestrator:
         return worst
 
     def _generate_summary(
-        self, components: Dict[str, ComponentHealth]
-    ) -> Dict[str, int]:
+        self, components: dict[str, ComponentHealth]
+    ) -> dict[str, int]:
         """Generate summary of health status counts."""
         summary = {
             "healthy": 0,
@@ -845,7 +846,7 @@ class HealthServiceOrchestrator:
                 summary["unknown"] += 1
         return summary
 
-    def _check_alerts(self, components: Dict[str, ComponentHealth]) -> List[str]:
+    def _check_alerts(self, components: dict[str, ComponentHealth]) -> list[str]:
         """Check for alerts based on component health status."""
         alerts = []
         for name, comp in components.items():
@@ -868,16 +869,16 @@ class HealthServiceOrchestrator:
 
     async def get_component_health(
         self, component_name: str
-    ) -> Optional[ComponentHealth]:
+    ) -> ComponentHealth | None:
         """Get the current health status of a specific component."""
         async with self._lock:
             return self._component_results.get(component_name)
 
-    async def get_all_component_health(self) -> Dict[str, ComponentHealth]:
+    async def get_all_component_health(self) -> dict[str, ComponentHealth]:
         """Get all current component health results."""
         async with self._lock:
             return self._component_results.copy()
 
-    def get_last_check_time(self) -> Optional[datetime]:
+    def get_last_check_time(self) -> datetime | None:
         """Get the timestamp of the last health check."""
         return self.last_health_check

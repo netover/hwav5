@@ -2,7 +2,6 @@
 CQRS dispatcher for routing commands and queries to their respective handlers.
 """
 
-from typing import Dict, Type
 
 from resync.cqrs.base import (
     CommandResult,
@@ -79,16 +78,16 @@ class CQRSDispatcher:
     """
 
     def __init__(self):
-        self.command_handlers: Dict[Type[ICommand], ICommandHandler] = {}
-        self.query_handlers: Dict[Type[IQuery], IQueryHandler] = {}
+        self.command_handlers: dict[type[ICommand], ICommandHandler] = {}
+        self.query_handlers: dict[type[IQuery], IQueryHandler] = {}
 
     def register_command_handler(
-        self, command_type: Type[ICommand], handler: ICommandHandler
+        self, command_type: type[ICommand], handler: ICommandHandler
     ):
         """Register a command handler for a specific command type."""
         self.command_handlers[command_type] = handler
 
-    def register_query_handler(self, query_type: Type[IQuery], handler: IQueryHandler):
+    def register_query_handler(self, query_type: type[IQuery], handler: IQueryHandler):
         """Register a query handler for a specific query type."""
         self.query_handlers[query_type] = handler
 

@@ -52,10 +52,9 @@ Architecture:
 """
 
 
-import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from resync.core.structured_logger import get_logger
 
@@ -65,35 +64,35 @@ logger = get_logger(__name__)
 @dataclass
 class ProcessingResult:
     """Result of query processing through the continual learning engine."""
-    
+
     # Query info
     original_query: str
     enriched_query: str
-    query_embedding: Optional[List[float]] = None
-    
+    query_embedding: list[float] | None = None
+
     # RAG results
-    rag_results: List[Dict[str, Any]] = field(default_factory=list)
+    rag_results: list[dict[str, Any]] = field(default_factory=list)
     rag_top_score: float = 0.0
     feedback_applied: bool = False
-    
+
     # Classification
     classification_confidence: float = 0.0
-    entities_found: Dict[str, List[str]] = field(default_factory=dict)
-    
+    entities_found: dict[str, list[str]] = field(default_factory=dict)
+
     # Context enrichment
     enrichment_applied: bool = False
-    enrichment_types: List[str] = field(default_factory=list)
-    
+    enrichment_types: list[str] = field(default_factory=list)
+
     # Active learning
     review_requested: bool = False
-    review_reasons: List[str] = field(default_factory=list)
-    review_priority: Optional[str] = None
-    
+    review_reasons: list[str] = field(default_factory=list)
+    review_priority: str | None = None
+
     # Metadata
     processing_time_ms: float = 0.0
     timestamp: datetime = field(default_factory=datetime.utcnow)
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "original_query": self.original_query,
             "enriched_query": self.enriched_query,
@@ -125,14 +124,14 @@ class FeedbackResult:
 class ContinualLearningEngine:
     """
     Unified engine for continual learning in the Resync system.
-    
+
     Integrates:
     - Context Enrichment (query enhancement)
     - Feedback-Aware RAG (learning from feedback)
     - Audit → KG Pipeline (error → knowledge)
     - Active Learning (human-in-the-loop)
     """
-    
+
     def __init__(
         self,
         enable_enrichment: bool = True,
@@ -143,7 +142,7 @@ class ContinualLearningEngine:
     ):
         """
         Initialize the continual learning engine.
-        
+
         Args:
             enable_enrichment: Enable context enrichment
             enable_feedback_rag: Enable feedback-aware retrieval
@@ -156,36 +155,36 @@ class ContinualLearningEngine:
         self.enable_active_learning = enable_active_learning
         self.enable_audit_pipeline = enable_audit_pipeline
         self.instance_id = instance_id
-        
+
         # Components (lazy loaded)
         self._enricher = None
         self._feedback_retriever = None
         self._active_learning = None
         self._audit_pipeline = None
         self._embedder = None
-        
+
         # Statistics
         self._queries_processed = 0
         self._feedback_recorded = 0
         self._reviews_triggered = 0
         self._audit_processes = 0
-    
+
     async def _get_enricher(self):
         """Get context enricher."""
         if self._enricher is None:
             from resync.core.context_enrichment import get_context_enricher
             self._enricher = get_context_enricher()
         return self._enricher
-    
+
     async def _get_feedback_retriever(self):
         """Get feedback-aware retriever."""
         if self._feedback_retriever is None:
-            from resync.RAG.microservice.core.feedback_retriever import (
-                create_feedback_aware_retriever
-            )
             from resync.RAG.microservice.core.embedding_service import get_embedder
+            from resync.RAG.microservice.core.feedback_retriever import (
+                create_feedback_aware_retriever,
+            )
             from resync.RAG.microservice.core.vector_store import get_vector_store
-            
+
             embedder = get_embedder()
             store = get_vector_store()
             self._feedback_retriever = create_feedback_aware_retriever(
@@ -194,63 +193,63 @@ class ContinualLearningEngine:
                 adaptive=True,
             )
         return self._feedback_retriever
-    
+
     async def _get_active_learning(self):
         """Get active learning manager."""
         if self._active_learning is None:
             from resync.core.active_learning import get_active_learning_manager
             self._active_learning = get_active_learning_manager()
         return self._active_learning
-    
+
     async def _get_audit_pipeline(self):
         """Get audit-to-KG pipeline."""
         if self._audit_pipeline is None:
             from resync.core.audit_to_kg_pipeline import get_audit_kg_pipeline
             self._audit_pipeline = get_audit_kg_pipeline()
         return self._audit_pipeline
-    
+
     async def _get_embedder(self):
         """Get embedder."""
         if self._embedder is None:
             from resync.RAG.microservice.core.embedding_service import get_embedder
             self._embedder = get_embedder()
         return self._embedder
-    
+
     # =========================================================================
     # QUERY PROCESSING
     # =========================================================================
-    
+
     async def process_query(
         self,
         query: str,
         top_k: int = 10,
-        user_id: Optional[str] = None,
-        classification_result: Optional[Dict[str, Any]] = None,
+        user_id: str | None = None,
+        classification_result: dict[str, Any] | None = None,
     ) -> ProcessingResult:
         """
         Process a query through the full continual learning pipeline.
-        
+
         Args:
             query: User's query
             top_k: Number of RAG results to retrieve
             user_id: Optional user identifier
             classification_result: Pre-computed classification (optional)
-            
+
         Returns:
             ProcessingResult with all processing details
         """
         start_time = datetime.utcnow()
-        
+
         result = ProcessingResult(
             original_query=query,
             enriched_query=query,
         )
-        
+
         # Get embedder for later use
         embedder = await self._get_embedder()
         query_embedding = await embedder.embed(query)
         result.query_embedding = query_embedding
-        
+
         # Step 1: Context Enrichment
         if self.enable_enrichment:
             enrichment_result = await self._apply_enrichment(query)
@@ -258,7 +257,7 @@ class ContinualLearningEngine:
             result.enrichment_applied = enrichment_result.was_enriched
             result.enrichment_types = [e.value for e in enrichment_result.enrichments_applied]
             result.entities_found = enrichment_result.entities_found
-        
+
         # Step 2: Feedback-Aware RAG Retrieval
         if self.enable_feedback_rag:
             rag_results = await self._retrieve_with_feedback(
@@ -268,13 +267,13 @@ class ContinualLearningEngine:
             result.feedback_applied = True
             if rag_results:
                 result.rag_top_score = rag_results[0].get("score", 0.0)
-        
+
         # Step 3: Extract classification confidence if provided
         if classification_result:
             result.classification_confidence = classification_result.get("confidence", 0.0)
             if not result.entities_found:
                 result.entities_found = classification_result.get("entities", {})
-        
+
         # Step 4: Active Learning Evaluation
         if self.enable_active_learning:
             needs_review, review_request = await self._evaluate_for_review(
@@ -290,14 +289,14 @@ class ContinualLearningEngine:
                 result.review_reasons = review_request.get("reasons", [])
                 result.review_priority = review_request.get("priority")
                 self._reviews_triggered += 1
-        
+
         # Calculate processing time
         result.processing_time_ms = (
             datetime.utcnow() - start_time
         ).total_seconds() * 1000
-        
+
         self._queries_processed += 1
-        
+
         logger.info(
             "query_processed",
             query_len=len(query),
@@ -306,20 +305,20 @@ class ContinualLearningEngine:
             review_requested=result.review_requested,
             processing_time_ms=result.processing_time_ms,
         )
-        
+
         return result
-    
+
     async def _apply_enrichment(self, query: str):
         """Apply context enrichment."""
         enricher = await self._get_enricher()
         return await enricher.enrich_query(query, self.instance_id)
-    
+
     async def _retrieve_with_feedback(
         self,
         query: str,
         top_k: int,
-        user_id: Optional[str],
-    ) -> List[Dict[str, Any]]:
+        user_id: str | None,
+    ) -> list[dict[str, Any]]:
         """Retrieve with feedback-aware reranking."""
         try:
             retriever = await self._get_feedback_retriever()
@@ -332,16 +331,16 @@ class ContinualLearningEngine:
         except Exception as e:
             logger.warning(f"Feedback retrieval failed, using basic: {e}")
             return []
-    
+
     async def _evaluate_for_review(
         self,
         query: str,
         response: str,
         classification_confidence: float,
         rag_similarity: float,
-        entities: Dict[str, List[str]],
-        query_embedding: Optional[List[float]],
-    ) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        entities: dict[str, list[str]],
+        query_embedding: list[float] | None,
+    ) -> tuple[bool, dict[str, Any] | None]:
         """Evaluate if query needs human review."""
         try:
             active_learning = await self._get_active_learning()
@@ -357,23 +356,23 @@ class ContinualLearningEngine:
         except Exception as e:
             logger.warning(f"Active learning evaluation failed: {e}")
             return False, None
-    
+
     # =========================================================================
     # FEEDBACK PROCESSING
     # =========================================================================
-    
+
     async def record_feedback(
         self,
         query: str,
         response: str,
         rating: int,
-        doc_ids: Optional[List[str]] = None,
-        user_id: Optional[str] = None,
+        doc_ids: list[str] | None = None,
+        user_id: str | None = None,
         trigger_audit: bool = True,
     ) -> FeedbackResult:
         """
         Record user feedback and propagate learning.
-        
+
         Args:
             query: The query that was asked
             response: The response that was given
@@ -381,12 +380,12 @@ class ContinualLearningEngine:
             doc_ids: Document IDs that were used in response
             user_id: User identifier
             trigger_audit: Whether to trigger audit for negative feedback
-            
+
         Returns:
             FeedbackResult with processing details
         """
         result = FeedbackResult(success=True)
-        
+
         # Step 1: Store feedback in RAG
         if self.enable_feedback_rag and doc_ids:
             try:
@@ -401,11 +400,11 @@ class ContinualLearningEngine:
                 result.feedback_stored = True
             except Exception as e:
                 logger.warning(f"Feedback storage failed: {e}")
-        
+
         # Step 2: Trigger audit pipeline for negative feedback
         if (
-            trigger_audit and 
-            rating < 0 and 
+            trigger_audit and
+            rating < 0 and
             self.enable_audit_pipeline
         ):
             try:
@@ -425,10 +424,10 @@ class ContinualLearningEngine:
                 self._audit_processes += 1
             except Exception as e:
                 logger.warning(f"Audit pipeline failed: {e}")
-        
+
         self._feedback_recorded += 1
         result.message = "Feedback processed successfully"
-        
+
         logger.info(
             "feedback_recorded",
             rating=rating,
@@ -436,24 +435,24 @@ class ContinualLearningEngine:
             audit_triggered=result.audit_triggered,
             kg_updated=result.kg_updated,
         )
-        
+
         return result
-    
+
     async def record_implicit_feedback(
         self,
         query: str,
         selected_doc_id: str,
-        shown_doc_ids: List[str],
-        user_id: Optional[str] = None,
+        shown_doc_ids: list[str],
+        user_id: str | None = None,
     ) -> FeedbackResult:
         """
         Record implicit feedback from user selection.
-        
+
         When user selects/uses one document from results, this is
         implicit positive feedback for that document.
         """
         result = FeedbackResult(success=True)
-        
+
         if self.enable_feedback_rag:
             try:
                 retriever = await self._get_feedback_retriever()
@@ -469,13 +468,13 @@ class ContinualLearningEngine:
                 logger.warning(f"Implicit feedback failed: {e}")
                 result.success = False
                 result.message = str(e)
-        
+
         return result
-    
+
     # =========================================================================
     # AUDIT INTEGRATION
     # =========================================================================
-    
+
     async def process_audit_finding(
         self,
         memory_id: str,
@@ -483,15 +482,15 @@ class ContinualLearningEngine:
         agent_response: str,
         reason: str,
         confidence: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Process an audit finding through the KG pipeline.
-        
+
         This is typically called from ia_auditor when an error is detected.
         """
         if not self.enable_audit_pipeline:
             return {"status": "disabled"}
-        
+
         try:
             pipeline = await self._get_audit_pipeline()
             result = await pipeline.process_audit_finding(
@@ -506,23 +505,23 @@ class ContinualLearningEngine:
         except Exception as e:
             logger.error(f"Audit processing failed: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     # =========================================================================
     # REVIEW MANAGEMENT
     # =========================================================================
-    
+
     async def get_pending_reviews(
         self,
-        priority: Optional[str] = None,
+        priority: str | None = None,
         limit: int = 20,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get pending review requests."""
         if not self.enable_active_learning:
             return []
-        
+
         try:
             from resync.core.active_learning import ReviewPriority
-            
+
             active_learning = await self._get_active_learning()
             priority_enum = ReviewPriority(priority) if priority else None
             requests = await active_learning.get_pending_reviews(
@@ -533,19 +532,19 @@ class ContinualLearningEngine:
         except Exception as e:
             logger.warning(f"Failed to get pending reviews: {e}")
             return []
-    
+
     async def submit_review(
         self,
         request_id: str,
         reviewer_id: str,
         is_correct: bool,
-        correction: Optional[str] = None,
-        feedback: Optional[str] = None,
+        correction: str | None = None,
+        feedback: str | None = None,
     ) -> bool:
         """Submit a human review."""
         if not self.enable_active_learning:
             return False
-        
+
         try:
             active_learning = await self._get_active_learning()
             return await active_learning.submit_review(
@@ -558,12 +557,12 @@ class ContinualLearningEngine:
         except Exception as e:
             logger.error(f"Review submission failed: {e}")
             return False
-    
+
     # =========================================================================
     # STATISTICS
     # =========================================================================
-    
-    async def get_statistics(self) -> Dict[str, Any]:
+
+    async def get_statistics(self) -> dict[str, Any]:
         """Get comprehensive statistics from all components."""
         stats = {
             "engine": {
@@ -579,43 +578,43 @@ class ContinualLearningEngine:
                 "audit_pipeline_enabled": self.enable_audit_pipeline,
             },
         }
-        
+
         # Get component statistics
         try:
             if self.enable_enrichment and self._enricher:
                 stats["enrichment"] = self._enricher.get_statistics()
         except Exception:
             pass
-        
+
         try:
             if self.enable_feedback_rag and self._feedback_retriever:
                 stats["feedback_rag"] = self._feedback_retriever.get_retriever_stats()
                 stats["feedback_store"] = await self._feedback_retriever.get_feedback_stats()
         except Exception:
             pass
-        
+
         try:
             if self.enable_active_learning and self._active_learning:
                 stats["active_learning"] = self._active_learning.get_statistics()
                 stats["review_queue"] = await self._active_learning.get_queue_statistics()
         except Exception:
             pass
-        
+
         try:
             if self.enable_audit_pipeline and self._audit_pipeline:
                 stats["audit_pipeline"] = self._audit_pipeline.get_statistics()
         except Exception:
             pass
-        
+
         return stats
-    
-    async def get_health(self) -> Dict[str, Any]:
+
+    async def get_health(self) -> dict[str, Any]:
         """Get health status of all components."""
         health = {
             "status": "healthy",
             "components": {},
         }
-        
+
         # Check enricher
         if self.enable_enrichment:
             try:
@@ -624,7 +623,7 @@ class ContinualLearningEngine:
             except Exception as e:
                 health["components"]["enrichment"] = f"unhealthy: {e}"
                 health["status"] = "degraded"
-        
+
         # Check feedback retriever
         if self.enable_feedback_rag:
             try:
@@ -633,7 +632,7 @@ class ContinualLearningEngine:
             except Exception as e:
                 health["components"]["feedback_rag"] = f"unhealthy: {e}"
                 health["status"] = "degraded"
-        
+
         # Check active learning
         if self.enable_active_learning:
             try:
@@ -643,7 +642,7 @@ class ContinualLearningEngine:
             except Exception as e:
                 health["components"]["active_learning"] = f"unhealthy: {e}"
                 health["status"] = "degraded"
-        
+
         # Check audit pipeline
         if self.enable_audit_pipeline:
             try:
@@ -652,12 +651,12 @@ class ContinualLearningEngine:
             except Exception as e:
                 health["components"]["audit_pipeline"] = f"unhealthy: {e}"
                 health["status"] = "degraded"
-        
+
         return health
 
 
 # Global instance
-_engine: Optional[ContinualLearningEngine] = None
+_engine: ContinualLearningEngine | None = None
 
 
 def get_continual_learning_engine(
@@ -677,7 +676,7 @@ def get_continual_learning_engine(
 async def process_query_with_learning(
     query: str,
     top_k: int = 10,
-    user_id: Optional[str] = None,
+    user_id: str | None = None,
 ) -> ProcessingResult:
     """Convenience function to process a query."""
     engine = get_continual_learning_engine()
@@ -688,7 +687,7 @@ async def record_user_feedback(
     query: str,
     response: str,
     rating: int,
-    doc_ids: Optional[List[str]] = None,
+    doc_ids: list[str] | None = None,
 ) -> FeedbackResult:
     """Convenience function to record feedback."""
     engine = get_continual_learning_engine()

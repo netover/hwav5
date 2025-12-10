@@ -19,10 +19,10 @@ Architecture:
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from resync.core.structured_logger import get_logger
 from resync.core.knowledge_graph.graph import get_knowledge_graph
+from resync.core.structured_logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -33,24 +33,24 @@ logger = get_logger(__name__)
 
 class QueryIntent(str, Enum):
     """Types of queries that can be handled."""
-    
+
     # Graph-only queries
     DEPENDENCY_CHAIN = "dependency_chain"       # "What are the dependencies of X?"
     IMPACT_ANALYSIS = "impact_analysis"         # "What happens if X fails?"
     RESOURCE_CONFLICT = "resource_conflict"     # "Can X and Y run together?"
     CRITICAL_JOBS = "critical_jobs"             # "What are the most critical jobs?"
     JOB_LINEAGE = "job_lineage"                 # "Show the full lineage of X"
-    
+
     # RAG-only queries
     DOCUMENTATION = "documentation"             # "How do I configure X?"
     EXPLANATION = "explanation"                 # "What is X?"
     TROUBLESHOOTING = "troubleshooting"         # "How to fix error X?"
-    
+
     # Hybrid queries (both systems)
     ROOT_CAUSE = "root_cause"                   # "Why did X fail?" (events + docs)
     JOB_DETAILS = "job_details"                 # "Tell me about job X" (graph + docs)
     COMPARISON = "comparison"                   # "Compare X and Y"
-    
+
     # Default
     GENERAL = "general"                         # Unclear intent
 
@@ -60,10 +60,10 @@ class QueryClassification:
     """Result of query classification."""
     intent: QueryIntent
     confidence: float
-    entities: Dict[str, List[str]]  # {"jobs": [...], "workstations": [...]}
+    entities: dict[str, list[str]]  # {"jobs": [...], "workstations": [...]}
     use_graph: bool
     use_rag: bool
-    graph_query_type: Optional[str] = None
+    graph_query_type: str | None = None
 
 
 # Intent patterns (Portuguese + English)
@@ -143,16 +143,16 @@ ENTITY_PATTERNS = {
 class QueryClassifier:
     """
     Classifies queries to determine routing strategy.
-    
+
     Uses regex patterns first (fast), then falls back to LLM
     if confidence is low (more accurate but slower).
-    
+
     Features:
     - LRU cache for LLM results (prevents memory leak)
     - Configurable cache size (default 1000)
     - Query normalization for better cache hits
     """
-    
+
     # LLM classification prompt
     LLM_ROUTER_PROMPT = """You are a query classifier for a TWS/HWA workload automation system.
 Classify the user query into ONE of these categories:
@@ -174,7 +174,7 @@ CATEGORIES:
 USER QUERY: {query}
 
 Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."""
-    
+
     # Intent map at class level for efficiency
     _INTENT_MAP = {
         "DEPENDENCY_CHAIN": QueryIntent.DEPENDENCY_CHAIN,
@@ -190,19 +190,19 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
         "COMPARISON": QueryIntent.COMPARISON,
         "GENERAL": QueryIntent.GENERAL,
     }
-    
+
     # Default cache size
     _DEFAULT_CACHE_SIZE = 1000
-    
+
     def __init__(
-        self, 
-        llm_service: Optional[Any] = None, 
+        self,
+        llm_service: Any | None = None,
         use_llm_fallback: bool = True,
         cache_max_size: int = _DEFAULT_CACHE_SIZE
     ):
         """
         Initialize classifier.
-        
+
         Args:
             llm_service: Optional LLM service for fallback classification
             use_llm_fallback: Whether to use LLM when regex fails
@@ -211,15 +211,15 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
         self._llm = llm_service
         self._use_llm_fallback = use_llm_fallback
         self._cache_max_size = cache_max_size
-        
+
         # LRU Cache using OrderedDict
         from collections import OrderedDict
         self._intent_cache: OrderedDict[str, QueryIntent] = OrderedDict()
-    
+
     def _normalize_for_cache(self, query: str) -> str:
         """
         Normalize query for consistent cache keys.
-        
+
         - Lowercase
         - Remove extra whitespace
         - Hash for fixed-size key
@@ -228,15 +228,15 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
         # Normalize: lowercase, collapse whitespace, limit length
         normalized = " ".join(query.lower().split())[:200]
         return hashlib.md5(normalized.encode()).hexdigest()
-    
-    def _get_from_cache(self, key: str) -> Optional[QueryIntent]:
+
+    def _get_from_cache(self, key: str) -> QueryIntent | None:
         """Get from LRU cache and update access order."""
         if key in self._intent_cache:
             # Move to end (most recently used)
             self._intent_cache.move_to_end(key)
             return self._intent_cache[key]
         return None
-    
+
     def _add_to_cache(self, key: str, intent: QueryIntent) -> None:
         """Add to LRU cache with eviction."""
         if key in self._intent_cache:
@@ -244,45 +244,45 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
             self._intent_cache.move_to_end(key)
             self._intent_cache[key] = intent
             return
-        
+
         # Add new entry
         self._intent_cache[key] = intent
-        
+
         # Evict oldest entries if over limit
         while len(self._intent_cache) > self._cache_max_size:
             self._intent_cache.popitem(last=False)  # Remove oldest (first)
-    
-    def get_cache_stats(self) -> Dict[str, Any]:
+
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         return {
             "size": len(self._intent_cache),
             "max_size": self._cache_max_size,
             "utilization": len(self._intent_cache) / self._cache_max_size if self._cache_max_size > 0 else 0,
         }
-    
+
     def clear_cache(self) -> None:
         """Clear the LRU cache."""
         self._intent_cache.clear()
-    
+
     def classify(self, query: str) -> QueryClassification:
         """
         Classify a query to determine how to route it.
-        
+
         Args:
             query: User query text
-            
+
         Returns:
             QueryClassification with intent and routing info
         """
         query_lower = query.lower()
-        
+
         # Extract entities first
         entities = self._extract_entities(query)
-        
+
         # Match intent patterns
         best_intent = QueryIntent.GENERAL
         best_confidence = 0.0
-        
+
         for intent, patterns in INTENT_PATTERNS.items():
             for pattern in patterns:
                 if re.search(pattern, query_lower):
@@ -292,10 +292,10 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
                         best_confidence = confidence
                         best_intent = intent
                         break
-        
+
         # Determine routing
         use_graph, use_rag, graph_query = self._determine_routing(best_intent)
-        
+
         return QueryClassification(
             intent=best_intent,
             confidence=best_confidence,
@@ -304,33 +304,33 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
             use_rag=use_rag,
             graph_query_type=graph_query
         )
-    
+
     async def classify_async(self, query: str) -> QueryClassification:
         """
         Classify query with LLM fallback for low-confidence matches.
-        
+
         This is the async version that can use LLM when regex fails.
-        
+
         Args:
             query: User query text
-            
+
         Returns:
             QueryClassification with intent and routing info
         """
         # First try regex classification
         result = self.classify(query)
-        
+
         # If high confidence or LLM disabled, return regex result
         if result.confidence >= 0.6 or not self._use_llm_fallback:
             return result
-        
+
         # Low confidence - try LLM classification
         llm_intent = await self._classify_with_llm(query)
-        
+
         if llm_intent and llm_intent != QueryIntent.GENERAL:
             # LLM found a better match
             use_graph, use_rag, graph_query = self._determine_routing(llm_intent)
-            
+
             return QueryClassification(
                 intent=llm_intent,
                 confidence=0.75,  # LLM classification confidence
@@ -339,47 +339,47 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
                 use_rag=use_rag,
                 graph_query_type=graph_query
             )
-        
+
         # LLM also didn't find a match, return original
         return result
-    
-    async def _classify_with_llm(self, query: str) -> Optional[QueryIntent]:
+
+    async def _classify_with_llm(self, query: str) -> QueryIntent | None:
         """
         Use LLM to classify query with LRU caching.
-        
+
         Args:
             query: User query text
-            
+
         Returns:
             Classified intent or None if failed
         """
         # Normalize query for cache key
         cache_key = self._normalize_for_cache(query)
-        
+
         # Check LRU cache first
         cached = self._get_from_cache(cache_key)
         if cached is not None:
             logger.debug("llm_cache_hit", query=query[:30])
             return cached
-        
+
         # Get LLM service
         llm = await self._get_llm()
         if llm is None:
             return None
-        
+
         try:
             prompt = self.LLM_ROUTER_PROMPT.format(query=query)
             response = await llm.generate(prompt)
-            
+
             # Parse response
             category = response.strip().upper().replace(" ", "_")
-            
+
             # Map to QueryIntent using class-level map
             intent = self._INTENT_MAP.get(category, QueryIntent.GENERAL)
-            
+
             # Add to LRU cache
             self._add_to_cache(cache_key, intent)
-            
+
             logger.debug(
                 "llm_classification",
                 query=query[:50],
@@ -387,13 +387,13 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
                 intent=intent.value,
                 cache_size=len(self._intent_cache)
             )
-            
+
             return intent
-            
+
         except Exception as e:
             logger.warning("llm_classification_failed", error=str(e))
             return None
-    
+
     async def _get_llm(self):
         """Get LLM service (lazy load)."""
         if self._llm is None:
@@ -404,11 +404,11 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
                 logger.warning("llm_service_not_available")
                 return None
         return self._llm
-    
-    def _extract_entities(self, query: str) -> Dict[str, List[str]]:
+
+    def _extract_entities(self, query: str) -> dict[str, list[str]]:
         """Extract entities from query."""
         entities = {}
-        
+
         for entity_type, patterns in ENTITY_PATTERNS.items():
             found = set()
             for pattern in patterns:
@@ -416,15 +416,15 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
                 found.update(m.upper() for m in matches)
             if found:
                 entities[entity_type] = list(found)
-        
+
         return entities
-    
+
     def _determine_routing(
-        self, 
+        self,
         intent: QueryIntent
-    ) -> Tuple[bool, bool, Optional[str]]:
+    ) -> tuple[bool, bool, str | None]:
         """Determine which systems to query."""
-        
+
         # Graph-only intents
         graph_only = {
             QueryIntent.DEPENDENCY_CHAIN: "dependency_chain",
@@ -433,30 +433,30 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
             QueryIntent.CRITICAL_JOBS: "critical_jobs",
             QueryIntent.JOB_LINEAGE: "lineage",
         }
-        
+
         if intent in graph_only:
             return True, False, graph_only[intent]
-        
+
         # RAG-only intents
         rag_only = {
             QueryIntent.DOCUMENTATION,
             QueryIntent.EXPLANATION,
             QueryIntent.TROUBLESHOOTING,
         }
-        
+
         if intent in rag_only:
             return False, True, None
-        
+
         # Hybrid intents
         hybrid = {
             QueryIntent.ROOT_CAUSE: "event_chain",
             QueryIntent.JOB_DETAILS: "job_info",
             QueryIntent.COMPARISON: "comparison",
         }
-        
+
         if intent in hybrid:
             return True, True, hybrid[intent]
-        
+
         # Default: RAG only
         return False, True, None
 
@@ -468,19 +468,19 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
 class HybridRAG:
     """
     Hybrid Knowledge Graph + RAG query executor.
-    
+
     Routes queries to appropriate systems and merges results.
     """
-    
+
     def __init__(
         self,
-        rag_retriever: Optional[Any] = None,
-        llm_service: Optional[Any] = None,
+        rag_retriever: Any | None = None,
+        llm_service: Any | None = None,
         use_llm_router: bool = True
     ):
         """
         Initialize hybrid RAG.
-        
+
         Args:
             rag_retriever: Existing RAG retriever (pgvector-based)
             llm_service: LLM service for response generation
@@ -494,14 +494,14 @@ class HybridRAG:
             use_llm_fallback=use_llm_router
         )
         self._kg = None  # Lazy load
-    
+
     async def _get_kg(self):
         """Get knowledge graph (lazy load)."""
         if self._kg is None:
             self._kg = get_knowledge_graph()
             await self._kg.initialize()
         return self._kg
-    
+
     async def _get_rag(self):
         """Get RAG retriever (lazy load)."""
         if self._rag is None:
@@ -511,7 +511,7 @@ class HybridRAG:
             except ImportError:
                 logger.warning("RAG retriever not available")
         return self._rag
-    
+
     async def _get_llm(self):
         """Get LLM service (lazy load)."""
         if self._llm is None:
@@ -521,27 +521,27 @@ class HybridRAG:
             except ImportError:
                 logger.warning("LLM service not available")
         return self._llm
-    
+
     # =========================================================================
     # MAIN QUERY INTERFACE
     # =========================================================================
-    
+
     async def query(
         self,
         query_text: str,
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
         generate_response: bool = True,
         enable_continual_learning: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute a hybrid query.
-        
+
         Args:
             query_text: User query
             context: Additional context (user, session, etc.)
             generate_response: Whether to generate LLM response
             enable_continual_learning: Enable context enrichment and active learning
-            
+
         Returns:
             Dict with graph_results, rag_results, and optional response
         """
@@ -550,7 +550,7 @@ class HybridRAG:
         enrichment_context = []
         if enable_continual_learning:
             try:
-                from resync.core.continual_learning import enrich_query, get_context_enricher
+                from resync.core.continual_learning import get_context_enricher
                 enricher = get_context_enricher()
                 instance_id = context.get("instance_id") if context else None
                 enrichment_result = await enricher.enrich_query(query_text, instance_id)
@@ -568,13 +568,13 @@ class HybridRAG:
             except Exception as e:
                 logger.warning("context_enrichment_error", error=str(e))
         # === END Context Enrichment ===
-        
+
         # Classify query - use async version for LLM fallback
         if self._use_llm_router:
             classification = await self._classifier.classify_async(query_text)
         else:
             classification = self._classifier.classify(query_text)
-        
+
         logger.info(
             "query_classified",
             intent=classification.intent.value,
@@ -582,7 +582,7 @@ class HybridRAG:
             use_graph=classification.use_graph,
             use_rag=classification.use_rag
         )
-        
+
         result = {
             "query": query_text,
             "enriched_query": enriched_query if enriched_query != query_text else None,
@@ -600,36 +600,36 @@ class HybridRAG:
                 "review_reasons": [],
             },
         }
-        
+
         # Execute graph query if needed
         if classification.use_graph:
             result["graph_results"] = await self._execute_graph_query(
                 classification, query_text
             )
-        
+
         # Execute RAG query if needed (use enriched query for better retrieval)
         if classification.use_rag:
             result["rag_results"] = await self._execute_rag_query(
                 enriched_query, classification.entities
             )
-        
+
         # Generate response if requested
         if generate_response:
             result["response"] = await self._generate_response(
                 query_text, result, classification
             )
-            
+
             # === CONTINUAL LEARNING: Active Learning Check ===
             if enable_continual_learning and result["response"]:
                 try:
                     from resync.core.continual_learning import check_for_review
-                    
+
                     # Get RAG similarity score
                     rag_similarity = 0.0
                     if result["rag_results"] and isinstance(result["rag_results"], list):
                         if result["rag_results"] and "score" in result["rag_results"][0]:
                             rag_similarity = float(result["rag_results"][0].get("score", 0))
-                    
+
                     needs_review, warning = await check_for_review(
                         query=query_text,
                         response=str(result["response"]),
@@ -637,42 +637,42 @@ class HybridRAG:
                         rag_similarity_score=rag_similarity,
                         entities_found=classification.entities,
                     )
-                    
+
                     result["continual_learning"]["needs_review"] = needs_review
                     if warning:
                         result["continual_learning"]["warning"] = warning
-                        
+
                 except ImportError:
                     logger.debug("continual_learning_module_not_available")
                 except Exception as e:
                     logger.warning("active_learning_check_error", error=str(e))
             # === END Active Learning Check ===
-        
+
         return result
-    
+
     # =========================================================================
     # GRAPH QUERY EXECUTION
     # =========================================================================
-    
+
     async def _execute_graph_query(
         self,
         classification: QueryClassification,
         query_text: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute knowledge graph query based on classification."""
         kg = await self._get_kg()
-        
+
         jobs = classification.entities.get("jobs", [])
         query_type = classification.graph_query_type
-        
+
         if query_type == "dependency_chain" and jobs:
             result = await kg.get_dependency_chain(jobs[0])
             return {"type": "dependency_chain", "job": jobs[0], "chain": result}
-        
+
         if query_type == "impact_analysis" and jobs:
             result = await kg.get_impact_analysis(jobs[0])
             return {"type": "impact_analysis", **result}
-        
+
         if query_type == "resource_conflict" and len(jobs) >= 2:
             result = await kg.find_resource_conflicts(jobs[0], jobs[1])
             return {
@@ -681,21 +681,21 @@ class HybridRAG:
                 "job_b": jobs[1],
                 "conflicts": result
             }
-        
+
         if query_type == "critical_jobs":
             result = await kg.get_critical_jobs()
             return {"type": "critical_jobs", "jobs": result}
-        
+
         if query_type == "lineage" and jobs:
             result = await kg.get_full_lineage(jobs[0])
             return {"type": "lineage", **result}
-        
+
         if query_type == "job_info" and jobs:
             # Get comprehensive job info
             chain = await kg.get_dependency_chain(jobs[0])
             impact = await kg.get_impact_analysis(jobs[0])
             downstream = await kg.get_downstream_jobs(jobs[0])
-            
+
             return {
                 "type": "job_info",
                 "job": jobs[0],
@@ -703,77 +703,77 @@ class HybridRAG:
                 "impact": impact,
                 "downstream_jobs": downstream
             }
-        
+
         # Default: return graph statistics
         stats = await kg.get_statistics()
         return {"type": "statistics", **stats}
-    
+
     # =========================================================================
     # RAG QUERY EXECUTION
     # =========================================================================
-    
+
     async def _execute_rag_query(
         self,
         query_text: str,
-        entities: Dict[str, List[str]]
-    ) -> Dict[str, Any]:
+        entities: dict[str, list[str]]
+    ) -> dict[str, Any]:
         """Execute RAG query using pgvector."""
         rag = await self._get_rag()
-        
+
         if rag is None:
             return {"error": "RAG not available", "documents": []}
-        
+
         try:
             # Build filter if entities found
             filters = {}
             if entities.get("jobs"):
                 # Could filter by job names in metadata
                 pass
-            
+
             # Execute semantic search
             results = await rag.retrieve(query_text, top_k=5)
-            
+
             return {
                 "type": "semantic_search",
                 "query": query_text,
                 "documents": results
             }
-            
+
         except Exception as e:
             logger.error("rag_query_failed", error=str(e))
             return {"error": str(e), "documents": []}
-    
+
     # =========================================================================
     # RESPONSE GENERATION
     # =========================================================================
-    
+
     async def _generate_response(
         self,
         query_text: str,
-        results: Dict[str, Any],
+        results: dict[str, Any],
         classification: QueryClassification
     ) -> str:
         """Generate natural language response from results."""
         llm = await self._get_llm()
-        
+
         if llm is None:
             return self._format_results_as_text(results)
-        
+
         # Build context from results
         context_parts = []
-        
+
         if results.get("graph_results"):
             context_parts.append(
                 f"Knowledge Graph Results:\n{self._format_graph_results(results['graph_results'])}"
             )
-        
+
         if results.get("rag_results") and results["rag_results"].get("documents"):
             context_parts.append(
                 f"Documentation:\n{self._format_rag_results(results['rag_results'])}"
             )
-        
+
         context = "\n\n".join(context_parts)
-        
+
         prompt = f"""Based on the following information, answer the user's question.
 
 CONTEXT:
@@ -783,84 +783,84 @@ USER QUESTION: {query_text}
 
 Provide a clear, helpful answer. If the information is incomplete, say so.
 Answer in the same language as the question."""
-        
+
         try:
             response = await llm.generate(prompt)
             return response
         except Exception as e:
             logger.error("response_generation_failed", error=str(e))
             return self._format_results_as_text(results)
-    
-    def _format_graph_results(self, results: Dict[str, Any]) -> str:
+
+    def _format_graph_results(self, results: dict[str, Any]) -> str:
         """Format graph results as text."""
         result_type = results.get("type", "unknown")
-        
+
         if result_type == "dependency_chain":
             chain = results.get("chain", [])
             if not chain:
                 return f"Job {results.get('job')} has no dependencies."
-            
+
             deps = [f"  → {c['to']}" for c in chain]
             return f"Dependencies for {results.get('job')}:\n" + "\n".join(deps)
-        
+
         if result_type == "impact_analysis":
             count = results.get("affected_count", 0)
             jobs = results.get("affected_jobs", [])
             severity = results.get("severity", "unknown")
-            
+
             if count == 0:
                 return f"Job {results.get('job')} has no downstream dependents."
-            
+
             return f"Impact Analysis for {results.get('job')}:\n" \
                    f"- Affected jobs: {count}\n" \
                    f"- Severity: {severity}\n" \
                    f"- Jobs: {', '.join(jobs[:10])}"
-        
+
         if result_type == "resource_conflict":
             conflicts = results.get("conflicts", [])
             if not conflicts:
                 return f"Jobs {results.get('job_a')} and {results.get('job_b')} " \
                        f"have no resource conflicts."
-            
+
             conflict_list = [f"  - {c['name']} ({c['conflict_type']})" for c in conflicts]
             return f"Resource conflicts between {results.get('job_a')} and {results.get('job_b')}:\n" \
                    + "\n".join(conflict_list)
-        
+
         if result_type == "critical_jobs":
             jobs = results.get("jobs", [])
             if not jobs:
                 return "No critical jobs identified."
-            
+
             lines = [f"  {i+1}. {j['job']} (centrality: {j['centrality_score']}, risk: {j['risk_level']})"
                      for i, j in enumerate(jobs[:10])]
             return "Most critical jobs:\n" + "\n".join(lines)
-        
+
         return str(results)
-    
-    def _format_rag_results(self, results: Dict[str, Any]) -> str:
+
+    def _format_rag_results(self, results: dict[str, Any]) -> str:
         """Format RAG results as text."""
         docs = results.get("documents", [])
         if not docs:
             return "No relevant documentation found."
-        
+
         formatted = []
         for i, doc in enumerate(docs[:3], 1):
             text = doc.get("text", doc.get("content", ""))[:500]
             source = doc.get("source", doc.get("metadata", {}).get("source", "unknown"))
             formatted.append(f"[{i}] {source}:\n{text}...")
-        
+
         return "\n\n".join(formatted)
-    
-    def _format_results_as_text(self, results: Dict[str, Any]) -> str:
+
+    def _format_results_as_text(self, results: dict[str, Any]) -> str:
         """Format all results as plain text (fallback)."""
         parts = []
-        
+
         if results.get("graph_results"):
             parts.append(self._format_graph_results(results["graph_results"]))
-        
+
         if results.get("rag_results"):
             parts.append(self._format_rag_results(results["rag_results"]))
-        
+
         return "\n\n".join(parts) if parts else "No results found."
 
 
@@ -868,7 +868,7 @@ Answer in the same language as the question."""
 # CONVENIENCE FUNCTIONS
 # =============================================================================
 
-_hybrid_rag: Optional[HybridRAG] = None
+_hybrid_rag: HybridRAG | None = None
 
 
 def get_hybrid_rag() -> HybridRAG:
@@ -881,17 +881,17 @@ def get_hybrid_rag() -> HybridRAG:
 
 async def hybrid_query(
     query_text: str,
-    context: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    context: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """
     Execute a hybrid KG+RAG query.
-    
+
     Convenience function for one-off queries.
-    
+
     Args:
         query_text: User query
         context: Optional context
-        
+
     Returns:
         Query results with graph_results, rag_results, and response
     """

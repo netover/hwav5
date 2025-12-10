@@ -3,9 +3,9 @@
 import re
 from enum import Enum
 from pathlib import Path
-from typing import Any, List, Optional, Union
+from typing import Any
 
-from pydantic import field_validator, BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ValidationMode(str, Enum):
@@ -69,7 +69,7 @@ class ValidationConfigModel(BaseModel):
         description="Validation requests per minute rate limit",
     )
 
-    skip_paths: List[str] = Field(
+    skip_paths: list[str] = Field(
         default_factory=lambda: [
             "/health",
             "/docs",
@@ -110,7 +110,7 @@ class ValidationConfigModel(BaseModel):
         default=1000, ge=1, le=10000, description="Maximum items in arrays"
     )
 
-    allowed_file_types: List[str] = Field(
+    allowed_file_types: list[str] = Field(
         default_factory=lambda: [
             "text/plain",
             "text/csv",
@@ -222,7 +222,7 @@ class AgentValidationConfig(BaseModel):
         default=500, ge=1, le=2000, description="Maximum agent description length"
     )
 
-    allowed_models: List[str] = Field(
+    allowed_models: list[str] = Field(
         default_factory=lambda: ["gpt-3.5-turbo", "gpt-4", "claude-3", "llama2"],
         description="Allowed AI models",
     )
@@ -263,7 +263,7 @@ class ChatValidationConfig(BaseModel):
         default=True, description="Enable content filtering"
     )
 
-    blocked_keywords: List[str] = Field(
+    blocked_keywords: list[str] = Field(
         default_factory=list, description="Keywords to block in messages", max_length=100
     )
 
@@ -352,7 +352,7 @@ class RateLimitConfig(BaseModel):
 class ValidationSettings:
     """Validation settings manager."""
 
-    def __init__(self, config_file: Optional[Union[str, Path]] = None):
+    def __init__(self, config_file: str | Path | None = None):
         """
         Initialize validation settings.
 
@@ -360,11 +360,11 @@ class ValidationSettings:
             config_file: Path to configuration file
         """
         self.config_file = Path(config_file) if config_file else None
-        self._config: Optional[ValidationConfigModel] = None
-        self._agent_config: Optional[AgentValidationConfig] = None
-        self._chat_config: Optional[ChatValidationConfig] = None
-        self._security_config: Optional[SecurityValidationConfig] = None
-        self._rate_limit_config: Optional[RateLimitConfig] = None
+        self._config: ValidationConfigModel | None = None
+        self._agent_config: AgentValidationConfig | None = None
+        self._chat_config: ChatValidationConfig | None = None
+        self._security_config: SecurityValidationConfig | None = None
+        self._rate_limit_config: RateLimitConfig | None = None
 
         # Load configuration
         self.load_config()
@@ -373,7 +373,7 @@ class ValidationSettings:
         """Load validation configuration."""
         if self.config_file and self.config_file.exists():
             try:
-                with open(self.config_file, "r") as f:
+                with open(self.config_file) as f:
                     config_data = f.read()
 
                 # Try JSON first, then fallback to other formats
@@ -432,7 +432,7 @@ class ValidationSettings:
 
         return config_dict
 
-    def save_config(self, config_file: Optional[Union[str, Path]] = None) -> None:
+    def save_config(self, config_file: str | Path | None = None) -> None:
         """
         Save validation configuration.
 
@@ -505,7 +505,7 @@ class ValidationSettings:
         """Check if validation is enabled."""
         return self._config.enabled if self._config else True
 
-    def get_skip_paths(self) -> List[str]:
+    def get_skip_paths(self) -> list[str]:
         """Get paths to skip validation for."""
         return self._config.skip_paths if self._config else []
 
@@ -515,11 +515,11 @@ class ValidationSettings:
 
 
 # Global validation settings instance
-_validation_settings: Optional[ValidationSettings] = None
+_validation_settings: ValidationSettings | None = None
 
 
 def get_validation_settings(
-    config_file: Optional[Union[str, Path]] = None,
+    config_file: str | Path | None = None,
 ) -> ValidationSettings:
     """
     Get global validation settings instance.

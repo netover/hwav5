@@ -8,11 +8,11 @@ Provides endpoints for:
 - Account status management
 """
 
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, status, Depends
+import logging
+
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 
-import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -24,16 +24,16 @@ class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
-    full_name: Optional[str] = None
+    full_name: str | None = None
     role: str = "user"
 
 
 class UserUpdate(BaseModel):
     """Model for updating a user."""
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
-    role: Optional[str] = None
-    is_active: Optional[bool] = None
+    email: EmailStr | None = None
+    full_name: str | None = None
+    role: str | None = None
+    is_active: bool | None = None
 
 
 class UserResponse(BaseModel):
@@ -41,12 +41,12 @@ class UserResponse(BaseModel):
     id: str
     username: str
     email: str
-    full_name: Optional[str]
+    full_name: str | None
     role: str
     is_active: bool
     is_verified: bool
     created_at: str
-    last_login: Optional[str]
+    last_login: str | None
 
 
 class PasswordChange(BaseModel):
@@ -57,7 +57,7 @@ class PasswordChange(BaseModel):
 
 class BulkUserAction(BaseModel):
     """Model for bulk user actions."""
-    user_ids: List[str]
+    user_ids: list[str]
     action: str  # activate, deactivate, delete
 
 
@@ -65,7 +65,7 @@ class BulkUserAction(BaseModel):
 _users = {}
 
 
-@router.get("/users", response_model=List[UserResponse], tags=["Admin Users"])
+@router.get("/users", response_model=list[UserResponse], tags=["Admin Users"])
 async def list_users(
     skip: int = 0,
     limit: int = 100,
@@ -73,10 +73,10 @@ async def list_users(
 ):
     """List all users with pagination."""
     users = list(_users.values())
-    
+
     if active_only:
         users = [u for u in users if u.get("is_active", True)]
-    
+
     return users[skip:skip + limit]
 
 
@@ -85,27 +85,27 @@ async def create_user(user: UserCreate):
     """Create a new user."""
     import uuid
     from datetime import datetime
-    
+
     # Check if username exists
     if any(u["username"] == user.username for u in _users.values()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already exists",
         )
-    
+
     # Check if email exists
     if any(u["email"] == user.email for u in _users.values()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already exists",
         )
-    
+
     user_id = str(uuid.uuid4())
-    
+
     # Hash password (in production, use proper hashing)
     from resync.fastapi_app.core.security import get_password_hash
     hashed_password = get_password_hash(user.password)
-    
+
     new_user = {
         "id": user_id,
         "username": user.username,
@@ -118,10 +118,10 @@ async def create_user(user: UserCreate):
         "created_at": datetime.utcnow().isoformat(),
         "last_login": None,
     }
-    
+
     _users[user_id] = new_user
     logger.info(f"User created: {user.username}")
-    
+
     return UserResponse(**new_user)
 
 
@@ -133,7 +133,7 @@ async def get_user(user_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     return UserResponse(**_users[user_id])
 
 
@@ -145,12 +145,12 @@ async def update_user(user_id: str, user_update: UserUpdate):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     user = _users[user_id]
-    
+
     for field, value in user_update.dict(exclude_unset=True).items():
         user[field] = value
-    
+
     logger.info(f"User updated: {user['username']}")
     return UserResponse(**user)
 
@@ -163,7 +163,7 @@ async def delete_user(user_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     username = _users[user_id]["username"]
     del _users[user_id]
     logger.info(f"User deleted: {username}")
@@ -177,17 +177,17 @@ async def change_password(user_id: str, password_change: PasswordChange):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     user = _users[user_id]
-    
+
     # Verify current password
-    from resync.fastapi_app.core.security import verify_password, get_password_hash
+    from resync.fastapi_app.core.security import get_password_hash, verify_password
     if not verify_password(password_change.current_password, user["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect",
         )
-    
+
     # Update password
     user["hashed_password"] = get_password_hash(password_change.new_password)
     logger.info(f"Password changed for user: {user['username']}")
@@ -201,7 +201,7 @@ async def activate_user(user_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     _users[user_id]["is_active"] = True
     logger.info(f"User activated: {_users[user_id]['username']}")
 
@@ -214,7 +214,7 @@ async def deactivate_user(user_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     _users[user_id]["is_active"] = False
     logger.info(f"User deactivated: {_users[user_id]['username']}")
 
@@ -223,12 +223,12 @@ async def deactivate_user(user_id: str):
 async def bulk_user_action(action: BulkUserAction):
     """Perform bulk action on multiple users."""
     results = {"success": [], "failed": []}
-    
+
     for user_id in action.user_ids:
         if user_id not in _users:
             results["failed"].append({"id": user_id, "reason": "Not found"})
             continue
-        
+
         try:
             if action.action == "activate":
                 _users[user_id]["is_active"] = True
@@ -239,9 +239,9 @@ async def bulk_user_action(action: BulkUserAction):
             else:
                 results["failed"].append({"id": user_id, "reason": "Unknown action"})
                 continue
-            
+
             results["success"].append(user_id)
         except Exception as e:
             results["failed"].append({"id": user_id, "reason": str(e)})
-    
+
     return results

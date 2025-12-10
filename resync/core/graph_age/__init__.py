@@ -20,15 +20,15 @@ Architecture:
 
 Usage:
     from resync.core.graph_age import get_graph_service
-    
+
     graph = await get_graph_service()
-    
+
     # Add a job
     await graph.add_job("BATCH_PROC", workstation="WS001")
-    
+
     # Query dependencies
     deps = await graph.get_dependency_chain("BATCH_PROC")
-    
+
     # Get critical jobs (high impact)
     critical = await graph.get_critical_jobs(limit=10)
 """
@@ -38,17 +38,17 @@ from resync.core.graph_age.age_service import (
     get_graph_service,
     initialize_graph_service,
 )
-from resync.core.graph_age.queries import (
-    CypherQueryBuilder,
-    JobQueries,
-    WorkstationQueries,
-    EventQueries,
-)
 from resync.core.graph_age.models import (
-    GraphNode,
     GraphEdge,
+    GraphNode,
     NodeType,
     RelationType,
+)
+from resync.core.graph_age.queries import (
+    CypherQueryBuilder,
+    EventQueries,
+    JobQueries,
+    WorkstationQueries,
 )
 
 __all__ = [

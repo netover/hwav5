@@ -10,22 +10,22 @@ Key features:
 
 Usage:
     from resync.core.langfuse import prompt_manager
-    
+
     # Get a prompt with variables
     prompt = await prompt_manager.get_prompt("tws-agent-v1")
     compiled = prompt.compile(context="system status", user_query="what's the status?")
 """
 
-from resync.core.langfuse.prompt_manager import (
-    PromptManager,
-    get_prompt_manager,
-    PromptConfig,
-    PromptTemplate,
-)
 from resync.core.langfuse.observability import (
     LangFuseTracer,
     get_tracer,
     trace_llm_call,
+)
+from resync.core.langfuse.prompt_manager import (
+    PromptConfig,
+    PromptManager,
+    PromptTemplate,
+    get_prompt_manager,
 )
 
 __all__ = [

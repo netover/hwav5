@@ -7,25 +7,25 @@ the prometheus_client API but use our internal metrics system.
 
 from resync.core.metrics_internal import (
     Counter as InternalCounter,
-    Histogram as InternalHistogram,
+)
+from resync.core.metrics_internal import (
     Gauge as InternalGauge,
-    registry,
+)
+from resync.core.metrics_internal import (
+    Histogram as InternalHistogram,
 )
 
 
 class Counter(InternalCounter):
     """prometheus_client-compatible Counter."""
-    pass
 
 
 class Histogram(InternalHistogram):
     """prometheus_client-compatible Histogram."""
-    pass
 
 
 class Gauge(InternalGauge):
     """prometheus_client-compatible Gauge."""
-    pass
 
 
 # Re-export for compatibility

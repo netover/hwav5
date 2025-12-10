@@ -11,14 +11,14 @@ Version: 5.2.3.29
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class SpecialistType(str, Enum):
     """Types of specialist agents."""
-    
+
     JOB_ANALYST = "job_analyst"
     DEPENDENCY = "dependency"
     RESOURCE = "resource"
@@ -27,7 +27,7 @@ class SpecialistType(str, Enum):
 
 class TeamExecutionMode(str, Enum):
     """Team execution modes for specialist coordination."""
-    
+
     COORDINATE = "coordinate"   # Orchestrator delegates and synthesizes
     COLLABORATE = "collaborate" # Agents work together iteratively
     ROUTE = "route"             # Single best agent handles query
@@ -36,7 +36,7 @@ class TeamExecutionMode(str, Enum):
 
 class SpecialistConfig(BaseModel):
     """Configuration for a specialist agent."""
-    
+
     specialist_type: SpecialistType = Field(
         ...,
         description="Type of specialist"
@@ -73,18 +73,18 @@ class SpecialistConfig(BaseModel):
         le=5,
         description="Number of retry attempts on failure"
     )
-    custom_instructions: Optional[str] = Field(
+    custom_instructions: str | None = Field(
         default=None,
         description="Additional custom instructions"
     )
-    
+
     class Config:
         use_enum_values = True
 
 
 class SpecialistResponse(BaseModel):
     """Response from a single specialist agent."""
-    
+
     specialist_type: SpecialistType = Field(
         ...,
         description="Type of specialist that generated this response"
@@ -99,7 +99,7 @@ class SpecialistResponse(BaseModel):
         le=1.0,
         description="Confidence score for the response"
     )
-    tools_used: List[str] = Field(
+    tools_used: list[str] = Field(
         default_factory=list,
         description="Tools invoked during analysis"
     )
@@ -108,11 +108,11 @@ class SpecialistResponse(BaseModel):
         ge=0,
         description="Processing time in milliseconds"
     )
-    error: Optional[str] = Field(
+    error: str | None = Field(
         default=None,
         description="Error message if processing failed"
     )
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional metadata"
     )
@@ -120,19 +120,19 @@ class SpecialistResponse(BaseModel):
         default_factory=datetime.utcnow,
         description="Response timestamp"
     )
-    
+
     @property
     def is_successful(self) -> bool:
         """Check if response was successful."""
         return self.error is None
-    
+
     class Config:
         use_enum_values = True
 
 
 class TeamResponse(BaseModel):
     """Consolidated response from the specialist team."""
-    
+
     query: str = Field(
         ...,
         description="Original user query"
@@ -141,7 +141,7 @@ class TeamResponse(BaseModel):
         ...,
         description="Final synthesized response"
     )
-    specialist_responses: List[SpecialistResponse] = Field(
+    specialist_responses: list[SpecialistResponse] = Field(
         default_factory=list,
         description="Individual specialist responses"
     )
@@ -154,11 +154,11 @@ class TeamResponse(BaseModel):
         ge=0,
         description="Total processing time"
     )
-    specialists_used: List[SpecialistType] = Field(
+    specialists_used: list[SpecialistType] = Field(
         default_factory=list,
         description="Which specialists contributed"
     )
-    query_classification: Optional[str] = Field(
+    query_classification: str | None = Field(
         default=None,
         description="Detected query type/intent"
     )
@@ -172,24 +172,24 @@ class TeamResponse(BaseModel):
         default_factory=datetime.utcnow,
         description="Response timestamp"
     )
-    
+
     @property
     def successful_specialists(self) -> int:
         """Count of specialists that responded successfully."""
         return sum(1 for r in self.specialist_responses if r.is_successful)
-    
+
     @property
     def failed_specialists(self) -> int:
         """Count of specialists that failed."""
         return sum(1 for r in self.specialist_responses if not r.is_successful)
-    
+
     class Config:
         use_enum_values = True
 
 
 class TeamConfig(BaseModel):
     """Configuration for the specialist team."""
-    
+
     enabled: bool = Field(
         default=True,
         description="Whether the team is active"
@@ -226,23 +226,23 @@ class TeamConfig(BaseModel):
         default=True,
         description="Fall back to general assistant if all specialists fail"
     )
-    specialists: Dict[SpecialistType, SpecialistConfig] = Field(
+    specialists: dict[SpecialistType, SpecialistConfig] = Field(
         default_factory=dict,
         description="Individual specialist configurations"
     )
-    
+
     class Config:
         use_enum_values = True
 
 
 class QueryClassification(BaseModel):
     """Classification of a user query for routing."""
-    
+
     query_type: str = Field(
         ...,
         description="Detected query type"
     )
-    recommended_specialists: List[SpecialistType] = Field(
+    recommended_specialists: list[SpecialistType] = Field(
         default_factory=list,
         description="Specialists best suited for this query"
     )
@@ -264,11 +264,11 @@ class QueryClassification(BaseModel):
         default=False,
         description="Whether query needs live TWS data"
     )
-    entities: Dict[str, List[str]] = Field(
+    entities: dict[str, list[str]] = Field(
         default_factory=dict,
         description="Extracted entities (jobs, workstations, etc.)"
     )
-    
+
     class Config:
         use_enum_values = True
 
@@ -277,7 +277,7 @@ class QueryClassification(BaseModel):
 # DEFAULT CONFIGURATIONS
 # ============================================================================
 
-DEFAULT_SPECIALIST_CONFIGS: Dict[SpecialistType, SpecialistConfig] = {
+DEFAULT_SPECIALIST_CONFIGS: dict[SpecialistType, SpecialistConfig] = {
     SpecialistType.JOB_ANALYST: SpecialistConfig(
         specialist_type=SpecialistType.JOB_ANALYST,
         model_name="gpt-4o",

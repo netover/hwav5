@@ -4,7 +4,6 @@ Este módulo implementa handlers para todas as exceções da aplicação,
 convertendo-as em respostas HTTP padronizadas seguindo RFC 7807.
 """
 
-from typing import Union
 
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
@@ -148,7 +147,7 @@ async def resync_exception_handler(
 
 
 async def validation_exception_handler(
-    request: Request, exc: Union[RequestValidationError, PydanticValidationError]
+    request: Request, exc: RequestValidationError | PydanticValidationError
 ) -> JSONResponse:
     """Handler para erros de validação do Pydantic/FastAPI.
 

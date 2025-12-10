@@ -9,26 +9,26 @@ Provides endpoints for monitoring and observability management:
 Endpoints:
     GET  /api/v1/admin/observability/status     - Get observability status
     POST /api/v1/admin/observability/setup      - Initialize observability
-    
+
     GET  /api/v1/admin/observability/langfuse/stats    - LangFuse statistics
-    
+
     GET  /api/v1/admin/observability/evidently/stats   - Evidently statistics
     POST /api/v1/admin/observability/evidently/check   - Run drift check
     GET  /api/v1/admin/observability/evidently/reports - List drift reports
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from resync.core.observability import (
-    get_observability_status,
-    get_observability_config,
-    setup_observability,
-    get_langfuse_client,
     get_evidently_monitor,
+    get_langfuse_client,
+    get_observability_config,
+    get_observability_status,
+    setup_observability,
 )
 from resync.core.structured_logger import get_logger
 
@@ -46,7 +46,7 @@ class LangFuseStatusResponse(BaseModel):
     enabled: bool
     configured: bool
     connected: bool
-    host: Optional[str]
+    host: str | None
 
 
 class EvidentlyStatusResponse(BaseModel):
@@ -55,7 +55,7 @@ class EvidentlyStatusResponse(BaseModel):
     active: bool
     reference_data_size: int = 0
     current_data_size: int = 0
-    last_check: Optional[str] = None
+    last_check: str | None = None
     reports_count: int = 0
 
 
@@ -79,10 +79,10 @@ class DriftCheckResponse(BaseModel):
     """Response from drift check."""
     timestamp: str
     drift_detected: bool
-    drift_columns: List[str] = []
+    drift_columns: list[str] = []
     reference_size: int
     current_size: int
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class DriftReportSummary(BaseModel):
@@ -94,7 +94,7 @@ class DriftReportSummary(BaseModel):
 
 class DriftReportsResponse(BaseModel):
     """Response with list of drift reports."""
-    reports: List[DriftReportSummary]
+    reports: list[DriftReportSummary]
     total: int
 
 
@@ -114,9 +114,9 @@ class EvidentlyStatsResponse(BaseModel):
     enabled: bool
     reference_data_size: int
     current_data_size: int
-    last_check: Optional[str]
+    last_check: str | None
     reports_count: int
-    config: Dict[str, Any]
+    config: dict[str, Any]
 
 
 # =============================================================================
@@ -127,16 +127,16 @@ class EvidentlyStatsResponse(BaseModel):
 async def get_status():
     """
     Get current observability status.
-    
+
     Returns status of LangFuse and Evidently integrations.
     """
     status = get_observability_status()
-    
+
     # Build response
     langfuse_status = status.get("langfuse", {})
     evidently_status = status.get("evidently", {})
     evidently_stats = evidently_status.get("statistics", {}) or {}
-    
+
     return ObservabilityStatusResponse(
         langfuse=LangFuseStatusResponse(
             enabled=langfuse_status.get("enabled", False),
@@ -162,12 +162,12 @@ async def get_status():
 async def initialize_observability():
     """
     Initialize or reinitialize observability components.
-    
+
     Sets up LangFuse and Evidently based on configuration.
     """
     try:
         results = await setup_observability()
-        
+
         return SetupResponse(
             langfuse=results.get("langfuse", False),
             evidently=results.get("evidently", False),
@@ -189,18 +189,18 @@ async def get_langfuse_stats():
     """
     config = get_observability_config().langfuse
     client = get_langfuse_client()
-    
+
     # Get tracer stats if available
     stats = {
         "enabled": config.enabled,
         "connected": client is not None,
     }
-    
+
     try:
         from resync.core.langfuse import get_tracer
         tracer = get_tracer()
         tracer_stats = tracer.get_statistics()
-        
+
         stats.update({
             "total_traces": tracer_stats.get("total_traces", 0),
             "success_rate": tracer_stats.get("success_rate", 1.0),
@@ -210,7 +210,7 @@ async def get_langfuse_stats():
         })
     except Exception as e:
         logger.debug("langfuse_stats_error", error=str(e))
-    
+
     return LangFuseStatsResponse(**stats)
 
 
@@ -224,7 +224,7 @@ async def get_evidently_stats():
     Get Evidently monitoring statistics.
     """
     monitor = get_evidently_monitor()
-    
+
     if not monitor:
         return EvidentlyStatsResponse(
             enabled=False,
@@ -234,9 +234,9 @@ async def get_evidently_stats():
             reports_count=0,
             config={},
         )
-    
+
     stats = monitor.get_statistics()
-    
+
     return EvidentlyStatsResponse(
         enabled=stats.get("enabled", False),
         reference_data_size=stats.get("reference_data_size", 0),
@@ -251,19 +251,19 @@ async def get_evidently_stats():
 async def run_drift_check():
     """
     Manually run a drift detection check.
-    
+
     Compares current data against reference data to detect drift.
     """
     monitor = get_evidently_monitor()
-    
+
     if not monitor:
         raise HTTPException(
             status_code=503,
             detail="Evidently monitor not initialized. Enable it in configuration."
         )
-    
+
     result = await monitor.check_drift()
-    
+
     if "error" in result:
         return DriftCheckResponse(
             timestamp=datetime.utcnow().isoformat(),
@@ -273,7 +273,7 @@ async def run_drift_check():
             current_size=0,
             error=result["error"],
         )
-    
+
     return DriftCheckResponse(
         timestamp=result.get("timestamp", datetime.utcnow().isoformat()),
         drift_detected=result.get("drift_detected", False),
@@ -291,13 +291,13 @@ async def list_drift_reports(
     List drift detection reports.
     """
     monitor = get_evidently_monitor()
-    
+
     if not monitor:
         return DriftReportsResponse(reports=[], total=0)
-    
+
     reports = monitor._reports[-limit:]
     reports.reverse()  # Most recent first
-    
+
     return DriftReportsResponse(
         reports=[
             DriftReportSummary(
@@ -319,11 +319,11 @@ async def list_drift_reports(
 async def get_config():
     """
     Get current observability configuration.
-    
+
     Note: Sensitive values (API keys) are masked.
     """
     config = get_observability_config()
-    
+
     return {
         "langfuse": {
             "enabled": config.langfuse.enabled,

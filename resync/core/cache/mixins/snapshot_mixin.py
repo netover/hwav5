@@ -5,10 +5,9 @@ Provides backup and restore functionality for cache implementations.
 """
 
 
-import asyncio
 import logging
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -16,16 +15,16 @@ logger = logging.getLogger(__name__)
 class CacheSnapshotMixin:
     """
     Mixin providing snapshot/backup capabilities for cache.
-    
+
     Requires base class to have:
     - self.shards: List of cache shards
     - self.shard_locks: List of shard locks
     """
-    
-    def create_backup_snapshot(self) -> Dict[str, Any]:
+
+    def create_backup_snapshot(self) -> dict[str, Any]:
         """
         Create a backup snapshot of the entire cache.
-        
+
         Returns:
             Dict containing serialized cache state
         """
@@ -34,7 +33,7 @@ class CacheSnapshotMixin:
             "timestamp": time.time(),
             "shards": [],
         }
-        
+
         for i, shard in enumerate(self.shards):
             shard_data = {}
             for key, entry in shard.items():
@@ -44,22 +43,22 @@ class CacheSnapshotMixin:
                     "ttl": entry.ttl,
                 }
             snapshot["shards"].append(shard_data)
-        
+
         snapshot["total_entries"] = sum(len(s) for s in self.shards)
-        
+
         logger.info(
             f"Created snapshot with {snapshot['total_entries']} entries"
         )
-        
+
         return snapshot
-    
-    async def restore_from_snapshot(self, snapshot: Dict[str, Any]) -> bool:
+
+    async def restore_from_snapshot(self, snapshot: dict[str, Any]) -> bool:
         """
         Restore cache state from a snapshot.
-        
+
         Args:
             snapshot: Previously created snapshot dict
-            
+
         Returns:
             True if restore was successful
         """
@@ -67,41 +66,41 @@ class CacheSnapshotMixin:
             if "shards" not in snapshot:
                 logger.error("Invalid snapshot format: missing shards")
                 return False
-            
+
             # Clear current cache
             await self.clear()
-            
+
             # Restore entries
             restored_count = 0
             current_time = time.time()
-            
+
             from ..async_cache import CacheEntry
-            
+
             for i, shard_data in enumerate(snapshot["shards"]):
                 if i >= len(self.shards):
                     break
-                    
+
                 async with self.shard_locks[i]:
                     for key, entry_data in shard_data.items():
                         # Skip expired entries
                         if current_time > entry_data["timestamp"] + entry_data["ttl"]:
                             continue
-                        
+
                         self.shards[i][key] = CacheEntry(
                             data=entry_data["data"],
                             timestamp=entry_data["timestamp"],
                             ttl=entry_data["ttl"],
                         )
                         restored_count += 1
-            
+
             logger.info(f"Restored {restored_count} entries from snapshot")
             return True
-            
+
         except Exception as e:
             logger.error(f"Snapshot restore failed: {e}")
             return False
-    
-    def get_snapshot_metadata(self, snapshot: Dict[str, Any]) -> Dict[str, Any]:
+
+    def get_snapshot_metadata(self, snapshot: dict[str, Any]) -> dict[str, Any]:
         """Get metadata about a snapshot without loading all data."""
         return {
             "version": snapshot.get("version", "unknown"),

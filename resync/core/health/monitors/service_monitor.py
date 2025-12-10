@@ -2,12 +2,11 @@
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
 from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
-
 
 logger = structlog.get_logger(__name__)
 
@@ -18,11 +17,11 @@ class ServiceDependencyStatus:
 
     service_name: str
     status: HealthStatus
-    dependencies: List[str] = field(default_factory=list)
-    dependency_status: Dict[str, HealthStatus] = field(default_factory=dict)
-    last_check: Optional[datetime] = None
-    response_time_ms: Optional[float] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    dependencies: list[str] = field(default_factory=list)
+    dependency_status: dict[str, HealthStatus] = field(default_factory=dict)
+    last_check: datetime | None = None
+    response_time_ms: float | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -32,11 +31,11 @@ class ExternalServiceStatus:
     service_name: str
     service_type: str
     status: HealthStatus
-    endpoint: Optional[str] = None
-    last_check: Optional[datetime] = None
-    response_time_ms: Optional[float] = None
-    error_message: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    endpoint: str | None = None
+    last_check: datetime | None = None
+    response_time_ms: float | None = None
+    error_message: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class ServiceHealthMonitor:
@@ -51,8 +50,8 @@ class ServiceHealthMonitor:
 
     def __init__(self):
         """Initialize the service health monitor."""
-        self._cache: Dict[str, Any] = {}
-        self._cache_expiry: Dict[str, datetime] = {}
+        self._cache: dict[str, Any] = {}
+        self._cache_expiry: dict[str, datetime] = {}
         self._cache_ttl_seconds = 300  # 5 minutes default TTL
 
     async def check_service_dependencies(self) -> ServiceDependencyStatus:
@@ -251,14 +250,14 @@ class ServiceHealthMonitor:
             return True
         return datetime.now() > self._cache_expiry[cache_key]
 
-    def _get_cached_result(self, cache_key: str) -> Optional[Any]:
+    def _get_cached_result(self, cache_key: str) -> Any | None:
         """Get a cached result if it exists and hasn't expired."""
         if self._is_cache_expired(cache_key):
             return None
         return self._cache.get(cache_key)
 
     def _set_cached_result(
-        self, cache_key: str, result: Any, ttl_seconds: Optional[int] = None
+        self, cache_key: str, result: Any, ttl_seconds: int | None = None
     ) -> None:
         """Cache a result with optional TTL."""
         if ttl_seconds is None:

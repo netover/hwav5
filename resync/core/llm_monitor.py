@@ -6,8 +6,9 @@ LLM cost monitoring and streaming implementation for TWS optimization.
 import asyncio
 import logging
 import time
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from typing import Any, AsyncGenerator, Dict, List
+from typing import Any
 
 from resync.core.async_cache import AsyncTTLCache
 from resync.core.utils.llm import call_llm
@@ -36,8 +37,8 @@ class LLMUsageStats:
     total_cost_usd: float = 0.0
     avg_response_time: float = 0.0
     error_rate: float = 0.0
-    model_usage: Dict[str, int] = field(default_factory=dict)
-    daily_costs: Dict[str, float] = field(default_factory=dict)
+    model_usage: dict[str, int] = field(default_factory=dict)
+    daily_costs: dict[str, float] = field(default_factory=dict)
 
 
 class LLMCostMonitor:
@@ -54,7 +55,7 @@ class LLMCostMonitor:
     def __init__(self):
         """Initialize LLM cost monitor."""
         self.usage_stats = LLMUsageStats()
-        self.cost_history: List[LLMCost] = []
+        self.cost_history: list[LLMCost] = []
         self.budget_limit = 500.0  # USD per month for 4M jobs/month
         self.cache = None  # Lazy initialization
 
@@ -123,7 +124,7 @@ class LLMCostMonitor:
 
         logger.debug(f"LLM request tracked: {model}, cost: ${total_cost:.4f}")
 
-    def _get_cost_per_1k_tokens(self, model: str) -> Dict[str, float]:
+    def _get_cost_per_1k_tokens(self, model: str) -> dict[str, float]:
         """Get cost per 1K tokens for different models."""
         # With LiteLLM integration, we can also use LiteLLM's cost calculation
         # but keeping this for fallback and custom models
@@ -183,7 +184,7 @@ class LLMCostMonitor:
                 f"Daily LLM budget exceeded: ${daily_cost:.2f}/${self.budget_limit:.2f}"
             )
 
-    def get_usage_report(self) -> Dict[str, Any]:
+    def get_usage_report(self) -> dict[str, Any]:
         """Get comprehensive usage report."""
         return {
             "total_requests": self.usage_stats.total_requests,
@@ -212,7 +213,7 @@ class StreamingLLMResponse:
         self.prompt = prompt
         self.model = model
         self.max_tokens = max_tokens
-        self.response_chunks: List[str] = []
+        self.response_chunks: list[str] = []
         self.is_complete = False
 
     async def generate_chunks(self) -> AsyncGenerator[str, None]:

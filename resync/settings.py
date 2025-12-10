@@ -16,14 +16,15 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .settings_legacy import SettingsLegacyProperties
+
 # Import shared types, validators and legacy properties from separate modules
 from .settings_types import Environment
-from .settings_legacy import SettingsLegacyProperties
 from .settings_validators import SettingsValidators
 
 
@@ -99,15 +100,19 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     )
 
     # ============================================================================
-    # CONTEXT STORE (SQLite)
+    # CONTEXT STORE (LEGACY - PostgreSQL now used)
     # ============================================================================
-    # O ContextStore usa SQLite para armazenar conversas e auditoria
+    # DEPRECATED: SQLite context store removed in v5.3
+    # The system now uses PostgreSQL for all persistence
+    # This field is kept for backward compatibility only
     context_db_path: str = Field(
-        default=""  # SQLite removed - using PostgreSQL, description="Deprecated - using PostgreSQL"
+        default="",
+        description="DEPRECATED: SQLite removed - using PostgreSQL. Keep empty.",
+        deprecated=True
     )
 
     # ============================================================================
-    # CONNECTION POOLS (SQLite/Generic)
+    # CONNECTION POOLS (PostgreSQL)
     # ============================================================================
     db_pool_min_size: int = Field(default=20, ge=1, le=100)
     db_pool_max_size: int = Field(default=100, ge=1, le=1000)
@@ -196,7 +201,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
 
     auditor_model_name: str = Field(default="gpt-3.5-turbo")
     agent_model_name: str = Field(default="gpt-4o")
-    
+
     llm_model: str = Field(
         default="meta/llama-3.1-70b-instruct",
         description="Default LLM model for NVIDIA API",
@@ -209,12 +214,12 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         default=False,
         description="Enable LangFuse integration for prompt management and tracing",
     )
-    
+
     langfuse_public_key: str = Field(
         default="",
         description="LangFuse public key for API authentication",
     )
-    
+
     langfuse_secret_key: SecretStr = Field(
         default="",
         description="LangFuse secret key for API authentication",
@@ -222,12 +227,12 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         exclude=True,
         repr=False,
     )
-    
+
     langfuse_host: str = Field(
         default="https://cloud.langfuse.com",
         description="LangFuse host URL (cloud or self-hosted)",
     )
-    
+
     langfuse_trace_sample_rate: float = Field(
         default=1.0,
         ge=0.0,
@@ -242,20 +247,20 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         default=True,
         description="Enable LangGraph for state-based agent orchestration",
     )
-    
+
     langgraph_checkpoint_ttl_hours: int = Field(
         default=24,
         ge=1,
         description="Time-to-live for LangGraph checkpoints in hours",
     )
-    
+
     langgraph_max_retries: int = Field(
         default=3,
         ge=0,
         le=10,
         description="Maximum retries for failed LLM/tool calls in LangGraph",
     )
-    
+
     langgraph_require_approval: bool = Field(
         default=True,
         description="Require human approval for TWS action requests",
@@ -268,7 +273,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         default="tws_graph",
         description="Name of the Apache AGE graph in PostgreSQL",
     )
-    
+
     age_max_traversal_depth: int = Field(
         default=10,
         ge=1,
@@ -374,7 +379,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         default="fixed",
         description="Modo de polling: fixed, adaptive, scheduled",
     )
-    
+
     # Alert Thresholds
     tws_job_stuck_threshold_minutes: int = Field(
         default=60,
@@ -392,7 +397,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         le=1.0,
         description="Taxa de falha para alerta de anomalia",
     )
-    
+
     # Data Retention
     tws_retention_days_full: int = Field(
         default=7,
@@ -412,7 +417,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         le=365,
         description="Dias para reter padrões detectados",
     )
-    
+
     # Pattern Detection
     tws_pattern_detection_enabled: bool = Field(
         default=True,
@@ -429,7 +434,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         le=1.0,
         description="Confiança mínima para reportar padrão",
     )
-    
+
     # Solution Correlation
     tws_solution_correlation_enabled: bool = Field(
         default=True,
@@ -441,7 +446,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         le=1.0,
         description="Taxa de sucesso mínima para sugerir solução",
     )
-    
+
     # Notifications
     tws_browser_notifications_enabled: bool = Field(
         default=True,
@@ -455,7 +460,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         default=None,
         description="URL do webhook do Microsoft Teams",
     )
-    
+
     # Dashboard
     tws_dashboard_theme: str = Field(
         default="auto",
@@ -474,7 +479,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     admin_username: str = Field(
         default="admin", min_length=3, description="Nome de usuário do administrador"
     )
-    admin_password: Optional[SecretStr] = Field(
+    admin_password: SecretStr | None = Field(
         default=None,
         # Reads from ADMIN_PASSWORD (without APP_ prefix)
         validation_alias="ADMIN_PASSWORD",

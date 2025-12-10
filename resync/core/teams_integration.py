@@ -15,15 +15,15 @@ import asyncio
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import aiohttp
 import structlog
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
 
 from resync.core.exceptions import NotificationError
@@ -70,17 +70,17 @@ class TeamsConfig:
     """Configuration for Microsoft Teams integration."""
 
     enabled: bool = False
-    webhook_url: Optional[str] = None
-    channel_name: Optional[str] = None
+    webhook_url: str | None = None
+    channel_name: str | None = None
     bot_name: str = "Resync Bot"
-    avatar_url: Optional[str] = None
+    avatar_url: str | None = None
     enable_conversation_learning: bool = False
     enable_job_notifications: bool = False
-    monitored_tws_instances: List[str] = field(default_factory=list)
-    job_status_filters: List[str] = field(
+    monitored_tws_instances: list[str] = field(default_factory=list)
+    job_status_filters: list[str] = field(
         default_factory=lambda: ["ABEND", "ERROR", "FAILED"]
     )
-    notification_types: List[str] = field(
+    notification_types: list[str] = field(
         default_factory=lambda: ["job_status", "alerts", "performance"]
     )
     rate_limit_enabled: bool = True
@@ -99,11 +99,11 @@ class TeamsNotification:
     message: str
     severity: str = "info"
     timestamp: datetime = field(default_factory=datetime.now)
-    job_id: Optional[str] = None
-    job_status: Optional[str] = None
-    instance_name: Optional[str] = None
-    additional_data: Dict[str, Any] = field(default_factory=dict)
-    actions: List[Dict[str, str]] = field(default_factory=list)
+    job_id: str | None = None
+    job_status: str | None = None
+    instance_name: str | None = None
+    additional_data: dict[str, Any] = field(default_factory=dict)
+    actions: list[dict[str, str]] = field(default_factory=list)
 
 
 # =============================================================================
@@ -112,26 +112,26 @@ class TeamsNotification:
 
 class RateLimiter:
     """Simple token bucket rate limiter for Teams API."""
-    
+
     def __init__(self, max_requests: int, period: float):
         self.max_requests = max_requests
         self.period = period
         self.tokens = max_requests
         self.last_update = time.monotonic()
         self._lock = asyncio.Lock()
-    
+
     async def acquire(self) -> None:
         """Acquire a token, waiting if necessary."""
         async with self._lock:
             now = time.monotonic()
             elapsed = now - self.last_update
-            
+
             self.tokens = min(
                 self.max_requests,
                 self.tokens + elapsed * (self.max_requests / self.period)
             )
             self.last_update = now
-            
+
             if self.tokens < 1:
                 wait_time = (1 - self.tokens) * (self.period / self.max_requests)
                 logger.debug("rate_limiter_waiting", wait_seconds=wait_time)
@@ -148,16 +148,16 @@ class RateLimiter:
 class TeamsIntegration:
     """Microsoft Teams integration service with enhanced features."""
 
-    def __init__(self, config: Optional[TeamsConfig] = None):
+    def __init__(self, config: TeamsConfig | None = None):
         self.config = config or self._load_config_from_settings()
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
         self._session_lock = asyncio.Lock()
-        
+
         self.rate_limiter = RateLimiter(
             max_requests=self.config.rate_limit_requests,
             period=self.config.rate_limit_period,
         ) if self.config.rate_limit_enabled else None
-        
+
         self._stats = {
             "notifications_sent": 0,
             "notifications_failed": 0,
@@ -196,7 +196,7 @@ class TeamsIntegration:
 
         return config
 
-    def _mask_webhook_url(self, url: Optional[str]) -> str:
+    def _mask_webhook_url(self, url: str | None) -> str:
         """Mask webhook URL for safe logging."""
         if not url:
             return "not_configured"
@@ -236,13 +236,13 @@ class TeamsIntegration:
         ),
     )
     async def _send_webhook_request(
-        self, session: aiohttp.ClientSession, message: Dict[str, Any]
+        self, session: aiohttp.ClientSession, message: dict[str, Any]
     ) -> aiohttp.ClientResponse:
         """Send webhook request with retry logic."""
         if self.rate_limiter:
             await self.rate_limiter.acquire()
             self._stats["rate_limit_waits"] += 1
-        
+
         async with session.post(self.config.webhook_url, json=message) as response:
             await response.read()
             return response
@@ -255,7 +255,7 @@ class TeamsIntegration:
 
         if not self.config.webhook_url:
             logger.warning(
-                "teams_notification_failed", 
+                "teams_notification_failed",
                 reason="webhook_url_not_configured"
             )
             raise NotificationError("Teams webhook URL not configured")
@@ -264,32 +264,31 @@ class TeamsIntegration:
             teams_message = self._format_teams_message(notification)
             session = await self._get_session()
             response = await self._send_webhook_request(session, teams_message)
-            
+
             if response.status in [200, 201, 202, 204]:
                 self._stats["notifications_sent"] += 1
                 logger.info(
-                    "teams_notification_sent", 
+                    "teams_notification_sent",
                     title=notification.title,
                     severity=notification.severity,
                     webhook=self._mask_webhook_url(self.config.webhook_url),
                 )
                 return True
-            else:
-                self._stats["notifications_failed"] += 1
-                error_text = await response.text()
-                logger.error(
-                    "teams_notification_failed",
-                    status=response.status,
-                    error=error_text[:200],
-                    webhook=self._mask_webhook_url(self.config.webhook_url),
-                )
-                return False
+            self._stats["notifications_failed"] += 1
+            error_text = await response.text()
+            logger.error(
+                "teams_notification_failed",
+                status=response.status,
+                error=error_text[:200],
+                webhook=self._mask_webhook_url(self.config.webhook_url),
+            )
+            return False
 
         except aiohttp.ClientError as e:
             self._stats["notifications_failed"] += 1
             logger.error(
-                "teams_notification_network_error", 
-                error=str(e), 
+                "teams_notification_network_error",
+                error=str(e),
                 webhook=self._mask_webhook_url(self.config.webhook_url),
             )
             raise NotificationError(
@@ -298,7 +297,7 @@ class TeamsIntegration:
         except Exception as e:
             self._stats["notifications_failed"] += 1
             logger.error(
-                "teams_notification_unexpected_error", 
+                "teams_notification_unexpected_error",
                 error=str(e),
                 webhook=self._mask_webhook_url(self.config.webhook_url),
             )
@@ -306,11 +305,11 @@ class TeamsIntegration:
                 f"Unexpected error sending Teams notification: {e}"
             ) from e
 
-    def _format_teams_message(self, notification: TeamsNotification) -> Dict[str, Any]:
+    def _format_teams_message(self, notification: TeamsNotification) -> dict[str, Any]:
         """Format notification as Microsoft Teams Adaptive Card with severity colors."""
         severity_color = SEVERITY_COLORS.get(notification.severity, "default")
         severity_emoji = SEVERITY_EMOJI.get(notification.severity, "")
-        
+
         title_text = f"{severity_emoji} {notification.title}" if severity_emoji else notification.title
 
         card_body = [
@@ -327,7 +326,7 @@ class TeamsIntegration:
                 "wrap": True,
             },
         ]
-        
+
         if severity_color != "default":
             card_body[0]["color"] = severity_color
 
@@ -345,7 +344,7 @@ class TeamsIntegration:
         facts.append(
             {"title": "Timestamp", "value": notification.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
         )
-        
+
         facts.append(
             {"title": "Severity", "value": notification.severity.upper()}
         )
@@ -391,14 +390,14 @@ class TeamsIntegration:
                 }
             ],
         }
-        
+
         if card_actions:
             message_card["attachments"][0]["content"]["actions"] = card_actions
 
         return message_card
 
     async def monitor_job_status(
-        self, job_data: Dict[str, Any], instance_name: str
+        self, job_data: dict[str, Any], instance_name: str
     ) -> None:
         """Monitor job status and send notifications for configured job status changes."""
         if not self.config.enabled or not self.config.enable_job_notifications:
@@ -413,14 +412,14 @@ class TeamsIntegration:
         job_status = job_data.get("status", "").upper()
         if job_status in [status.upper() for status in self.config.job_status_filters]:
             severity = "error" if job_status in ["ABEND", "ERROR", "FAILED"] else "warning"
-            
+
             notification = create_job_status_notification(
                 job_data, instance_name, self.config.job_status_filters
             )
 
             if notification is None:
                 return
-            
+
             notification.severity = severity
 
             try:
@@ -431,21 +430,21 @@ class TeamsIntegration:
                 logger.error("job_status_notification_unexpected_error", error=str(e))
 
     async def learn_from_conversation(
-        self, message: str, context: Dict[str, Any]
+        self, message: str, context: dict[str, Any]
     ) -> None:
         """Learn from Teams conversation and store in Knowledge Graph."""
         if not self.config.enabled or not self.config.enable_conversation_learning:
             return
 
         logger.info(
-            "learning_from_teams_conversation", 
+            "learning_from_teams_conversation",
             message_preview=message[:100] if len(message) > 100 else message,
             sender=context.get("sender", "unknown"),
         )
-        
+
         try:
             from resync.core.knowledge_graph import get_knowledge_graph
-            
+
             kg = await get_knowledge_graph()
             if kg:
                 await kg.add_conversation_knowledge(
@@ -465,9 +464,9 @@ class TeamsIntegration:
         title: str,
         message: str,
         severity: str = "warning",
-        job_id: Optional[str] = None,
-        instance_name: Optional[str] = None,
-        actions: Optional[List[Dict[str, str]]] = None,
+        job_id: str | None = None,
+        instance_name: str | None = None,
+        actions: list[dict[str, str]] | None = None,
     ) -> bool:
         """Convenience method to send an alert notification."""
         notification = TeamsNotification(
@@ -480,7 +479,7 @@ class TeamsIntegration:
         )
         return await self.send_notification(notification)
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check of Teams integration."""
         status = {
             "enabled": self.config.enabled,
@@ -498,7 +497,7 @@ class TeamsIntegration:
             try:
                 session = await self._get_session()
                 async with session.head(
-                    self.config.webhook_url, 
+                    self.config.webhook_url,
                     timeout=aiohttp.ClientTimeout(total=5),
                     allow_redirects=True,
                 ) as response:
@@ -507,19 +506,19 @@ class TeamsIntegration:
                 status["webhook_accessible"] = False
                 status["webhook_error"] = str(e)[:100]
                 logger.warning(
-                    "teams_webhook_health_check_failed", 
+                    "teams_webhook_health_check_failed",
                     error=str(e),
                     webhook=self._mask_webhook_url(self.config.webhook_url),
                 )
 
         return status
-    
-    def get_stats(self) -> Dict[str, Any]:
+
+    def get_stats(self) -> dict[str, Any]:
         """Get notification statistics."""
         return {
             **self._stats,
             "success_rate": (
-                self._stats["notifications_sent"] / 
+                self._stats["notifications_sent"] /
                 max(1, self._stats["notifications_sent"] + self._stats["notifications_failed"])
             ) * 100,
         }
@@ -534,7 +533,7 @@ class TeamsIntegration:
 # GLOBAL INSTANCE
 # =============================================================================
 
-_teams_integration: Optional[TeamsIntegration] = None
+_teams_integration: TeamsIntegration | None = None
 
 
 async def get_teams_integration() -> TeamsIntegration:

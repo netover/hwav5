@@ -1,8 +1,9 @@
 """Validation middleware for automatic request validation."""
 
 import json
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any
 
 import structlog
 from fastapi import HTTPException, Request, Response
@@ -19,12 +20,12 @@ class ValidationMiddleware:
 
     def __init__(
         self,
-        validation_models: Optional[Dict[str, Type[BaseModel]]] = None,
+        validation_models: dict[str, type[BaseModel]] | None = None,
         strict_mode: bool = True,
         sanitize_input: bool = True,
         enable_logging: bool = True,
-        custom_validators: Optional[Dict[str, Callable]] = None,
-        error_handler: Optional[Callable] = None,
+        custom_validators: dict[str, Callable] | None = None,
+        error_handler: Callable | None = None,
     ):
         """
         Initialize validation middleware.
@@ -117,7 +118,7 @@ class ValidationMiddleware:
 
         return False
 
-    def _get_validation_model(self, request: Request) -> Optional[Type[BaseModel]]:
+    def _get_validation_model(self, request: Request) -> type[BaseModel] | None:
         """
         Get validation model for the request endpoint.
 
@@ -167,8 +168,8 @@ class ValidationMiddleware:
         return True
 
     async def _validate_request(
-        self, request: Request, validation_model: Type[BaseModel]
-    ) -> Optional[Dict[str, Any]]:
+        self, request: Request, validation_model: type[BaseModel]
+    ) -> dict[str, Any] | None:
         """
         Validate request data against the validation model.
 
@@ -184,14 +185,13 @@ class ValidationMiddleware:
 
         if request.method in ["POST", "PUT", "PATCH"]:
             return await self._validate_body_data(request, validation_model)
-        elif request.method in ["GET", "DELETE"]:
+        if request.method in ["GET", "DELETE"]:
             return self._validate_query_params(request, validation_model)
-        else:
-            return None
+        return None
 
     async def _validate_body_data(
-        self, request: Request, validation_model: Type[BaseModel]
-    ) -> Optional[Dict[str, Any]]:
+        self, request: Request, validation_model: type[BaseModel]
+    ) -> dict[str, Any] | None:
         """
         Validate request body data.
 
@@ -219,7 +219,7 @@ class ValidationMiddleware:
             elif "multipart/form-data" in content_type:
                 form_data = await request.form()
                 files = await request.files()
-                data = {**dict(form_data), **{"files": files}}
+                data = {**dict(form_data), "files": files}
             else:
                 # Try to parse as JSON by default
                 try:
@@ -244,8 +244,8 @@ class ValidationMiddleware:
             raise ValidationError.from_exception_data("body", [str(e)])
 
     def _validate_query_params(
-        self, request: Request, validation_model: Type[BaseModel]
-    ) -> Optional[Dict[str, Any]]:
+        self, request: Request, validation_model: type[BaseModel]
+    ) -> dict[str, Any] | None:
         """
         Validate query parameters.
 
@@ -292,8 +292,8 @@ class ValidationMiddleware:
             raise ValidationError.from_exception_data("query_params", [str(e)])
 
     def _apply_custom_validators(
-        self, data: Dict[str, Any], request: Request
-    ) -> Dict[str, Any]:
+        self, data: dict[str, Any], request: Request
+    ) -> dict[str, Any]:
         """
         Apply custom validators to the data.
 
@@ -318,7 +318,7 @@ class ValidationMiddleware:
         return data
 
     def _log_validation_success(
-        self, request: Request, validated_data: Optional[Dict[str, Any]]
+        self, request: Request, validated_data: dict[str, Any] | None
     ) -> None:
         """
         Log successful validation.
@@ -423,13 +423,13 @@ class ValidationConfig:
 
     def __init__(
         self,
-        validation_models: Optional[Dict[str, Type[BaseModel]]] = None,
+        validation_models: dict[str, type[BaseModel]] | None = None,
         strict_mode: bool = True,
         sanitize_input: bool = True,
         enable_logging: bool = True,
-        custom_validators: Optional[Dict[str, Callable]] = None,
-        error_handler: Optional[Callable] = None,
-        skip_paths: Optional[List[str]] = None,
+        custom_validators: dict[str, Callable] | None = None,
+        error_handler: Callable | None = None,
+        skip_paths: list[str] | None = None,
         rate_limit_validation: bool = False,
         max_validation_errors: int = 50,
     ):
@@ -479,7 +479,7 @@ def create_validation_middleware(config: ValidationConfig) -> ValidationMiddlewa
 
 
 # Common validation utilities
-def validate_json_body(request: Request, model: Type[BaseModel]) -> Dict[str, Any]:
+def validate_json_body(request: Request, model: type[BaseModel]) -> dict[str, Any]:
     """
     Validate JSON request body against a Pydantic model.
 
@@ -508,7 +508,7 @@ def validate_json_body(request: Request, model: Type[BaseModel]) -> Dict[str, An
         raise
 
 
-def validate_query_params(request: Request, model: Type[BaseModel]) -> Dict[str, Any]:
+def validate_query_params(request: Request, model: type[BaseModel]) -> dict[str, Any]:
     """
     Validate query parameters against a Pydantic model.
 

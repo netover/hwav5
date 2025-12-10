@@ -17,15 +17,16 @@ This module provides comprehensive metrics collection and visualization capabili
 
 import asyncio
 import json
-import psutil
 import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union, Callable
+from typing import Any
 
 import aiohttp
+import psutil
 from aiohttp import web
 
 from resync.core.structured_logger import get_logger
@@ -62,15 +63,15 @@ class MetricDefinition:
     metric_type: MetricType
     category: MetricCategory
     unit: str = ""
-    labels: List[str] = field(default_factory=list)
-    buckets: Optional[List[float]] = None  # For histograms
+    labels: list[str] = field(default_factory=list)
+    buckets: list[float] | None = None  # For histograms
 
     def get_prometheus_name(self) -> str:
         """Get Prometheus-compatible metric name."""
         return self.name.replace(".", "_").replace("-", "_")
 
     def to_prometheus_format(
-        self, value: Union[int, float], labels: Optional[Dict[str, str]] = None
+        self, value: int | float, labels: dict[str, str] | None = None
     ) -> str:
         """Convert metric to Prometheus format."""
         prom_name = self.get_prometheus_name()
@@ -88,8 +89,8 @@ class MetricValue:
     """A metric value with metadata."""
 
     definition: MetricDefinition
-    value: Union[int, float]
-    labels: Dict[str, str] = field(default_factory=dict)
+    value: int | float
+    labels: dict[str, str] = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
 
     def to_prometheus(self) -> str:
@@ -104,10 +105,10 @@ class AlertRule:
     name: str
     query: str
     duration: str = "5m"
-    labels: Dict[str, str] = field(default_factory=dict)
-    annotations: Dict[str, str] = field(default_factory=dict)
+    labels: dict[str, str] = field(default_factory=dict)
+    annotations: dict[str, str] = field(default_factory=dict)
 
-    def to_prometheus_rule(self) -> Dict[str, Any]:
+    def to_prometheus_rule(self) -> dict[str, Any]:
         """Convert to Prometheus rule format."""
         return {
             "alert": self.name,
@@ -124,14 +125,14 @@ class GrafanaDashboard:
 
     title: str
     description: str
-    tags: List[str] = field(default_factory=lambda: ["hwa-new", "auto-generated"])
-    panels: List[Dict[str, Any]] = field(default_factory=list)
-    time_range: Dict[str, str] = field(
+    tags: list[str] = field(default_factory=lambda: ["hwa-new", "auto-generated"])
+    panels: list[dict[str, Any]] = field(default_factory=list)
+    time_range: dict[str, str] = field(
         default_factory=lambda: {"from": "now-1h", "to": "now"}
     )
     refresh: str = "30s"
 
-    def to_grafana_format(self) -> Dict[str, Any]:
+    def to_grafana_format(self) -> dict[str, Any]:
         """Convert to Grafana dashboard JSON format."""
         return {
             "dashboard": {
@@ -206,28 +207,28 @@ class MetricsCollector:
     - Performance and health monitoring
     """
 
-    def __init__(self, config: Optional[MetricsCollectorConfig] = None):
+    def __init__(self, config: MetricsCollectorConfig | None = None):
         self.config = config or MetricsCollectorConfig()
 
         # Core components
-        self.metrics_definitions: Dict[str, MetricDefinition] = {}
+        self.metrics_definitions: dict[str, MetricDefinition] = {}
         self.metrics_buffer: deque = deque(maxlen=self.config.max_metrics_buffer)
-        self.custom_collectors: List[Callable] = []
+        self.custom_collectors: list[Callable] = []
 
         # HTTP server for Prometheus endpoint
-        self.http_app: Optional[web.Application] = None
-        self.http_runner: Optional[web.AppRunner] = None
+        self.http_app: web.Application | None = None
+        self.http_runner: web.AppRunner | None = None
 
         # Grafana integration
-        self.grafana_session: Optional[aiohttp.ClientSession] = None
+        self.grafana_session: aiohttp.ClientSession | None = None
 
         # Alerting
-        self.alert_rules: List[AlertRule] = []
+        self.alert_rules: list[AlertRule] = []
 
         # Runtime state
         self._running = False
-        self._collection_task: Optional[asyncio.Task] = None
-        self._http_task: Optional[asyncio.Task] = None
+        self._collection_task: asyncio.Task | None = None
+        self._http_task: asyncio.Task | None = None
 
         # Initialize standard metrics
         self._initialize_standard_metrics()
@@ -481,8 +482,8 @@ class MetricsCollector:
     def record_metric(
         self,
         name: str,
-        value: Union[int, float],
-        labels: Optional[Dict[str, str]] = None,
+        value: int | float,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Record a metric value."""
         if name not in self.metrics_definitions:
@@ -496,7 +497,7 @@ class MetricsCollector:
         self.metrics_buffer.append(metric_value)
 
     def increment_counter(
-        self, name: str, labels: Optional[Dict[str, str]] = None, value: int = 1
+        self, name: str, labels: dict[str, str] | None = None, value: int = 1
     ) -> None:
         """Increment a counter metric."""
         definition = self.metrics_definitions.get(name)
@@ -511,8 +512,8 @@ class MetricsCollector:
     def set_gauge(
         self,
         name: str,
-        value: Union[int, float],
-        labels: Optional[Dict[str, str]] = None,
+        value: int | float,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Set a gauge metric value."""
         definition = self.metrics_definitions.get(name)
@@ -523,7 +524,7 @@ class MetricsCollector:
         self.record_metric(name, value, labels)
 
     def observe_histogram(
-        self, name: str, value: float, labels: Optional[Dict[str, str]] = None
+        self, name: str, value: float, labels: dict[str, str] | None = None
     ) -> None:
         """Observe a value in a histogram metric."""
         definition = self.metrics_definitions.get(name)
@@ -555,7 +556,7 @@ class MetricsCollector:
         ]
 
         # Group metrics by name
-        metrics_by_name: Dict[str, List[MetricValue]] = defaultdict(list)
+        metrics_by_name: dict[str, list[MetricValue]] = defaultdict(list)
         for metric in self.metrics_buffer:
             metrics_by_name[metric.definition.name].append(metric)
 
@@ -836,7 +837,7 @@ class MetricsCollector:
         }
         return json.dumps(rules, indent=2)
 
-    def get_metrics_summary(self) -> Dict[str, Any]:
+    def get_metrics_summary(self) -> dict[str, Any]:
         """Get comprehensive metrics summary."""
         metrics_by_category = defaultdict(int)
         for definition in self.metrics_definitions.values():

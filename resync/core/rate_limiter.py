@@ -7,8 +7,8 @@ rate limit exceeded responses.
 """
 
 
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Callable, Optional
 
 import structlog
 from fastapi import Request, Response
@@ -94,7 +94,7 @@ limiter = Limiter(
 
 
 def create_rate_limit_exceeded_response(
-    request: Request, exc: RateLimitExceeded, retry_after: Optional[int] = None
+    request: Request, exc: RateLimitExceeded, retry_after: int | None = None
 ) -> Response:
     """
     Create a custom response for rate limit exceeded errors.

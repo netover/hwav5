@@ -6,15 +6,21 @@ This module provides comprehensive agent management functionality including:
 - Agent execution orchestration
 - Agent configuration validation
 - Performance monitoring and metrics
+
+v5.3.2 - Added dynamic agent configuration via YAML
 """
 
 from __future__ import annotations
 
 import asyncio
 import threading
-from typing import Any, Callable, Optional, List
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
 import structlog
+import yaml
+
 # Lazy import para evitar circular import
 # from resync.core.fastapi_di import get_service
 from resync.core.interfaces import ITWSClient
@@ -81,7 +87,7 @@ except ImportError:
                     )
                     return result
 
-                elif "status" in msg or "workstation" in msg:
+                if "status" in msg or "workstation" in msg:
                     result = "Status atual do ambiente TWS:\\n\\nWorkstations:\\n- TWS_MASTER: ONLINE\\n- TWS_AGENT1: ONLINE\\n- TWS_AGENT2: OFFLINE\\n\\nJobs:\\n- Daily Backup: SUCC (TWS_AGENT1)\\n- Data Processing: ABEND (TWS_AGENT2)\\n- Report Generation: SUCC (TWS_AGENT1)"
                     agent_logger.info(
                         "mock_agent_status_response",
@@ -90,7 +96,7 @@ except ImportError:
                     )
                     return result
 
-                elif "tws" in msg:
+                if "tws" in msg:
                     result = f"Como {self.name}, posso ajudar com questões relacionadas ao TWS. Que informações você precisa?"
                     agent_logger.info(
                         "mock_agent_tws_response",
@@ -99,14 +105,13 @@ except ImportError:
                     )
                     return result
 
-                else:
-                    result = f"Entendi sua mensagem: '{message}'. Como {self.name}, estou aqui para ajudar com questões do TWS."
-                    agent_logger.info(
-                        "mock_agent_default_response",
-                        agent_name=self.name,
-                        result_preview=result[:50],
-                    )
-                    return result
+                result = f"Entendi sua mensagem: '{message}'. Como {self.name}, estou aqui para ajudar com questões do TWS."
+                agent_logger.info(
+                    "mock_agent_default_response",
+                    agent_name=self.name,
+                    result_preview=result[:50],
+                )
+                return result
 
             except Exception as e:
                 result = f"Erro simples: {str(e)}"
@@ -131,8 +136,7 @@ except ImportError:
                         return await self.arun(message)
 
                     return asyncio.create_task(run_async())
-                else:
-                    return loop.run_until_complete(self.arun(message))
+                return loop.run_until_complete(self.arun(message))
             except Exception as e:
                 logger.error("exception_caught", error=str(e), exc_info=True)
                 import asyncio
@@ -176,7 +180,7 @@ from resync.models.agents import AgentConfig, AgentType
 class AgentsConfig(BaseModel):
     """Configuration model for multiple agents."""
 
-    agents: List[AgentConfig] = []
+    agents: list[AgentConfig] = []
 
 
 # --- Agent Manager Class ---
@@ -186,7 +190,7 @@ class AgentManager:
     Implements singleton pattern for thread-safe behavior.
     """
 
-    _instance: Optional["AgentManager"] = None
+    _instance: AgentManager | None = None
     _lock = threading.RLock()
     _initialized = False
 
@@ -199,8 +203,114 @@ class AgentManager:
         return cls._instance
 
     async def load_agents_from_config(self, config_path: str | None = None) -> None:
-        """Loads agent configurations from settings or specified path."""
-        # Implementation for loading agents from config
+        """
+        Load agent configurations from YAML file.
+
+        Args:
+            config_path: Path to agents.yaml. If None, uses default location.
+
+        The method will:
+        1. Load configuration from YAML file
+        2. Validate each agent configuration
+        3. Update self.agent_configs with loaded configs
+        4. Log any validation errors
+
+        If the config file doesn't exist, hardcoded defaults are used.
+        """
+        # Determine config path
+        if config_path is None:
+            # Default locations to search
+            search_paths = [
+                Path("config/agents.yaml"),
+                Path(__file__).parent.parent.parent / "config" / "agents.yaml",
+                Path("/app/config/agents.yaml"),
+            ]
+            config_file = None
+            for path in search_paths:
+                if path.exists():
+                    config_file = path
+                    break
+        else:
+            config_file = Path(config_path)
+
+        if config_file is None or not config_file.exists():
+            logger.warning(
+                "agent_config_not_found",
+                searched_paths=[str(p) for p in search_paths] if config_path is None else [config_path],
+                using="hardcoded defaults"
+            )
+            return  # Keep hardcoded defaults
+
+        try:
+            # Load YAML configuration
+            with open(config_file, encoding="utf-8") as f:
+                config_data = yaml.safe_load(f)
+
+            if not config_data or "agents" not in config_data:
+                logger.error("agent_config_invalid", file=str(config_file), reason="missing 'agents' key")
+                return
+
+            # Get defaults
+            defaults = config_data.get("defaults", {})
+            model_aliases = config_data.get("model_aliases", {})
+
+            # Parse agent configurations
+            loaded_configs: list[AgentConfig] = []
+
+            for agent_data in config_data["agents"]:
+                try:
+                    # Map YAML type to AgentType enum
+                    agent_type_str = agent_data.get("type", "chat").lower()
+                    agent_type_map = {
+                        "task": AgentType.TASK,
+                        "chat": AgentType.CHAT,
+                        "research": AgentType.RESEARCH,
+                        "specialist": AgentType.TASK,  # Map specialist to task
+                    }
+                    agent_type = agent_type_map.get(agent_type_str, AgentType.CHAT)
+
+                    # Resolve model alias if needed
+                    model_name = agent_data.get("model", defaults.get("model", "gpt-4o-mini"))
+                    if model_name in model_aliases:
+                        model_name = model_aliases[model_name]
+
+                    # Create AgentConfig
+                    config = AgentConfig(
+                        id=agent_data["id"],
+                        name=agent_data.get("name", agent_data["id"]),
+                        agent_type=agent_type,
+                        role=agent_data.get("role", agent_data.get("name", "")),
+                        goal=agent_data.get("goal", ""),
+                        backstory=agent_data.get("backstory", "").strip(),
+                        tools=agent_data.get("tools", []),
+                        model_name=model_name,
+                        temperature=agent_data.get("temperature", defaults.get("temperature", 0.5)),
+                        memory=agent_data.get("memory", defaults.get("memory", True)),
+                        verbose=agent_data.get("verbose", defaults.get("verbose", False)),
+                    )
+                    loaded_configs.append(config)
+                    logger.debug("agent_config_loaded", agent_id=config.id, model=config.model_name)
+
+                except KeyError as e:
+                    logger.error("agent_config_missing_field", agent=agent_data.get("id", "unknown"), field=str(e))
+                except Exception as e:
+                    logger.error("agent_config_parse_error", agent=agent_data.get("id", "unknown"), error=str(e))
+
+            if loaded_configs:
+                self.agent_configs = loaded_configs
+                logger.info(
+                    "agents_loaded_from_config",
+                    file=str(config_file),
+                    count=len(loaded_configs),
+                    agents=[c.id for c in loaded_configs]
+                )
+            else:
+                logger.warning("no_valid_agents_loaded", file=str(config_file), using="hardcoded defaults")
+
+        except yaml.YAMLError as e:
+            logger.error("agent_config_yaml_error", file=str(config_file), error=str(e))
+        except Exception as e:
+            logger.error("agent_config_load_error", file=str(config_file), error=str(e))
 
     async def get_agent(self, agent_id: str) -> Any:
         """Retrieves an agent by its ID."""
@@ -252,19 +362,18 @@ class AgentManager:
                 )
                 logger.info(f"Created real agent: {agent}")
                 return agent
-            else:
-                # Create mock agent with ALL required attributes - FIXED
-                agent = MockAgent(
-                    tools=list(self.tools.values()),
-                    model=agent_config.model_name,
-                    instructions=f"You are a {agent_config.name} assistant for TWS operations. {agent_config.backstory}",
-                    name=agent_config.name,
-                    description=agent_config.backstory,  # ✅ PASSAR DESCRIPTION
-                )
-                logger.info(
-                    f"Created mock agent: {agent}, has arun: {hasattr(agent, 'arun')}"
-                )
-                return agent
+            # Create mock agent with ALL required attributes - FIXED
+            agent = MockAgent(
+                tools=list(self.tools.values()),
+                model=agent_config.model_name,
+                instructions=f"You are a {agent_config.name} assistant for TWS operations. {agent_config.backstory}",
+                name=agent_config.name,
+                description=agent_config.backstory,  # ✅ PASSAR DESCRIPTION
+            )
+            logger.info(
+                f"Created mock agent: {agent}, has arun: {hasattr(agent, 'arun')}"
+            )
+            return agent
 
         except Exception as e:
             logger.error(f"Failed to create agent '{agent_id}': {e}")
@@ -312,7 +421,7 @@ class AgentManager:
     def __init__(
         self,
         settings_module: Any = settings,
-        tws_client_factory: Optional[Callable[[], Any]] = None,
+        tws_client_factory: Callable[[], Any] | None = None,
     ) -> None:
         """
         Initializes the AgentManager with thread-safe initialization.
@@ -400,8 +509,8 @@ class AgentManager:
                         ),
                     ]
                     self.tools: dict[str, Any] = self._discover_tools()
-                    self.tws_client: Optional[OptimizedTWSClient] = None
-                    self._mock_tws_client: Optional[MockTWSClient] = None
+                    self.tws_client: OptimizedTWSClient | None = None
+                    self._mock_tws_client: MockTWSClient | None = None
                     # Async lock to prevent race conditions during TWS client initialization
                     self._tws_init_lock: asyncio.Lock = asyncio.Lock()
 
@@ -438,19 +547,19 @@ agent_manager = AgentManager()
 class UnifiedAgent:
     """
     Unified agent interface that provides automatic routing.
-    
+
     This is the recommended way to interact with the Resync AI system.
     Instead of selecting specific agents, users simply send messages
     and the system automatically routes to the appropriate handler.
-    
+
     Usage:
         agent = UnifiedAgent()
         response = await agent.chat("Quais jobs estão em ABEND?")
     """
-    
-    _instance: Optional["UnifiedAgent"] = None
+
+    _instance: UnifiedAgent | None = None
     _lock = threading.RLock()
-    
+
     def __new__(cls):
         """Thread-safe singleton implementation."""
         if cls._instance is None:
@@ -459,19 +568,19 @@ class UnifiedAgent:
                     cls._instance = super().__new__(cls)
                     cls._instance._initialized = False
         return cls._instance
-    
+
     def __init__(self):
         if self._initialized:
             return
-            
+
         from resync.core.agent_router import create_router
-        
+
         self._router = create_router(agent_manager)
         self._conversation_history: list[dict[str, str]] = []
         self._initialized = True
-        
+
         logger.info("unified_agent_initialized")
-    
+
     async def chat(
         self,
         message: str,
@@ -480,12 +589,12 @@ class UnifiedAgent:
     ) -> str:
         """
         Send a message and get a response.
-        
+
         Args:
             message: The user's input message
             include_history: Whether to include conversation history in context
             use_llm_classification: Whether to use LLM for intent classification
-            
+
         Returns:
             The assistant's response
         """
@@ -493,22 +602,22 @@ class UnifiedAgent:
         context = {}
         if include_history and self._conversation_history:
             context["history"] = self._conversation_history[-10:]  # Last 10 messages
-        
+
         # Route the message
         result = await self._router.route(
             message,
             context=context,
             use_llm_classification=use_llm_classification
         )
-        
+
         # Update history
         self._conversation_history.append({"role": "user", "content": message})
         self._conversation_history.append({"role": "assistant", "content": result.response})
-        
+
         # Keep history bounded
         if len(self._conversation_history) > 100:
             self._conversation_history = self._conversation_history[-50:]
-        
+
         logger.debug(
             "unified_agent_response",
             handler=result.handler_name,
@@ -516,9 +625,9 @@ class UnifiedAgent:
             confidence=result.classification.confidence,
             processing_time_ms=result.processing_time_ms,
         )
-        
+
         return result.response
-    
+
     async def chat_with_metadata(
         self,
         message: str,
@@ -527,29 +636,29 @@ class UnifiedAgent:
     ) -> dict[str, Any]:
         """
         Send a message and get response with full metadata.
-        
+
         Args:
             message: The user's message
             include_history: Include conversation history in context
             tws_instance_id: Optional TWS instance ID for multi-server queries
-        
+
         Returns dict with: response, intent, confidence, handler, tools_used, processing_time_ms
         """
         context = {}
         if include_history and self._conversation_history:
             context["history"] = self._conversation_history[-10:]
-        
+
         # Add TWS instance context if specified
         if tws_instance_id:
             context["tws_instance_id"] = tws_instance_id
             logger.debug("tws_instance_context_set", instance_id=tws_instance_id)
-        
+
         result = await self._router.route(message, context=context)
-        
+
         # Update history
         self._conversation_history.append({"role": "user", "content": message})
         self._conversation_history.append({"role": "assistant", "content": result.response})
-        
+
         return {
             "response": result.response,
             "intent": result.classification.primary_intent.value,
@@ -560,16 +669,16 @@ class UnifiedAgent:
             "processing_time_ms": result.processing_time_ms,
             "tws_instance_id": tws_instance_id,
         }
-    
+
     def clear_history(self) -> None:
         """Clear conversation history."""
         self._conversation_history.clear()
         logger.debug("conversation_history_cleared")
-    
+
     def get_history(self) -> list[dict[str, str]]:
         """Get conversation history."""
         return self._conversation_history.copy()
-    
+
     @property
     def router(self):
         """Access the underlying router for advanced usage."""

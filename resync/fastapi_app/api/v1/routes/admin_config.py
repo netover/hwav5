@@ -21,15 +21,14 @@ These endpoints are mounted under the ``/api/v1/admin`` prefix via the
 main application (see ``main.py``).
 """
 
-from pathlib import Path
-from typing import Any, Dict
-
-import json
-import shutil
 import datetime
+import json
+import logging
+from pathlib import Path
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, status
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +41,7 @@ router = APIRouter()
 CONFIG_PATH = Path(__file__).resolve().parent.parent.parent.parent / "config" / "admin_config.json"
 
 # Default configuration values used when the config file does not exist.
-DEFAULT_CONFIG: Dict[str, Any] = {
+DEFAULT_CONFIG: dict[str, Any] = {
     "teams_config": {
         "enabled": False,
         "webhook_url": "",
@@ -80,7 +79,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 # the primary database, cache and external integrations.  For demonstration
 # purposes we avoid deep dependency checks and instead return simple boolean
 # flags.  Integrators can replace these stubs with real connectivity tests.
-def _get_health_report() -> Dict[str, Any]:
+def _get_health_report() -> dict[str, Any]:
     """Assemble a basic health report.
 
     Returns
@@ -103,7 +102,7 @@ def _get_health_report() -> Dict[str, Any]:
 
 
 
-def _load_config() -> Dict[str, Any]:
+def _load_config() -> dict[str, Any]:
     """Read configuration from disk or return defaults.
 
     Returns
@@ -129,7 +128,7 @@ def _load_config() -> Dict[str, Any]:
         return DEFAULT_CONFIG.copy()
 
 
-def _save_config(config: Dict[str, Any]) -> None:
+def _save_config(config: dict[str, Any]) -> None:
     """Persist the entire configuration to disk as JSON.
 
     Parameters
@@ -149,7 +148,7 @@ def _save_config(config: Dict[str, Any]) -> None:
 
 
 @router.get("/teams-config", tags=["Admin"])
-async def get_teams_config() -> Dict[str, Any]:
+async def get_teams_config() -> dict[str, Any]:
     """Retrieve current Teams integration settings.
 
     Returns
@@ -164,7 +163,7 @@ async def get_teams_config() -> Dict[str, Any]:
 
 
 @router.post("/teams-config", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin"])
-async def update_teams_config(settings: Dict[str, Any]) -> None:
+async def update_teams_config(settings: dict[str, Any]) -> None:
     """Persist Teams integration settings provided by the admin UI.
 
     Parameters
@@ -192,14 +191,14 @@ async def update_teams_config(settings: Dict[str, Any]) -> None:
 # ----- TWS Configuration Endpoints -----
 
 @router.get("/tws-config", tags=["Admin"])
-async def get_tws_config() -> Dict[str, Any]:
+async def get_tws_config() -> dict[str, Any]:
     """Return current TWS connection configuration."""
     config = _load_config()
     return config.get("tws_config", DEFAULT_CONFIG["tws_config"]).copy()
 
 
 @router.post("/tws-config", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin"])
-async def update_tws_config(settings: Dict[str, Any]) -> None:
+async def update_tws_config(settings: dict[str, Any]) -> None:
     """Update TWS connection configuration.
 
     Accepts ``primary_instance`` (str) and ``monitored_instances`` (list of str).
@@ -217,14 +216,14 @@ async def update_tws_config(settings: Dict[str, Any]) -> None:
 # ----- System Settings Endpoints -----
 
 @router.get("/system-settings", tags=["Admin"])
-async def get_system_settings() -> Dict[str, Any]:
+async def get_system_settings() -> dict[str, Any]:
     """Return current system settings."""
     config = _load_config()
     return config.get("system_settings", DEFAULT_CONFIG["system_settings"]).copy()
 
 
 @router.post("/system-settings", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin"])
-async def update_system_settings(settings: Dict[str, Any]) -> None:
+async def update_system_settings(settings: dict[str, Any]) -> None:
     """Update system settings configuration.
 
     Accepts any subset of keys defined in the ``system_settings`` section.
@@ -241,14 +240,14 @@ async def update_system_settings(settings: Dict[str, Any]) -> None:
 # ----- Notifications Endpoints -----
 
 @router.get("/notifications", tags=["Admin"])
-async def get_notifications() -> Dict[str, Any]:
+async def get_notifications() -> dict[str, Any]:
     """Return current notification configuration."""
     config = _load_config()
     return config.get("notifications", DEFAULT_CONFIG["notifications"]).copy()
 
 
 @router.post("/notifications", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin"])
-async def update_notifications(settings: Dict[str, Any]) -> None:
+async def update_notifications(settings: dict[str, Any]) -> None:
     """Update notification configuration.
 
     Accepts ``job_status_filters`` (list of str) and boolean toggles for
@@ -268,7 +267,7 @@ async def update_notifications(settings: Dict[str, Any]) -> None:
 # ----- Logs Endpoint -----
 
 @router.get("/logs", tags=["Admin"])
-async def get_logs(file: str = "app.log", lines: int = 100) -> Dict[str, Any]:
+async def get_logs(file: str = "app.log", lines: int = 100) -> dict[str, Any]:
     """Return the last ``lines`` lines of the specified log file.
 
     Parameters
@@ -287,7 +286,7 @@ async def get_logs(file: str = "app.log", lines: int = 100) -> Dict[str, Any]:
     log_path = logs_dir / file
     if not log_path.is_file():
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Log file not found"
         )
     try:
@@ -308,25 +307,25 @@ async def get_logs(file: str = "app.log", lines: int = 100) -> Dict[str, Any]:
 # ----- Backup and Restore Endpoints -----
 
 @router.post("/backup", tags=["Admin"])
-async def create_backup() -> Dict[str, str]:
+async def create_backup() -> dict[str, str]:
     """Create a backup of audit data.
 
     With PostgreSQL, this exports audit entries to a JSON file
     for archival purposes.
-    
+
     Returns:
         Dictionary with backup status and filename.
     """
     from resync.core.database.repositories import AuditEntryRepository
-    
+
     timestamp = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
     backup_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "backup"
     backup_dir.mkdir(parents=True, exist_ok=True)
-    
+
     try:
         repo = AuditEntryRepository()
         entries = await repo.get_all(limit=10000)
-        
+
         backup_data = [
             {
                 "id": e.id,
@@ -338,11 +337,11 @@ async def create_backup() -> Dict[str, str]:
             }
             for e in entries
         ]
-        
+
         backup_file = backup_dir / f"audit_backup_{timestamp}.json"
         with open(backup_file, "w") as f:
             json.dump(backup_data, f, indent=2)
-        
+
         return {"created": [backup_file.name], "count": len(backup_data)}
     except Exception as exc:
         logger.error("backup_failed", error=str(exc), exc_info=True)
@@ -353,35 +352,35 @@ async def create_backup() -> Dict[str, str]:
 
 
 @router.post("/restore", tags=["Admin"])
-async def restore_from_latest() -> Dict[str, str]:
+async def restore_from_latest() -> dict[str, str]:
     """Restore audit data from the most recent backup.
 
     Note: With PostgreSQL, this is primarily for disaster recovery.
     Normal operations should use PostgreSQL's native backup tools (pg_dump).
-    
+
     Returns:
         Dictionary with restore status.
     """
     backup_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "backup"
     if not backup_dir.is_dir():
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="No backup directory found"
         )
-    
+
     # Find latest JSON backup
     backups = sorted(
-        backup_dir.glob("audit_backup_*.json"), 
-        key=lambda p: p.stat().st_mtime, 
+        backup_dir.glob("audit_backup_*.json"),
+        key=lambda p: p.stat().st_mtime,
         reverse=True
     )
-    
+
     if not backups:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No backup files found"
         )
-    
+
     return {
         "message": "PostgreSQL restore should be done via pg_restore",
         "latest_backup": backups[0].name,
@@ -390,7 +389,7 @@ async def restore_from_latest() -> Dict[str, str]:
 
 
 @router.get("/audit", tags=["Admin"])
-async def get_audit_logs(limit: int = 50) -> Dict[str, Any]:
+async def get_audit_logs(limit: int = 50) -> dict[str, Any]:
     """Return the latest entries from the audit log.
 
     Parameters
@@ -404,11 +403,11 @@ async def get_audit_logs(limit: int = 50) -> Dict[str, Any]:
         A dictionary containing a list of audit records.
     """
     from resync.core.database.repositories import AuditEntryRepository
-    
+
     try:
         repo = AuditEntryRepository()
         entries = await repo.get_all(limit=limit, order_by="timestamp", desc=True)
-        
+
         records = [
             {
                 "id": e.id,
@@ -421,7 +420,7 @@ async def get_audit_logs(limit: int = 50) -> Dict[str, Any]:
             }
             for e in entries
         ]
-        
+
         return {"records": records, "count": len(records)}
     except Exception as exc:
         logger.error("audit_query_failed", error=str(exc), exc_info=True)
@@ -431,7 +430,7 @@ async def get_audit_logs(limit: int = 50) -> Dict[str, Any]:
 # ----- Health Monitoring Endpoint -----
 
 @router.get("/health", tags=["Admin"])
-async def get_health() -> Dict[str, Any]:
+async def get_health() -> dict[str, Any]:
     """Return a simple health report for key services.
 
     The report includes boolean flags for the database, cache, Teams integration

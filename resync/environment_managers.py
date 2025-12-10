@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Type, Dict, Any, Optional, override
+from typing import Any, override
 
 from .settings import Settings
-from .settings_validator import Environment as ValidatedEnvironment
 from .settings_factory import SettingsFactory
 from .settings_observer import settings_monitor
+from .settings_validator import Environment as ValidatedEnvironment
 
 
 class EnvironmentManager(ABC):
@@ -30,18 +30,18 @@ class EnvironmentManager(ABC):
         """Setup environment-specific logging configuration."""
 
     @abstractmethod
-    def get_cache_config(self) -> Dict[str, Any]:
+    def get_cache_config(self) -> dict[str, Any]:
         """Get environment-specific cache configuration."""
 
     @abstractmethod
-    def get_connection_pool_config(self) -> Dict[str, Any]:
+    def get_connection_pool_config(self) -> dict[str, Any]:
         """Get environment-specific connection pool configuration."""
 
     @abstractmethod
     def validate_environment_specific_settings(self) -> None:
         """Validate settings specific to this environment."""
 
-    def get_environment_info(self) -> Dict[str, Any]:
+    def get_environment_info(self) -> dict[str, Any]:
         """Get environment-specific information."""
         return {
             "environment": self.settings.environment.value,
@@ -83,7 +83,7 @@ class DevelopmentManager(EnvironmentManager):
         self.logger.info("Development logging configured")
 
     @override
-    def get_cache_config(self) -> Dict[str, Any]:
+    def get_cache_config(self) -> dict[str, Any]:
         """Get development-optimized cache configuration."""
         return {
             "hierarchy_l1_max_size": 1000,
@@ -96,7 +96,7 @@ class DevelopmentManager(EnvironmentManager):
         }
 
     @override
-    def get_connection_pool_config(self) -> Dict[str, Any]:
+    def get_connection_pool_config(self) -> dict[str, Any]:
         """Get development connection pool configuration."""
         return {
             "db_pool_min_size": 2,
@@ -164,7 +164,7 @@ class ProductionManager(EnvironmentManager):
         self.logger.info("Production logging configured")
 
     @override
-    def get_cache_config(self) -> Dict[str, Any]:
+    def get_cache_config(self) -> dict[str, Any]:
         """Get production-optimized cache configuration."""
         return {
             "hierarchy_l1_max_size": min(
@@ -179,7 +179,7 @@ class ProductionManager(EnvironmentManager):
         }
 
     @override
-    def get_connection_pool_config(self) -> Dict[str, Any]:
+    def get_connection_pool_config(self) -> dict[str, Any]:
         """Get production connection pool configuration."""
         return {
             "db_pool_min_size": self.settings.db_pool_min_size,
@@ -260,7 +260,7 @@ class TestManager(EnvironmentManager):
         self.logger.info("Test logging configured")
 
     @override
-    def get_cache_config(self) -> Dict[str, Any]:
+    def get_cache_config(self) -> dict[str, Any]:
         """Get test-optimized cache configuration."""
         return {
             "hierarchy_l1_max_size": 100,
@@ -273,7 +273,7 @@ class TestManager(EnvironmentManager):
         }
 
     @override
-    def get_connection_pool_config(self) -> Dict[str, Any]:
+    def get_connection_pool_config(self) -> dict[str, Any]:
         """Get test connection pool configuration."""
         return {
             "db_pool_min_size": 1,
@@ -304,7 +304,7 @@ class TestManager(EnvironmentManager):
 class EnvironmentManagerFactory:
     """Factory for creating environment managers."""
 
-    _managers: dict[ValidatedEnvironment, Type[EnvironmentManager]] = {
+    _managers: dict[ValidatedEnvironment, type[EnvironmentManager]] = {
         ValidatedEnvironment.DEVELOPMENT: DevelopmentManager,
         ValidatedEnvironment.PRODUCTION: ProductionManager,
         ValidatedEnvironment.TEST: TestManager,
@@ -323,7 +323,7 @@ class EnvironmentManagerFactory:
 
     @classmethod
     def create_development_manager(
-        cls, settings: Optional[Settings] = None
+        cls, settings: Settings | None = None
     ) -> DevelopmentManager:
         """Create development manager with optional settings."""
         if settings is None:
@@ -332,7 +332,7 @@ class EnvironmentManagerFactory:
 
     @classmethod
     def create_production_manager(
-        cls, settings: Optional[Settings] = None
+        cls, settings: Settings | None = None
     ) -> ProductionManager:
         """Create production manager with optional settings."""
         if settings is None:
@@ -340,7 +340,7 @@ class EnvironmentManagerFactory:
         return ProductionManager(settings)
 
     @classmethod
-    def create_test_manager(cls, settings: Optional[Settings] = None) -> TestManager:
+    def create_test_manager(cls, settings: Settings | None = None) -> TestManager:
         """Create test manager with optional settings."""
         if settings is None:
             settings = SettingsFactory.create_test()
@@ -350,7 +350,7 @@ class EnvironmentManagerFactory:
 class EnvironmentService:
     """Service for managing environment-specific operations."""
 
-    def __init__(self, settings: Optional[Settings] = None):  # type: ignore[reportMissingSuperCall]
+    def __init__(self, settings: Settings | None = None):  # type: ignore[reportMissingSuperCall]
         self.settings = settings or Settings()
         self.manager = EnvironmentManagerFactory.create_manager(self.settings)
         env_name = self.settings.environment.value
@@ -373,11 +373,11 @@ class EnvironmentService:
         env_info = self.manager.get_environment_info()
         self.logger.info(f"Environment info: {env_info}")
 
-    def get_cache_config(self) -> Dict[str, Any]:
+    def get_cache_config(self) -> dict[str, Any]:
         """Get cache configuration for current environment."""
         return self.manager.get_cache_config()
 
-    def get_connection_pool_config(self) -> Dict[str, Any]:
+    def get_connection_pool_config(self) -> dict[str, Any]:
         """Get connection pool configuration for current environment."""
         return self.manager.get_connection_pool_config()
 

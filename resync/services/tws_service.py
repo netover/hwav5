@@ -10,7 +10,7 @@ with OpenTelemetry if the instrumentation library is available.
 
 
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -86,7 +86,7 @@ class OptimizedTWSClient:
     async def _get(
         self,
         path: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         """
         Internal helper for GET requests with metrics.
@@ -131,7 +131,7 @@ class OptimizedTWSClient:
         """Retrieve high level information about the engine."""
         return await self._get("/twsd/api/v2/engine/info")
 
-    async def get_engine_configuration(self, key: Optional[str] = None) -> Any:
+    async def get_engine_configuration(self, key: str | None = None) -> Any:
         """Retrieve engine configuration values."""
         params = {"key": key} if key else None
         return await self._get("/twsd/api/v2/engine/configuration", params=params)
@@ -149,12 +149,12 @@ class OptimizedTWSClient:
     # ---------------------------------------------------------------------
     async def query_jobdefinitions(
         self,
-        q: Optional[str] = None,
-        folder: Optional[str] = None,
-        limit: Optional[int] = 50,
+        q: str | None = None,
+        folder: str | None = None,
+        limit: int | None = 50,
     ) -> Any:
         """Search job definitions in the model with optional filters."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if q:
             params["query"] = q
         if folder:
@@ -169,12 +169,12 @@ class OptimizedTWSClient:
 
     async def query_jobstreams(
         self,
-        q: Optional[str] = None,
-        folder: Optional[str] = None,
-        limit: Optional[int] = 50,
+        q: str | None = None,
+        folder: str | None = None,
+        limit: int | None = 50,
     ) -> Any:
         """Search job streams in the model with optional filters."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if q:
             params["query"] = q
         if folder:
@@ -189,11 +189,11 @@ class OptimizedTWSClient:
 
     async def query_workstations(
         self,
-        q: Optional[str] = None,
-        limit: Optional[int] = 50,
+        q: str | None = None,
+        limit: int | None = 50,
     ) -> Any:
         """Search workstations in the model with optional filters."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if q:
             params["query"] = q
         if limit is not None:
@@ -209,16 +209,16 @@ class OptimizedTWSClient:
     # ---------------------------------------------------------------------
     async def query_current_plan_jobs(
         self,
-        q: Optional[str] = None,
-        folder: Optional[str] = None,
-        status: Optional[str] = None,
-        limit: Optional[int] = 50,
+        q: str | None = None,
+        folder: str | None = None,
+        status: str | None = None,
+        limit: int | None = 50,
     ) -> Any:
         """
         List or search jobs currently present in the plan.
         Filters include a free form search string, folder path and status.
         """
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if q:
             params["query"] = q
         if folder:
@@ -236,10 +236,10 @@ class OptimizedTWSClient:
     async def get_current_plan_job_predecessors(
         self,
         job_id: str,
-        depth: Optional[int] = None,
+        depth: int | None = None,
     ) -> Any:
         """Retrieve the predecessors of a job in the current plan."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if depth is not None:
             params["depth"] = depth
         return await self._get(
@@ -249,10 +249,10 @@ class OptimizedTWSClient:
     async def get_current_plan_job_successors(
         self,
         job_id: str,
-        depth: Optional[int] = None,
+        depth: int | None = None,
     ) -> Any:
         """Retrieve the successors of a job in the current plan."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if depth is not None:
             params["depth"] = depth
         return await self._get(
@@ -286,12 +286,12 @@ class OptimizedTWSClient:
     # ---------------------------------------------------------------------
     async def query_current_plan_jobstreams(
         self,
-        q: Optional[str] = None,
-        folder: Optional[str] = None,
-        limit: Optional[int] = 50,
+        q: str | None = None,
+        folder: str | None = None,
+        limit: int | None = 50,
     ) -> Any:
         """List or search job streams in the current plan."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if q:
             params["query"] = q
         if folder:
@@ -307,10 +307,10 @@ class OptimizedTWSClient:
     async def get_current_plan_jobstream_predecessors(
         self,
         jobstream_id: str,
-        depth: Optional[int] = None,
+        depth: int | None = None,
     ) -> Any:
         """Retrieve the predecessors of a job stream in the current plan."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if depth is not None:
             params["depth"] = depth
         return await self._get(
@@ -321,10 +321,10 @@ class OptimizedTWSClient:
     async def get_current_plan_jobstream_successors(
         self,
         jobstream_id: str,
-        depth: Optional[int] = None,
+        depth: int | None = None,
     ) -> Any:
         """Retrieve the successors of a job stream in the current plan."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if depth is not None:
             params["depth"] = depth
         return await self._get(
@@ -348,10 +348,10 @@ class OptimizedTWSClient:
     # Current plan queries – Resources and Folders
     # ---------------------------------------------------------------------
     async def query_current_plan_resources(
-        self, q: Optional[str] = None, limit: Optional[int] = 50
+        self, q: str | None = None, limit: int | None = 50
     ) -> Any:
         """List or search resources in the current plan."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if q:
             params["query"] = q
         if limit is not None:
@@ -363,10 +363,10 @@ class OptimizedTWSClient:
         return await self._get(f"/twsd/api/v2/plan/resource/{resource_id}")
 
     async def get_current_plan_folder_objects_count(
-        self, folder: Optional[str] = None
+        self, folder: str | None = None
     ) -> Any:
         """Return the number of plan objects within a folder."""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if folder:
             params["folder"] = folder
         return await self._get("/twsd/api/v2/plan/folder/objects-count", params=params)
@@ -376,8 +376,8 @@ class OptimizedTWSClient:
     # ---------------------------------------------------------------------
     async def get_consumed_jobs_runs(
         self,
-        job_name: Optional[str] = None,
-        limit: Optional[int] = 50,
+        job_name: str | None = None,
+        limit: int | None = 50,
     ) -> Any:
         """
         Retrieve runs of consumed jobs in the current plan.
@@ -386,7 +386,7 @@ class OptimizedTWSClient:
             job_name: Optional name filter for the job whose runs are returned.
             limit: Maximum number of runs to return.
         """
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if job_name:
             params["jobName"] = job_name
         if limit is not None:

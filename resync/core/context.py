@@ -9,16 +9,15 @@ Uso de contextvars garante isolamento entre requisições concorrentes.
 
 import uuid
 from contextvars import ContextVar, Token
-from typing import Optional
 
 # Context variables para armazenar informações da requisição
-_correlation_id_ctx: ContextVar[Optional[str]] = ContextVar(
+_correlation_id_ctx: ContextVar[str | None] = ContextVar(
     "correlation_id", default=None
 )
 
-_user_id_ctx: ContextVar[Optional[str]] = ContextVar("user_id", default=None)
+_user_id_ctx: ContextVar[str | None] = ContextVar("user_id", default=None)
 
-_request_id_ctx: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
+_request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
 # ============================================================================
@@ -26,7 +25,7 @@ _request_id_ctx: ContextVar[Optional[str]] = ContextVar("request_id", default=No
 # ============================================================================
 
 
-def set_correlation_id(correlation_id: str) -> Token[Optional[str]]:
+def set_correlation_id(correlation_id: str) -> Token[str | None]:
     """Define o Correlation ID para o contexto atual.
 
     Args:
@@ -38,7 +37,7 @@ def set_correlation_id(correlation_id: str) -> Token[Optional[str]]:
     return _correlation_id_ctx.set(correlation_id)
 
 
-def get_correlation_id() -> Optional[str]:
+def get_correlation_id() -> str | None:
     """Obtém o Correlation ID do contexto atual.
 
     Returns:
@@ -62,7 +61,7 @@ def get_or_create_correlation_id() -> str:
     return correlation_id
 
 
-def reset_correlation_id(token: Token[Optional[str]]) -> None:
+def reset_correlation_id(token: Token[str | None]) -> None:
     """Reseta o Correlation ID para o valor anterior.
 
     Args:
@@ -81,7 +80,7 @@ def clear_correlation_id() -> None:
 # ============================================================================
 
 
-def set_user_id(user_id: str) -> Token[Optional[str]]:
+def set_user_id(user_id: str) -> Token[str | None]:
     """Define o User ID para o contexto atual.
 
     Args:
@@ -93,7 +92,7 @@ def set_user_id(user_id: str) -> Token[Optional[str]]:
     return _user_id_ctx.set(user_id)
 
 
-def get_user_id() -> Optional[str]:
+def get_user_id() -> str | None:
     """Obtém o User ID do contexto atual.
 
     Returns:
@@ -112,7 +111,7 @@ def clear_user_id() -> None:
 # ============================================================================
 
 
-def set_request_id(request_id: str) -> Token[Optional[str]]:
+def set_request_id(request_id: str) -> Token[str | None]:
     """Define o Request ID para o contexto atual.
 
     Args:
@@ -124,7 +123,7 @@ def set_request_id(request_id: str) -> Token[Optional[str]]:
     return _request_id_ctx.set(request_id)
 
 
-def get_request_id() -> Optional[str]:
+def get_request_id() -> str | None:
     """Obtém o Request ID do contexto atual.
 
     Returns:
@@ -196,9 +195,9 @@ class RequestContext:
 
     def __init__(
         self,
-        correlation_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-        request_id: Optional[str] = None,
+        correlation_id: str | None = None,
+        user_id: str | None = None,
+        request_id: str | None = None,
     ):
         """Inicializa o context manager.
 

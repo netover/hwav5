@@ -8,7 +8,7 @@ modular architecture with dependency injection and extracted health checkers.
 
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -18,10 +18,11 @@ from resync.core.health_models import (
     HealthCheckConfig,
     HealthCheckResult,
     HealthStatus,
+    SystemHealthStatus,
 )
-from resync.core.health_models import SystemHealthStatus
-from .health_checkers.health_checker_factory import HealthCheckerFactory
+
 from .enhanced_health_config_manager import EnhancedHealthConfigurationManager
+from .health_checkers.health_checker_factory import HealthCheckerFactory
 
 logger = structlog.get_logger(__name__)
 
@@ -34,7 +35,7 @@ class RefactoredHealthCheckService:
     the new architecture with improved modularity and maintainability.
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """
         Initialize the refactored health check service.
 
@@ -47,10 +48,10 @@ class RefactoredHealthCheckService:
         self.checker_factory = HealthCheckerFactory(self.config_manager.get_config())
         self.config_manager.set_health_checker_factory(self.checker_factory)
 
-        self._component_cache: Dict[str, ComponentHealth] = {}
-        self._last_system_check: Optional[datetime] = None
+        self._component_cache: dict[str, ComponentHealth] = {}
+        self._last_system_check: datetime | None = None
 
-    async def run_all_checks(self) -> List[HealthCheckResult]:
+    async def run_all_checks(self) -> list[HealthCheckResult]:
         """
         Run health checks on all enabled system components.
 
@@ -203,17 +204,16 @@ class RefactoredHealthCheckService:
 
             if critical_ratio > 0.5:  # More than 50% critical
                 return SystemHealthStatus.CRITICAL
-            elif warning_count > 0 or critical_count > 0:
+            if warning_count > 0 or critical_count > 0:
                 return SystemHealthStatus.WARNING
-            else:
-                return SystemHealthStatus.OK
+            return SystemHealthStatus.OK
 
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
             # Return critical status on any error
             return SystemHealthStatus.CRITICAL
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
 
@@ -232,11 +232,11 @@ class RefactoredHealthCheckService:
         self._component_cache.clear()
         logger.info("refactored_health_check_cache_cleared")
 
-    def get_config_summary(self) -> Dict[str, Any]:
+    def get_config_summary(self) -> dict[str, Any]:
         """Get configuration summary."""
         return self.config_manager.get_config_summary_enhanced()
 
-    def validate_configuration(self) -> Dict[str, Any]:
+    def validate_configuration(self) -> dict[str, Any]:
         """Validate current configuration."""
         return {
             "config_validation": self.config_manager.validate_config(),
