@@ -1,0 +1,96 @@
+"""
+Cache Transaction Mixin.
+
+Provides transaction and rollback functionality for cache implementations.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+
+class CacheTransactionMixin:
+    """
+    Mixin providing transaction capabilities for cache.
+    
+    Supports recording operations and rolling them back if needed.
+    """
+    
+    _transaction_log: List[Dict[str, Any]] = []
+    _in_transaction: bool = False
+    
+    def begin_transaction(self):
+        """Begin a new transaction."""
+        self._transaction_log = []
+        self._in_transaction = True
+        logger.debug("Cache transaction started")
+    
+    def _log_operation(self, operation: str, key: str, old_value: Any = None):
+        """Log an operation for potential rollback."""
+        if self._in_transaction:
+            self._transaction_log.append({
+                "operation": operation,
+                "key": key,
+                "old_value": old_value,
+            })
+    
+    async def commit_transaction(self):
+        """Commit the current transaction."""
+        self._transaction_log = []
+        self._in_transaction = False
+        logger.debug("Cache transaction committed")
+    
+    async def rollback_transaction(
+        self,
+        operations: Optional[List[Dict[str, Any]]] = None
+    ) -> bool:
+        """
+        Rollback operations from the transaction log.
+        
+        Args:
+            operations: Specific operations to rollback, or None for all
+            
+        Returns:
+            True if rollback was successful
+        """
+        ops_to_rollback = operations or self._transaction_log
+        
+        if not ops_to_rollback:
+            return True
+        
+        try:
+            # Process in reverse order
+            for op in reversed(ops_to_rollback):
+                operation = op.get("operation")
+                key = op.get("key")
+                old_value = op.get("old_value")
+                
+                if operation == "set":
+                    if old_value is None:
+                        await self.delete(key)
+                    else:
+                        await self.set(key, old_value)
+                elif operation == "delete":
+                    if old_value is not None:
+                        await self.set(key, old_value)
+            
+            logger.info(f"Rolled back {len(ops_to_rollback)} operations")
+            
+            self._transaction_log = []
+            self._in_transaction = False
+            return True
+            
+        except Exception as e:
+            logger.error(f"Rollback failed: {e}")
+            return False
+    
+    def get_transaction_log(self) -> List[Dict[str, Any]]:
+        """Get current transaction log."""
+        return self._transaction_log.copy()
+    
+    def is_in_transaction(self) -> bool:
+        """Check if currently in a transaction."""
+        return self._in_transaction

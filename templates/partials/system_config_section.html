@@ -1,0 +1,810 @@
+<!-- ==========================================================================
+     SYSTEM CONFIGURATION SECTION
+     Add this inside the main content area of admin.html
+     ========================================================================== -->
+
+<div id="system-settings" class="config-section">
+    <h2><i class="fas fa-cogs me-2"></i>System Configuration</h2>
+    <p class="text-muted">Configure performance, caching, monitoring, and system behavior</p>
+    
+    <!-- Resource Monitor Bar -->
+    <div class="resource-monitor card mb-4">
+        <div class="card-body py-3">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <span class="resource-label"><i class="fas fa-microchip me-1"></i>CPU</span>
+                    <div class="resource-bar">
+                        <div class="resource-fill cpu" id="cpuBar" style="width: 0%"></div>
+                    </div>
+                    <span class="resource-value" id="cpuValue">0%</span>
+                </div>
+                <div class="col-auto">
+                    <span class="resource-label"><i class="fas fa-memory me-1"></i>Memory</span>
+                    <div class="resource-bar">
+                        <div class="resource-fill memory" id="memoryBar" style="width: 0%"></div>
+                    </div>
+                    <span class="resource-value" id="memoryValue">0 MB</span>
+                </div>
+                <div class="col-auto">
+                    <span class="resource-label"><i class="fas fa-hdd me-1"></i>Disk</span>
+                    <div class="resource-bar">
+                        <div class="resource-fill disk" id="diskBar" style="width: 0%"></div>
+                    </div>
+                    <span class="resource-value" id="diskValue">0%</span>
+                </div>
+                <div class="col-auto ms-auto">
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshResources()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning" onclick="triggerGC()" title="Force Garbage Collection">
+                        <i class="fas fa-broom"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Category Tabs -->
+    <ul class="nav nav-pills config-tabs mb-4" id="configCategoryTabs" role="tablist">
+        <!-- Tabs will be populated dynamically -->
+    </ul>
+    
+    <!-- Tab Content -->
+    <div class="tab-content" id="configTabContent">
+        <!-- Content will be populated dynamically -->
+    </div>
+    
+    <!-- Save Bar -->
+    <div class="save-bar card mt-4" id="saveBar" style="display: none;">
+        <div class="card-body d-flex align-items-center justify-content-between py-3">
+            <div>
+                <span class="badge bg-warning me-2" id="changesCount">0</span>
+                <span class="text-muted">unsaved changes</span>
+                <span class="text-warning ms-2" id="restartWarning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Some changes require restart
+                </span>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary me-2" onclick="discardChanges()">
+                    <i class="fas fa-times me-1"></i>Discard
+                </button>
+                <button class="btn btn-success" onclick="saveAllChanges()">
+                    <i class="fas fa-save me-1"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================================================
+     STYLES - Add to admin-neumorphic.css or inline
+     ========================================================================== -->
+<style>
+/* Resource Monitor */
+.resource-monitor {
+    background: var(--neuro-bg-secondary);
+}
+
+.resource-label {
+    font-size: 0.75rem;
+    color: var(--neuro-text-muted);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.resource-bar {
+    width: 120px;
+    height: 8px;
+    background: var(--neuro-bg-primary);
+    border-radius: 10px;
+    box-shadow: var(--shadow-inset-sm);
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.resource-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+.resource-fill.cpu { background: linear-gradient(90deg, var(--neuro-info), var(--neuro-primary)); }
+.resource-fill.memory { background: linear-gradient(90deg, var(--neuro-success), var(--neuro-warning)); }
+.resource-fill.disk { background: linear-gradient(90deg, var(--neuro-warning), var(--neuro-danger)); }
+
+.resource-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--neuro-text-primary);
+    margin-left: 8px;
+}
+
+/* Config Tabs */
+.config-tabs {
+    background: var(--neuro-bg-secondary);
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: var(--shadow-md);
+}
+
+.config-tabs .nav-link {
+    color: var(--neuro-text-secondary);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin: 0 4px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.config-tabs .nav-link:hover {
+    background: var(--neuro-bg-primary);
+    box-shadow: var(--shadow-inset-sm);
+}
+
+.config-tabs .nav-link.active {
+    background: var(--neuro-gradient);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.config-tabs .nav-link i {
+    font-size: 1rem;
+}
+
+/* Config Cards */
+.config-card {
+    background: var(--neuro-bg-secondary);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s;
+}
+
+.config-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md), 0 8px 20px rgba(102, 126, 234, 0.1);
+}
+
+.config-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--neuro-bg-primary);
+}
+
+.config-card-title {
+    font-weight: 600;
+    color: var(--neuro-text-primary);
+    font-size: 1rem;
+    margin: 0;
+}
+
+.config-card-description {
+    color: var(--neuro-text-muted);
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+/* Config Fields */
+.config-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(163, 177, 198, 0.1);
+}
+
+.config-field:last-child {
+    border-bottom: none;
+}
+
+.config-field-info {
+    flex: 1;
+}
+
+.config-field-name {
+    font-weight: 500;
+    color: var(--neuro-text-primary);
+    font-size: 0.9rem;
+}
+
+.config-field-desc {
+    color: var(--neuro-text-muted);
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+
+.config-field-control {
+    min-width: 200px;
+    text-align: right;
+}
+
+/* Field Controls */
+.config-input {
+    background: var(--neuro-bg-primary);
+    border: none;
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: var(--neuro-text-primary);
+    box-shadow: var(--shadow-inset-sm);
+    font-size: 0.875rem;
+    width: 100%;
+    max-width: 200px;
+    transition: all 0.2s;
+}
+
+.config-input:focus {
+    outline: none;
+    box-shadow: var(--shadow-inset-sm), 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.config-input.changed {
+    background: rgba(102, 126, 234, 0.1);
+    box-shadow: var(--shadow-inset-sm), 0 0 0 2px var(--neuro-primary);
+}
+
+.config-select {
+    background: var(--neuro-bg-primary);
+    border: none;
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: var(--neuro-text-primary);
+    box-shadow: var(--shadow-inset-sm);
+    font-size: 0.875rem;
+    cursor: pointer;
+    min-width: 150px;
+}
+
+/* Toggle Switch */
+.config-toggle {
+    position: relative;
+    width: 50px;
+    height: 26px;
+}
+
+.config-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.config-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--neuro-bg-primary);
+    border-radius: 26px;
+    box-shadow: var(--shadow-inset-sm);
+    transition: all 0.3s;
+}
+
+.config-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: linear-gradient(135deg, #fff, #f0f0f0);
+    border-radius: 50%;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s;
+}
+
+.config-toggle input:checked + .config-toggle-slider {
+    background: var(--neuro-gradient);
+}
+
+.config-toggle input:checked + .config-toggle-slider:before {
+    transform: translateX(24px);
+}
+
+/* Range Slider */
+.config-range {
+    -webkit-appearance: none;
+    width: 100%;
+    max-width: 150px;
+    height: 8px;
+    background: var(--neuro-bg-primary);
+    border-radius: 10px;
+    box-shadow: var(--shadow-inset-sm);
+    outline: none;
+}
+
+.config-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--neuro-gradient);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+}
+
+.config-range-value {
+    display: inline-block;
+    min-width: 50px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--neuro-primary);
+    font-size: 0.875rem;
+}
+
+/* Save Bar */
+.save-bar {
+    position: sticky;
+    bottom: 20px;
+    z-index: 100;
+    background: var(--neuro-bg-secondary);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md), 0 -4px 20px rgba(0, 0, 0, 0.1);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Restart Warning Badge */
+.restart-badge {
+    background: linear-gradient(135deg, var(--neuro-warning), #f59e0b);
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+
+/* Loading Skeleton */
+.skeleton {
+    background: linear-gradient(90deg, var(--neuro-bg-primary) 25%, var(--neuro-bg-secondary) 50%, var(--neuro-bg-primary) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Success/Error States */
+.config-field.success .config-field-name::after {
+    content: " ✓";
+    color: var(--neuro-success);
+}
+
+.config-field.error .config-input {
+    box-shadow: var(--shadow-inset-sm), 0 0 0 2px var(--neuro-danger);
+}
+
+.error-message {
+    color: var(--neuro-danger);
+    font-size: 0.75rem;
+    margin-top: 4px;
+}
+</style>
+
+<!-- ==========================================================================
+     JAVASCRIPT - Add to admin.html or separate file
+     ========================================================================== -->
+<script>
+// =============================================================================
+// SYSTEM CONFIGURATION MODULE
+// =============================================================================
+
+const SystemConfig = {
+    categories: [],
+    originalValues: {},
+    currentValues: {},
+    changedFields: new Set(),
+    
+    // Initialize the module
+    async init() {
+        await this.loadCategories();
+        this.renderTabs();
+        this.renderContent();
+        this.bindEvents();
+        this.refreshResources();
+        
+        // Auto-refresh resources every 10 seconds
+        setInterval(() => this.refreshResources(), 10000);
+    },
+    
+    // Load configuration categories from API
+    async loadCategories() {
+        try {
+            const response = await fetch('/api/v1/system-config/categories', {
+                headers: {
+                    'Authorization': 'Basic ' + btoa(adminCredentials),
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load configuration');
+            
+            this.categories = await response.json();
+            
+            // Store original values
+            this.categories.forEach(cat => {
+                cat.fields.forEach(field => {
+                    this.originalValues[field.name] = field.value;
+                    this.currentValues[field.name] = field.value;
+                });
+            });
+            
+        } catch (error) {
+            console.error('Error loading config:', error);
+            showToast('Failed to load configuration', 'error');
+        }
+    },
+    
+    // Render category tabs
+    renderTabs() {
+        const tabsContainer = document.getElementById('configCategoryTabs');
+        if (!tabsContainer) return;
+        
+        tabsContainer.innerHTML = this.categories.map((cat, index) => `
+            <li class="nav-item" role="presentation">
+                <button class="nav-link ${index === 0 ? 'active' : ''}" 
+                        id="tab-${cat.name}" 
+                        data-bs-toggle="pill" 
+                        data-bs-target="#content-${cat.name}" 
+                        type="button" 
+                        role="tab">
+                    <i class="fas ${cat.icon}"></i>
+                    <span class="d-none d-md-inline">${cat.display_name}</span>
+                </button>
+            </li>
+        `).join('');
+    },
+    
+    // Render tab content
+    renderContent() {
+        const contentContainer = document.getElementById('configTabContent');
+        if (!contentContainer) return;
+        
+        contentContainer.innerHTML = this.categories.map((cat, index) => `
+            <div class="tab-pane fade ${index === 0 ? 'show active' : ''}" 
+                 id="content-${cat.name}" 
+                 role="tabpanel">
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <div>
+                            <h5 class="config-card-title">
+                                <i class="fas ${cat.icon} me-2"></i>${cat.display_name}
+                            </h5>
+                            <p class="config-card-description">${cat.description}</p>
+                        </div>
+                    </div>
+                    <div class="config-fields">
+                        ${cat.fields.map(field => this.renderField(field)).join('')}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    },
+    
+    // Render a single field
+    renderField(field) {
+        const restartBadge = field.requires_restart 
+            ? '<span class="restart-badge">Requires Restart</span>' 
+            : '';
+        
+        return `
+            <div class="config-field" data-field="${field.name}">
+                <div class="config-field-info">
+                    <div class="config-field-name">
+                        ${this.formatFieldName(field.name)}
+                        ${restartBadge}
+                    </div>
+                    <div class="config-field-desc">${field.description}</div>
+                </div>
+                <div class="config-field-control">
+                    ${this.renderControl(field)}
+                </div>
+            </div>
+        `;
+    },
+    
+    // Render the appropriate control for a field
+    renderControl(field) {
+        switch (field.type) {
+            case 'bool':
+                return `
+                    <label class="config-toggle">
+                        <input type="checkbox" 
+                               data-field="${field.name}"
+                               ${field.value ? 'checked' : ''}
+                               onchange="SystemConfig.handleChange('${field.name}', this.checked)">
+                        <span class="config-toggle-slider"></span>
+                    </label>
+                `;
+            
+            case 'string':
+                if (field.options && field.options.length > 0) {
+                    return `
+                        <select class="config-select" 
+                                data-field="${field.name}"
+                                onchange="SystemConfig.handleChange('${field.name}', this.value)">
+                            ${field.options.map(opt => `
+                                <option value="${opt}" ${opt === field.value ? 'selected' : ''}>${opt}</option>
+                            `).join('')}
+                        </select>
+                    `;
+                }
+                return `
+                    <input type="text" 
+                           class="config-input" 
+                           data-field="${field.name}"
+                           value="${field.value || ''}"
+                           onchange="SystemConfig.handleChange('${field.name}', this.value)">
+                `;
+            
+            case 'int':
+            case 'float':
+                const step = field.type === 'float' ? '0.1' : '1';
+                const min = field.min_value !== null ? `min="${field.min_value}"` : '';
+                const max = field.max_value !== null ? `max="${field.max_value}"` : '';
+                
+                return `
+                    <input type="number" 
+                           class="config-input" 
+                           data-field="${field.name}"
+                           value="${field.value}"
+                           step="${step}"
+                           ${min} ${max}
+                           onchange="SystemConfig.handleChange('${field.name}', this.value)">
+                `;
+            
+            default:
+                return `<span class="text-muted">${field.value}</span>`;
+        }
+    },
+    
+    // Format field name for display
+    formatFieldName(name) {
+        return name
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase())
+            .replace(/Tws/g, 'TWS')
+            .replace(/Llm/g, 'LLM')
+            .replace(/Rag/g, 'RAG')
+            .replace(/Db/g, 'DB')
+            .replace(/Mb/g, 'MB');
+    },
+    
+    // Handle field value change
+    handleChange(fieldName, newValue) {
+        // Type conversion
+        const field = this.findField(fieldName);
+        if (field) {
+            if (field.type === 'int') newValue = parseInt(newValue);
+            if (field.type === 'float') newValue = parseFloat(newValue);
+        }
+        
+        this.currentValues[fieldName] = newValue;
+        
+        // Track changed fields
+        if (newValue !== this.originalValues[fieldName]) {
+            this.changedFields.add(fieldName);
+        } else {
+            this.changedFields.delete(fieldName);
+        }
+        
+        // Update UI
+        this.updateFieldUI(fieldName);
+        this.updateSaveBar();
+    },
+    
+    // Find field definition
+    findField(name) {
+        for (const cat of this.categories) {
+            for (const field of cat.fields) {
+                if (field.name === name) return field;
+            }
+        }
+        return null;
+    },
+    
+    // Update field UI state
+    updateFieldUI(fieldName) {
+        const fieldEl = document.querySelector(`[data-field="${fieldName}"]`);
+        if (!fieldEl) return;
+        
+        const input = fieldEl.querySelector('input, select');
+        if (input) {
+            if (this.changedFields.has(fieldName)) {
+                input.classList.add('changed');
+            } else {
+                input.classList.remove('changed');
+            }
+        }
+    },
+    
+    // Update save bar visibility
+    updateSaveBar() {
+        const saveBar = document.getElementById('saveBar');
+        const changesCount = document.getElementById('changesCount');
+        const restartWarning = document.getElementById('restartWarning');
+        
+        if (this.changedFields.size > 0) {
+            saveBar.style.display = 'block';
+            changesCount.textContent = this.changedFields.size;
+            
+            // Check if any changed field requires restart
+            let needsRestart = false;
+            this.changedFields.forEach(name => {
+                const field = this.findField(name);
+                if (field && field.requires_restart) needsRestart = true;
+            });
+            restartWarning.style.display = needsRestart ? 'inline' : 'none';
+        } else {
+            saveBar.style.display = 'none';
+        }
+    },
+    
+    // Discard all changes
+    discardChanges() {
+        this.changedFields.forEach(name => {
+            const input = document.querySelector(`[data-field="${name}"] input, [data-field="${name}"] select`);
+            if (input) {
+                if (input.type === 'checkbox') {
+                    input.checked = this.originalValues[name];
+                } else {
+                    input.value = this.originalValues[name];
+                }
+                input.classList.remove('changed');
+            }
+            this.currentValues[name] = this.originalValues[name];
+        });
+        
+        this.changedFields.clear();
+        this.updateSaveBar();
+        showToast('Changes discarded', 'info');
+    },
+    
+    // Save all changes
+    async saveAllChanges() {
+        if (this.changedFields.size === 0) return;
+        
+        const updates = {};
+        this.changedFields.forEach(name => {
+            updates[name] = this.currentValues[name];
+        });
+        
+        try {
+            const response = await fetch('/api/v1/system-config/update', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(adminCredentials),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ updates })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Update original values
+                result.updated_fields.forEach(name => {
+                    this.originalValues[name] = this.currentValues[name];
+                    const input = document.querySelector(`[data-field="${name}"] input, [data-field="${name}"] select`);
+                    if (input) input.classList.remove('changed');
+                });
+                
+                this.changedFields.clear();
+                this.updateSaveBar();
+                
+                let message = `${result.updated_fields.length} setting(s) saved`;
+                if (result.requires_restart) {
+                    message += '. Restart required for some changes.';
+                    showToast(message, 'warning');
+                } else {
+                    showToast(message, 'success');
+                }
+            } else {
+                throw new Error(result.message || 'Update failed');
+            }
+            
+        } catch (error) {
+            console.error('Save error:', error);
+            showToast('Failed to save changes: ' + error.message, 'error');
+        }
+    },
+    
+    // Refresh system resources
+    async refreshResources() {
+        try {
+            const response = await fetch('/api/v1/system-config/resources', {
+                headers: {
+                    'Authorization': 'Basic ' + btoa(adminCredentials)
+                }
+            });
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            // Update bars
+            document.getElementById('cpuBar').style.width = `${data.cpu_percent}%`;
+            document.getElementById('cpuValue').textContent = `${data.cpu_percent}%`;
+            
+            document.getElementById('memoryBar').style.width = `${data.memory_percent}%`;
+            document.getElementById('memoryValue').textContent = `${Math.round(data.memory_used_mb)} MB`;
+            
+            document.getElementById('diskBar').style.width = `${data.disk_percent}%`;
+            document.getElementById('diskValue').textContent = `${data.disk_percent}%`;
+            
+        } catch (error) {
+            console.error('Failed to refresh resources:', error);
+        }
+    },
+    
+    // Bind events
+    bindEvents() {
+        // Listen for tab changes to lazy-load content if needed
+        document.querySelectorAll('#configCategoryTabs button').forEach(button => {
+            button.addEventListener('shown.bs.tab', () => {
+                // Could load additional data here if needed
+            });
+        });
+    }
+};
+
+// Global functions for HTML onclick handlers
+function refreshResources() {
+    SystemConfig.refreshResources();
+}
+
+function discardChanges() {
+    SystemConfig.discardChanges();
+}
+
+function saveAllChanges() {
+    SystemConfig.saveAllChanges();
+}
+
+async function triggerGC() {
+    try {
+        const response = await fetch('/api/v1/system-config/gc', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Basic ' + btoa(adminCredentials)
+            }
+        });
+        
+        const result = await response.json();
+        showToast(`GC complete: ${result.objects_collected} objects collected, ${result.memory_freed_mb}MB freed`, 'success');
+        SystemConfig.refreshResources();
+        
+    } catch (error) {
+        showToast('Failed to trigger GC', 'error');
+    }
+}
+
+// Initialize when System Settings section is shown
+document.querySelector('[data-target="system-settings"]')?.addEventListener('click', () => {
+    if (!SystemConfig.categories.length) {
+        SystemConfig.init();
+    }
+});
+</script>

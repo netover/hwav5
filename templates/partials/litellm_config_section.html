@@ -1,0 +1,992 @@
+<!-- ==========================================================================
+     LITELLM CONFIGURATION SECTION
+     Add this inside the main content area of admin.html
+     ========================================================================== -->
+
+<div id="litellm-config" class="config-section">
+    <h2><i class="fas fa-brain me-2"></i>LiteLLM Configuration</h2>
+    <p class="text-muted">Multi-provider AI model management, cost monitoring, and smart routing</p>
+    
+    <!-- Status Overview Cards -->
+    <div class="row mb-4">
+        <!-- Router Status -->
+        <div class="col-md-3 mb-3">
+            <div class="status-card" id="routerStatusCard">
+                <div class="status-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <div class="status-info">
+                    <span class="status-label">Router Status</span>
+                    <span class="status-value" id="routerStatus">Checking...</span>
+                </div>
+                <div class="status-indicator" id="routerIndicator"></div>
+            </div>
+        </div>
+        
+        <!-- Active Models -->
+        <div class="col-md-3 mb-3">
+            <div class="status-card">
+                <div class="status-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="status-info">
+                    <span class="status-label">Active Models</span>
+                    <span class="status-value" id="activeModels">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Today's Cost -->
+        <div class="col-md-3 mb-3">
+            <div class="status-card">
+                <div class="status-icon cost">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="status-info">
+                    <span class="status-label">Today's Cost</span>
+                    <span class="status-value" id="todayCost">$0.00</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Total Requests -->
+        <div class="col-md-3 mb-3">
+            <div class="status-card">
+                <div class="status-icon requests">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="status-info">
+                    <span class="status-label">Total Requests</span>
+                    <span class="status-value" id="totalRequests">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Budget Progress -->
+    <div class="card budget-card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="budget-label">
+                    <i class="fas fa-chart-pie me-2"></i>Monthly Budget Usage
+                </span>
+                <span class="budget-amount">
+                    <span id="budgetUsed">$0.00</span> / <span id="budgetLimit">$500.00</span>
+                </span>
+            </div>
+            <div class="budget-progress">
+                <div class="budget-fill" id="budgetBar" style="width: 0%"></div>
+            </div>
+            <div class="budget-info">
+                <span class="text-muted">Projected: <span id="projectedCost">$0.00</span>/month</span>
+                <span class="budget-alert" id="budgetAlert" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Approaching limit
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabs for Configuration Sections -->
+    <ul class="nav nav-pills litellm-tabs mb-4" id="litellmTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#providers-tab">
+                <i class="fas fa-cloud me-2"></i>Providers
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#models-tab">
+                <i class="fas fa-cubes me-2"></i>Models
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#routing-tab">
+                <i class="fas fa-route me-2"></i>Smart Routing
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#costs-tab">
+                <i class="fas fa-coins me-2"></i>Costs & Analytics
+            </button>
+        </li>
+    </ul>
+    
+    <div class="tab-content">
+        <!-- Providers Tab -->
+        <div class="tab-pane fade show active" id="providers-tab">
+            <div class="row" id="providersGrid">
+                <!-- Provider cards will be populated dynamically -->
+            </div>
+        </div>
+        
+        <!-- Models Tab -->
+        <div class="tab-pane fade" id="models-tab">
+            <div class="models-toolbar mb-3">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" id="modelSearch" 
+                               placeholder="Search models...">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="providerFilter">
+                            <option value="">All Providers</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="ollama">Ollama (Local)</option>
+                            <option value="together_ai">Together AI</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="localOnlyFilter">
+                            <label class="form-check-label" for="localOnlyFilter">
+                                Local Models Only (Free)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <button class="btn btn-primary btn-sm" onclick="LiteLLMConfig.refreshModels()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="models-grid" id="modelsGrid">
+                <!-- Model cards will be populated dynamically -->
+            </div>
+        </div>
+        
+        <!-- Routing Tab -->
+        <div class="tab-pane fade" id="routing-tab">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="mb-4"><i class="fas fa-magic me-2"></i>Smart Model Routing</h5>
+                    <p class="text-muted mb-4">
+                        Configure automatic model selection based on query complexity to optimize cost and performance.
+                    </p>
+                    
+                    <div class="routing-config">
+                        <div class="routing-toggle mb-4">
+                            <label class="config-toggle">
+                                <input type="checkbox" id="routingEnabled" checked>
+                                <span class="config-toggle-slider"></span>
+                            </label>
+                            <span class="ms-3">Enable Smart Routing</span>
+                        </div>
+                        
+                        <div class="routing-models">
+                            <div class="routing-item">
+                                <div class="routing-label">
+                                    <i class="fas fa-bolt text-success me-2"></i>
+                                    <strong>Simple Queries</strong>
+                                    <span class="text-muted ms-2">(Status checks, basic info)</span>
+                                </div>
+                                <select class="form-select" id="simpleModel">
+                                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                                    <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                    <option value="ollama/llama3">Llama 3 (Local)</option>
+                                    <option value="ollama/mistral">Mistral (Local)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="routing-item">
+                                <div class="routing-label">
+                                    <i class="fas fa-brain text-primary me-2"></i>
+                                    <strong>Complex Queries</strong>
+                                    <span class="text-muted ms-2">(Analysis, troubleshooting)</span>
+                                </div>
+                                <select class="form-select" id="complexModel">
+                                    <option value="gpt-4o">GPT-4o</option>
+                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                    <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
+                                    <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                                </select>
+                            </div>
+                            
+                            <div class="routing-item">
+                                <div class="routing-label">
+                                    <i class="fas fa-life-ring text-warning me-2"></i>
+                                    <strong>Fallback Model</strong>
+                                    <span class="text-muted ms-2">(When primary is unavailable)</span>
+                                </div>
+                                <select class="form-select" id="fallbackModel">
+                                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                    <option value="ollama/llama3">Llama 3 (Local)</option>
+                                    <option value="ollama/mistral">Mistral (Local)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check form-switch mt-4">
+                            <input class="form-check-input" type="checkbox" id="preferLocal">
+                            <label class="form-check-label" for="preferLocal">
+                                <i class="fas fa-home me-2"></i>Prefer local models when available (zero cost)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Costs Tab -->
+        <div class="tab-pane fade" id="costs-tab">
+            <div class="row">
+                <!-- Daily Costs Chart -->
+                <div class="col-md-8 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Daily Cost Trend</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="costChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Model Breakdown -->
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Cost by Model</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="modelCostChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Usage Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Usage Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-2">
+                            <div class="stat-box">
+                                <div class="stat-value" id="statTotalRequests">0</div>
+                                <div class="stat-label">Total Requests</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="stat-box">
+                                <div class="stat-value" id="statInputTokens">0</div>
+                                <div class="stat-label">Input Tokens</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="stat-box">
+                                <div class="stat-value" id="statOutputTokens">0</div>
+                                <div class="stat-label">Output Tokens</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="stat-box">
+                                <div class="stat-value" id="statAvgLatency">0ms</div>
+                                <div class="stat-label">Avg Latency</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="stat-box">
+                                <div class="stat-value" id="statErrorRate">0%</div>
+                                <div class="stat-label">Error Rate</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="stat-box">
+                                <div class="stat-value" id="statTotalCost">$0.00</div>
+                                <div class="stat-label">Total Cost</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test Model Modal -->
+    <div class="modal fade" id="testModelModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-flask me-2"></i>Test Model</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Model</label>
+                        <input type="text" class="form-control" id="testModelName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Test Prompt</label>
+                        <textarea class="form-control" id="testPrompt" rows="3">Hello, respond with 'OK' if you're working.</textarea>
+                    </div>
+                    <div id="testResult" style="display: none;">
+                        <div class="alert" id="testResultAlert">
+                            <div id="testResultContent"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="LiteLLMConfig.runTest()">
+                        <i class="fas fa-play me-1"></i>Run Test
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================================================
+     STYLES
+     ========================================================================== -->
+<style>
+/* Status Cards */
+.status-card {
+    background: var(--neuro-bg-secondary);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.status-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: var(--neuro-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.status-icon.cost { background: linear-gradient(135deg, var(--neuro-success), #38a169); }
+.status-icon.requests { background: linear-gradient(135deg, var(--neuro-info), #0ea5e9); }
+
+.status-info {
+    flex: 1;
+}
+
+.status-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--neuro-text-muted);
+    margin-bottom: 4px;
+}
+
+.status-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--neuro-text-primary);
+}
+
+.status-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--neuro-text-muted);
+}
+
+.status-indicator.online { background: var(--neuro-success); animation: pulse 2s infinite; }
+.status-indicator.offline { background: var(--neuro-danger); }
+.status-indicator.warning { background: var(--neuro-warning); animation: pulse 2s infinite; }
+
+/* Budget Card */
+.budget-card {
+    background: var(--neuro-bg-secondary);
+}
+
+.budget-label {
+    font-weight: 600;
+    color: var(--neuro-text-primary);
+}
+
+.budget-amount {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.budget-progress {
+    height: 12px;
+    background: var(--neuro-bg-primary);
+    border-radius: 10px;
+    box-shadow: var(--shadow-inset-sm);
+    overflow: hidden;
+}
+
+.budget-fill {
+    height: 100%;
+    background: var(--neuro-gradient);
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+.budget-fill.warning { background: linear-gradient(90deg, var(--neuro-warning), #f59e0b); }
+.budget-fill.danger { background: linear-gradient(90deg, var(--neuro-danger), #f56565); }
+
+.budget-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 0.85rem;
+}
+
+.budget-alert {
+    color: var(--neuro-warning);
+    font-weight: 600;
+}
+
+/* LiteLLM Tabs */
+.litellm-tabs {
+    background: var(--neuro-bg-secondary);
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: var(--shadow-md);
+}
+
+.litellm-tabs .nav-link {
+    color: var(--neuro-text-secondary);
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.litellm-tabs .nav-link:hover {
+    background: var(--neuro-bg-primary);
+}
+
+.litellm-tabs .nav-link.active {
+    background: var(--neuro-gradient);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Provider Cards */
+.provider-card {
+    background: var(--neuro-bg-secondary);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    padding: 1.25rem;
+    height: 100%;
+    transition: all 0.3s;
+}
+
+.provider-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md), 0 8px 20px rgba(102, 126, 234, 0.15);
+}
+
+.provider-card.disabled {
+    opacity: 0.6;
+}
+
+.provider-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.provider-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-right: 12px;
+}
+
+.provider-logo.openai { background: linear-gradient(135deg, #10a37f, #1a7f64); color: white; }
+.provider-logo.anthropic { background: linear-gradient(135deg, #d4a574, #c19660); color: white; }
+.provider-logo.ollama { background: linear-gradient(135deg, #333, #555); color: white; }
+.provider-logo.together { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; }
+.provider-logo.nvidia { background: linear-gradient(135deg, #76b900, #5a8f00); color: white; }
+.provider-logo.openrouter { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); color: white; }
+
+.provider-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.provider-status {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: auto;
+}
+
+.provider-status.active { background: rgba(72, 199, 116, 0.2); color: var(--neuro-success); }
+.provider-status.inactive { background: rgba(246, 109, 155, 0.2); color: var(--neuro-danger); }
+
+.provider-models {
+    font-size: 0.85rem;
+    color: var(--neuro-text-muted);
+}
+
+/* Model Cards */
+.models-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.model-card {
+    background: var(--neuro-bg-secondary);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    padding: 1rem;
+    transition: all 0.2s;
+}
+
+.model-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.model-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.model-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.model-provider {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: var(--neuro-bg-primary);
+    color: var(--neuro-text-muted);
+}
+
+.model-details {
+    font-size: 0.8rem;
+    color: var(--neuro-text-muted);
+}
+
+.model-cost {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--neuro-bg-primary);
+}
+
+.model-cost span {
+    font-size: 0.75rem;
+}
+
+.model-cost .free {
+    color: var(--neuro-success);
+    font-weight: 600;
+}
+
+.model-actions {
+    margin-top: 0.75rem;
+}
+
+/* Routing Config */
+.routing-item {
+    background: var(--neuro-bg-primary);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.routing-label {
+    flex: 1;
+}
+
+.routing-item .form-select {
+    max-width: 250px;
+}
+
+/* Stat Box */
+.stat-box {
+    background: var(--neuro-bg-primary);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: var(--shadow-inset-sm);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--neuro-primary);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--neuro-text-muted);
+}
+</style>
+
+<!-- ==========================================================================
+     JAVASCRIPT
+     ========================================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// =============================================================================
+// LITELLM CONFIGURATION MODULE
+// =============================================================================
+
+const LiteLLMConfig = {
+    data: null,
+    costChart: null,
+    modelCostChart: null,
+    
+    async init() {
+        await this.loadDashboardData();
+        this.renderProviders();
+        this.renderModels();
+        this.initCharts();
+        this.bindEvents();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(() => this.loadDashboardData(), 30000);
+    },
+    
+    async loadDashboardData() {
+        try {
+            const response = await fetch('/api/v1/litellm/dashboard-data', {
+                headers: { 'Authorization': 'Basic ' + btoa(adminCredentials) }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load data');
+            
+            this.data = await response.json();
+            this.updateUI();
+            
+        } catch (error) {
+            console.error('LiteLLM data load error:', error);
+        }
+    },
+    
+    updateUI() {
+        if (!this.data) return;
+        
+        const { status, usage, costs, providers } = this.data;
+        
+        // Router status
+        const routerStatus = document.getElementById('routerStatus');
+        const routerIndicator = document.getElementById('routerIndicator');
+        if (status.router_available) {
+            routerStatus.textContent = 'Online';
+            routerIndicator.className = 'status-indicator online';
+        } else {
+            routerStatus.textContent = 'Offline';
+            routerIndicator.className = 'status-indicator offline';
+        }
+        
+        // Overview stats
+        document.getElementById('activeModels').textContent = this.data.models_count || 0;
+        document.getElementById('todayCost').textContent = `$${usage.cost_today_usd.toFixed(2)}`;
+        document.getElementById('totalRequests').textContent = this.formatNumber(usage.total_requests);
+        
+        // Budget
+        document.getElementById('budgetUsed').textContent = `$${costs.total_cost_usd.toFixed(2)}`;
+        document.getElementById('budgetLimit').textContent = `$${costs.budget_limit_usd.toFixed(2)}`;
+        document.getElementById('projectedCost').textContent = `$${costs.projected_monthly_cost.toFixed(2)}`;
+        
+        const budgetBar = document.getElementById('budgetBar');
+        const budgetPercent = Math.min(costs.budget_used_percent, 100);
+        budgetBar.style.width = `${budgetPercent}%`;
+        
+        if (budgetPercent >= 90) {
+            budgetBar.className = 'budget-fill danger';
+            document.getElementById('budgetAlert').style.display = 'inline';
+        } else if (budgetPercent >= 70) {
+            budgetBar.className = 'budget-fill warning';
+            document.getElementById('budgetAlert').style.display = 'inline';
+        } else {
+            budgetBar.className = 'budget-fill';
+            document.getElementById('budgetAlert').style.display = 'none';
+        }
+        
+        // Usage stats
+        document.getElementById('statTotalRequests').textContent = this.formatNumber(usage.total_requests);
+        document.getElementById('statInputTokens').textContent = this.formatNumber(usage.total_input_tokens);
+        document.getElementById('statOutputTokens').textContent = this.formatNumber(usage.total_output_tokens);
+        document.getElementById('statAvgLatency').textContent = `${Math.round(usage.avg_response_time_ms)}ms`;
+        document.getElementById('statErrorRate').textContent = `${(usage.error_rate * 100).toFixed(1)}%`;
+        document.getElementById('statTotalCost').textContent = `$${usage.total_cost_usd.toFixed(2)}`;
+        
+        // Update charts
+        this.updateCharts();
+    },
+    
+    renderProviders() {
+        const providers = this.data?.providers || [];
+        const grid = document.getElementById('providersGrid');
+        
+        const providerIcons = {
+            'OpenAI': { icon: 'fa-openai', class: 'openai' },
+            'Anthropic': { icon: 'fa-robot', class: 'anthropic' },
+            'Ollama (Local)': { icon: 'fa-home', class: 'ollama' },
+            'Together AI': { icon: 'fa-layer-group', class: 'together' },
+            'NVIDIA NIM': { icon: 'fa-microchip', class: 'nvidia' },
+            'OpenRouter': { icon: 'fa-random', class: 'openrouter' },
+        };
+        
+        grid.innerHTML = providers.map(p => {
+            const iconInfo = providerIcons[p.name] || { icon: 'fa-cloud', class: '' };
+            const statusClass = p.configured ? 'active' : 'inactive';
+            const statusText = p.configured ? 'Configured' : 'Not Configured';
+            
+            return `
+                <div class="col-md-4 mb-3">
+                    <div class="provider-card ${!p.configured ? 'disabled' : ''}">
+                        <div class="provider-header">
+                            <div class="provider-logo ${iconInfo.class}">
+                                <i class="fas ${iconInfo.icon}"></i>
+                            </div>
+                            <span class="provider-name">${p.name}</span>
+                            <span class="provider-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="provider-models">
+                            <strong>Models:</strong> ${p.models_available.slice(0, 3).join(', ')}
+                            ${p.models_available.length > 3 ? `+${p.models_available.length - 3} more` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+    
+    async renderModels() {
+        try {
+            const response = await fetch('/api/v1/litellm/models', {
+                headers: { 'Authorization': 'Basic ' + btoa(adminCredentials) }
+            });
+            
+            if (!response.ok) return;
+            
+            const models = await response.json();
+            const grid = document.getElementById('modelsGrid');
+            
+            grid.innerHTML = models.map(m => `
+                <div class="model-card" data-provider="${m.provider}" data-local="${m.is_local}">
+                    <div class="model-header">
+                        <span class="model-name">${m.name}</span>
+                        <span class="model-provider">${m.provider}</span>
+                    </div>
+                    <div class="model-details">
+                        <div>Max tokens: ${m.max_tokens ? this.formatNumber(m.max_tokens) : 'N/A'}</div>
+                        <div>Type: ${m.model_type}</div>
+                    </div>
+                    <div class="model-cost">
+                        ${m.is_local ? 
+                            '<span class="free"><i class="fas fa-check me-1"></i>Free (Local)</span>' :
+                            `<span>In: $${m.input_cost_per_1k}/1K</span>
+                             <span>Out: $${m.output_cost_per_1k}/1K</span>`
+                        }
+                    </div>
+                    <div class="model-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="LiteLLMConfig.testModel('${m.name}')">
+                            <i class="fas fa-flask me-1"></i>Test
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error('Failed to load models:', error);
+        }
+    },
+    
+    initCharts() {
+        // Daily cost chart
+        const costCtx = document.getElementById('costChart')?.getContext('2d');
+        if (costCtx) {
+            this.costChart = new Chart(costCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Daily Cost ($)',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { callback: v => '$' + v } }
+                    }
+                }
+            });
+        }
+        
+        // Model cost chart
+        const modelCtx = document.getElementById('modelCostChart')?.getContext('2d');
+        if (modelCtx) {
+            this.modelCostChart = new Chart(modelCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: ['#667eea', '#764ba2', '#48c774', '#ffb347', '#f66d9b', '#4fc3f7'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12 } }
+                    }
+                }
+            });
+        }
+    },
+    
+    updateCharts() {
+        if (!this.data) return;
+        
+        const { costs } = this.data;
+        
+        // Update daily cost chart
+        if (this.costChart && costs.daily_costs) {
+            const labels = Object.keys(costs.daily_costs).slice(-7);
+            const data = labels.map(d => costs.daily_costs[d]);
+            
+            this.costChart.data.labels = labels;
+            this.costChart.data.datasets[0].data = data;
+            this.costChart.update();
+        }
+        
+        // Update model cost chart
+        if (this.modelCostChart && costs.model_costs) {
+            const labels = Object.keys(costs.model_costs);
+            const data = Object.values(costs.model_costs);
+            
+            this.modelCostChart.data.labels = labels;
+            this.modelCostChart.data.datasets[0].data = data;
+            this.modelCostChart.update();
+        }
+    },
+    
+    testModel(modelName) {
+        document.getElementById('testModelName').value = modelName;
+        document.getElementById('testResult').style.display = 'none';
+        new bootstrap.Modal(document.getElementById('testModelModal')).show();
+    },
+    
+    async runTest() {
+        const model = document.getElementById('testModelName').value;
+        const prompt = document.getElementById('testPrompt').value;
+        const resultDiv = document.getElementById('testResult');
+        const alertDiv = document.getElementById('testResultAlert');
+        const contentDiv = document.getElementById('testResultContent');
+        
+        resultDiv.style.display = 'block';
+        alertDiv.className = 'alert alert-info';
+        contentDiv.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Testing...';
+        
+        try {
+            const response = await fetch('/api/v1/litellm/test', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(adminCredentials),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ model, prompt })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alertDiv.className = 'alert alert-success';
+                contentDiv.innerHTML = `
+                    <strong><i class="fas fa-check-circle me-2"></i>Success!</strong><br>
+                    <small>Response: ${result.response}</small><br>
+                    <small>Latency: ${Math.round(result.latency_ms)}ms</small>
+                `;
+            } else {
+                alertDiv.className = 'alert alert-danger';
+                contentDiv.innerHTML = `
+                    <strong><i class="fas fa-times-circle me-2"></i>Failed</strong><br>
+                    <small>Error: ${result.error}</small><br>
+                    <small>Latency: ${Math.round(result.latency_ms)}ms</small>
+                `;
+            }
+            
+        } catch (error) {
+            alertDiv.className = 'alert alert-danger';
+            contentDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+        }
+    },
+    
+    refreshModels() {
+        this.renderModels();
+    },
+    
+    bindEvents() {
+        // Model search
+        document.getElementById('modelSearch')?.addEventListener('input', (e) => {
+            const search = e.target.value.toLowerCase();
+            document.querySelectorAll('.model-card').forEach(card => {
+                const name = card.querySelector('.model-name').textContent.toLowerCase();
+                card.style.display = name.includes(search) ? '' : 'none';
+            });
+        });
+        
+        // Provider filter
+        document.getElementById('providerFilter')?.addEventListener('change', (e) => {
+            const provider = e.target.value.toLowerCase();
+            document.querySelectorAll('.model-card').forEach(card => {
+                const cardProvider = card.dataset.provider.toLowerCase();
+                card.style.display = !provider || cardProvider === provider ? '' : 'none';
+            });
+        });
+        
+        // Local only filter
+        document.getElementById('localOnlyFilter')?.addEventListener('change', (e) => {
+            const localOnly = e.target.checked;
+            document.querySelectorAll('.model-card').forEach(card => {
+                const isLocal = card.dataset.local === 'true';
+                card.style.display = !localOnly || isLocal ? '' : 'none';
+            });
+        });
+    },
+    
+    formatNumber(num) {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toString();
+    }
+};
+
+// Initialize when LiteLLM section is shown
+document.querySelector('[data-target="litellm-config"]')?.addEventListener('click', () => {
+    if (!LiteLLMConfig.data) {
+        LiteLLMConfig.init();
+    }
+});
+</script>
