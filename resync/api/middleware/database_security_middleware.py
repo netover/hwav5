@@ -196,7 +196,7 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
                         data[f"form.{key}"] = value
 
         except Exception as e:
-            logger.debug("failed_to_extract_request_body", error=str(e))
+            logger.debug("failed_to_extract_request_body", error=str(e), exc_info=True)
 
         return data
 
@@ -247,7 +247,7 @@ class DatabaseSecurityMiddleware(BaseHTTPMiddleware):
                 error=error,
             )
         except Exception as e:
-            logger.error("failed_to_log_request_outcome", error=str(e))
+            logger.error("failed_to_log_request_outcome", error=str(e), exc_info=True)
 
     def get_security_stats(self) -> dict[str, Any]:
         """

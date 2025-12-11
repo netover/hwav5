@@ -62,6 +62,7 @@ class HealthCheckUtils:
                         component_name=component_name,
                         max_retries=max_retries,
                         error=str(e),
+                        exc_info=True,
                     )
                     raise
 
@@ -73,6 +74,7 @@ class HealthCheckUtils:
                     max_retries=max_retries,
                     wait_time=wait_time,
                     error=str(e),
+                    exc_info=True,
                 )
                 await asyncio.sleep(wait_time)
         return None

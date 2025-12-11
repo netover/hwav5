@@ -209,7 +209,7 @@ class DatabaseHealthMonitor:
 
         except Exception as e:
             response_time_ms = (time.time() - start_time) * 1000
-            logger.error("database_connection_health_check_failed", error=str(e))
+            logger.error("database_connection_health_check_failed", error=str(e), exc_info=True)
 
             return ComponentHealth(
                 name="database_connections",
@@ -277,7 +277,7 @@ class DatabaseHealthMonitor:
             return metrics
 
         except Exception as e:
-            logger.error("database_performance_check_failed", error=str(e))
+            logger.error("database_performance_check_failed", error=str(e), exc_info=True)
             return PerformanceMetrics()
 
     async def check_replication_status(self) -> ReplicationStatus:
@@ -311,14 +311,14 @@ class DatabaseHealthMonitor:
                             replication_status.replication_health = HealthStatus.HEALTHY
 
             except Exception as e:
-                logger.warning("replication_status_check_error", error=str(e))
+                logger.warning("replication_status_check_error", error=str(e), exc_info=True)
                 replication_status.last_error_message = str(e)
                 replication_status.replication_errors += 1
 
             return replication_status
 
         except Exception as e:
-            logger.error("replication_status_check_failed", error=str(e))
+            logger.error("replication_status_check_failed", error=str(e), exc_info=True)
             return ReplicationStatus(
                 is_enabled=False,
                 is_running=False,

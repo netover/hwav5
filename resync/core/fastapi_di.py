@@ -16,7 +16,6 @@ from typing import Any, TypeVar, get_type_hints
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from resync.core.agent_manager import AgentManager
 from resync.core.audit_queue import AsyncAuditQueue
 from resync.core.connection_manager import ConnectionManager
 
@@ -89,6 +88,9 @@ def configure_container(app_container: DIContainer = container) -> DIContainer:
     Returns:
         The configured container.
     """
+    # Lazy import to avoid circular dependency
+    from resync.core.agent_manager import AgentManager
+
     try:
         # Register interfaces and implementations
         app_container.register(IAgentManager, AgentManager, ServiceLifetime.SINGLETON)
@@ -127,7 +129,7 @@ def configure_container(app_container: DIContainer = container) -> DIContainer:
 
         logger.info("DI container configured with all service registrations")
     except Exception as e:
-        logger.error("error_configuring_di_container", error=str(e))
+        logger.error("error_configuring_di_container", error=str(e), exc_info=True)
         raise
 
     return app_container
@@ -160,6 +162,7 @@ def get_service(service_type: type[T]) -> Callable[[], T]:
                 "error_resolving_service",
                 service_type=service_type.__name__,
                 error=str(e),
+                exc_info=True,
             )
             raise RuntimeError(f"Error resolving service {service_type.__name__}: {str(e)}") from e
 
@@ -214,7 +217,7 @@ class DIMiddleware(BaseHTTPMiddleware):
             # Continue processing the request
             return await call_next(request)
         except Exception as e:
-            logger.error("error_in_DIMiddleware_dispatch", error=str(e))
+            logger.error("error_in_DIMiddleware_dispatch", error=str(e), exc_info=True)
             # Re-raise the exception to be handled by other error handlers
             raise
 

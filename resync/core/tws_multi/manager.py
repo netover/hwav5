@@ -74,7 +74,7 @@ class TWSInstanceManager:
 
                 logger.info(f"Loaded {len(self._instances)} TWS instances")
             except Exception as e:
-                logger.error(f"Error loading instances: {e}")
+                logger.error(f"Error loading instances: {e}", exc_info=True)
         else:
             # Create default instances
             self._create_default_instances()
@@ -259,7 +259,7 @@ class TWSInstanceManager:
             instance.error_count += 1
             instance.last_error = str(e)
 
-            logger.error(f"Failed to connect to {config.name}: {e}")
+            logger.error(f"Failed to connect to {config.name}: {e}", exc_info=True)
             return False
 
     async def disconnect_instance(self, instance_id: str):

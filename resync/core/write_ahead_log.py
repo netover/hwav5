@@ -136,7 +136,7 @@ class WriteAheadLog:
                 try:
                     await self._file_handle.close()
                 except Exception as e:
-                    logger.warning(f"Error closing WAL file handle: {e}")
+                    logger.warning(f"Error closing WAL file handle: {e}", exc_info=True)
 
             # Open or create the log file in append mode using aiofiles
             if aiofiles is None:
@@ -162,7 +162,7 @@ class WriteAheadLog:
                     try:
                         await self._file_handle.close()
                     except Exception as e:
-                        logger.warning(f"Error closing WAL file handle during rotation: {e}")
+                        logger.warning(f"Error closing WAL file handle during rotation: {e}", exc_info=True)
 
                 # Create new log file with timestamp
                 timestamp = int(time.time())
@@ -212,7 +212,7 @@ class WriteAheadLog:
 
                 return True
             except Exception as e:
-                logger.error(f"Failed to log operation to WAL: {e}")
+                logger.error(f"Failed to log operation to WAL: {e}", exc_info=True)
                 return False
 
     async def read_log(self, log_file_path: str | Path) -> list[WalEntry]:
@@ -257,12 +257,12 @@ class WriteAheadLog:
                             f"Failed to parse JSON at line {line_num} in {log_file_path}: {e}"
                         )
                     except Exception as e:
-                        logger.error(f"Error processing line {line_num} in {log_file_path}: {e}")
+                        logger.error(f"Error processing line {line_num} in {log_file_path}: {e}", exc_info=True)
 
         except FileNotFoundError:
             logger.info(f"WAL file not found: {log_file_path}")
         except Exception as e:
-            logger.error(f"Error reading WAL file {log_file_path}: {e}")
+            logger.error(f"Error reading WAL file {log_file_path}: {e}", exc_info=True)
 
         return entries
 
@@ -308,7 +308,7 @@ class WriteAheadLog:
 
                     replayed_count += 1
                 except Exception as e:
-                    logger.error(f"Error replaying WAL entry for key {entry.key}: {e}")
+                    logger.error(f"Error replaying WAL entry for key {entry.key}: {e}", exc_info=True)
                     failed_count += 1
 
         logger.info(f"Replayed {replayed_count} operations from WAL, {failed_count} failed")
@@ -329,7 +329,7 @@ class WriteAheadLog:
                     wal_file.unlink()
                     logger.info(f"Removed old WAL file: {wal_file}")
                 except Exception as e:
-                    logger.error(f"Failed to remove old WAL file {wal_file}: {e}")
+                    logger.error(f"Failed to remove old WAL file {wal_file}: {e}", exc_info=True)
 
     async def close(self):
         """Close the WAL system and release resources."""
@@ -337,4 +337,4 @@ class WriteAheadLog:
             try:
                 await self._file_handle.close()
             except Exception as e:
-                logger.error(f"Error closing WAL file handle: {e}")
+                logger.error(f"Error closing WAL file handle: {e}", exc_info=True)

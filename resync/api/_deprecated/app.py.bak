@@ -4,13 +4,32 @@ FastAPI application for the TWS read‑only microservice.
 This module instantiates a FastAPI app, registers the `/tws` router, exposes
 basic health and metrics endpoints, and sets up OpenTelemetry instrumentation
 for the framework if available.
+
+.. deprecated::
+    This module is NOT the main application entry point.
+    The actual application is created in `resync/fastapi_app/main.py`.
+    This file is kept for backwards compatibility but should not be used directly.
+
+    Use `from resync.fastapi_app.main import app` instead.
+
+Status: DEPRECATED - Use resync.fastapi_app.main
+Last reviewed: v5.3.11
 """
 
 import json
 import logging
+import warnings
 
 from fastapi import FastAPI
 from starlette.responses import Response
+
+# Emit deprecation warning AFTER imports to comply with E402
+warnings.warn(
+    "resync.api.app is deprecated. Use resync.fastapi_app.main instead. "
+    "This module may be removed in a future version.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 logger = logging.getLogger(__name__)
 

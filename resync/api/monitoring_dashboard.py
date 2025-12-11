@@ -410,7 +410,7 @@ async def collect_metrics_sample() -> MetricSample:
         )
 
     except Exception as e:
-        logger.error(f"Erro ao coletar métricas: {e}")
+        logger.error(f"Erro ao coletar métricas: {e}", exc_info=True)
         return MetricSample(timestamp=time.time(), datetime_str=datetime.now().strftime("%H:%M:%S"))
 
 
@@ -423,7 +423,7 @@ async def metrics_collector_loop():
             sample = await collect_metrics_sample()
             await store.add_sample(sample)
         except Exception as e:
-            logger.error(f"Erro no collector loop: {e}")
+            logger.error(f"Erro no collector loop: {e}", exc_info=True)
 
         await asyncio.sleep(SAMPLE_INTERVAL_SECONDS)
 
@@ -546,6 +546,6 @@ async def websocket_metrics(websocket: WebSocket):
     except WebSocketDisconnect:
         connected_clients.remove(websocket)
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error: {e}", exc_info=True)
         if websocket in connected_clients:
             connected_clients.remove(websocket)

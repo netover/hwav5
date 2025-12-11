@@ -50,7 +50,7 @@ class CachedStaticFiles(StarletteStaticFiles):
                     etag_value = f'"{hashlib.sha256(file_metadata.encode()).hexdigest()[:16]}"'
                     response.headers["ETag"] = etag_value
             except Exception as e:
-                logger.warning("failed_to_generate_etag", error=str(e))
+                logger.warning("failed_to_generate_etag", error=str(e), exc_info=True)
                 response.headers["ETag"] = f'"{hash(path)}"'
 
         return response
@@ -148,6 +148,7 @@ class ApplicationFactory:
                     "proactive_monitoring_init_failed",
                     error=str(e),
                     hint="Monitoring will be unavailable but app will continue",
+                    exc_info=True,
                 )
 
             logger.info("application_startup_completed")
@@ -221,7 +222,7 @@ class ApplicationFactory:
                     await shutdown_proactive_monitoring(app)
                     app_logger.info("proactive_monitoring_shutdown_successful")
                 except Exception as e:
-                    app_logger.warning("proactive_monitoring_shutdown_error", error=str(e))
+                    app_logger.warning("proactive_monitoring_shutdown_error", error=str(e), exc_info=True)
 
                 await shutdown_tws_monitor()
                 logger.info("application_shutdown_completed")
@@ -402,7 +403,7 @@ class ApplicationFactory:
             self.app.include_router(config_router, prefix="/api/v1")
             self.app.include_router(rag_upload_router, prefix="/api/v1")
         except ImportError as e:
-            logger.warning("optional_routers_not_available", error=str(e))
+            logger.warning("optional_routers_not_available", error=str(e), exc_info=True)
 
         # Register monitoring routers
         try:
@@ -413,7 +414,7 @@ class ApplicationFactory:
             register_dashboard_route(self.app)
             logger.info("monitoring_routers_registered")
         except ImportError as e:
-            logger.warning("monitoring_routers_not_available", error=str(e))
+            logger.warning("monitoring_routers_not_available", error=str(e), exc_info=True)
 
         # Register core routers
         routers = [
@@ -531,7 +532,7 @@ class ApplicationFactory:
                 status_code=404, detail=f"Template {template_name} not found"
             ) from None
         except Exception as e:
-            logger.error("template_render_error", template=template_name, error=str(e))
+            logger.error("template_render_error", template=template_name, error=str(e), exc_info=True)
             raise HTTPException(status_code=500, detail="Internal server error") from None
 
     async def _handle_csp_report(self, request: Request) -> JSONResponse:
@@ -568,6 +569,7 @@ class ApplicationFactory:
                 "csp_report_error",
                 error_type=type(e).__name__,
                 client_host=request.client.host if request.client else "unknown",
+                exc_info=True,
             )
             # Always return 200 to prevent information leakage
             return JSONResponse(content={"status": "received"}, status_code=200)

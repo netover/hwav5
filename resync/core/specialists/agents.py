@@ -302,6 +302,7 @@ class BaseSpecialist:
                 "specialist_processing_error",
                 specialist=self.specialist_type.value,
                 error=str(e),
+                exc_info=True,
             )
             return SpecialistResponse(
                 specialist_type=self.specialist_type,
@@ -754,7 +755,7 @@ class TWSSpecialistTeam:
                 result = await self.team.arun(synthesis_prompt)
                 return str(result)
             except Exception as e:
-                logger.warning("team_synthesis_failed", error=str(e))
+                logger.warning("team_synthesis_failed", error=str(e), exc_info=True)
 
         # Fallback: simple concatenation with structure
         return self._simple_synthesis(query, successful_responses, classification)

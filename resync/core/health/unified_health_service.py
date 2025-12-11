@@ -127,7 +127,7 @@ class UnifiedHealthService:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("health_monitoring_error", error=str(e))
+                logger.error("health_monitoring_error", error=str(e), exc_info=True)
                 await asyncio.sleep(interval)
 
     # =========================================================================
@@ -211,7 +211,7 @@ class UnifiedHealthService:
             return result
 
         except Exception as e:
-            logger.error("comprehensive_health_check_failed", error=str(e))
+            logger.error("comprehensive_health_check_failed", error=str(e), exc_info=True)
             return HealthCheckResult(
                 status=HealthStatus.UNHEALTHY,
                 components={},
@@ -243,7 +243,7 @@ class UnifiedHealthService:
             logger.warning("health_check_timeout", component=name)
             return self._create_error_health(name, "Check timeout")
         except Exception as e:
-            logger.warning("health_check_error", component=name, error=str(e))
+            logger.warning("health_check_error", component=name, error=str(e), exc_info=True)
             return self._create_error_health(name, str(e))
 
     async def _get_health_checkers(self) -> dict[str, BaseHealthChecker]:

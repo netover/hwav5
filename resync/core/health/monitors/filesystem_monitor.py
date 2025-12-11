@@ -184,7 +184,7 @@ class FileSystemHealthMonitor:
                     disk_status.is_readonly = not os.access(path, os.W_OK)
 
                 except (OSError, AttributeError) as e:
-                    logger.warning("disk_space_check_failed_for_path", path=path, error=str(e))
+                    logger.warning("disk_space_check_failed_for_path", path=path, error=str(e), exc_info=True)
                     continue
 
             # Determine health status based on usage
@@ -204,7 +204,7 @@ class FileSystemHealthMonitor:
             return disk_status
 
         except Exception as e:
-            logger.error("disk_space_check_failed", error=str(e))
+            logger.error("disk_space_check_failed", error=str(e), exc_info=True)
             return DiskSpaceStatus(status=HealthStatus.UNHEALTHY, timestamp=time.time())
 
     def check_file_integrity(self) -> IntegrityStatus:
@@ -230,7 +230,7 @@ class FileSystemHealthMonitor:
                     self._scan_directory_integrity(path_obj, integrity_status)
 
                 except (OSError, AttributeError) as e:
-                    logger.warning("integrity_check_failed_for_path", path=path, error=str(e))
+                    logger.warning("integrity_check_failed_for_path", path=path, error=str(e), exc_info=True)
                     integrity_status.scan_errors += 1
                     integrity_status.error_details.append(f"Path {path}: {str(e)}")
                     continue
@@ -259,7 +259,7 @@ class FileSystemHealthMonitor:
             return integrity_status
 
         except Exception as e:
-            logger.error("file_integrity_check_failed", error=str(e))
+            logger.error("file_integrity_check_failed", error=str(e), exc_info=True)
             return IntegrityStatus(
                 status=HealthStatus.UNHEALTHY,
                 scan_errors=1,
@@ -290,7 +290,7 @@ class FileSystemHealthMonitor:
                     self._scan_directory_permissions(path_obj, permission_status)
 
                 except (OSError, AttributeError) as e:
-                    logger.warning("permission_check_failed_for_path", path=path, error=str(e))
+                    logger.warning("permission_check_failed_for_path", path=path, error=str(e), exc_info=True)
                     permission_status.permission_errors += 1
                     permission_status.error_details.append(f"Path {path}: {str(e)}")
                     continue
@@ -321,7 +321,7 @@ class FileSystemHealthMonitor:
             return permission_status
 
         except Exception as e:
-            logger.error("permission_check_failed", error=str(e))
+            logger.error("permission_check_failed", error=str(e), exc_info=True)
             return PermissionStatus(
                 status=HealthStatus.UNHEALTHY,
                 permission_errors=1,

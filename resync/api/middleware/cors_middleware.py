@@ -49,7 +49,19 @@ class LoggingCORSMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
         self.policy = policy
-        self.allow_origins = allow_origins or ["*"]
+        # SECURITY: Default to wildcard but warn in production
+        if allow_origins is None:
+            import os
+            import warnings
+            allow_origins = ["*"]
+            if os.getenv("ENVIRONMENT", "development").lower() == "production":
+                warnings.warn(
+                    "CORS allow_origins is set to '*' (wildcard) in production. "
+                    "Configure specific origins via CORS_ALLOW_ORIGINS for better security.",
+                    RuntimeWarning,
+                    stacklevel=2
+                )
+        self.allow_origins = allow_origins
         self.allow_methods = allow_methods or [
             "GET",
             "POST",

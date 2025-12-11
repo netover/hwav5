@@ -169,6 +169,7 @@ class LiteLLMEmbeddingProvider(EmbeddingProvider):
                         "embedding_error",
                         error=str(e),
                         attempt=attempt + 1,
+                        exc_info=True,
                     )
                     if attempt == self._config.max_retries - 1:
                         raise

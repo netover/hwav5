@@ -143,7 +143,7 @@ async def get_health_summary(
         )
     except Exception as e:
         original_exception = e
-        logger.error(f"Health check failed: {original_exception}")
+        logger.error(f"Health check failed: {original_exception}", exc_info=True)
         # Increment counter for health check failures if we can
         try:
             _get_runtime_metrics().health_check_with_auto_enable.increment()
@@ -220,7 +220,7 @@ async def get_core_health() -> CoreHealthResponse:
             summary=core_summary,
         )
     except Exception as e:
-        logger.error(f"Core health check failed: {e}")
+        logger.error(f"Core health check failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Core health check system error: {str(e)}",
@@ -288,7 +288,7 @@ async def get_detailed_health(
             history=history_data,
         )
     except Exception as e:
-        logger.error(f"Detailed health check failed: {e}")
+        logger.error(f"Detailed health check failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Detailed health check system error: {str(e)}",
@@ -345,7 +345,7 @@ async def readiness_probe() -> dict[str, Any]:
         return response_data
 
     except Exception as e:
-        logger.error(f"Readiness probe failed: {e}")
+        logger.error(f"Readiness probe failed: {e}", exc_info=True)
         # Always return 503 on probe failure
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -403,7 +403,7 @@ async def liveness_probe() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Liveness probe failed: {e}")
+        logger.error(f"Liveness probe failed: {e}", exc_info=True)
         # Always return 503 on probe failure
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

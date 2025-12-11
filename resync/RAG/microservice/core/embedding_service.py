@@ -390,7 +390,8 @@ class MultiProviderEmbeddingService(Embedder):
                     if attempt < self._retry_attempts - 1:
                         wait_time = 2**attempt  # Exponential backoff
                         logger.warning(
-                            f"Embedding attempt {attempt + 1} failed, retrying in {wait_time}s: {e}"
+                            f"Embedding attempt {attempt + 1} failed, retrying in {wait_time}s: {e}",
+                            exc_info=True,
                         )
                         await asyncio.sleep(wait_time)
                     else:

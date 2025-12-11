@@ -97,7 +97,7 @@ class CacheHierarchyHealthMonitor:
             # Sanitize error message for security
             secure_message = str(e)
 
-            logger.error("cache_hierarchy_health_check_failed", error=str(e))
+            logger.error("cache_hierarchy_health_check_failed", error=str(e), exc_info=True)
             return ComponentHealth(
                 name="cache_hierarchy",
                 component_type=ComponentType.CACHE,
@@ -131,6 +131,7 @@ class CacheHierarchyHealthMonitor:
                         component_name=component_name,
                         max_retries=max_retries,
                         error=str(e),
+                        exc_info=True,
                     )
                     raise
 
@@ -142,6 +143,7 @@ class CacheHierarchyHealthMonitor:
                     max_retries=max_retries,
                     wait_time=wait_time,
                     error=str(e),
+                    exc_info=True,
                 )
                 await asyncio.sleep(wait_time)
 

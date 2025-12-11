@@ -174,6 +174,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 idempotency_key=idempotency_key,
                 error=str(e),
                 correlation_id=correlation_id,
+                exc_info=True,
             )
             raise
 
@@ -262,7 +263,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             }
 
         except Exception as e:
-            logger.warning("Failed to extract request data for idempotency", error=str(e))
+            logger.warning("Failed to extract request data for idempotency", error=str(e), exc_info=True)
             # Em caso de erro, retornar dados mínimos
             return {"method": request.method, "path": str(request.url.path)}
 
@@ -328,6 +329,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 "Error caching response for idempotency",
                 idempotency_key=idempotency_key,
                 error=str(e),
+                exc_info=True,
             )
 
     async def _extract_response_data(self, response: Response) -> dict:
@@ -360,7 +362,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             return {"message": "Response cached", "status_code": response.status_code}
 
         except Exception as e:
-            logger.warning("Failed to extract response data", error=str(e))
+            logger.warning("Failed to extract response data", error=str(e), exc_info=True)
             return {"cached": True, "status_code": response.status_code}
 
     def _create_response_from_cache(self, cached: dict) -> Response:

@@ -233,7 +233,7 @@ class StreamingLLMResponse:
             self.is_complete = True
 
         except Exception as e:
-            logger.error(f"Error in streaming response: {e}")
+            logger.error(f"Error in streaming response: {e}", exc_info=True)
             yield f"Error: {str(e)}"
             self.is_complete = True
 

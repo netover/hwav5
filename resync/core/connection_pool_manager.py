@@ -205,7 +205,7 @@ class AutoScalingManager:
                 self._update_predictions()
 
             except Exception as e:
-                logger.error("auto_scaling_monitoring_error", error=str(e))
+                logger.error("auto_scaling_monitoring_error", error=str(e), exc_info=True)
 
             # Sleep for measurement period
             self._stop_monitoring.wait(self.load_metrics.measurement_period)

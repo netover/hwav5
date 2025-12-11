@@ -7,9 +7,20 @@ from typing import Annotated, Any
 
 from fastapi import Path
 
-# Expressão regular para permitir caracteres alfanuméricos, espaços, e pontuação comum.
-# Isso ajuda a prevenir a injeção de caracteres de controle ou scripts complexos.
-SAFE_STRING_PATTERN = re.compile(r"^[a-zA-Z0-9\s.,!?'\"()\-:;]*$")
+# Expressão regular para permitir caracteres seguros incluindo:
+# - Letras Unicode (incluindo acentos: á, é, ã, ç, etc.) via \w com flag UNICODE
+# - Números
+# - Espaços
+# - Pontuação comum
+# - @ para emails
+# - Outros caracteres comuns seguros
+#
+# IMPORTANTE: Esta regex foi atualizada para suportar internacionalização (i18n)
+# e caracteres latinos/portugueses. A versão anterior não permitia acentos.
+SAFE_STRING_PATTERN = re.compile(
+    r"[\w\s.,!?'\"()\-:;@#$%&*+=<>/\\|~°ªº]+",
+    re.UNICODE
+)
 
 
 class InputSanitizer:

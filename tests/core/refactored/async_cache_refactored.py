@@ -634,7 +634,7 @@ class AsyncTTLCache(BaseCache):
             return True
 
         except Exception as e:
-            logger.error(f"Failed to restore from snapshot {snapshot_path}: {e}")
+            logger.error(f"Failed to restore from snapshot {snapshot_path}: {e}", exc_info=True)
             return False
 
     def list_snapshots(self) -> list:
@@ -781,7 +781,7 @@ class AsyncTTLCache(BaseCache):
                 runtime_metrics.cache_sets.increment()
                 runtime_metrics.cache_size.set(self.size())
         except Exception as e:
-            logger.error("WAL_replay_SET_failed", key=repr(key), error=str(e))
+            logger.error("WAL_replay_SET_failed", key=repr(key), error=str(e), exc_info=True)
 
     async def apply_wal_delete(self, key: str):
         """Apply a DELETE operation from WAL replay without re-logging."""
@@ -793,4 +793,4 @@ class AsyncTTLCache(BaseCache):
                     runtime_metrics.cache_evictions.increment()
                     runtime_metrics.cache_size.set(self.size())
         except Exception as e:
-            logger.error("WAL_replay_DELETE_failed", key=key, error=str(e))
+            logger.error("WAL_replay_DELETE_failed", key=key, error=str(e), exc_info=True)

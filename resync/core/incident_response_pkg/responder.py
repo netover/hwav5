@@ -43,7 +43,7 @@ class IncidentResponder:
                 results.append(result)
                 incident.actions_taken.append(action.name)
             except Exception as e:
-                logger.error(f"Action {action.name} failed: {e}")
+                logger.error(f"Action {action.name} failed: {e}", exc_info=True)
                 results.append(
                     {
                         "action": action.name,

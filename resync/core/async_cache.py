@@ -1197,6 +1197,7 @@ class AsyncTTLCache:
                         }
                     )
                 },
+                exc_info=True,
             )
             # If we can't estimate memory, just check the size limit
             max_safe_size = self.max_entries  # Use configurable max entries
@@ -1805,7 +1806,7 @@ class AsyncTTLCache:
                 runtime_metrics.cache_sets.increment()
                 runtime_metrics.cache_size.set(self.size())
         except Exception as e:
-            logger.error("WAL_replay_SET_failed", key=repr(key), error=str(e))
+            logger.error("WAL_replay_SET_failed", key=repr(key), error=str(e), exc_info=True)
 
     async def apply_wal_delete(self, key: str):
         """
@@ -1820,7 +1821,7 @@ class AsyncTTLCache:
                     runtime_metrics.cache_evictions.increment()
                     runtime_metrics.cache_size.set(self.size())
         except Exception as e:
-            logger.error("WAL_replay_DELETE_failed", key=key, error=str(e))
+            logger.error("WAL_replay_DELETE_failed", key=key, error=str(e), exc_info=True)
 
 
 async def get_redis_client():
@@ -1845,5 +1846,5 @@ async def get_redis_client():
         )
 
     except Exception as e:
-        logger.error("Failed to create Redis client", error=str(e))
+        logger.error("Failed to create Redis client", error=str(e), exc_info=True)
         raise

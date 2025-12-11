@@ -99,7 +99,7 @@ class HealthServiceFacade:
                 logger.info("health_service_facade_components_initialized")
 
             except Exception as e:
-                logger.error("health_service_facade_initialization_failed", error=str(e))
+                logger.error("health_service_facade_initialization_failed", error=str(e), exc_info=True)
                 raise
 
     async def start_monitoring(self) -> None:
@@ -121,7 +121,7 @@ class HealthServiceFacade:
                 logger.info("health_service_facade_monitoring_started")
 
             except Exception as e:
-                logger.error("health_service_facade_monitoring_start_failed", error=str(e))
+                logger.error("health_service_facade_monitoring_start_failed", error=str(e), exc_info=True)
                 raise
 
     async def stop_monitoring(self) -> None:
@@ -136,7 +136,7 @@ class HealthServiceFacade:
                 logger.info("health_service_facade_monitoring_stopped")
 
             except Exception as e:
-                logger.error("health_service_facade_monitoring_stop_failed", error=str(e))
+                logger.error("health_service_facade_monitoring_stop_failed", error=str(e), exc_info=True)
                 raise
 
     async def perform_comprehensive_health_check(self) -> HealthCheckResult:
@@ -193,7 +193,7 @@ class HealthServiceFacade:
             return result
 
         except Exception as e:
-            logger.error("facade_comprehensive_health_check_failed", error=str(e))
+            logger.error("facade_comprehensive_health_check_failed", error=str(e), exc_info=True)
 
             # Return error result
             return HealthCheckResult(
@@ -230,6 +230,7 @@ class HealthServiceFacade:
                 "facade_get_component_health_failed",
                 component=component_name,
                 error=str(e),
+                exc_info=True,
             )
             return None
 
@@ -274,6 +275,7 @@ class HealthServiceFacade:
                 "facade_component_recovery_failed",
                 component=component_name,
                 error=str(e),
+                exc_info=True,
             )
             return False
 
@@ -344,7 +346,7 @@ class HealthServiceFacade:
                 )
 
         except Exception as e:
-            logger.error("facade_monitoring_health_check_failed", error=str(e))
+            logger.error("facade_monitoring_health_check_failed", error=str(e), exc_info=True)
 
     async def shutdown(self) -> None:
         """Shutdown the health service facade and all components."""
@@ -364,5 +366,5 @@ class HealthServiceFacade:
                 logger.info("health_service_facade_shutdown_completed")
 
             except Exception as e:
-                logger.error("health_service_facade_shutdown_failed", error=str(e))
+                logger.error("health_service_facade_shutdown_failed", error=str(e), exc_info=True)
                 raise

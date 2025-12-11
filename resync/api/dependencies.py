@@ -127,6 +127,7 @@ async def initialize_idempotency_manager(redis_client):
             "idempotency_manager_initialization_failed",
             error=str(e),
             redis_available=False,
+            exc_info=True,
         )
         # Create in-memory fallback
         # Note: In production, this should not be used
@@ -245,14 +246,15 @@ async def check_rate_limit(request: Request) -> None:
     Raises:
         RateLimitError: Se o limite de taxa for excedido.
     """
+    import os
     from collections import defaultdict
     from datetime import datetime, timedelta
 
-    # Rate limit configuration
-    RATE_LIMIT_REQUESTS = 100  # requests per window  # noqa: N806
-    RATE_LIMIT_WINDOW = 60  # seconds  # noqa: N806
+    # Rate limit configuration - configurable via environment
+    RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))  # noqa: N806
+    RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "60"))  # seconds  # noqa: N806
 
-    # In-memory store (use Redis in production)
+    # In-memory store (use Redis in production for multi-worker deployments)
     if not hasattr(check_rate_limit, "_store"):
         check_rate_limit._store = defaultdict(list)
 

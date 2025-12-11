@@ -46,7 +46,7 @@ class LLMResourceManager(ResourceManager):
             logger.debug("LLM client acquired")
             return client
         except Exception as e:
-            logger.error(f"Failed to acquire LLM client: {e}")
+            logger.error(f"Failed to acquire LLM client: {e}", exc_info=True)
             raise
 
     async def release(self, client: Any) -> None:
@@ -58,7 +58,7 @@ class LLMResourceManager(ResourceManager):
                 await client.aclose()
             logger.debug("LLM client released")
         except Exception as e:
-            logger.warning(f"Error releasing LLM client: {e}")
+            logger.warning(f"Error releasing LLM client: {e}", exc_info=True)
 
     async def health_check(self, client: Any) -> bool:
         """Check if LLM client is healthy."""
@@ -94,7 +94,7 @@ async def managed_llm_call(
         client = await manager.acquire()
         yield client
     except Exception as e:
-        logger.error(f"Error in managed LLM call: {e}")
+        logger.error(f"Error in managed LLM call: {e}", exc_info=True)
         raise
     finally:
         if client:
@@ -117,7 +117,7 @@ async def managed_database_connection(
         conn = await connection_factory()
         yield conn
     except Exception as e:
-        logger.error(f"Database operation error: {e}")
+        logger.error(f"Database operation error: {e}", exc_info=True)
         raise
     finally:
         if conn:
@@ -125,7 +125,7 @@ async def managed_database_connection(
                 await conn.close()
                 logger.debug("Database connection closed")
             except Exception as e:
-                logger.warning(f"Error closing database connection: {e}")
+                logger.warning(f"Error closing database connection: {e}", exc_info=True)
 
 
 @contextmanager
@@ -142,7 +142,7 @@ def managed_file_operation(file_path: str, mode: str = "r", **kwargs) -> Iterato
         file_obj = open(file_path, mode, **kwargs)  # noqa: SIM115
         yield file_obj
     except Exception as e:
-        logger.error(f"File operation error for {file_path}: {e}")
+        logger.error(f"File operation error for {file_path}: {e}", exc_info=True)
         raise
     finally:
         if file_obj:
@@ -150,7 +150,7 @@ def managed_file_operation(file_path: str, mode: str = "r", **kwargs) -> Iterato
                 file_obj.close()
                 logger.debug(f"File {file_path} closed")
             except Exception as e:
-                logger.warning(f"Error closing file {file_path}: {e}")
+                logger.warning(f"Error closing file {file_path}: {e}", exc_info=True)
 
 
 @asynccontextmanager
@@ -188,7 +188,7 @@ async def managed_http_session(
         session = await session_factory()
         yield session
     except Exception as e:
-        logger.error(f"HTTP session error: {e}")
+        logger.error(f"HTTP session error: {e}", exc_info=True)
         raise
     finally:
         if session:
@@ -196,7 +196,7 @@ async def managed_http_session(
                 await session.close()
                 logger.debug("HTTP session closed")
             except Exception as e:
-                logger.warning(f"Error closing HTTP session: {e}")
+                logger.warning(f"Error closing HTTP session: {e}", exc_info=True)
 
 
 class ResourcePoolManager:
@@ -263,7 +263,7 @@ class ResourcePoolManager:
                 async with self._lock:
                     self.size -= 1
         except Exception as e:
-            logger.warning(f"Error returning resource to pool: {e}")
+            logger.warning(f"Error returning resource to pool: {e}", exc_info=True)
             async with self._lock:
                 self.size -= 1
 
@@ -282,7 +282,7 @@ class ResourcePoolManager:
             try:
                 await self.resource_manager.release(resource)
             except Exception as e:
-                logger.warning(f"Error closing pooled resource: {e}")
+                logger.warning(f"Error closing pooled resource: {e}", exc_info=True)
 
 
 # Convenience functions for common use cases

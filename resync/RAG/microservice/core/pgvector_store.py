@@ -90,7 +90,7 @@ class PgVectorStore(VectorStore):
             try:
                 await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
             except Exception as e:
-                logger.warning("pgvector_extension_check_failed", error=str(e))
+                logger.warning("pgvector_extension_check_failed", error=str(e), exc_info=True)
 
             # Create table
             await conn.execute(f"""
@@ -128,7 +128,7 @@ class PgVectorStore(VectorStore):
                     WITH (m = 16, ef_construction = 256)
                 """)
             except Exception as e:
-                logger.warning("hnsw_index_creation_failed", error=str(e))
+                logger.warning("hnsw_index_creation_failed", error=str(e), exc_info=True)
 
         self._initialized = True
         logger.info(

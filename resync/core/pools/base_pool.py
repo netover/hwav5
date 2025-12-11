@@ -84,7 +84,7 @@ class ConnectionPool(ABC, Generic[T]):
                 self._initialized = True
                 logger.info(f"Initialized {self.config.pool_name} connection pool")
             except Exception as e:
-                logger.error(f"Failed to initialize {self.config.pool_name} connection pool: {e}")
+                logger.error(f"Failed to initialize {self.config.pool_name} connection pool: {e}", exc_info=True)
                 raise
 
     async def _setup_pool(self) -> None:
@@ -109,7 +109,7 @@ class ConnectionPool(ABC, Generic[T]):
                 self._shutdown = True
                 logger.info(f"Closed {self.config.pool_name} connection pool")
             except Exception as e:
-                logger.error(f"Error closing {self.config.pool_name} connection pool: {e}")
+                logger.error(f"Error closing {self.config.pool_name} connection pool: {e}", exc_info=True)
                 raise
 
     async def _close_pool(self) -> None:
@@ -151,5 +151,5 @@ class ConnectionPool(ABC, Generic[T]):
                 pass
             return True
         except Exception as e:
-            logger.warning(f"Health check failed for {self.config.pool_name}: {e}")
+            logger.warning(f"Health check failed for {self.config.pool_name}: {e}", exc_info=True)
             return False

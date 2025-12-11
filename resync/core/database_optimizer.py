@@ -329,6 +329,7 @@ class DatabaseOptimizer:
                 batch_id=batch.batch_id,
                 error=str(e),
                 query_count=len(batch.queries),
+                exc_info=True,
             )
             raise
 
@@ -379,7 +380,7 @@ class DatabaseOptimizer:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Batch processor error: {e}")
+                logger.error(f"Batch processor error: {e}", exc_info=True)
 
     def _apply_optimization_rules(
         self, sql: str, params: tuple[Any, ...]
@@ -398,7 +399,7 @@ class DatabaseOptimizer:
                         sql_preview=optimized_sql[:50],
                     )
                 except Exception as e:
-                    logger.warning("optimization_rule_failed", rule=rule.optimization, error=str(e))
+                    logger.warning("optimization_rule_failed", rule=rule.optimization, error=str(e), exc_info=True)
 
         return optimized_sql, optimized_params
 

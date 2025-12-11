@@ -90,7 +90,7 @@ class SystemResourceMonitor:
             # Sanitize error message for security
             secure_message = str(e)
 
-            logger.error("memory_health_check_failed", error=str(e))
+            logger.error("memory_health_check_failed", error=str(e), exc_info=True)
             return ComponentHealth(
                 name="memory",
                 component_type=ComponentType.MEMORY,
@@ -168,7 +168,7 @@ class SystemResourceMonitor:
             # Sanitize error message for security
             secure_message = str(e)
 
-            logger.error("cpu_health_check_failed", error=str(e))
+            logger.error("cpu_health_check_failed", error=str(e), exc_info=True)
             return ComponentHealth(
                 name="cpu",
                 component_type=ComponentType.CPU,

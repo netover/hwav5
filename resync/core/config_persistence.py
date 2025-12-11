@@ -146,7 +146,7 @@ class ConfigPersistenceManager:
                     shutil.copy2(backup_file, self.config_file)
                     logger.info("Configuration restored from backup after failure")
                 except Exception as restore_error:
-                    logger.error(f"Failed to restore backup: {restore_error}")
+                    logger.error(f"Failed to restore backup: {restore_error}", exc_info=True)
 
             raise ConfigPersistenceError(f"Failed to save config: {e}") from e
 
@@ -178,7 +178,7 @@ class ConfigPersistenceManager:
                 old_backup.unlink()
                 logger.debug(f"Removed old backup: {old_backup}")
             except Exception as e:
-                logger.warning(f"Failed to remove old backup {old_backup}: {e}")
+                logger.warning(f"Failed to remove old backup {old_backup}: {e}", exc_info=True)
 
     def get_section(self, section: str) -> dict[str, Any]:
         """Get specific configuration section.

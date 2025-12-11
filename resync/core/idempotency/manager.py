@@ -124,6 +124,7 @@ class IdempotencyManager:
                 "Unexpected error getting cached response",
                 idempotency_key=idempotency_key,
                 error=str(e),
+                exc_info=True,
             )
             return None
 
@@ -216,6 +217,7 @@ class IdempotencyManager:
                 "Unexpected error caching response",
                 idempotency_key=idempotency_key,
                 error=str(e),
+                exc_info=True,
             )
             return False
 
@@ -254,6 +256,7 @@ class IdempotencyManager:
                 "Unexpected error checking processing status",
                 idempotency_key=idempotency_key,
                 error=str(e),
+                exc_info=True,
             )
             return False
 
@@ -322,6 +325,7 @@ class IdempotencyManager:
                 "Unexpected error marking processing",
                 idempotency_key=idempotency_key,
                 error=str(e),
+                exc_info=True,
             )
             return False
 
@@ -368,6 +372,7 @@ class IdempotencyManager:
                 "Unexpected error clearing processing mark",
                 idempotency_key=idempotency_key,
                 error=str(e),
+                exc_info=True,
             )
             return False
 
@@ -419,6 +424,7 @@ class IdempotencyManager:
                 "Unexpected error invalidating idempotency key",
                 idempotency_key=idempotency_key,
                 error=str(e),
+                exc_info=True,
             )
             return False
 

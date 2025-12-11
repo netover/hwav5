@@ -120,7 +120,7 @@ async def record_feedback(request: FeedbackRequest):
 
         return FeedbackResponse(feedback_id=feedback_id, message="Feedback recorded successfully")
     except Exception as e:
-        logger.error("feedback_recording_error", error=str(e))
+        logger.error("feedback_recording_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -134,7 +134,7 @@ async def get_feedback_stats():
         return await store.get_feedback_stats()
 
     except Exception as e:
-        logger.error("feedback_stats_error", error=str(e))
+        logger.error("feedback_stats_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -165,7 +165,7 @@ async def get_low_quality_documents(
             for d in docs
         ]
     except Exception as e:
-        logger.error("low_quality_docs_error", error=str(e))
+        logger.error("low_quality_docs_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -217,7 +217,7 @@ async def get_pending_reviews(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("pending_reviews_error", error=str(e))
+        logger.error("pending_reviews_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -252,7 +252,7 @@ async def submit_review(review_id: str, submission: ReviewSubmission):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("submit_review_error", error=str(e))
+        logger.error("submit_review_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -266,7 +266,7 @@ async def get_review_stats():
         return await manager.get_queue_stats()
 
     except Exception as e:
-        logger.error("review_stats_error", error=str(e))
+        logger.error("review_stats_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -281,7 +281,7 @@ async def expire_old_reviews():
 
         return {"expired_count": expired_count, "message": f"Expired {expired_count} reviews"}
     except Exception as e:
-        logger.error("expire_reviews_error", error=str(e))
+        logger.error("expire_reviews_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -315,7 +315,7 @@ async def enrich_query(request: EnrichmentRequest):
             enrichment_source=result.enrichment_source,
         )
     except Exception as e:
-        logger.error("enrichment_error", error=str(e))
+        logger.error("enrichment_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -335,7 +335,7 @@ async def get_system_stats():
 
         return StatsResponse(**stats)
     except Exception as e:
-        logger.error("system_stats_error", error=str(e))
+        logger.error("system_stats_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -402,5 +402,5 @@ async def get_error_patterns(
         )
 
     except Exception as e:
-        logger.error("error_patterns_error", error=str(e))
+        logger.error("error_patterns_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e

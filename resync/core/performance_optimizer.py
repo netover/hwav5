@@ -378,7 +378,7 @@ class ResourceManager:
 
                     logger.info(f"Cleaned up resource: {resource_id}")
                 except Exception as e:
-                    logger.error(f"Error cleaning up resource {resource_id}: {e}")
+                    logger.error(f"Error cleaning up resource {resource_id}: {e}", exc_info=True)
                 finally:
                     await self.unregister_resource(resource_id)
 

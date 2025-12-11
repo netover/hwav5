@@ -363,7 +363,7 @@ class DistributedTracingManager:
             logger.info("Auto-instrumentation completed")
 
         except Exception as e:
-            logger.error(f"Failed to setup auto-instrumentation: {e}")
+            logger.error(f"Failed to setup auto-instrumentation: {e}", exc_info=True)
 
     async def _instrument_http_clients(self) -> None:
         """Instrument HTTP client calls."""

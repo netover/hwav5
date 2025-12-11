@@ -143,7 +143,7 @@ async def _perform_action_on_memory(
         except ImportError:
             logger.debug("continual_learning_module_not_available")
         except Exception as e:
-            logger.warning("continual_learning_pipeline_error", error=str(e))
+            logger.warning("continual_learning_pipeline_error", error=str(e), exc_info=True)
         # === END CONTINUAL LEARNING INTEGRATION ===
 
         success = await _get_knowledge_graph().atomic_check_and_delete(memory_id)
@@ -169,7 +169,7 @@ async def _perform_action_on_memory(
         except ImportError:
             logger.debug("continual_learning_module_not_available")
         except Exception as e:
-            logger.warning("continual_learning_pipeline_error", error=str(e))
+            logger.warning("continual_learning_pipeline_error", error=str(e), exc_info=True)
         # === END CONTINUAL LEARNING INTEGRATION ===
 
         success = await _get_knowledge_graph().atomic_check_and_flag(memory_id, reason, confidence)
@@ -276,7 +276,7 @@ async def analyze_memory(
         return None
     except AuditError as e:
         # Lock acquisition failure
-        logger.warning("could_not_acquire_lock_for_memory", memory_id=memory_id, error=str(e))
+        logger.warning("could_not_acquire_lock_for_memory", memory_id=memory_id, error=str(e), exc_info=True)
         return None
     except (KnowledgeGraphError, DatabaseError) as e:
         # Catch specific data access errors

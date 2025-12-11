@@ -469,7 +469,7 @@ Return only valid JSON, no markdown."""
             return triplets
 
         except Exception as e:
-            logger.warning("llm_triplet_extraction_failed", error=str(e))
+            logger.warning("llm_triplet_extraction_failed", error=str(e), exc_info=True)
             return []
 
     # =========================================================================
@@ -521,6 +521,7 @@ Return only valid JSON, no markdown."""
                     predicate=triplet.predicate,
                     object=triplet.object,
                     error=str(e),
+                    exc_info=True,
                 )
                 failed += 1
 
@@ -571,7 +572,7 @@ Return only valid JSON, no markdown."""
             return {"documents_penalized": penalized, "doc_refs": list(doc_refs)}
 
         except Exception as e:
-            logger.warning("rag_penalization_failed", error=str(e))
+            logger.warning("rag_penalization_failed", error=str(e), exc_info=True)
             return {"documents_penalized": 0, "error": str(e)}
 
     # =========================================================================

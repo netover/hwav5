@@ -293,7 +293,7 @@ def _load_config() -> dict[str, Any]:
                 # Merge with defaults for any missing keys
                 return _deep_merge(DEFAULT_AI_CONFIG.copy(), config)
         except (OSError, json.JSONDecodeError) as e:
-            logger.warning("config_load_error", error=str(e))
+            logger.warning("config_load_error", error=str(e), exc_info=True)
     return DEFAULT_AI_CONFIG.copy()
 
 
@@ -368,7 +368,7 @@ async def update_ai_config(
         return _load_config()
 
     except Exception as e:
-        logger.error("config_update_error", error=str(e))
+        logger.error("config_update_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update configuration: {str(e)}",
@@ -567,7 +567,7 @@ async def run_monitoring_now() -> dict[str, Any]:
     try:
         return await service.run_monitoring()
     except Exception as e:
-        logger.error("manual_monitoring_error", error=str(e))
+        logger.error("manual_monitoring_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Monitoring run failed: {str(e)}",
@@ -689,7 +689,7 @@ async def _restart_monitoring(monitoring_config: dict[str, Any]) -> None:
     except ImportError:
         logger.warning("monitoring_module_not_available")
     except Exception as e:
-        logger.error("monitoring_restart_error", error=str(e))
+        logger.error("monitoring_restart_error", error=str(e), exc_info=True)
 
 
 async def _reload_specialists(specialists_config: dict[str, Any]) -> None:
@@ -724,7 +724,7 @@ async def _reload_specialists(specialists_config: dict[str, Any]) -> None:
     except ImportError:
         logger.warning("specialists_module_not_available")
     except Exception as e:
-        logger.error("specialists_reload_error", error=str(e))
+        logger.error("specialists_reload_error", error=str(e), exc_info=True)
 
 
 async def _toggle_monitoring_service(enabled: bool) -> None:
@@ -746,4 +746,4 @@ async def _toggle_monitoring_service(enabled: bool) -> None:
     except ImportError:
         logger.warning("monitoring_module_not_available")
     except Exception as e:
-        logger.error("toggle_monitoring_error", error=str(e))
+        logger.error("toggle_monitoring_error", error=str(e), exc_info=True)

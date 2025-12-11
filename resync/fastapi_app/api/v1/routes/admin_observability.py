@@ -185,7 +185,7 @@ async def initialize_observability():
             message="Observability setup completed",
         )
     except Exception as e:
-        logger.error("observability_setup_failed", error=str(e))
+        logger.error("observability_setup_failed", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -224,7 +224,7 @@ async def get_langfuse_stats():
             }
         )
     except Exception as e:
-        logger.debug("langfuse_stats_error", error=str(e))
+        logger.debug("langfuse_stats_error", error=str(e), exc_info=True)
 
     return LangFuseStatsResponse(**stats)
 

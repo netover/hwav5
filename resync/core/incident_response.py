@@ -497,7 +497,7 @@ class IncidentResponder:
                 )
 
             except Exception as e:
-                logger.error(f"Failed to execute action {action.action_id}: {e}")
+                logger.error(f"Failed to execute action {action.action_id}: {e}", exc_info=True)
                 executed_actions.append(
                     {
                         "action_id": action.action_id,
@@ -1020,7 +1020,7 @@ class IncidentResponseEngine:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Incident detection worker error: {e}")
+                logger.error(f"Incident detection worker error: {e}", exc_info=True)
 
     async def _escalation_worker(self) -> None:
         """Background worker for incident escalation."""
@@ -1048,7 +1048,7 @@ class IncidentResponseEngine:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Escalation worker error: {e}")
+                logger.error(f"Escalation worker error: {e}", exc_info=True)
 
     async def _cleanup_worker(self) -> None:
         """Background worker for incident cleanup."""
@@ -1071,7 +1071,7 @@ class IncidentResponseEngine:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Cleanup worker error: {e}")
+                logger.error(f"Cleanup worker error: {e}", exc_info=True)
 
 
 # Global incident response engine instance

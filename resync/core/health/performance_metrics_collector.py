@@ -59,7 +59,7 @@ class PerformanceMetricsCollector:
             }
 
         except Exception as e:
-            logger.warning("failed_to_get_system_performance_metrics", error=str(e))
+            logger.warning("failed_to_get_system_performance_metrics", error=str(e), exc_info=True)
             return {
                 "error": str(e),
                 "timestamp": time.time(),
@@ -80,7 +80,7 @@ class PerformanceMetricsCollector:
             return {"error": "Advanced connection pool manager not available"}
 
         except Exception as e:
-            logger.warning("failed_to_get_connection_pool_metrics", error=str(e))
+            logger.warning("failed_to_get_connection_pool_metrics", error=str(e), exc_info=True)
             return {"error": str(e)}
 
     async def get_comprehensive_performance_metrics(self) -> dict[str, Any]:
@@ -115,7 +115,7 @@ class PerformanceMetricsCollector:
             return comprehensive_metrics
 
         except Exception as e:
-            logger.error("failed_to_get_comprehensive_performance_metrics", error=str(e))
+            logger.error("failed_to_get_comprehensive_performance_metrics", error=str(e), exc_info=True)
             return {
                 "error": str(e),
                 "timestamp": time.time(),
@@ -216,7 +216,7 @@ class PerformanceMetricsCollector:
             return summary
 
         except Exception as e:
-            logger.error("failed_to_get_performance_summary", error=str(e))
+            logger.error("failed_to_get_performance_summary", error=str(e), exc_info=True)
             return {
                 "status": "error",
                 "message": f"Failed to generate performance summary: {str(e)}",

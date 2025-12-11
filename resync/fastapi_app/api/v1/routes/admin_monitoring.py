@@ -283,7 +283,7 @@ async def monitoring_websocket(websocket: WebSocket):
         _ws_connections.remove(websocket)
         logger.info(f"Monitoring WebSocket disconnected. Total: {len(_ws_connections)}")
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error: {e}", exc_info=True)
         if websocket in _ws_connections:
             _ws_connections.remove(websocket)
 

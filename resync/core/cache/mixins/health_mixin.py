@@ -87,7 +87,7 @@ class CacheHealthMixin:
             }
 
         except Exception as e:
-            logger.error(f"Health check failed: {e}")
+            logger.error(f"Health check failed: {e}", exc_info=True)
             return {
                 "status": "error",
                 "correlation_id": correlation_id,

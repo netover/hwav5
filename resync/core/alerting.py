@@ -387,6 +387,7 @@ class AlertingSystem:
                 alert_id=alert.id,
                 error=str(e),
                 error_type=type(e).__name__,
+                exc_info=True,
             )
 
     async def _apply_escalation_policy(self, alert: Alert):
@@ -403,6 +404,7 @@ class AlertingSystem:
                         escalation_policy=policy_name,
                         error=str(e),
                         error_type=type(e).__name__,
+                        exc_info=True,
                     )
 
     def acknowledge_alert(self, alert_id: str, acknowledged_by: str):

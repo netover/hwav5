@@ -283,7 +283,7 @@ class SplunkConnector(SIEMConnector):
             return False
 
         except Exception as e:
-            logger.error(f"Splunk connection failed: {e}")
+            logger.error(f"Splunk connection failed: {e}", exc_info=True)
             self.status = SIEMStatus.ERROR
             self.connection_failures += 1
             return False
@@ -333,7 +333,7 @@ class SplunkConnector(SIEMConnector):
                 return 0
 
         except Exception as e:
-            logger.error(f"Splunk batch send error: {e}")
+            logger.error(f"Splunk batch send error: {e}", exc_info=True)
             self.connection_failures += 1
             if self.connection_failures >= 3:
                 self.status = SIEMStatus.ERROR
@@ -386,7 +386,7 @@ class ELKConnector(SIEMConnector):
             return False
 
         except Exception as e:
-            logger.error(f"ELK connection failed: {e}")
+            logger.error(f"ELK connection failed: {e}", exc_info=True)
             self.status = SIEMStatus.ERROR
             self.connection_failures += 1
             return False
@@ -433,7 +433,7 @@ class ELKConnector(SIEMConnector):
                 return 0
 
         except Exception as e:
-            logger.error(f"ELK batch send error: {e}")
+            logger.error(f"ELK batch send error: {e}", exc_info=True)
             self.connection_failures += 1
             if self.connection_failures >= 3:
                 self.status = SIEMStatus.ERROR
@@ -552,7 +552,7 @@ class SIEMIntegrator:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to add SIEM connector {name}: {e}")
+            logger.error(f"Failed to add SIEM connector {name}: {e}", exc_info=True)
             return False
 
     async def send_security_event(
@@ -674,7 +674,7 @@ class SIEMIntegrator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Event processor error: {e}")
+                logger.error(f"Event processor error: {e}", exc_info=True)
 
     async def _batch_flusher(self) -> None:
         """Periodically flush event batches."""
@@ -692,7 +692,7 @@ class SIEMIntegrator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Batch flusher error: {e}")
+                logger.error(f"Batch flusher error: {e}", exc_info=True)
 
     async def _flush_events(self) -> None:
         """Flush buffered events to SIEMs."""
@@ -717,7 +717,7 @@ class SIEMIntegrator:
 
                 except Exception as e:
                     self.circuit_breaker.record_failure(name)
-                    logger.error(f"Error sending events to {name}: {e}")
+                    logger.error(f"Error sending events to {name}: {e}", exc_info=True)
             else:
                 logger.debug(f"Skipping {name}: not connected or circuit open")
 
@@ -753,7 +753,7 @@ class SIEMIntegrator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Health monitor error: {e}")
+                logger.error(f"Health monitor error: {e}", exc_info=True)
 
 
 class EventCorrelationEngine:

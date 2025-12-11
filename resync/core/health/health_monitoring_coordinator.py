@@ -70,7 +70,7 @@ class HealthMonitoringCoordinator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("error_in_health_monitoring_loop", error=str(e))
+                logger.error("error_in_health_monitoring_loop", error=str(e), exc_info=True)
                 await asyncio.sleep(10)  # Brief pause on error
 
     def is_monitoring(self) -> bool:

@@ -249,7 +249,7 @@ class TWS_LLMOptimizer:  # noqa: N801
                 response_time=response_time,
                 success=False,
             )
-            logger.error(f"LLM request failed: {e}")
+            logger.error(f"LLM request failed: {e}", exc_info=True)
             raise
 
         # Cache response
@@ -312,7 +312,7 @@ class TWS_LLMOptimizer:  # noqa: N801
             return full_response
 
         except Exception as e:
-            logger.error("Error in LLM streaming", error=str(e))
+            logger.error("Error in LLM streaming", error=str(e), exc_info=True)
             # Fallback to original method (which now also uses LiteLLM)
             result = await call_llm(prompt, model=model, max_tokens=1000)
             await self.response_cache.set(cache_key, result)

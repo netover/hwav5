@@ -1,0 +1,566 @@
+"""
+Admin routes for Semantic Cache management.
+
+v5.3.16 - Admin endpoints for:
+- Cache statistics and metrics
+- Threshold configuration
+- Cache invalidation
+- Health checks
+
+Security: All endpoints require admin authentication.
+"""
+
+import logging
+from datetime import datetime, timezone
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
+
+from resync.api.auth import verify_admin_credentials
+from resync.core.cache.embedding_model import get_model_info, preload_model
+from resync.core.cache.redis_config import (
+    RedisDatabase,
+    check_redis_stack_available,
+    redis_health_check,
+)
+from resync.core.cache.semantic_cache import get_semantic_cache
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(
+    prefix="/admin/semantic-cache",
+    tags=["admin", "semantic-cache"],
+    dependencies=[Depends(verify_admin_credentials)],
+)
+
+
+# =============================================================================
+# Request/Response Models
+# =============================================================================
+
+class CacheStatsResponse(BaseModel):
+    """Response model for cache statistics."""
+    
+    entries: int = Field(description="Number of cached entries")
+    hits: int = Field(description="Total cache hits")
+    misses: int = Field(description="Total cache misses")
+    sets: int = Field(description="Total cache writes")
+    errors: int = Field(description="Total errors")
+    hit_rate_percent: float = Field(description="Cache hit rate percentage")
+    avg_lookup_time_ms: float = Field(description="Average lookup time in ms")
+    threshold: float = Field(description="Current similarity threshold")
+    default_ttl: int = Field(description="Default TTL in seconds")
+    max_entries: int = Field(description="Maximum entries limit")
+    redis_stack_available: bool | None = Field(description="Whether Redis Stack is available")
+    used_memory_human: str = Field(description="Redis memory usage")
+
+
+class ThresholdUpdateRequest(BaseModel):
+    """Request model for updating cache threshold."""
+    
+    threshold: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="New similarity threshold (0-1, lower = stricter)",
+        examples=[0.25, 0.30, 0.35],
+    )
+
+
+class ThresholdUpdateResponse(BaseModel):
+    """Response model for threshold update."""
+    
+    old_threshold: float
+    new_threshold: float
+    message: str
+
+
+class InvalidateRequest(BaseModel):
+    """Request model for cache invalidation."""
+    
+    query: str | None = Field(
+        default=None,
+        description="Specific query to invalidate",
+    )
+    pattern: str | None = Field(
+        default=None,
+        description="Pattern to match queries for invalidation",
+    )
+    all: bool = Field(
+        default=False,
+        description="Clear entire cache (use with caution!)",
+    )
+
+
+class InvalidateResponse(BaseModel):
+    """Response model for cache invalidation."""
+    
+    invalidated_count: int
+    message: str
+
+
+class HealthCheckResponse(BaseModel):
+    """Response model for health check."""
+    
+    status: str = Field(description="Overall health status")
+    redis_status: str
+    redis_latency_ms: float | None
+    redis_stack_available: bool
+    embedding_model_status: str
+    embedding_model_info: dict[str, Any]
+    timestamp: datetime
+
+
+class PreloadResponse(BaseModel):
+    """Response model for model preload."""
+    
+    success: bool
+    model_info: dict[str, Any]
+    message: str
+
+
+class RedisInfoResponse(BaseModel):
+    """Response model for Redis server information."""
+    
+    # Connection info
+    host: str = Field(description="Redis host")
+    port: int = Field(description="Redis port")
+    database: int = Field(description="Redis database number")
+    connected: bool = Field(description="Connection status")
+    version: str | None = Field(description="Redis version")
+    
+    # Memory info
+    used_memory_human: str = Field(description="Used memory (human readable)")
+    max_memory_human: str = Field(description="Max memory setting (human readable)")
+    memory_usage_percent: float = Field(description="Memory usage percentage")
+    maxmemory_policy: str = Field(description="Eviction policy")
+    
+    # Modules info
+    modules: dict[str, bool] = Field(description="Loaded modules status")
+    
+    # Database info (keys per db)
+    databases: dict[str, dict[str, Any]] = Field(description="Database statistics")
+    
+    # Performance info
+    connected_clients: int = Field(description="Number of connected clients")
+    ops_per_sec: int = Field(description="Operations per second")
+    uptime_days: float = Field(description="Server uptime in days")
+
+
+# =============================================================================
+# Endpoints
+# =============================================================================
+
+@router.get(
+    "/stats",
+    response_model=CacheStatsResponse,
+    summary="Get cache statistics",
+    description="Returns comprehensive statistics about semantic cache performance.",
+)
+async def get_cache_stats() -> CacheStatsResponse:
+    """Get semantic cache statistics and metrics."""
+    try:
+        cache = await get_semantic_cache()
+        stats = await cache.get_stats()
+        
+        return CacheStatsResponse(**stats)
+        
+    except Exception as e:
+        logger.error(f"Failed to get cache stats: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve cache statistics: {str(e)}",
+        )
+
+
+@router.get(
+    "/health",
+    response_model=HealthCheckResponse,
+    summary="Health check",
+    description="Check health of semantic cache components.",
+)
+async def health_check() -> HealthCheckResponse:
+    """Perform comprehensive health check of semantic cache."""
+    try:
+        # Check Redis
+        redis_health = await redis_health_check(RedisDatabase.SEMANTIC_CACHE)
+        
+        # Check Redis Stack
+        stack_info = await check_redis_stack_available()
+        
+        # Check embedding model
+        model_info = get_model_info()
+        
+        # Determine overall status
+        overall_status = "healthy"
+        if redis_health["status"] != "healthy":
+            overall_status = "degraded"
+        if model_info["status"] == "fallback":
+            overall_status = "degraded"
+        if redis_health["status"] == "unhealthy":
+            overall_status = "unhealthy"
+        
+        return HealthCheckResponse(
+            status=overall_status,
+            redis_status=redis_health["status"],
+            redis_latency_ms=redis_health.get("latency_ms"),
+            redis_stack_available=stack_info.get("search", False),
+            embedding_model_status=model_info["status"],
+            embedding_model_info=model_info,
+            timestamp=datetime.now(timezone.utc),
+        )
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return HealthCheckResponse(
+            status="unhealthy",
+            redis_status="error",
+            redis_latency_ms=None,
+            redis_stack_available=False,
+            embedding_model_status="error",
+            embedding_model_info={"error": str(e)},
+            timestamp=datetime.now(timezone.utc),
+        )
+
+
+@router.put(
+    "/threshold",
+    response_model=ThresholdUpdateResponse,
+    summary="Update similarity threshold",
+    description="Update the similarity threshold for cache hits. Lower = stricter matching.",
+)
+async def update_threshold(request: ThresholdUpdateRequest) -> ThresholdUpdateResponse:
+    """Update semantic cache similarity threshold."""
+    try:
+        cache = await get_semantic_cache()
+        old_threshold = cache.threshold
+        
+        await cache.update_threshold(request.threshold)
+        
+        logger.info(f"Cache threshold updated: {old_threshold} -> {request.threshold}")
+        
+        return ThresholdUpdateResponse(
+            old_threshold=old_threshold,
+            new_threshold=request.threshold,
+            message=f"Threshold updated from {old_threshold} to {request.threshold}",
+        )
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Failed to update threshold: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update threshold: {str(e)}",
+        )
+
+
+@router.post(
+    "/invalidate",
+    response_model=InvalidateResponse,
+    summary="Invalidate cache entries",
+    description="Invalidate specific cache entries or clear entire cache.",
+)
+async def invalidate_cache(request: InvalidateRequest) -> InvalidateResponse:
+    """Invalidate semantic cache entries."""
+    try:
+        cache = await get_semantic_cache()
+        
+        if request.all:
+            # Clear entire cache
+            success = await cache.clear()
+            if success:
+                return InvalidateResponse(
+                    invalidated_count=-1,  # Unknown exact count
+                    message="Entire cache cleared successfully",
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to clear cache",
+                )
+        
+        elif request.query:
+            # Invalidate specific query
+            success = await cache.invalidate(request.query)
+            return InvalidateResponse(
+                invalidated_count=1 if success else 0,
+                message=f"Query {'invalidated' if success else 'not found in cache'}",
+            )
+        
+        elif request.pattern:
+            # Invalidate by pattern
+            count = await cache.invalidate_pattern(request.pattern)
+            return InvalidateResponse(
+                invalidated_count=count,
+                message=f"Invalidated {count} entries matching pattern '{request.pattern}'",
+            )
+        
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Must specify query, pattern, or all=true",
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to invalidate cache: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to invalidate cache: {str(e)}",
+        )
+
+
+@router.post(
+    "/preload-model",
+    response_model=PreloadResponse,
+    summary="Preload embedding model",
+    description="Preload the embedding model into memory to avoid cold-start latency.",
+)
+async def preload_embedding_model() -> PreloadResponse:
+    """Preload embedding model into memory."""
+    try:
+        success = preload_model()
+        model_info = get_model_info()
+        
+        if success:
+            return PreloadResponse(
+                success=True,
+                model_info=model_info,
+                message="Embedding model loaded successfully",
+            )
+        else:
+            return PreloadResponse(
+                success=False,
+                model_info=model_info,
+                message="Failed to load embedding model, using fallback",
+            )
+        
+    except Exception as e:
+        logger.error(f"Failed to preload model: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to preload model: {str(e)}",
+        )
+
+
+@router.get(
+    "/test",
+    summary="Test cache lookup",
+    description="Test semantic cache with a query (does not call LLM).",
+)
+async def test_cache_lookup(
+    query: Annotated[str, Query(min_length=1, max_length=1000)],
+) -> dict[str, Any]:
+    """Test cache lookup without calling LLM."""
+    try:
+        cache = await get_semantic_cache()
+        result = await cache.get(query)
+        
+        return {
+            "query": query,
+            "hit": result.hit,
+            "response": result.response[:200] if result.response else None,
+            "distance": result.distance,
+            "lookup_time_ms": result.lookup_time_ms,
+            "cached_query": result.entry.query if result.entry else None,
+            "hit_count": result.entry.hit_count if result.entry else None,
+        }
+        
+    except Exception as e:
+        logger.error(f"Test lookup failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Test failed: {str(e)}",
+        )
+
+
+@router.post(
+    "/test-store",
+    summary="Test cache store",
+    description="Store a test entry in cache (for testing purposes).",
+)
+async def test_cache_store(
+    query: Annotated[str, Query(min_length=1, max_length=1000)],
+    response: Annotated[str, Query(min_length=1, max_length=10000)],
+    ttl: Annotated[int, Query(ge=60, le=604800)] = 3600,
+) -> dict[str, Any]:
+    """Store a test entry in cache."""
+    try:
+        cache = await get_semantic_cache()
+        success = await cache.set(
+            query=query,
+            response=response,
+            ttl=ttl,
+            metadata={"test": True, "stored_via": "admin_endpoint"},
+        )
+        
+        return {
+            "success": success,
+            "query": query,
+            "response_length": len(response),
+            "ttl": ttl,
+            "message": "Entry stored successfully" if success else "Failed to store entry",
+        }
+        
+    except Exception as e:
+        logger.error(f"Test store failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Test failed: {str(e)}",
+        )
+
+
+@router.get(
+    "/redis-info",
+    response_model=RedisInfoResponse,
+    summary="Get Redis server information",
+    description="Returns detailed information about Redis server, modules, and databases.",
+)
+async def get_redis_info() -> RedisInfoResponse:
+    """Get comprehensive Redis server information."""
+    try:
+        from resync.core.cache.redis_config import (
+            get_redis_client,
+            get_redis_config,
+        )
+        
+        config = get_redis_config()
+        
+        # Try to connect and get info
+        try:
+            client = await get_redis_client(RedisDatabase.SEMANTIC_CACHE)
+            info = await client.info()
+            connected = True
+        except Exception as conn_err:
+            logger.warning(f"Redis connection failed: {conn_err}")
+            connected = False
+            info = {}
+        
+        # Parse memory info
+        used_memory = info.get("used_memory_human", "0B") if info else "N/A"
+        max_memory = info.get("maxmemory_human", "0B") if info else "N/A"
+        maxmemory = info.get("maxmemory", 0) if info else 0
+        used_memory_bytes = info.get("used_memory", 0) if info else 0
+        
+        # Calculate memory percentage
+        if maxmemory > 0:
+            memory_percent = (used_memory_bytes / maxmemory) * 100
+        else:
+            memory_percent = 0.0
+        
+        # Check modules
+        modules_status = {"search": False, "json": False, "timeseries": False, "bloom": False}
+        if connected:
+            try:
+                stack_info = await check_redis_stack_available()
+                modules_status = {
+                    "search": stack_info.get("search", False),
+                    "json": stack_info.get("ReJSON", False) or stack_info.get("json", False),
+                    "timeseries": stack_info.get("timeseries", False),
+                    "bloom": stack_info.get("bf", False) or stack_info.get("bloom", False),
+                }
+            except Exception:
+                pass
+        
+        # Get database stats
+        databases = {}
+        db_names = {
+            0: "Connection Pools",
+            1: "Sessions", 
+            2: "Cache Geral",
+            3: "Semantic Cache",
+            4: "Idempotency",
+        }
+        
+        if connected:
+            keyspace = info.get("db0", None)  # Example: db0: keys=10,expires=5
+            
+            for db_num in range(5):
+                db_key = f"db{db_num}"
+                db_info = info.get(db_key, {})
+                if isinstance(db_info, dict):
+                    keys = db_info.get("keys", 0)
+                elif isinstance(db_info, str):
+                    # Parse string format: "keys=10,expires=5"
+                    try:
+                        parts = dict(p.split("=") for p in db_info.split(","))
+                        keys = int(parts.get("keys", 0))
+                    except Exception:
+                        keys = 0
+                else:
+                    keys = 0
+                    
+                databases[db_key] = {
+                    "name": db_names.get(db_num, f"DB {db_num}"),
+                    "keys": keys,
+                    "active": db_num == RedisDatabase.SEMANTIC_CACHE.value,
+                }
+        
+        return RedisInfoResponse(
+            host=config.host,
+            port=config.port,
+            database=RedisDatabase.SEMANTIC_CACHE.value,
+            connected=connected,
+            version=info.get("redis_version") if info else None,
+            used_memory_human=used_memory,
+            max_memory_human=max_memory if max_memory != "0B" else "Unlimited",
+            memory_usage_percent=round(memory_percent, 1),
+            maxmemory_policy=info.get("maxmemory_policy", "noeviction") if info else "unknown",
+            modules=modules_status,
+            databases=databases,
+            connected_clients=info.get("connected_clients", 0) if info else 0,
+            ops_per_sec=info.get("instantaneous_ops_per_sec", 0) if info else 0,
+            uptime_days=round(info.get("uptime_in_seconds", 0) / 86400, 2) if info else 0,
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to get Redis info: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get Redis info: {str(e)}",
+        )
+
+
+@router.post(
+    "/redis-test",
+    summary="Test Redis connection",
+    description="Test Redis connection and return latency.",
+)
+async def test_redis_connection() -> dict[str, Any]:
+    """Test Redis connection with ping."""
+    try:
+        import time
+        from resync.core.cache.redis_config import get_redis_client
+        
+        start = time.perf_counter()
+        client = await get_redis_client(RedisDatabase.SEMANTIC_CACHE)
+        pong = await client.ping()
+        latency_ms = (time.perf_counter() - start) * 1000
+        
+        return {
+            "success": pong,
+            "latency_ms": round(latency_ms, 2),
+            "message": "Redis connection successful" if pong else "Redis ping failed",
+        }
+        
+    except Exception as e:
+        logger.error(f"Redis connection test failed: {e}")
+        return {
+            "success": False,
+            "latency_ms": None,
+            "message": f"Connection failed: {str(e)}",
+            "error": str(e),
+        }
+
+
+# =============================================================================
+# Export router
+# =============================================================================
+
+__all__ = ["router"]

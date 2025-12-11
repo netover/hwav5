@@ -83,7 +83,7 @@ class MemoryUsageTracker:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("error_in_memory_monitoring_loop", error=str(e))
+                logger.error("error_in_memory_monitoring_loop", error=str(e), exc_info=True)
                 await asyncio.sleep(10)  # Brief pause on error
 
     async def record_memory_usage(self) -> dict[str, Any]:
@@ -134,7 +134,7 @@ class MemoryUsageTracker:
             return memory_data
 
         except Exception as e:
-            logger.error("failed_to_record_memory_usage", error=str(e))
+            logger.error("failed_to_record_memory_usage", error=str(e), exc_info=True)
             return {"timestamp": datetime.now(), "error": str(e)}
 
     async def _check_memory_alerts(self, memory_data: dict[str, Any]) -> None:
@@ -166,7 +166,7 @@ class MemoryUsageTracker:
                 logger.info("system_memory_high", memory_percent=system_memory_percent)
 
         except Exception as e:
-            logger.error("failed_to_check_memory_alerts", error=str(e))
+            logger.error("failed_to_check_memory_alerts", error=str(e), exc_info=True)
 
     def get_current_memory_usage(self) -> dict[str, Any]:
         """
@@ -364,7 +364,7 @@ class MemoryUsageTracker:
             return result
 
         except Exception as e:
-            logger.error("failed_to_force_garbage_collection", error=str(e))
+            logger.error("failed_to_force_garbage_collection", error=str(e), exc_info=True)
             return {
                 "gc_performed": False,
                 "error": str(e),
@@ -421,5 +421,5 @@ class MemoryUsageTracker:
             return summary
 
         except Exception as e:
-            logger.error("failed_to_get_memory_summary", error=str(e))
+            logger.error("failed_to_get_memory_summary", error=str(e), exc_info=True)
             return {"error": str(e), "timestamp": datetime.now().isoformat()}

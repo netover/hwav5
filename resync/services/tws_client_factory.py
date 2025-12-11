@@ -6,7 +6,7 @@ from resync.config.app_settings import AppSettings
 from resync.services.tws_service import OptimizedTWSClient
 
 
-@lru_cache
+@lru_cache(maxsize=1)
 def _build_client(settings: AppSettings) -> OptimizedTWSClient:
     """
     Instantiate a singleton OptimizedTWSClient using the provided settings.

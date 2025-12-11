@@ -38,7 +38,7 @@ async def get_performance_report() -> dict[str, Any]:
 
         return JSONResponse(status_code=status.HTTP_200_OK, content=report)
     except Exception as e:
-        logger.error(f"Error generating performance report: {e}")
+        logger.error(f"Error generating performance report: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate performance report: {str(e)}",
@@ -74,7 +74,7 @@ async def get_cache_metrics() -> dict[str, Any]:
 
         return JSONResponse(status_code=status.HTTP_200_OK, content={"caches": cache_metrics})
     except Exception as e:
-        logger.error(f"Error getting cache metrics: {e}")
+        logger.error(f"Error getting cache metrics: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get cache metrics: {str(e)}",
@@ -100,7 +100,7 @@ async def get_cache_recommendations() -> dict[str, Any]:
             status_code=status.HTTP_200_OK, content={"recommendations": recommendations}
         )
     except Exception as e:
-        logger.error(f"Error getting cache recommendations: {e}")
+        logger.error(f"Error getting cache recommendations: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get cache recommendations: {str(e)}",
@@ -121,7 +121,7 @@ async def get_pool_metrics() -> dict[str, Any]:
 
         return JSONResponse(status_code=status.HTTP_200_OK, content=report)
     except Exception as e:
-        logger.error(f"Error getting pool metrics: {e}")
+        logger.error(f"Error getting pool metrics: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get pool metrics: {str(e)}",
@@ -144,7 +144,7 @@ async def get_pool_recommendations() -> dict[str, Any]:
             status_code=status.HTTP_200_OK, content={"recommendations": recommendations}
         )
     except Exception as e:
-        logger.error(f"Error getting pool recommendations: {e}")
+        logger.error(f"Error getting pool recommendations: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get pool recommendations: {str(e)}",
@@ -165,7 +165,7 @@ async def get_resource_stats() -> dict[str, Any]:
 
         return JSONResponse(status_code=status.HTTP_200_OK, content={"resource_stats": stats})
     except Exception as e:
-        logger.error(f"Error getting resource stats: {e}")
+        logger.error(f"Error getting resource stats: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get resource stats: {str(e)}",
@@ -207,7 +207,7 @@ async def detect_resource_leaks(max_lifetime_seconds: int = 3600) -> dict[str, A
             },
         )
     except Exception as e:
-        logger.error(f"Error detecting resource leaks: {e}")
+        logger.error(f"Error detecting resource leaks: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to detect resource leaks: {str(e)}",
@@ -269,7 +269,7 @@ async def get_performance_health() -> dict[str, Any]:
             },
         )
     except Exception as e:
-        logger.error(f"Error getting performance health: {e}")
+        logger.error(f"Error getting performance health: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get performance health: {str(e)}",

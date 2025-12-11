@@ -178,7 +178,7 @@ class IsolationForestDetector:
             )
 
         except Exception as e:
-            logger.warning(f"Isolation Forest detection error: {e}")
+            logger.warning(f"Isolation Forest detection error: {e}", exc_info=True)
             return AnomalyScore(
                 is_anomaly=False,
                 confidence=0.0,
@@ -218,7 +218,7 @@ class IsolationForestDetector:
             logger.info(f"Isolation Forest model trained with {len(self.training_data)} samples")
 
         except Exception as e:
-            logger.error(f"Isolation Forest training error: {e}")
+            logger.error(f"Isolation Forest training error: {e}", exc_info=True)
             self.is_trained = False
 
     def _should_retrain(self) -> bool:
@@ -310,7 +310,7 @@ class OneClassSVMDetector:
             )
 
         except Exception as e:
-            logger.warning(f"One-Class SVM detection error: {e}")
+            logger.warning(f"One-Class SVM detection error: {e}", exc_info=True)
             return AnomalyScore(
                 is_anomaly=False,
                 confidence=0.0,
@@ -344,7 +344,7 @@ class OneClassSVMDetector:
             logger.info(f"One-Class SVM model trained with {len(self.training_data)} samples")
 
         except Exception as e:
-            logger.error(f"One-Class SVM training error: {e}")
+            logger.error(f"One-Class SVM training error: {e}", exc_info=True)
             self.is_trained = False
 
     def _should_retrain(self) -> bool:
@@ -616,7 +616,7 @@ class AnomalyDetectionEngine:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Processing loop error: {e}")
+                logger.error(f"Processing loop error: {e}", exc_info=True)
 
     async def _training_loop(self) -> None:
         """Background training loop for model updates."""
@@ -631,7 +631,7 @@ class AnomalyDetectionEngine:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Training loop error: {e}")
+                logger.error(f"Training loop error: {e}", exc_info=True)
 
     async def _process_batch(self) -> None:
         """Process a batch of buffered metrics."""
@@ -662,7 +662,7 @@ class AnomalyDetectionEngine:
             logger.info("ML models updated with new training data")
 
         except Exception as e:
-            logger.error(f"Model update error: {e}")
+            logger.error(f"Model update error: {e}", exc_info=True)
 
     async def _cleanup_history(self) -> None:
         """Clean up old history data."""

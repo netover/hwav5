@@ -185,7 +185,7 @@ class ProactiveMonitoringManager:
             try:
                 await self._status_store.save_event(event)
             except Exception as e:
-                logger.error("failed_to_save_event", error=str(e))
+                logger.error("failed_to_save_event", error=str(e), exc_info=True)
 
         # Se for um ABEND, tenta encontrar solução
         if hasattr(event, "event_type") and event.event_type.value == "job_abend":
@@ -241,7 +241,7 @@ class ProactiveMonitoringManager:
                 )
 
         except Exception as e:
-            logger.error("solution_suggestion_error", error=str(e))
+            logger.error("solution_suggestion_error", error=str(e), exc_info=True)
 
     async def _pattern_detection_loop(self) -> None:
         """Loop de detecção de padrões."""
@@ -267,7 +267,7 @@ class ProactiveMonitoringManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("pattern_detection_error", error=str(e))
+                logger.error("pattern_detection_error", error=str(e), exc_info=True)
                 await asyncio.sleep(60)  # Wait before retry
 
     async def _publish_pattern(self, pattern: Any) -> None:
@@ -312,7 +312,7 @@ class ProactiveMonitoringManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("cleanup_error", error=str(e))
+                logger.error("cleanup_error", error=str(e), exc_info=True)
                 await asyncio.sleep(3600)  # Wait 1h before retry
 
     # =========================================================================

@@ -80,7 +80,7 @@ class CacheTransactionMixin:
             return True
 
         except Exception as e:
-            logger.error(f"Rollback failed: {e}")
+            logger.error(f"Rollback failed: {e}", exc_info=True)
             return False
 
     def get_transaction_log(self) -> list[dict[str, Any]]:

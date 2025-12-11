@@ -109,7 +109,7 @@ class ReportStrategy(ABC):
             self.validate_manager(manager)
             return self._execute_strategy(manager, context or {})
         except Exception as e:
-            logger.error(f"Error executing strategy {self.__class__.__name__}: {e}")
+            logger.error(f"Error executing strategy {self.__class__.__name__}: {e}", exc_info=True)
             if isinstance(e, (StrategyValidationError, ComplianceCalculationError)):
                 raise
             raise ComplianceCalculationError(f"Strategy execution failed: {e}") from e
@@ -651,5 +651,5 @@ class ReportGenerator:
         except StrategyValidationError:
             raise
         except Exception as e:
-            logger.error(f"Error generating compliance report: {e}")
+            logger.error(f"Error generating compliance report: {e}", exc_info=True)
             raise ComplianceCalculationError(f"Failed to generate compliance report: {e}") from None

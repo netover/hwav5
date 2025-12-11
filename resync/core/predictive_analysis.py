@@ -85,7 +85,7 @@ class PredictiveAnalysisEngine:
                 )
 
         except Exception as e:
-            logger.error("predictive_analysis_failed", error=str(e))
+            logger.error("predictive_analysis_failed", error=str(e), exc_info=True)
 
         return alerts
 
@@ -129,7 +129,7 @@ class PredictiveAnalysisEngine:
                 pass
 
         except Exception as e:
-            logger.warning("connection_pool_health_check_failed", error=str(e))
+            logger.warning("connection_pool_health_check_failed", error=str(e), exc_info=True)
 
         return {"error": "Unable to check connection pool health"}
 

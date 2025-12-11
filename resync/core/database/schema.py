@@ -55,7 +55,7 @@ async def create_schemas(engine: AsyncEngine | None = None) -> None:
                 try:
                     await conn.execute(text(statement))
                 except Exception as e:
-                    logger.warning(f"Schema creation warning: {e}")
+                    logger.warning(f"Schema creation warning: {e}", exc_info=True)
 
         logger.info("Database schemas created")
 
@@ -134,7 +134,7 @@ async def check_database_connection(engine: AsyncEngine | None = None) -> bool:
             await conn.execute(text("SELECT 1"))
         return True
     except Exception as e:
-        logger.error(f"Database connection failed: {e}")
+        logger.error(f"Database connection failed: {e}", exc_info=True)
         return False
 
 

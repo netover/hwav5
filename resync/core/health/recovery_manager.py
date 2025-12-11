@@ -125,7 +125,7 @@ class HealthRecoveryManager:
             recovery_time_ms = (time.time() - start_time) * 1000
             error_message = f"Database recovery failed: {str(e)}"
 
-            logger.error("database_recovery_failed", error=str(e), duration_ms=recovery_time_ms)
+            logger.error("database_recovery_failed", error=str(e), duration_ms=recovery_time_ms, exc_info=True)
 
             result = RecoveryResult(
                 success=False,
@@ -219,7 +219,7 @@ class HealthRecoveryManager:
             recovery_time_ms = (time.time() - start_time) * 1000
             error_message = f"Cache recovery failed: {str(e)}"
 
-            logger.error("cache_recovery_failed", error=str(e), duration_ms=recovery_time_ms)
+            logger.error("cache_recovery_failed", error=str(e), duration_ms=recovery_time_ms, exc_info=True)
 
             result = RecoveryResult(
                 success=False,
@@ -311,7 +311,7 @@ class HealthRecoveryManager:
             recovery_time_ms = (time.time() - start_time) * 1000
             error_message = f"Service recovery failed: {str(e)}"
 
-            logger.error("service_recovery_failed", error=str(e), duration_ms=recovery_time_ms)
+            logger.error("service_recovery_failed", error=str(e), duration_ms=recovery_time_ms, exc_info=True)
 
             result = RecoveryResult(
                 success=False,

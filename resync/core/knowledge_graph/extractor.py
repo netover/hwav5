@@ -147,7 +147,7 @@ class TripletExtractor:
             return triplets
 
         except Exception as e:
-            logger.error("triplet_extraction_failed", error=str(e))
+            logger.error("triplet_extraction_failed", error=str(e), exc_info=True)
             return []
 
     def _build_extraction_prompt(self, text: str) -> str:

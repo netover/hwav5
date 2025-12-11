@@ -126,7 +126,7 @@ class TestConnectionPoolMetrics:
                     await asyncio.sleep(0.001 * (1 + connection_id * 0.1))
 
             except Exception as e:
-                op_logger.error("connection_failed", error=str(e))
+                op_logger.error("connection_failed", error=str(e), exc_info=True)
                 raise
 
         # Execute with timing and diagnostics

@@ -118,7 +118,7 @@ class RAGIntegrationService:
             logger.warning(f"pgvector not configured: {e}")
             self.use_mock = True
         except Exception as e:
-            logger.error(f"Failed to initialize RAG services: {e}")
+            logger.error(f"Failed to initialize RAG services: {e}", exc_info=True)
             self.use_mock = True
 
     async def ingest_document(
@@ -180,7 +180,7 @@ class RAGIntegrationService:
             except Exception as e:
                 doc.status = "failed"
                 doc.metadata["error"] = str(e)
-                logger.error(f"Failed to ingest document {file_id}: {e}")
+                logger.error(f"Failed to ingest document {file_id}: {e}", exc_info=True)
 
         return doc
 
@@ -225,7 +225,7 @@ class RAGIntegrationService:
 
             return results
         except Exception as e:
-            logger.error(f"Search failed: {e}")
+            logger.error(f"Search failed: {e}", exc_info=True)
             return []
 
     def _mock_chunk_text(self, text: str, chunk_size: int = 500) -> list[dict]:
@@ -332,7 +332,7 @@ class RAGIntegrationService:
                 try:
                     path.unlink()
                 except Exception as e:
-                    logger.warning(f"Failed to delete file {path}: {e}")
+                    logger.warning(f"Failed to delete file {path}: {e}", exc_info=True)
 
             return True
         return False

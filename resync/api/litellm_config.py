@@ -585,7 +585,7 @@ async def test_model(request: ModelTestRequest):
         )
     except Exception as e:
         latency_ms = (time.time() - start_time) * 1000
-        logger.error("model_test_failed", model=request.model, error=str(e))
+        logger.error("model_test_failed", model=request.model, error=str(e), exc_info=True)
         return ModelTestResponse(
             success=False,
             model=request.model,
@@ -618,7 +618,7 @@ async def reset_router():
             detail="LiteLLM not installed",
         ) from None
     except Exception as e:
-        logger.error("litellm_reset_failed", error=str(e))
+        logger.error("litellm_reset_failed", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset router: {str(e)}",

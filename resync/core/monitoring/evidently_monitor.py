@@ -475,7 +475,7 @@ class DriftDetector:
             return drift_detected, drift_score, report
 
         except Exception as e:
-            logger.error("data_drift_detection_error", error=str(e))
+            logger.error("data_drift_detection_error", error=str(e), exc_info=True)
             return False, 0.0, None
 
     def detect_prediction_drift(
@@ -529,7 +529,7 @@ class DriftDetector:
             return drift_detected, drift_score, report
 
         except Exception as e:
-            logger.error("prediction_drift_detection_error", error=str(e))
+            logger.error("prediction_drift_detection_error", error=str(e), exc_info=True)
             return False, 0.0, None
 
     def detect_target_drift(
@@ -593,7 +593,7 @@ class DriftDetector:
             return drift_detected, drift_score, report
 
         except Exception as e:
-            logger.error("target_drift_detection_error", error=str(e))
+            logger.error("target_drift_detection_error", error=str(e), exc_info=True)
             return False, 0.0, None
 
 
@@ -676,7 +676,7 @@ class AIMonitoringService:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("scheduler_error", error=str(e))
+                logger.error("scheduler_error", error=str(e), exc_info=True)
                 await asyncio.sleep(60)  # Wait before retry
 
     def _get_schedule_interval(self) -> int:
@@ -783,7 +783,7 @@ class AIMonitoringService:
             results["alerts"] = [a.to_dict() for a in self._alerts[-10:]]
 
         except Exception as e:
-            logger.error("monitoring_run_error", error=str(e))
+            logger.error("monitoring_run_error", error=str(e), exc_info=True)
             results["error"] = str(e)
 
         results["duration_seconds"] = time.time() - start_time

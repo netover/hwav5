@@ -817,7 +817,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         logger.info("websocket_client_disconnected", client_id=client_id)
     except Exception as e:
-        logger.error("websocket_error", client_id=client_id, error=str(e))
+        logger.error("websocket_error", client_id=client_id, error=str(e), exc_info=True)
     finally:
         await bus.unregister_websocket(client_id)
 

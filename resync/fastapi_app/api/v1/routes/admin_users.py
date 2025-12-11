@@ -6,19 +6,38 @@ Provides endpoints for:
 - Password management
 - Role/permission management
 - Account status management
+
+✅ PERSISTENT STORAGE (v5.3.12)
+==============================
+This module now uses PostgreSQL for persistent user storage via:
+- resync.core.database.models.AdminUser
+- resync.core.database.repositories.AdminUserRepository
+
+All user data is now persisted across restarts and shared between workers.
 """
 
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
+
+from resync.core.database.repositories import (
+    AdminUserRepository,
+    get_admin_user_repository,
+    verify_password,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-# Pydantic models for API
+# =============================================================================
+# PYDANTIC MODELS
+# =============================================================================
+
+
 class UserCreate(BaseModel):
     """Model for creating a user."""
 
@@ -51,6 +70,8 @@ class UserResponse(BaseModel):
     created_at: str
     last_login: str | None
 
+    model_config = {"from_attributes": True}
+
 
 class PasswordChange(BaseModel):
     """Model for password change."""
@@ -66,8 +87,34 @@ class BulkUserAction(BaseModel):
     action: str  # activate, deactivate, delete
 
 
-# In-memory user store (replace with database in production)
-_users = {}
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+
+def _user_to_response(user) -> UserResponse:
+    """Convert AdminUser model to UserResponse."""
+    return UserResponse(
+        id=str(user.id),
+        username=user.username,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        is_active=user.is_active,
+        is_verified=user.is_verified,
+        created_at=user.created_at.isoformat() if user.created_at else datetime.now().isoformat(),
+        last_login=user.last_login.isoformat() if user.last_login else None,
+    )
+
+
+def _get_repo() -> AdminUserRepository:
+    """Get the admin user repository."""
+    return get_admin_user_repository()
+
+
+# =============================================================================
+# API ROUTES
+# =============================================================================
 
 
 @router.get("/users", response_model=list[UserResponse], tags=["Admin Users"])
@@ -77,186 +124,362 @@ async def list_users(
     active_only: bool = False,
 ):
     """List all users with pagination."""
-    users = list(_users.values())
+    try:
+        repo = _get_repo()
+        users = await repo.list_users(skip=skip, limit=limit, active_only=active_only)
+        return [_user_to_response(u) for u in users]
+    except Exception as e:
+        logger.error(f"Error listing users: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list users",
+        ) from e
 
-    if active_only:
-        users = [u for u in users if u.get("is_active", True)]
 
-    return users[skip : skip + limit]
-
-
-@router.post(
-    "/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["Admin Users"]
-)
+@router.post("/users", response_model=UserResponse, tags=["Admin Users"])
 async def create_user(user: UserCreate):
     """Create a new user."""
-    import uuid
-    from datetime import datetime
+    try:
+        repo = _get_repo()
 
-    # Check if username exists
-    if any(u["username"] == user.username for u in _users.values()):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already exists",
+        # Check if username exists
+        existing = await repo.get_by_username(user.username)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Username '{user.username}' already exists",
+            )
+
+        # Check if email exists
+        existing = await repo.get_by_email(user.email)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Email '{user.email}' already exists",
+            )
+
+        # Create user
+        new_user = await repo.create_user(
+            username=user.username,
+            email=user.email,
+            password=user.password,
+            full_name=user.full_name,
+            role=user.role,
         )
 
-    # Check if email exists
-    if any(u["email"] == user.email for u in _users.values()):
+        logger.info(f"User created: {user.username}")
+        return _user_to_response(new_user)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating user: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already exists",
-        )
-
-    user_id = str(uuid.uuid4())
-
-    # Hash password (in production, use proper hashing)
-    from resync.fastapi_app.core.security import get_password_hash
-
-    hashed_password = get_password_hash(user.password)
-
-    new_user = {
-        "id": user_id,
-        "username": user.username,
-        "email": user.email,
-        "hashed_password": hashed_password,
-        "full_name": user.full_name,
-        "role": user.role,
-        "is_active": True,
-        "is_verified": False,
-        "created_at": datetime.utcnow().isoformat(),
-        "last_login": None,
-    }
-
-    _users[user_id] = new_user
-    logger.info(f"User created: {user.username}")
-
-    return UserResponse(**new_user)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create user",
+        ) from e
 
 
 @router.get("/users/{user_id}", response_model=UserResponse, tags=["Admin Users"])
 async def get_user(user_id: str):
     """Get user by ID."""
-    if user_id not in _users:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+    try:
+        repo = _get_repo()
+        user = await repo.get_by_id(int(user_id))
 
-    return UserResponse(**_users[user_id])
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User {user_id} not found",
+            )
+
+        return _user_to_response(user)
+
+    except HTTPException:
+        raise
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format",
+        ) from None
+    except Exception as e:
+        logger.error(f"Error getting user: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get user",
+        ) from e
 
 
 @router.put("/users/{user_id}", response_model=UserResponse, tags=["Admin Users"])
-async def update_user(user_id: str, user_update: UserUpdate):
+async def update_user(user_id: str, update: UserUpdate):
     """Update user details."""
-    if user_id not in _users:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
+    try:
+        repo = _get_repo()
+
+        # Check if user exists
+        user = await repo.get_by_id(int(user_id))
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User {user_id} not found",
+            )
+
+        # Check email uniqueness if being changed
+        if update.email and update.email != user.email:
+            existing = await repo.get_by_email(update.email)
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Email '{update.email}' already exists",
+                )
+
+        # Update user
+        updated_user = await repo.update_user(
+            user_id=int(user_id),
+            email=update.email,
+            full_name=update.full_name,
+            role=update.role,
         )
 
-    user = _users[user_id]
+        # Handle is_active separately
+        if update.is_active is not None:
+            if update.is_active:
+                await repo.activate_user(int(user_id))
+            else:
+                await repo.deactivate_user(int(user_id))
+            # Refresh user data
+            updated_user = await repo.get_by_id(int(user_id))
 
-    for field, value in user_update.dict(exclude_unset=True).items():
-        user[field] = value
+        logger.info(f"User updated: {user_id}")
+        return _user_to_response(updated_user)
 
-    logger.info(f"User updated: {user['username']}")
-    return UserResponse(**user)
-
-
-@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Users"])
-async def delete_user(user_id: str):
-    """Delete a user."""
-    if user_id not in _users:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    username = _users[user_id]["username"]
-    del _users[user_id]
-    logger.info(f"User deleted: {username}")
-
-
-@router.post(
-    "/users/{user_id}/change-password", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Users"]
-)
-async def change_password(user_id: str, password_change: PasswordChange):
-    """Change user password."""
-    if user_id not in _users:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    user = _users[user_id]
-
-    # Verify current password
-    from resync.fastapi_app.core.security import get_password_hash, verify_password
-
-    if not verify_password(password_change.current_password, user["hashed_password"]):
+    except HTTPException:
+        raise
+    except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect",
+            detail="Invalid user ID format",
+        ) from None
+    except Exception as e:
+        logger.error(f"Error updating user: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update user",
+        ) from e
+
+
+@router.delete("/users/{user_id}", tags=["Admin Users"])
+async def delete_user(user_id: str):
+    """Delete a user (soft delete - deactivates the account)."""
+    try:
+        repo = _get_repo()
+
+        # Check if user exists
+        user = await repo.get_by_id(int(user_id))
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User {user_id} not found",
+            )
+
+        username = user.username
+        await repo.delete_user(int(user_id))
+
+        logger.info(f"User deleted (deactivated): {username}")
+        return {"message": f"User '{username}' deleted successfully"}
+
+    except HTTPException:
+        raise
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format",
+        ) from None
+    except Exception as e:
+        logger.error(f"Error deleting user: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete user",
+        ) from e
+
+
+@router.post("/users/{user_id}/password", tags=["Admin Users"])
+async def change_password(user_id: str, password_change: PasswordChange):
+    """Change user password."""
+    try:
+        repo = _get_repo()
+
+        # Check if user exists
+        user = await repo.get_by_id(int(user_id))
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User {user_id} not found",
+            )
+
+        # Verify current password
+        if not verify_password(password_change.current_password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect",
+            )
+
+        # Change password
+        success = await repo.change_password(int(user_id), password_change.new_password)
+
+        if success:
+            logger.info(f"Password changed for user: {user_id}")
+            return {"message": "Password changed successfully"}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to change password",
         )
 
-    # Update password
-    user["hashed_password"] = get_password_hash(password_change.new_password)
-    logger.info(f"Password changed for user: {user['username']}")
+    except HTTPException:
+        raise
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format",
+        ) from None
+    except Exception as e:
+        logger.error(f"Error changing password: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to change password",
+        ) from e
 
 
-@router.post(
-    "/users/{user_id}/activate", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Users"]
-)
+@router.post("/users/{user_id}/activate", tags=["Admin Users"])
 async def activate_user(user_id: str):
     """Activate a user account."""
-    if user_id not in _users:
+    try:
+        repo = _get_repo()
+
+        # Check if user exists
+        user = await repo.get_by_id(int(user_id))
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User {user_id} not found",
+            )
+
+        await repo.activate_user(int(user_id))
+        logger.info(f"User activated: {user.username}")
+        return {"message": f"User '{user.username}' activated successfully"}
+
+    except HTTPException:
+        raise
+    except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format",
+        ) from None
+    except Exception as e:
+        logger.error(f"Error activating user: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to activate user",
+        ) from e
 
-    _users[user_id]["is_active"] = True
-    logger.info(f"User activated: {_users[user_id]['username']}")
 
-
-@router.post(
-    "/users/{user_id}/deactivate", status_code=status.HTTP_204_NO_CONTENT, tags=["Admin Users"]
-)
+@router.post("/users/{user_id}/deactivate", tags=["Admin Users"])
 async def deactivate_user(user_id: str):
     """Deactivate a user account."""
-    if user_id not in _users:
+    try:
+        repo = _get_repo()
+
+        # Check if user exists
+        user = await repo.get_by_id(int(user_id))
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User {user_id} not found",
+            )
+
+        await repo.deactivate_user(int(user_id))
+        logger.info(f"User deactivated: {user.username}")
+        return {"message": f"User '{user.username}' deactivated successfully"}
+
+    except HTTPException:
+        raise
+    except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format",
+        ) from None
+    except Exception as e:
+        logger.error(f"Error deactivating user: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to deactivate user",
+        ) from e
 
-    _users[user_id]["is_active"] = False
-    logger.info(f"User deactivated: {_users[user_id]['username']}")
+
+@router.post("/users/{user_id}/unlock", tags=["Admin Users"])
+async def unlock_user(user_id: str):
+    """Unlock a locked user account."""
+    try:
+        repo = _get_repo()
+
+        # Check if user exists
+        user = await repo.get_by_id(int(user_id))
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User {user_id} not found",
+            )
+
+        await repo.unlock_user(int(user_id))
+        logger.info(f"User unlocked: {user.username}")
+        return {"message": f"User '{user.username}' unlocked successfully"}
+
+    except HTTPException:
+        raise
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format",
+        ) from None
+    except Exception as e:
+        logger.error(f"Error unlocking user: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to unlock user",
+        ) from e
 
 
-@router.post("/users/bulk-action", tags=["Admin Users"])
+@router.post("/users/bulk", tags=["Admin Users"])
 async def bulk_user_action(action: BulkUserAction):
-    """Perform bulk action on multiple users."""
-    results = {"success": [], "failed": []}
+    """Perform bulk actions on users."""
+    try:
+        repo = _get_repo()
+        results: dict = {"success": [], "failed": []}
 
-    for user_id in action.user_ids:
-        if user_id not in _users:
-            results["failed"].append({"id": user_id, "reason": "Not found"})
-            continue
+        for user_id in action.user_ids:
+            try:
+                uid = int(user_id)
+                if action.action == "activate":
+                    await repo.activate_user(uid)
+                elif action.action == "deactivate":
+                    await repo.deactivate_user(uid)
+                elif action.action == "delete":
+                    await repo.delete_user(uid)
+                else:
+                    results["failed"].append({"id": user_id, "error": f"Unknown action: {action.action}"})
+                    continue
+                results["success"].append(user_id)
+            except Exception as e:
+                results["failed"].append({"id": user_id, "error": str(e)})
 
-        try:
-            if action.action == "activate":
-                _users[user_id]["is_active"] = True
-            elif action.action == "deactivate":
-                _users[user_id]["is_active"] = False
-            elif action.action == "delete":
-                del _users[user_id]
-            else:
-                results["failed"].append({"id": user_id, "reason": "Unknown action"})
-                continue
+        success_count = len(results["success"])
+        failed_count = len(results["failed"])
+        logger.info(f"Bulk action '{action.action}' completed: {success_count} success, {failed_count} failed")
+        return results
 
-            results["success"].append(user_id)
-        except Exception as e:
-            results["failed"].append({"id": user_id, "reason": str(e)})
-
-    return results
+    except Exception as e:
+        logger.error(f"Error in bulk action: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to perform bulk action",
+        ) from e

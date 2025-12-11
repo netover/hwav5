@@ -1,9 +1,24 @@
+"""
+System status routes for FastAPI.
+
+WARNING: EPHEMERAL STATE
+========================
+The _status_store is an in-memory dictionary that:
+- Is NOT shared between multiple worker processes
+- Is NOT persisted across server restarts
+- Is intended for development/demo purposes only
+
+For production deployments with multiple workers, replace with:
+- Redis for fast, shared state
+- PostgreSQL for persistent state
+- Or configure single-worker deployment if acceptable
+
+This is by design for the current scope - the status data is
+considered "best-effort" and non-critical.
+"""
 import platform
 from datetime import datetime
 
-"""
-System status routes for FastAPI
-"""
 from fastapi import APIRouter, Depends  # noqa: E402
 
 from ..dependencies import get_logger  # noqa: E402
@@ -11,11 +26,69 @@ from ..models.response_models import SystemStatusResponse  # noqa: E402
 
 router = APIRouter()
 
-# In-memory status store (replace with Redis/DB in production)
-_status_store = {
-    "workstations": [],
-    "jobs": [],
-}
+
+# Status store with Redis fallback for multi-worker deployments
+class StatusStore:
+    """
+    Status store with Redis fallback for production multi-worker deployments.
+    
+    In development (single worker), uses in-memory dict.
+    In production with Redis, uses Redis for shared state.
+    """
+    
+    def __init__(self):
+        self._local_store: dict = {"workstations": [], "jobs": []}
+        self._redis = None
+        self._redis_checked = False
+    
+    def _get_redis(self):
+        """Lazy load Redis connection if available."""
+        if self._redis_checked:
+            return self._redis
+        
+        self._redis_checked = True
+        try:
+            import os
+            redis_url = os.getenv("REDIS_URL")
+            if redis_url and not os.getenv("RESYNC_DISABLE_REDIS", "").lower() == "true":
+                import redis
+                self._redis = redis.from_url(redis_url, decode_responses=True)
+                self._redis.ping()  # Test connection
+        except Exception:
+            self._redis = None
+        return self._redis
+    
+    def get(self, key: str, default=None):
+        """Get value from store (Redis or local)."""
+        r = self._get_redis()
+        if r:
+            try:
+                import json
+                val = r.get(f"resync:status:{key}")
+                return json.loads(val) if val else default
+            except Exception:
+                pass
+        return self._local_store.get(key, default)
+    
+    def set(self, key: str, value):
+        """Set value in store (Redis or local)."""
+        r = self._get_redis()
+        if r:
+            try:
+                import json
+                r.set(f"resync:status:{key}", json.dumps(value), ex=3600)
+            except Exception:
+                pass
+        self._local_store[key] = value
+    
+    def __getitem__(self, key):
+        return self.get(key, [])
+    
+    def __setitem__(self, key, value):
+        self.set(key, value)
+
+
+_status_store = StatusStore()
 
 
 def get_system_metrics() -> dict:
@@ -63,7 +136,7 @@ async def get_system_status(logger_instance=Depends(get_logger)):
         )
 
     except Exception as e:
-        logger_instance.error("system_status_retrieval_error", error=str(e))
+        logger_instance.error("system_status_retrieval_error", error=str(e), exc_info=True)
         return SystemStatusResponse(workstations=[], jobs=[], timestamp=datetime.now().isoformat())
 
 

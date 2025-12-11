@@ -120,6 +120,7 @@ except ImportError:
                     agent_name=self.name,
                     error=str(e),
                     error_type=type(e).__name__,
+                    exc_info=True,
                 )
                 return result
 
@@ -306,6 +307,7 @@ class AgentManager:
                         "agent_config_parse_error",
                         agent=agent_data.get("id", "unknown"),
                         error=str(e),
+                        exc_info=True,
                     )
 
             if loaded_configs:
@@ -322,9 +324,9 @@ class AgentManager:
                 )
 
         except yaml.YAMLError as e:
-            logger.error("agent_config_yaml_error", file=str(config_file), error=str(e))
+            logger.error("agent_config_yaml_error", file=str(config_file), error=str(e), exc_info=True)
         except Exception as e:
-            logger.error("agent_config_load_error", file=str(config_file), error=str(e))
+            logger.error("agent_config_load_error", file=str(config_file), error=str(e), exc_info=True)
 
     async def get_agent(self, agent_id: str) -> Any:
         """Retrieves an agent by its ID."""
@@ -362,7 +364,7 @@ class AgentManager:
                         try:
                             self.tws_client = await get_service(ITWSClient)
                         except Exception as e:
-                            logger.warning(f"Failed to get TWS client: {e}")
+                            logger.warning(f"Failed to get TWS client: {e}", exc_info=True)
                             self.tws_client = None
 
             # Create agent with tools
@@ -388,7 +390,7 @@ class AgentManager:
             return agent
 
         except Exception as e:
-            logger.error(f"Failed to create agent '{agent_id}': {e}")
+            logger.error(f"Failed to create agent '{agent_id}': {e}", exc_info=True)
             return None
 
     async def get_all_agents(self) -> list[AgentConfig]:
@@ -409,7 +411,7 @@ class AgentManager:
 
             return get_service(ITWSClient)()
         except Exception as e:
-            logger.warning(f"Failed to get TWS client: {e}")
+            logger.warning(f"Failed to get TWS client: {e}", exc_info=True)
             return None
 
     async def get_tws_client(self) -> Any:

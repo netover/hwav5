@@ -405,7 +405,7 @@ class LLMService:
                         agent_id=agent_id,
                     )
             except Exception as e:
-                logger.warning("prompt_manager_fallback", error=str(e))
+                logger.warning("prompt_manager_fallback", error=str(e), exc_info=True)
 
         # Fallback to hardcoded prompt
         if not system_message:
@@ -465,7 +465,7 @@ class LLMService:
                     system_message = prompt.compile(rag_context=context)
                     logger.debug("rag_prompt_loaded_from_manager", prompt_id=prompt.id)
             except Exception as e:
-                logger.warning("rag_prompt_manager_fallback", error=str(e))
+                logger.warning("rag_prompt_manager_fallback", error=str(e), exc_info=True)
 
         # Fallback to hardcoded prompt
         if not system_message:

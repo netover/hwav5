@@ -465,7 +465,7 @@ class MetricsCollector:
             try:
                 await collector()
             except Exception as e:
-                logger.error(f"Custom collector failed: {e}")
+                logger.error(f"Custom collector failed: {e}", exc_info=True)
 
         # Format as Prometheus text format
         output_lines = [
@@ -544,7 +544,7 @@ class MetricsCollector:
                     continue
 
         except Exception as e:
-            logger.error(f"System metrics collection failed: {e}")
+            logger.error(f"System metrics collection failed: {e}", exc_info=True)
 
     async def _collect_application_metrics(self) -> None:
         """Collect application-level metrics."""
@@ -565,7 +565,7 @@ class MetricsCollector:
                 self.set_gauge("app.process.cpu_percent", cpu_percent)
 
             except Exception as e:
-                logger.error(f"Process metrics collection failed: {e}")
+                logger.error(f"Process metrics collection failed: {e}", exc_info=True)
 
     async def _metrics_collection_worker(self) -> None:
         """Background worker for periodic metrics collection."""
@@ -587,7 +587,7 @@ class MetricsCollector:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Metrics collection worker error: {e}")
+                logger.error(f"Metrics collection worker error: {e}", exc_info=True)
 
     def get_alert_rules_prometheus_format(self) -> str:
         """Get alert rules in Prometheus format."""

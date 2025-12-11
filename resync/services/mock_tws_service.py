@@ -102,6 +102,7 @@ class MockTWSClient:
                 "Unexpected error loading mock data from %s: %s",
                 mock_data_path,
                 e,
+                exc_info=True,
             )
             self.mock_data = {}
             # In a production environment, consider raising a FileProcessingError here
@@ -169,7 +170,7 @@ class MockTWSClient:
                 try:
                     workstations.append(WorkstationStatus(**ws))
                 except Exception as e:
-                    logger.warning(f"Failed to create WorkstationStatus from data: {e}")
+                    logger.warning(f"Failed to create WorkstationStatus from data: {e}", exc_info=True)
         return workstations
 
     async def get_jobs_status(self) -> list[JobStatus]:
@@ -190,7 +191,7 @@ class MockTWSClient:
                 try:
                     jobs.append(JobStatus(**job))
                 except Exception as e:
-                    logger.warning(f"Failed to create JobStatus from data: {e}")
+                    logger.warning(f"Failed to create JobStatus from data: {e}", exc_info=True)
         return jobs
 
     async def get_critical_path_status(self) -> list[CriticalJob]:
@@ -210,7 +211,7 @@ class MockTWSClient:
                 try:
                     critical_jobs.append(CriticalJob(**job))
                 except Exception as e:
-                    logger.warning(f"Failed to create CriticalJob from data: {e}")
+                    logger.warning(f"Failed to create CriticalJob from data: {e}", exc_info=True)
         return critical_jobs
 
     async def get_system_status(self) -> SystemStatus:

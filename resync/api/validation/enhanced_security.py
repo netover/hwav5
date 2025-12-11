@@ -809,7 +809,7 @@ class EnhancedSecurityValidator:
                 return pwd_context.hash(truncated_password)
             except Exception as e:
                 # CRITICAL SECURITY: Never fall back to plain text
-                logger.error(f"Password hashing failed: {e}")
+                logger.error(f"Password hashing failed: {e}", exc_info=True)
                 raise RuntimeError(
                     "Password hashing failed - cannot proceed with insecure storage"
                 ) from None
@@ -849,7 +849,7 @@ class EnhancedSecurityValidator:
             try:
                 return pwd_context.verify(truncated_password, hashed_password)
             except Exception as e:
-                logger.error(f"Password verification failed: {e}")
+                logger.error(f"Password verification failed: {e}", exc_info=True)
                 return False
 
         # CRITICAL SECURITY: No insecure fallback allowed

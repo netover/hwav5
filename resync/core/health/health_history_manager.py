@@ -148,7 +148,7 @@ class HealthHistoryManager:
                     self.health_history = self.health_history[-min_entries:]
 
             except Exception as e:
-                logger.error("error_during_health_history_cleanup", error=str(e))
+                logger.error("error_during_health_history_cleanup", error=str(e), exc_info=True)
 
     async def _update_memory_usage(self) -> None:
         """Update memory usage tracking for health history."""
@@ -171,7 +171,7 @@ class HealthHistoryManager:
                 self._memory_usage_mb = 0.0
 
         except Exception as e:
-            logger.error("error_updating_memory_usage", error=str(e))
+            logger.error("error_updating_memory_usage", error=str(e), exc_info=True)
 
     def get_memory_usage(self) -> dict[str, Any]:
         """

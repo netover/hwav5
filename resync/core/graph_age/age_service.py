@@ -106,7 +106,7 @@ class AGEGraphService:
                 logger.info("age_graph_service_initialized", graph=GRAPH_NAME)
 
             except Exception as e:
-                logger.error("age_graph_init_failed", error=str(e))
+                logger.error("age_graph_init_failed", error=str(e), exc_info=True)
                 # Continue with limited functionality
                 self._initialized = True
 
@@ -136,6 +136,7 @@ class AGEGraphService:
                         "age_extension_not_available",
                         error=str(e),
                         hint="Install Apache AGE extension or use fallback",
+                        exc_info=True,
                     )
 
     async def _ensure_graph(self) -> None:
@@ -162,7 +163,7 @@ class AGEGraphService:
                     logger.info("age_graph_created", graph=GRAPH_NAME)
 
             except Exception as e:
-                logger.warning("age_graph_check_failed", error=str(e))
+                logger.warning("age_graph_check_failed", error=str(e), exc_info=True)
 
     # =========================================================================
     # CYPHER EXECUTION HELPERS
@@ -213,7 +214,7 @@ class AGEGraphService:
                 return results
 
             except Exception as e:
-                logger.error("cypher_execution_failed", query=cypher_query[:100], error=str(e))
+                logger.error("cypher_execution_failed", query=cypher_query[:100], error=str(e), exc_info=True)
                 return []
 
     async def _execute_cypher_write(
@@ -244,7 +245,7 @@ class AGEGraphService:
                 return True
 
             except Exception as e:
-                logger.error("cypher_write_failed", query=cypher_query[:100], error=str(e))
+                logger.error("cypher_write_failed", query=cypher_query[:100], error=str(e), exc_info=True)
                 await session.rollback()
                 return False
 

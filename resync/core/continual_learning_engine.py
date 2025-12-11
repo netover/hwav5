@@ -329,7 +329,7 @@ class ContinualLearningEngine:
                 user_id=user_id,
             )
         except Exception as e:
-            logger.warning(f"Feedback retrieval failed, using basic: {e}")
+            logger.warning(f"Feedback retrieval failed, using basic: {e}", exc_info=True)
             return []
 
     async def _evaluate_for_review(
@@ -354,7 +354,7 @@ class ContinualLearningEngine:
             )
             return needs_review, request.to_dict() if request else None
         except Exception as e:
-            logger.warning(f"Active learning evaluation failed: {e}")
+            logger.warning(f"Active learning evaluation failed: {e}", exc_info=True)
             return False, None
 
     # =========================================================================
@@ -399,7 +399,7 @@ class ContinualLearningEngine:
                     )
                 result.feedback_stored = True
             except Exception as e:
-                logger.warning(f"Feedback storage failed: {e}")
+                logger.warning(f"Feedback storage failed: {e}", exc_info=True)
 
         # Step 2: Trigger audit pipeline for negative feedback
         if trigger_audit and rating < 0 and self.enable_audit_pipeline:
@@ -419,7 +419,7 @@ class ContinualLearningEngine:
                 )
                 self._audit_processes += 1
             except Exception as e:
-                logger.warning(f"Audit pipeline failed: {e}")
+                logger.warning(f"Audit pipeline failed: {e}", exc_info=True)
 
         self._feedback_recorded += 1
         result.message = "Feedback processed successfully"
@@ -461,7 +461,7 @@ class ContinualLearningEngine:
                 result.feedback_stored = count > 0
                 result.message = f"Recorded {count} implicit feedback records"
             except Exception as e:
-                logger.warning(f"Implicit feedback failed: {e}")
+                logger.warning(f"Implicit feedback failed: {e}", exc_info=True)
                 result.success = False
                 result.message = str(e)
 
@@ -499,7 +499,7 @@ class ContinualLearningEngine:
             self._audit_processes += 1
             return result
         except Exception as e:
-            logger.error(f"Audit processing failed: {e}")
+            logger.error(f"Audit processing failed: {e}", exc_info=True)
             return {"status": "error", "error": str(e)}
 
     # =========================================================================
@@ -526,7 +526,7 @@ class ContinualLearningEngine:
             )
             return [r.to_dict() for r in requests]
         except Exception as e:
-            logger.warning(f"Failed to get pending reviews: {e}")
+            logger.warning(f"Failed to get pending reviews: {e}", exc_info=True)
             return []
 
     async def submit_review(
@@ -551,7 +551,7 @@ class ContinualLearningEngine:
                 feedback=feedback,
             )
         except Exception as e:
-            logger.error(f"Review submission failed: {e}")
+            logger.error(f"Review submission failed: {e}", exc_info=True)
             return False
 
     # =========================================================================
@@ -579,28 +579,28 @@ class ContinualLearningEngine:
         try:
             if self.enable_enrichment and self._enricher:
                 stats["enrichment"] = self._enricher.get_statistics()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("enrichment_stats_failed", error=str(e), exc_info=True)
 
         try:
             if self.enable_feedback_rag and self._feedback_retriever:
                 stats["feedback_rag"] = self._feedback_retriever.get_retriever_stats()
                 stats["feedback_store"] = await self._feedback_retriever.get_feedback_stats()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("feedback_rag_stats_failed", error=str(e), exc_info=True)
 
         try:
             if self.enable_active_learning and self._active_learning:
                 stats["active_learning"] = self._active_learning.get_statistics()
                 stats["review_queue"] = await self._active_learning.get_queue_statistics()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("active_learning_stats_failed", error=str(e), exc_info=True)
 
         try:
             if self.enable_audit_pipeline and self._audit_pipeline:
                 stats["audit_pipeline"] = self._audit_pipeline.get_statistics()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("audit_pipeline_stats_failed", error=str(e), exc_info=True)
 
         return stats
 

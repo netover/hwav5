@@ -339,7 +339,7 @@ class IntentClassifier:
                         },
                     )
             except Exception as e:
-                logger.warning("llm_classification_failed", error=str(e))
+                logger.warning("llm_classification_failed", error=str(e), exc_info=True)
 
         return classification
 
@@ -461,7 +461,7 @@ class AgentRouter:
             response = await handler.handle(message, context, classification)
             tools_used = getattr(handler, "last_tools_used", [])
         except Exception as e:
-            logger.error("handler_error", error=str(e), handler=type(handler).__name__)
+            logger.error("handler_error", error=str(e), handler=type(handler).__name__, exc_info=True)
             response = (
                 "Desculpe, ocorreu um erro ao processar sua solicitação. "
                 "Por favor, tente novamente ou reformule sua pergunta."
@@ -548,7 +548,7 @@ class StatusHandler(BaseHandler):
             return await self._get_agent_response("tws-general", message)
 
         except Exception as e:
-            logger.error("status_handler_error", error=str(e))
+            logger.error("status_handler_error", error=str(e), exc_info=True)
             return (
                 "Não foi possível obter o status do sistema no momento. "
                 "Verifique se a conexão com o TWS está ativa."
@@ -587,7 +587,7 @@ class TroubleshootingHandler(BaseHandler):
             return await self._get_agent_response("tws-troubleshooting", message)
 
         except Exception as e:
-            logger.error("troubleshooting_handler_error", error=str(e))
+            logger.error("troubleshooting_handler_error", error=str(e), exc_info=True)
             return (
                 "Não foi possível realizar a análise de problemas. "
                 "Tente verificar manualmente o console do TWS."

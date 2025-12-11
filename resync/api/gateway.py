@@ -28,6 +28,8 @@ from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import aiohttp
+
+from resync.settings import settings
 import jwt
 from aiohttp import web
 
@@ -466,8 +468,9 @@ class APIGateway:
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
             try:
-                # This would validate JWT token (simplified)
-                payload = jwt.decode(token, "secret", algorithms=["HS256"])
+                # Validate JWT token using configured secret key
+                secret_key = settings.secret_key.get_secret_value() if hasattr(settings.secret_key, 'get_secret_value') else str(settings.secret_key)
+                payload = jwt.decode(token, secret_key, algorithms=["HS256"])
                 request["user_id"] = payload.get("user_id")
                 request["user_roles"] = payload.get("roles", [])
                 return {"authenticated": True}
@@ -749,7 +752,7 @@ class APIGateway:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Cleanup worker error: {e}")
+                logger.error(f"Cleanup worker error: {e}", exc_info=True)
 
     async def _health_check_worker(self) -> None:
         """Background worker for service health checks."""
@@ -768,7 +771,7 @@ class APIGateway:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Health check worker error: {e}")
+                logger.error(f"Health check worker error: {e}", exc_info=True)
 
     async def _metrics_worker(self) -> None:
         """Background worker for metrics collection."""
@@ -790,7 +793,7 @@ class APIGateway:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Metrics worker error: {e}")
+                logger.error(f"Metrics worker error: {e}", exc_info=True)
 
     def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive gateway metrics."""

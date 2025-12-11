@@ -112,25 +112,25 @@ class LLMFactory:
             logger.error("llm_timeout", timeout_seconds=timeout)
             raise LLMError(f"LLM call timed out after {timeout} seconds") from None
         except ContentPolicyViolationError as e:
-            logger.warning("llm_content_policy_violation", error=str(e))
+            logger.warning("llm_content_policy_violation", error=str(e), exc_info=True)
             raise LLMError(f"Content policy violation: {str(e)}") from e
         except ContextWindowExceededError as e:
-            logger.error("llm_context_window_exceeded", error=str(e))
+            logger.error("llm_context_window_exceeded", error=str(e), exc_info=True)
             raise LLMError(f"Context window exceeded: {str(e)}") from e
         except AuthenticationError as e:
-            logger.error("llm_authentication_error", error=str(e))
+            logger.error("llm_authentication_error", error=str(e), exc_info=True)
             raise LLMError(f"Authentication error: {str(e)}") from e
         except RateLimitError as e:
-            logger.warning("llm_rate_limit_exceeded", error=str(e))
+            logger.warning("llm_rate_limit_exceeded", error=str(e), exc_info=True)
             raise LLMError(f"Rate limit exceeded: {str(e)}") from e
         except InvalidRequestError as e:
-            logger.error("llm_invalid_request", error=str(e))
+            logger.error("llm_invalid_request", error=str(e), exc_info=True)
             raise LLMError(f"Invalid request: {str(e)}") from e
         except APIError as e:
-            logger.error("llm_api_error", error=str(e))
+            logger.error("llm_api_error", error=str(e), exc_info=True)
             raise LLMError(f"API error: {str(e)}") from e
         except Exception as e:
-            logger.error("llm_unexpected_error", error=str(e))
+            logger.error("llm_unexpected_error", error=str(e), exc_info=True)
             raise LLMError(f"Unexpected error: {str(e)}") from e
 
 

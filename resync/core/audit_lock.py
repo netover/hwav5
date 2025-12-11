@@ -308,11 +308,12 @@ class AuditLockContext:
             logger.error("Value error during lock release: %s", e)
             raise AuditError(f"Value error during lock release: {e}") from e
         except Exception as e:
-            logger.error("Unexpected error during lock release", error=str(e))
+            logger.error("Unexpected error during lock release", error=str(e), exc_info=True)
             logger.error(
                 "lock_details",
                 key=self.lock_key,
                 value=self.lock_value[:8] if self.lock_value else None,
+                exc_info=True,
             )
             raise AuditError(f"Unexpected error during lock release: {e}") from e
 

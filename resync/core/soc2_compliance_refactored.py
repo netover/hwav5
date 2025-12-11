@@ -550,7 +550,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             return test_result
 
         except Exception as e:
-            logger.error(f"Control testing failed for {control_id}: {e}")
+            logger.error(f"Control testing failed for {control_id}: {e}", exc_info=True)
             control.mark_tested(False)
             return {"success": False, "error": str(e)}
 
@@ -821,7 +821,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Control testing worker error: {e}")
+                logger.error(f"Control testing worker error: {e}", exc_info=True)
 
     async def _monitoring_worker(self) -> None:
         """Background worker for continuous monitoring."""
@@ -850,7 +850,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Monitoring worker error: {e}")
+                logger.error(f"Monitoring worker error: {e}", exc_info=True)
 
     async def _reporting_worker(self) -> None:
         """Background worker for compliance reporting."""
@@ -874,7 +874,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Reporting worker error: {e}")
+                logger.error(f"Reporting worker error: {e}", exc_info=True)
 
     def _generate_recommendations(self, report: dict[str, Any]) -> list[str]:
         """Generate recommendations based on compliance report."""

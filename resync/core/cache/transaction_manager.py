@@ -191,6 +191,7 @@ class CacheTransactionManager:
                 "Failed to commit transaction",
                 transaction_id=transaction_id,
                 error=str(e),
+                exc_info=True,
             )
             return False
 
@@ -247,6 +248,7 @@ class CacheTransactionManager:
                 "Failed to rollback transaction",
                 transaction_id=transaction_id,
                 error=str(e),
+                exc_info=True,
             )
             return False
 

@@ -213,7 +213,7 @@ class PDFParser:
                 metadata.update(self._detect_tws_info(first_page))
 
         except Exception as e:
-            logger.warning(f"Error extracting PDF metadata: {e}")
+            logger.warning(f"Error extracting PDF metadata: {e}", exc_info=True)
 
         return metadata
 
@@ -745,7 +745,7 @@ class DocumentationFetcher:
 
     def _get_cache_path(self, url: str) -> Path:
         """Get cache file path for URL."""
-        url_hash = hashlib.md5(url.encode()).hexdigest()
+        url_hash = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
         return self.cache_dir / f"{url_hash}.html"
 
 

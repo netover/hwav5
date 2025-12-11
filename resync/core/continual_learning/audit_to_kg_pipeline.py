@@ -389,6 +389,7 @@ class AuditToKGPipeline:
                     "failed_to_add_triplet",
                     subject=triplet.subject,
                     error=str(e),
+                    exc_info=True,
                 )
 
         return added
@@ -454,7 +455,7 @@ class AuditToKGPipeline:
             )
 
         except Exception as e:
-            logger.warning("failed_to_get_error_patterns", error=str(e))
+            logger.warning("failed_to_get_error_patterns", error=str(e), exc_info=True)
 
         return patterns
 
@@ -483,8 +484,8 @@ class AuditToKGPipeline:
                     # This would query the graph for error edges
                     # For now, return False (no known issues)
                     pass
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("kg_error_check_failed", error=str(e), exc_info=True)
 
         return False, None
 

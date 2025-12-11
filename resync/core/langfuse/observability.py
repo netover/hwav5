@@ -243,7 +243,7 @@ class LangFuseTracer:
                 )
                 logger.info("langfuse_tracer_initialized")
             except Exception as e:
-                logger.warning("langfuse_tracer_init_failed", error=str(e))
+                logger.warning("langfuse_tracer_init_failed", error=str(e), exc_info=True)
 
         self._initialized = True
 
@@ -300,7 +300,7 @@ class LangFuseTracer:
                 )
 
         except Exception as e:
-            trace.complete(error=str(e))
+            trace.complete(error=str(e), exc_info=True)
             trace.error_type = type(e).__name__
             raise
         finally:
@@ -374,7 +374,7 @@ class LangFuseTracer:
                 model=trace.model,
             )
         except Exception as e:
-            logger.warning("langfuse_trace_failed", error=str(e), trace_id=trace.trace_id)
+            logger.warning("langfuse_trace_failed", error=str(e), trace_id=trace.trace_id, exc_info=True)
 
     def start_session(
         self, user_id: str | None = None, metadata: dict[str, Any] | None = None

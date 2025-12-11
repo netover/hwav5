@@ -22,7 +22,7 @@ from fastapi import (  # noqa: E402
     status,
 )
 
-from ...services.rag_service import RAGIntegrationService, get_rag_service  # noqa: E402
+from resync.fastapi_app.services.rag_service import RAGIntegrationService, get_rag_service  # noqa: E402
 from ..dependencies import get_current_user, get_logger  # noqa: E402
 from ..models.request_models import FileUploadValidation  # noqa: E402
 from ..models.response_models import FileUploadResponse  # noqa: E402
@@ -244,7 +244,7 @@ async def list_rag_files(
         return {"files": files, "total": len(files)}
 
     except Exception as e:
-        logger_instance.error("rag_files_listing_error", error=str(e))
+        logger_instance.error("rag_files_listing_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to list RAG files"
         ) from e

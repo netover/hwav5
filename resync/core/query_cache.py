@@ -253,7 +253,7 @@ class QueryCacheManager:
             return result
 
         except Exception as e:
-            logger.error(f"Query execution failed: {e}")
+            logger.error(f"Query execution failed: {e}", exc_info=True)
             self._update_cache_stats(hit=False, execution_time=time.time() - start_time, error=True)
             raise
 
@@ -368,7 +368,7 @@ class QueryCacheManager:
                 # Result invalidated due to table changes
                 await self.cache_manager.invalidate(cache_key, cascade=False)
         except Exception as e:
-            logger.warning(f"Cache retrieval error for {cache_key}: {e}")
+            logger.warning(f"Cache retrieval error for {cache_key}: {e}", exc_info=True)
 
         return None
 

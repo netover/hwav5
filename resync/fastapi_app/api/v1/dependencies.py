@@ -2,6 +2,9 @@
 FastAPI Dependencies.
 
 Provides dependency injection for FastAPI routes using PostgreSQL.
+
+This module re-exports common dependencies from resync.api.dependencies
+for backward compatibility with routes that import from this location.
 """
 
 import logging
@@ -16,8 +19,31 @@ from resync.core.database.repositories import (
     MetricsStore,
     TWSStore,
 )
+from resync.core.structured_logger import get_logger
+
+# Re-export from resync.api.dependencies for backward compatibility
+from resync.api.dependencies import (
+    check_rate_limit,
+    get_current_user,
+)
 
 logger = logging.getLogger(__name__)
+
+# Export all public symbols
+__all__ = [
+    # Database
+    "get_database",
+    # Stores
+    "get_tws_store",
+    "get_context_store", 
+    "get_metrics_store",
+    "get_feedback_store",
+    "cleanup_dependencies",
+    # Re-exports
+    "check_rate_limit",
+    "get_current_user",
+    "get_logger",
+]
 
 
 # Database Session Dependencies

@@ -130,7 +130,7 @@ class CacheWithStampedeProtection(Generic[T]):
             return value
 
         except Exception as e:
-            logger.error(f"Failed to load cache key {key}: {e}")
+            logger.error(f"Failed to load cache key {key}: {e}", exc_info=True)
             # Cache the exception for a short time to prevent repeated failures
             error_entry = CacheEntry(e, time.time() + 30, is_loading=False)
             self._cache[key] = error_entry

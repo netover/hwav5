@@ -104,7 +104,7 @@ class RedisHealthMonitor:
             except (RedisError, RedisTimeoutError) as e:
                 response_time = (time.time() - start_time) * 1000
 
-                logger.error("redis_connectivity_test_failed", error=str(e))
+                logger.error("redis_connectivity_test_failed", error=str(e), exc_info=True)
                 return ComponentHealth(
                     name="redis",
                     component_type=ComponentType.REDIS,
@@ -127,7 +127,7 @@ class RedisHealthMonitor:
             # Sanitize error message for security
             secure_message = str(e)
 
-            logger.error("redis_health_check_failed", error=str(e))
+            logger.error("redis_health_check_failed", error=str(e), exc_info=True)
             return ComponentHealth(
                 name="redis",
                 component_type=ComponentType.REDIS,
@@ -161,6 +161,7 @@ class RedisHealthMonitor:
                         component_name=component_name,
                         max_retries=max_retries,
                         error=str(e),
+                        exc_info=True,
                     )
                     raise
 
@@ -172,6 +173,7 @@ class RedisHealthMonitor:
                     max_retries=max_retries,
                     wait_time=wait_time,
                     error=str(e),
+                    exc_info=True,
                 )
                 await asyncio.sleep(wait_time)
 

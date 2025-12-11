@@ -247,7 +247,7 @@ class AdvancedCacheManager:
             self.redis_enabled = True
             logger.info("Redis integration enabled for advanced caching")
         except Exception as e:
-            logger.warning(f"Redis not available for caching: {e}")
+            logger.warning(f"Redis not available for caching: {e}", exc_info=True)
             self.redis_enabled = False
 
         self._running = True
@@ -331,7 +331,7 @@ class AdvancedCacheManager:
                 self._record_miss(time.time() - start_time)
                 return value
             except Exception as e:
-                logger.error(f"Failed to fetch data for key {key}: {e}")
+                logger.error(f"Failed to fetch data for key {key}: {e}", exc_info=True)
                 self._record_miss(time.time() - start_time)
                 raise
 
@@ -485,7 +485,7 @@ class AdvancedCacheManager:
                 logger.debug(f"Warmed cache key: {key}")
 
             except Exception as e:
-                logger.warning(f"Failed to warm cache key {key_config.get('key', 'unknown')}: {e}")
+                logger.warning(f"Failed to warm cache key {key_config.get('key', 'unknown')}: {e}", exc_info=True)
 
         logger.info(f"Cache warming completed: {warmed} keys warmed")
         return warmed
@@ -563,7 +563,7 @@ class AdvancedCacheManager:
             if value_json:
                 return json.loads(value_json)
         except Exception as e:
-            logger.warning(f"Redis get error for key {key}: {e}")
+            logger.warning(f"Redis get error for key {key}: {e}", exc_info=True)
 
         return None
 
@@ -576,7 +576,7 @@ class AdvancedCacheManager:
             value_json = json.dumps(value)
             await self.redis_client.set(key, value_json, ex=ttl)
         except Exception as e:
-            logger.warning(f"Redis set error for key {key}: {e}")
+            logger.warning(f"Redis set error for key {key}: {e}", exc_info=True)
 
     def _calculate_ttl(self, key: str, value: Any) -> int:
         """Calculate appropriate TTL based on key patterns and value characteristics."""
@@ -677,7 +677,7 @@ class AdvancedCacheManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Cache cleanup error: {e}")
+                logger.error(f"Cache cleanup error: {e}", exc_info=True)
 
     async def _warming_loop(self) -> None:
         """Background cache warming based on access patterns."""
@@ -703,7 +703,7 @@ class AdvancedCacheManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Cache warming error: {e}")
+                logger.error(f"Cache warming error: {e}", exc_info=True)
 
 
 # Global cache manager instance

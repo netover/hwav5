@@ -44,8 +44,10 @@ class PgVectorPersistence:
                 "postgresql+asyncpg://", "postgresql://"
             )
 
-        self._snapshot_dir = Path(os.getenv("RAG_SNAPSHOT_DIR", "/tmp/rag_snapshots"))
-        self._snapshot_dir.mkdir(parents=True, exist_ok=True)
+        # Use configured directory or default to data/rag_snapshots (not /tmp)
+        default_snapshot_dir = Path.home() / ".resync" / "rag_snapshots"
+        self._snapshot_dir = Path(os.getenv("RAG_SNAPSHOT_DIR", str(default_snapshot_dir)))
+        self._snapshot_dir.mkdir(parents=True, exist_ok=True, mode=0o700)  # Restricted permissions
 
     async def create_collection_snapshot(self, collection: str | None = None) -> str:
         """

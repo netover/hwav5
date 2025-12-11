@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # Environment
     environment: str = "development"
-    debug: bool = True
+    debug: bool = False  # Default to False for security; set via DEBUG env var
 
     # Security - SECRET_KEY must be set via environment variable in production
     secret_key: SecretStr = SecretStr("CHANGE_ME_IN_PRODUCTION_USE_ENV_VAR")

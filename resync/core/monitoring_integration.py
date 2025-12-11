@@ -104,7 +104,7 @@ async def initialize_proactive_monitoring(app: FastAPI) -> None:
         )
 
     except Exception as e:
-        logger.error("proactive_monitoring_initialization_failed", error=str(e))
+        logger.error("proactive_monitoring_initialization_failed", error=str(e), exc_info=True)
         # Não falha o startup, apenas loga o erro
 
 
@@ -128,7 +128,7 @@ async def shutdown_proactive_monitoring(app: FastAPI) -> None:
         logger.info("proactive_monitoring_shutdown_complete")
 
     except Exception as e:
-        logger.error("proactive_monitoring_shutdown_error", error=str(e))
+        logger.error("proactive_monitoring_shutdown_error", error=str(e), exc_info=True)
 
 
 def register_monitoring_routes(app: FastAPI) -> None:
@@ -146,7 +146,7 @@ def register_monitoring_routes(app: FastAPI) -> None:
         logger.info("monitoring_routes_registered")
 
     except ImportError as e:
-        logger.warning("monitoring_routes_not_available", error=str(e))
+        logger.warning("monitoring_routes_not_available", error=str(e), exc_info=True)
 
 
 def register_dashboard_route(app: FastAPI) -> None:
@@ -216,7 +216,7 @@ async def _get_tws_client() -> Any | None:
         return app_container.tws_client()
 
     except Exception as e:
-        logger.warning("failed_to_get_tws_client", error=str(e))
+        logger.warning("failed_to_get_tws_client", error=str(e), exc_info=True)
         return None
 
 
@@ -228,7 +228,7 @@ async def _get_llm_client() -> Any | None:
         return app_container.llm_client()
 
     except Exception as e:
-        logger.warning("failed_to_get_llm_client", error=str(e))
+        logger.warning("failed_to_get_llm_client", error=str(e), exc_info=True)
         return None
 
 

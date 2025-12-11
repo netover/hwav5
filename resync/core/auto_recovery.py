@@ -80,7 +80,7 @@ class AutoRecovery:
             actions.extend(scaling_actions)
 
         except Exception as e:
-            logger.error("auto_recovery_execution_failed", error=str(e))
+            logger.error("auto_recovery_execution_failed", error=str(e), exc_info=True)
 
         return actions
 
@@ -117,7 +117,7 @@ class AutoRecovery:
                 return basic_metrics
 
         except Exception as e:
-            logger.warning("connection_pool_health_check_failed", error=str(e))
+            logger.warning("connection_pool_health_check_failed", error=str(e), exc_info=True)
 
         return {"error": "Unable to check connection pool health"}
 
@@ -197,7 +197,7 @@ class AutoRecovery:
                 )
 
         except Exception as e:
-            logger.error("component_recovery_failed", error=str(e))
+            logger.error("component_recovery_failed", error=str(e), exc_info=True)
 
         return actions
 
@@ -222,7 +222,7 @@ class AutoRecovery:
                 actions.append(cache_cleanup)
 
         except Exception as e:
-            logger.error("resource_cleanup_failed", error=str(e))
+            logger.error("resource_cleanup_failed", error=str(e), exc_info=True)
 
         return actions
 
@@ -261,7 +261,7 @@ class AutoRecovery:
                 )
 
         except Exception as e:
-            logger.error("auto_scaling_failed", error=str(e))
+            logger.error("auto_scaling_failed", error=str(e), exc_info=True)
 
         return actions
 
@@ -273,7 +273,7 @@ class AutoRecovery:
             # Placeholder implementation
             return True
         except Exception as e:
-            logger.error("database_connection_reset_failed", error=str(e))
+            logger.error("database_connection_reset_failed", error=str(e), exc_info=True)
             return False
 
     async def _check_memory_issues(self) -> bool:
@@ -296,7 +296,7 @@ class AutoRecovery:
             logger.info("forced_memory_cleanup")
             return True
         except Exception as e:
-            logger.error("memory_cleanup_failed", error=str(e))
+            logger.error("memory_cleanup_failed", error=str(e), exc_info=True)
             return False
 
     async def _cleanup_temp_files(self) -> dict[str, Any]:
@@ -323,6 +323,7 @@ class AutoRecovery:
                                 "failed_to_cleanup_temp_file",
                                 file=filepath,
                                 error=str(e),
+                                exc_info=True,
                             )
 
             return {
@@ -332,7 +333,7 @@ class AutoRecovery:
                 "temp_directory": temp_dir,
             }
         except Exception as e:
-            logger.error("temp_file_cleanup_failed", error=str(e))
+            logger.error("temp_file_cleanup_failed", error=str(e), exc_info=True)
             return None
 
     async def _cleanup_stale_connections(self) -> dict[str, Any]:
@@ -347,7 +348,7 @@ class AutoRecovery:
                 "connections_cleaned": 0,
             }
         except Exception as e:
-            logger.error("stale_connection_cleanup_failed", error=str(e))
+            logger.error("stale_connection_cleanup_failed", error=str(e), exc_info=True)
             return None
 
     async def _cleanup_cache_entries(self) -> dict[str, Any]:
@@ -362,7 +363,7 @@ class AutoRecovery:
                 "entries_cleaned": 0,
             }
         except Exception as e:
-            logger.error("cache_cleanup_failed", error=str(e))
+            logger.error("cache_cleanup_failed", error=str(e), exc_info=True)
             return None
 
     async def _scale_connection_pool(self, direction: str) -> bool:
@@ -373,5 +374,5 @@ class AutoRecovery:
             # Placeholder implementation
             return True
         except Exception as e:
-            logger.error("connection_pool_scaling_failed", direction=direction, error=str(e))
+            logger.error("connection_pool_scaling_failed", direction=direction, error=str(e), exc_info=True)
             return False

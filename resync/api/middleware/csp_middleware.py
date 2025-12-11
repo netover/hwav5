@@ -191,12 +191,12 @@ class CSPMiddleware(BaseHTTPMiddleware):
                 # We still return 200 to avoid giving attackers information
                 return
             except Exception as e:
-                logger.error(f"Error processing CSP violation report: {e}")
+                logger.error(f"Error processing CSP violation report: {e}", exc_info=True)
                 # We still return 200 to avoid giving attackers information
                 return
 
         except Exception as e:
-            logger.error(f"Error processing CSP violation report: {e}")
+            logger.error(f"Error processing CSP violation report: {e}", exc_info=True)
 
 
 def create_csp_middleware(app) -> CSPMiddleware:

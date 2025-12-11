@@ -407,8 +407,8 @@ class ContextEnricher:
 
                     downstream = await kg.get_downstream_jobs(entity_id, max_depth=1)
                     context.dependents = list(downstream) if downstream else []
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("kg_downstream_fetch_failed", entity_id=entity_id, error=str(e), exc_info=True)
 
         return context
 

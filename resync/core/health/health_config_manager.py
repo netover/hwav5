@@ -322,7 +322,7 @@ class HealthCheckConfigurationManager:
             return True
 
         except Exception as e:
-            logger.error("health_check_config_import_failed", error=str(e))
+            logger.error("health_check_config_import_failed", error=str(e), exc_info=True)
             return False
 
     def get_component_thresholds(self, component_name: str) -> dict[str, float]:

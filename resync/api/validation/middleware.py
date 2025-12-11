@@ -306,6 +306,7 @@ class ValidationMiddleware:
                     "custom_validator_failed",
                     validator_name=validator_name,
                     error=str(e),
+                    exc_info=True,
                 )
 
         return data

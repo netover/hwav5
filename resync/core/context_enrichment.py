@@ -149,7 +149,7 @@ class ContextEnricher:
 
                 self._learning_stores[instance_id] = TWSLearningStore(instance_id)
             except Exception as e:
-                logger.warning(f"Could not load learning store: {e}")
+                logger.warning(f"Could not load learning store: {e}", exc_info=True)
                 return None
         return self._learning_stores[instance_id]
 
@@ -161,7 +161,7 @@ class ContextEnricher:
 
                 self._kg = await get_kg_instance()
             except Exception as e:
-                logger.warning(f"Could not load knowledge graph: {e}")
+                logger.warning(f"Could not load knowledge graph: {e}", exc_info=True)
                 return None
         return self._kg
 

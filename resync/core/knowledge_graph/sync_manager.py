@@ -146,7 +146,7 @@ class SyncState:
                     return datetime.fromisoformat(row[0])
                 return None
         except Exception as e:
-            logger.warning("get_last_sync_failed", error=str(e))
+            logger.warning("get_last_sync_failed", error=str(e), exc_info=True)
             return None
 
     @classmethod
@@ -164,7 +164,7 @@ class SyncState:
                 )
                 await session.commit()
         except Exception as e:
-            logger.warning("set_last_sync_failed", error=str(e))
+            logger.warning("set_last_sync_failed", error=str(e), exc_info=True)
 
     @classmethod
     async def ensure_table(cls) -> None:
@@ -180,7 +180,7 @@ class SyncState:
                 """)
                 await session.commit()
         except Exception as e:
-            logger.warning("ensure_sync_table_failed", error=str(e))
+            logger.warning("ensure_sync_table_failed", error=str(e), exc_info=True)
 
 
 # =============================================================================
@@ -303,7 +303,7 @@ class TWSSyncManager:
 
             except Exception as e:
                 self._stats.record_error()
-                logger.error("sync_failed", error=str(e))
+                logger.error("sync_failed", error=str(e), exc_info=True)
                 raise
 
     async def _fetch_changes(self, since: datetime | None) -> list[SyncChange]:
@@ -367,7 +367,7 @@ class TWSSyncManager:
                     )
 
         except Exception as e:
-            logger.error("tws_fetch_failed", error=str(e))
+            logger.error("tws_fetch_failed", error=str(e), exc_info=True)
 
         return changes
 
@@ -402,7 +402,7 @@ class TWSSyncManager:
                     )
 
         except Exception as e:
-            logger.warning("database_fetch_failed", error=str(e))
+            logger.warning("database_fetch_failed", error=str(e), exc_info=True)
 
         return changes
 
@@ -424,7 +424,7 @@ class TWSSyncManager:
                     await self._apply_default(change)
 
             except Exception as e:
-                logger.error("change_apply_failed", change=change.to_dict(), error=str(e))
+                logger.error("change_apply_failed", change=change.to_dict(), error=str(e), exc_info=True)
 
     async def _apply_default(self, change: SyncChange) -> None:
         """Default change application logic."""
@@ -496,7 +496,7 @@ class TWSSyncManager:
         try:
             await self.sync_now(force_full=True)
         except Exception as e:
-            logger.error("initial_sync_failed", error=str(e))
+            logger.error("initial_sync_failed", error=str(e), exc_info=True)
 
         while True:
             try:
@@ -509,7 +509,7 @@ class TWSSyncManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("background_sync_error", error=str(e))
+                logger.error("background_sync_error", error=str(e), exc_info=True)
                 # Continue loop even on error
                 await asyncio.sleep(30)
 

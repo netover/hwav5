@@ -431,7 +431,7 @@ class TWSMonitor:
             }
 
         except Exception as e:
-            logger.error("Error generating performance report", error=str(e))
+            logger.error("Error generating performance report", error=str(e), exc_info=True)
             raise PerformanceError(f"Failed to generate performance report: {e}") from e
 
     def get_alerts(self, limit: int = 10) -> list[dict[str, Any]]:

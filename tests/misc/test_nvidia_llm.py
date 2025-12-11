@@ -2,6 +2,8 @@
 Test script for NVIDIA LLM API
 """
 
+import os
+
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -13,9 +15,15 @@ def test_nvidia_llm():
     """Test NVIDIA LLM API connection and response"""
     try:
         # Initialize OpenAI client with NVIDIA API
+        # API key must be set via NVIDIA_API_KEY environment variable
+        api_key = os.getenv("NVIDIA_API_KEY")
+        if not api_key:
+            print("⚠️  NVIDIA_API_KEY not set. Skipping test.")
+            return
+        
         client = OpenAI(
             base_url="https://integrate.api.nvidia.com/v1",
-            api_key="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",
+            api_key=api_key,
         )
 
         print("🚀 Testing NVIDIA LLM API...")
@@ -59,9 +67,14 @@ def test_streaming():
     """Test streaming response from NVIDIA LLM API"""
     try:
         # Initialize OpenAI client with NVIDIA API
+        api_key = os.getenv("NVIDIA_API_KEY")
+        if not api_key:
+            print("⚠️  NVIDIA_API_KEY not set. Skipping streaming test.")
+            return
+        
         client = OpenAI(
             base_url="https://integrate.api.nvidia.com/v1",
-            api_key="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",
+            api_key=api_key,
         )
 
         print("\n🌊 Testing streaming response...")

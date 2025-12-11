@@ -78,7 +78,7 @@ class ManagedResource:
                     f"lifetime: {lifetime:.2f}s"
                 )
             except Exception as e:
-                logger.error(f"Error closing resource {self.resource_id}: {e}")
+                logger.error(f"Error closing resource {self.resource_id}: {e}", exc_info=True)
                 raise
 
     def close_sync(self) -> None:
@@ -93,7 +93,7 @@ class ManagedResource:
                     f"lifetime: {lifetime:.2f}s"
                 )
             except Exception as e:
-                logger.error(f"Error closing resource {self.resource_id}: {e}")
+                logger.error(f"Error closing resource {self.resource_id}: {e}", exc_info=True)
                 raise
 
     async def _cleanup(self) -> None:
@@ -303,7 +303,7 @@ class ResourcePool:
                         else:
                             resource.close()
                 except Exception as e:
-                    logger.error(f"Error closing resource {resource_id}: {e}")
+                    logger.error(f"Error closing resource {resource_id}: {e}", exc_info=True)
 
                 del self.active_resources[resource_id]
                 logger.debug(
@@ -416,7 +416,7 @@ class BatchResourceManager:
 
                 logger.debug(f"Cleaned up batch resource: {resource_id}")
             except Exception as e:
-                logger.error(f"Error cleaning up batch resource {resource_id}: {e}")
+                logger.error(f"Error cleaning up batch resource {resource_id}: {e}", exc_info=True)
 
         self.resources.clear()
 

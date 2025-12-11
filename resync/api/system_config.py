@@ -1771,7 +1771,7 @@ async def get_config_categories():
     try:
         return get_config_definitions()
     except Exception as e:
-        logger.error("get_config_categories_error", error=str(e))
+        logger.error("get_config_categories_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get configuration: {str(e)}",
@@ -1876,7 +1876,7 @@ async def update_config(request: ConfigUpdateRequest):
         )
 
     except Exception as e:
-        logger.error("update_config_error", error=str(e))
+        logger.error("update_config_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update configuration: {str(e)}",
@@ -1927,7 +1927,7 @@ async def get_system_resources():
             uptime_seconds=0,
         )
     except Exception as e:
-        logger.error("get_resources_error", error=str(e))
+        logger.error("get_resources_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get resources: {str(e)}",
@@ -1998,7 +1998,7 @@ async def clear_cache():
         return {"success": True, "message": "Caches cleared successfully"}
 
     except Exception as e:
-        logger.error("clear_cache_error", error=str(e))
+        logger.error("clear_cache_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to clear cache: {str(e)}",
