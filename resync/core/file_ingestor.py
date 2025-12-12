@@ -100,16 +100,16 @@ def read_pdf(file_path: Path) -> str:
         reader = pypdf.PdfReader(file_path)
         return "".join(page.extract_text() for page in reader.pages if page.extract_text())
     except FileNotFoundError as e:
-        logger.error("pdf_file_not_found", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("pdf_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
-        logger.error("permission_denied_reading_pdf", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("permission_denied_reading_pdf", file_path=str(file_path), error=str(e))
         return ""
     except pypdf.errors.PdfReadError as e:
-        logger.error("pdf_read_error", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("pdf_read_error", file_path=str(file_path), error=str(e))
         return ""
     except ValueError as e:
-        logger.error("invalid_pdf_content", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("invalid_pdf_content", file_path=str(file_path), error=str(e))
         return ""
     except Exception as e:  # Catch any other pypdf or system errors
         logger.critical(
@@ -143,16 +143,16 @@ def read_json(file_path: Path) -> str:
         return str(data)
 
     except FileNotFoundError as e:
-        logger.error("json_file_not_found", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("json_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
-        logger.error("permission_denied_reading_json", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("permission_denied_reading_json", file_path=str(file_path), error=str(e))
         return ""
     except json.JSONDecodeError as e:
-        logger.error("invalid_json_format", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("invalid_json_format", file_path=str(file_path), error=str(e))
         return ""
     except UnicodeDecodeError as e:
-        logger.error("encoding_error_reading_json", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("encoding_error_reading_json", file_path=str(file_path), error=str(e))
         return ""
     except Exception as e:  # Catch other potential OS or parsing errors
         logger.critical(
@@ -170,7 +170,7 @@ def read_txt(file_path: Path) -> str:
     try:
         return file_path.read_text(encoding="utf-8")
     except FileNotFoundError as e:
-        logger.error("text_file_not_found", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("text_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
         logger.error(
@@ -180,7 +180,7 @@ def read_txt(file_path: Path) -> str:
         )
         return ""
     except UnicodeDecodeError as e:
-        logger.error("encoding_error_reading_text_file", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("encoding_error_reading_text_file", file_path=str(file_path), error=str(e))
         return ""
     except OSError as e:
         logger.critical(
@@ -212,10 +212,10 @@ def read_doc(file_path: Path) -> str:
         return f"[DOC file: {file_path.name} - Manual processing may be required]"
 
     except FileNotFoundError as e:
-        logger.error("doc_file_not_found", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("doc_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
-        logger.error("permission_denied_reading_doc_file", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("permission_denied_reading_doc_file", file_path=str(file_path), error=str(e))
         return ""
     except Exception as e:  # Catch other potential library or system errors
         logger.critical(
@@ -283,14 +283,14 @@ def read_xls(file_path: Path) -> str:
             logger.warning("xls_file_requires_xlrd_library", file_path=str(file_path))
             return f"[XLS file: {file_path.name} - Install xlrd for better support]"
         except Exception as e:
-            logger.error("error_processing_xls_file", file_path=str(file_path), error=str(e), exc_info=True)
+            logger.error("error_processing_xls_file", file_path=str(file_path), error=str(e))
             return f"[XLS file: {file_path.name} - Processing error: {e}]"
 
     except FileNotFoundError as e:
-        logger.error("xls_file_not_found", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("xls_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
-        logger.error("permission_denied_reading_xls_file", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("permission_denied_reading_xls_file", file_path=str(file_path), error=str(e))
         return ""
     except Exception as e:  # Catch other potential library or system errors
         logger.critical(
@@ -308,7 +308,7 @@ def read_md(file_path: Path) -> str:
     try:
         return file_path.read_text(encoding="utf-8")
     except FileNotFoundError as e:
-        logger.error("markdown_file_not_found", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("markdown_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
         logger.error(
@@ -452,7 +452,7 @@ def read_html(file_path: Path) -> str:
             return text.strip()
 
     except FileNotFoundError as e:
-        logger.error("html_file_not_found", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("html_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
         logger.error(
@@ -492,7 +492,7 @@ def read_html(file_path: Path) -> str:
     try:
         return file_path.read_text(encoding="utf-8")
     except FileNotFoundError as e:
-        logger.error("markdown_file_not_found", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("markdown_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
         logger.error(
@@ -525,7 +525,7 @@ def read_docx(file_path: Path) -> str:
         doc = docx.Document(file_path)
         return "\n".join(para.text for para in doc.paragraphs if para.text)
     except FileNotFoundError as e:
-        logger.error("docx_file_not_found", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("docx_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
         logger.error(
@@ -535,10 +535,10 @@ def read_docx(file_path: Path) -> str:
         )
         return ""  # Corrected import for PackageNotFoundError
     except docx.opc.exceptions.PackageNotFoundError as e:
-        logger.error("invalid_docx_package", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("invalid_docx_package", file_path=str(file_path), error=str(e))
         return ""
     except ValueError as e:
-        logger.error("invalid_docx_content", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("invalid_docx_content", file_path=str(file_path), error=str(e))
         return ""
     except Exception as e:  # Catch other potential library or system errors
         logger.critical(
@@ -568,7 +568,7 @@ def read_excel(file_path: Path) -> str:
                     text_parts.append(" | ".join(row_texts))
         return "\n".join(text_parts)
     except FileNotFoundError as e:
-        logger.error("excel_file_not_found", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("excel_file_not_found", file_path=str(file_path), error=str(e))
         return ""
     except PermissionError as e:
         logger.error(
@@ -578,10 +578,10 @@ def read_excel(file_path: Path) -> str:
         )
         return ""
     except InvalidFileException as e:
-        logger.error("invalid_excel_file", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("invalid_excel_file", file_path=str(file_path), error=str(e))
         return ""
     except ValueError as e:
-        logger.error("invalid_excel_content", file_path=str(file_path), error=str(e), exc_info=True)
+        logger.error("invalid_excel_content", file_path=str(file_path), error=str(e))
         return ""
     except Exception as e:  # Catch other potential library or system errors
         logger.critical(

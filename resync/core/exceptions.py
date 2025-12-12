@@ -115,7 +115,7 @@ class ErrorSeverity(str, Enum):
     INFO = "info"  # Informação
 
 
-class BaseAppException(Exception):  # noqa: N818
+class BaseAppException(Exception):
     """Exceção base para todas as exceções da aplicação.
 
     Fornece estrutura padronizada com:

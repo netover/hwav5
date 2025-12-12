@@ -124,7 +124,7 @@ def get_redis_connection() -> Redis | None:
         logger.error(f"Failed to connect to Redis: {e}")
         return None
     except Exception as e:
-        logger.error(f"Unexpected error when connecting to Redis: {e}", exc_info=True)
+        logger.error(f"Unexpected error when connecting to Redis: {e}")
         return None
 
 
@@ -154,7 +154,7 @@ class RedisCacheManager:
                 logger.debug(f"Cache miss for key: {key}")
             return value
         except Exception as e:
-            logger.error(f"Error retrieving from cache: {e}", exc_info=True)
+            logger.error(f"Error retrieving from cache: {e}")
             return None
 
     def set(self, key: str, value: str, expire: int = 3600) -> bool:
@@ -174,7 +174,7 @@ class RedisCacheManager:
             logger.debug(f"Set cache key: {key} with expire: {expire}")
             return True
         except Exception as e:
-            logger.error(f"Error setting cache: {e}", exc_info=True)
+            logger.error(f"Error setting cache: {e}")
             return False
 
     def delete(self, key: str) -> bool:
@@ -192,7 +192,7 @@ class RedisCacheManager:
             logger.debug(f"Deleted cache key: {key}, count: {deleted}")
             return bool(deleted)
         except Exception as e:
-            logger.error(f"Error deleting cache: {e}", exc_info=True)
+            logger.error(f"Error deleting cache: {e}")
             return False
 
     def clear_pattern(self, pattern: str) -> int:
@@ -213,7 +213,7 @@ class RedisCacheManager:
             logger.debug(f"Cleared {total_deleted} keys matching pattern: {pattern}")
             return total_deleted
         except Exception as e:
-            logger.error(f"Error clearing pattern: {e}", exc_info=True)
+            logger.error(f"Error clearing pattern: {e}")
             return 0
 
     def get_cache_stats(self) -> CacheStats:

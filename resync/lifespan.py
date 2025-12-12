@@ -113,14 +113,14 @@ async def redis_connection_manager() -> AsyncIterator:
         ) from e
 
     except RedisAuthError as e:
-        logger.error("redis_auth_failed", error=str(e), exc_info=True)
+        logger.error("redis_auth_failed", error=str(e))
         raise RedisAuthError(
             "Falha de autenticação no Redis",
             details={"error": str(e), "hint": "Verifique REDIS_URL no .env"},
         ) from e
 
     except RedisTimeoutError as e:
-        logger.error("redis_timeout", error=str(e), exc_info=True)
+        logger.error("redis_timeout", error=str(e))
         raise RedisTimeoutError(
             "Timeout ao conectar ao Redis",
             details={
@@ -136,7 +136,7 @@ async def redis_connection_manager() -> AsyncIterator:
                 await client.connection_pool.disconnect()
                 logger.debug("redis_connection_closed")
             except Exception as e:
-                logger.warning("redis_cleanup_warning", error=type(e).__name__, message=str(e), exc_info=True)
+                logger.warning("redis_cleanup_warning", error=type(e).__name__, message=str(e))
 
 
 async def initialize_redis_with_retry(
@@ -193,7 +193,7 @@ async def initialize_redis_with_retry(
 
             if attempt >= max_retries - 1:
                 # Última tentativa falhou
-                logger.critical("redis_initialization_failed", attempts=max_retries, error=str(e), exc_info=True)
+                logger.critical("redis_initialization_failed", attempts=max_retries, error=str(e))
                 raise
 
             # Calcular backoff exponencial
@@ -214,7 +214,7 @@ async def initialize_redis_with_retry(
 
             # Verificar se é erro de autenticação disfarçado
             if "NOAUTH" in error_msg or "WRONGPASS" in error_msg:
-                logger.critical("redis_access_denied", error=str(e), exc_info=True)
+                logger.critical("redis_access_denied", error=str(e))
                 raise RedisAuthError(
                     "Redis requer autenticação",
                     details={
@@ -225,7 +225,7 @@ async def initialize_redis_with_retry(
 
             # Outros erros de resposta
             if attempt >= max_retries - 1:
-                logger.critical("redis_response_error", error=str(e), exc_info=True)
+                logger.critical("redis_response_error", error=str(e))
                 raise RedisInitializationError(
                     f"Erro Redis: {str(e)}", details={"error": str(e)}
                 ) from e
@@ -236,7 +236,7 @@ async def initialize_redis_with_retry(
         except BusyLoadingError as e:
             # Redis ainda carregando
             if attempt >= max_retries - 1:
-                logger.critical("redis_busy_loading", error=str(e), exc_info=True)
+                logger.critical("redis_busy_loading", error=str(e))
                 raise RedisConnectionError(
                     "Redis ocupado carregando dados",
                     details={
@@ -251,7 +251,7 @@ async def initialize_redis_with_retry(
 
         except Exception as e:
             # Erro inesperado - fail fast
-            logger.critical("redis_unexpected_error", error_type=type(e).__name__, error=str(e), exc_info=True)
+            logger.critical("redis_unexpected_error", error_type=type(e).__name__, error=str(e))
             raise RedisInitializationError(
                 f"Erro inesperado ao inicializar Redis: {type(e).__name__}",
                 details={

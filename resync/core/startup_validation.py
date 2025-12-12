@@ -226,7 +226,6 @@ async def validate_redis_connection(max_retries: int = 3, timeout: float = 5.0) 
                 "redis_unexpected_error",
                 error_type=type(e).__name__,
                 error_message=str(e) if os.getenv("ENVIRONMENT") != "production" else None,
-                exc_info=True,
             )
             raise StartupError(
                 f"Unexpected Redis validation error: {type(e).__name__}", {"error": str(e)}
@@ -413,7 +412,6 @@ async def validate_all_settings() -> "Settings":
             error_type=type(e).__name__,
             error_message=str(e) if os.getenv("ENVIRONMENT") != "production" else None,
             partial_results=list(validation_results.keys()),
-            exc_info=True,
         )
         raise StartupError(
             error_msg, {"error": str(e), "partial_results": validation_results}

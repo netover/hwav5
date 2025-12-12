@@ -90,7 +90,7 @@ class PredictiveAnalyzer:
             alerts.extend(cpu_alerts)
 
         except Exception as e:
-            logger.error("predictive_analysis_failed", error=str(e), exc_info=True)
+            logger.error("predictive_analysis_failed", error=str(e))
 
         return alerts
 
@@ -127,7 +127,7 @@ class PredictiveAnalyzer:
                 return basic_metrics
 
         except Exception as e:
-            logger.warning("connection_pool_health_check_failed", error=str(e), exc_info=True)
+            logger.warning("connection_pool_health_check_failed", error=str(e))
 
         return {"error": "Unable to check connection pool health"}
 
@@ -210,7 +210,7 @@ class PredictiveAnalyzer:
                 )
 
         except Exception as e:
-            logger.warning("memory_trend_analysis_failed", error=str(e), exc_info=True)
+            logger.warning("memory_trend_analysis_failed", error=str(e))
 
         return alerts
 
@@ -256,7 +256,7 @@ class PredictiveAnalyzer:
                 )
 
         except Exception as e:
-            logger.warning("cpu_trend_analysis_failed", error=str(e), exc_info=True)
+            logger.warning("cpu_trend_analysis_failed", error=str(e))
 
         return alerts
 
@@ -275,6 +275,6 @@ class PredictiveAnalyzer:
             pass
 
         except Exception as e:
-            logger.error("performance_degradation_analysis_failed", error=str(e), exc_info=True)
+            logger.error("performance_degradation_analysis_failed", error=str(e))
 
         return alerts

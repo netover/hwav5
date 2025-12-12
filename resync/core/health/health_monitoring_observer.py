@@ -172,7 +172,6 @@ class HealthMonitoringSubject:
                     observer_type=type(observer).__name__,
                     method=method_name,
                     error=str(e),
-                    exc_info=True,
                 )
 
         if tasks:
@@ -184,7 +183,6 @@ class HealthMonitoringSubject:
                     method=method_name,
                     component=component_name,
                     error=str(e),
-                    exc_info=True,
                 )
 
     def get_observer_count(self) -> int:

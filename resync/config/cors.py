@@ -34,7 +34,7 @@ def validate_origin(origin: str) -> bool:
         logger.warning(f"Invalid origin format: {origin}")
         return False
     except Exception as e:
-        logger.warning(f"Error parsing origin '{origin}': {e}", exc_info=True)
+        logger.warning(f"Error parsing origin '{origin}': {e}")
         return False
 
 
@@ -111,5 +111,5 @@ def configure_cors(app: FastAPI, settings_module: object | None = None) -> None:
 
         logger.info(f"CORS middleware added for environment: {cors_environment}")
     except Exception as e:
-        logger.error(f"Failed to add CORS middleware: {e}", exc_info=True)
+        logger.error(f"Failed to add CORS middleware: {e}")
         logger.info("Continuing without CORS middleware")

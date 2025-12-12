@@ -120,7 +120,6 @@ except ImportError:
                     agent_name=self.name,
                     error=str(e),
                     error_type=type(e).__name__,
-                    exc_info=True,
                 )
                 return result
 
@@ -158,24 +157,24 @@ except ImportError:
             }
 
 
-from pydantic import BaseModel  # noqa: E402
+from pydantic import BaseModel
 
-from resync.core.exceptions import (  # noqa: E402
+from resync.core.exceptions import (
     AgentError,
 )  # Renamed from AgentExecutionError for broader scope
-from resync.core.metrics import runtime_metrics  # noqa: E402
-from resync.services.mock_tws_service import MockTWSClient  # noqa: E402
-from resync.services.tws_service import OptimizedTWSClient  # noqa: E402
-from resync.settings import settings  # noqa: E402
+from resync.core.metrics import runtime_metrics
+from resync.services.mock_tws_service import MockTWSClient
+from resync.services.tws_service import OptimizedTWSClient
+from resync.settings import settings
 
-from .global_utils import get_environment_tags, get_global_correlation_id  # noqa: E402
+from .global_utils import get_environment_tags, get_global_correlation_id
 
 # --- Logging Setup ---
 logger = structlog.get_logger(__name__)
 
 
 # --- Pydantic Models for Agent Configuration ---
-from resync.models.agents import AgentConfig, AgentType  # noqa: E402
+from resync.models.agents import AgentConfig, AgentType
 
 
 class AgentsConfig(BaseModel):
@@ -307,7 +306,6 @@ class AgentManager:
                         "agent_config_parse_error",
                         agent=agent_data.get("id", "unknown"),
                         error=str(e),
-                        exc_info=True,
                     )
 
             if loaded_configs:
@@ -324,9 +322,9 @@ class AgentManager:
                 )
 
         except yaml.YAMLError as e:
-            logger.error("agent_config_yaml_error", file=str(config_file), error=str(e), exc_info=True)
+            logger.error("agent_config_yaml_error", file=str(config_file), error=str(e))
         except Exception as e:
-            logger.error("agent_config_load_error", file=str(config_file), error=str(e), exc_info=True)
+            logger.error("agent_config_load_error", file=str(config_file), error=str(e))
 
     async def get_agent(self, agent_id: str) -> Any:
         """Retrieves an agent by its ID."""
@@ -364,7 +362,7 @@ class AgentManager:
                         try:
                             self.tws_client = await get_service(ITWSClient)
                         except Exception as e:
-                            logger.warning(f"Failed to get TWS client: {e}", exc_info=True)
+                            logger.warning(f"Failed to get TWS client: {e}")
                             self.tws_client = None
 
             # Create agent with tools
@@ -390,7 +388,7 @@ class AgentManager:
             return agent
 
         except Exception as e:
-            logger.error(f"Failed to create agent '{agent_id}': {e}", exc_info=True)
+            logger.error(f"Failed to create agent '{agent_id}': {e}")
             return None
 
     async def get_all_agents(self) -> list[AgentConfig]:
@@ -411,7 +409,7 @@ class AgentManager:
 
             return get_service(ITWSClient)()
         except Exception as e:
-            logger.warning(f"Failed to get TWS client: {e}", exc_info=True)
+            logger.warning(f"Failed to get TWS client: {e}")
             return None
 
     async def get_tws_client(self) -> Any:

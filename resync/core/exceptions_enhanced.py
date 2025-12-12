@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 
-class ResyncException(Exception):  # noqa: N818
+class ResyncException(Exception):
     """Enhanced base class for all custom exceptions in Resync with error codes and categories."""
 
     def __init__(

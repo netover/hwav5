@@ -261,7 +261,6 @@ class CacheMemoryManager:
                         }
                     )
                 },
-                exc_info=True,
             )
             # If we can't estimate memory, just check the size limit
             max_safe_size = self.max_entries
@@ -447,7 +446,7 @@ class CacheMemoryManager:
             return total_memory / (1024 * 1024)
 
         except Exception as e:
-            logger.warning(f"Failed to estimate cache memory usage: {e}", exc_info=True)
+            logger.warning(f"Failed to estimate cache memory usage: {e}")
             return 0.0
 
     def get_memory_info(self, shards: list[dict[str, CacheEntry]]) -> dict[str, Any]:

@@ -1,25 +1,28 @@
 """
 Semantic Cache for LLM Responses.
 
-v5.3.16 - Semantic caching with:
+v5.3.17 - Semantic caching with:
 - Vector similarity search using Redis Stack (when available)
 - Python-based fallback for standard Redis OSS
 - Configurable similarity threshold
 - TTL-based expiration
 - Hit/miss metrics
+- Conditional cross-encoder reranking for gray zone queries (NEW)
 
 Architecture (learned from decades of cache design):
 1. Query comes in
 2. Generate embedding for query
 3. Search for similar cached queries (within threshold)
-4. If found: return cached response (HIT)
-5. If not found: return None (MISS) - caller should query LLM
-6. After LLM response: store in cache for future queries
+4. If in "gray zone" (uncertain match): apply cross-encoder reranking
+5. If found: return cached response (HIT)
+6. If not found: return None (MISS) - caller should query LLM
+7. After LLM response: store in cache for future queries
 
 Performance targets:
 - Cache lookup: <100ms (including embedding generation)
+- Cache lookup with reranking: <150ms (only for uncertain matches)
 - Hit rate: >60% after warm-up period
-- False positive rate: <5% (wrong cached response returned)
+- False positive rate: <2% (with reranking enabled)
 """
 
 import asyncio
@@ -41,6 +44,12 @@ from .redis_config import (
     check_redis_stack_available,
     get_redis_client,
     get_redis_config,
+)
+from .reranker import (
+    is_reranker_available,
+    rerank_pair,
+    should_rerank,
+    get_reranker_info,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,12 +110,16 @@ class CacheResult:
         distance: Semantic distance from original query (0 = exact match)
         entry: Full cache entry (for metrics)
         lookup_time_ms: Time taken for lookup
+        reranked: Whether cross-encoder reranking was applied
+        rerank_score: Cross-encoder similarity score (if reranked)
     """
     hit: bool
     response: str | None = None
     distance: float = 1.0
     entry: CacheEntry | None = None
     lookup_time_ms: float = 0.0
+    reranked: bool = False
+    rerank_score: float | None = None
 
 
 class SemanticCache:
@@ -142,6 +155,7 @@ class SemanticCache:
         threshold: float | None = None,
         default_ttl: int | None = None,
         max_entries: int | None = None,
+        enable_reranking: bool = True,
     ):
         """
         Initialize semantic cache.
@@ -150,12 +164,14 @@ class SemanticCache:
             threshold: Cosine distance threshold for cache hit (0-1, lower = stricter)
             default_ttl: Default TTL in seconds for cache entries
             max_entries: Maximum entries before LRU eviction
+            enable_reranking: Whether to use cross-encoder for gray zone queries
         """
         config = get_redis_config()
         
         self.threshold = threshold or config.semantic_cache_threshold
         self.default_ttl = default_ttl or config.semantic_cache_ttl
         self.max_entries = max_entries or config.semantic_cache_max_entries
+        self.enable_reranking = enable_reranking and is_reranker_available()
         
         self._redis_stack_available: bool | None = None
         self._index_created: bool = False
@@ -168,11 +184,14 @@ class SemanticCache:
             "sets": 0,
             "errors": 0,
             "total_lookup_time_ms": 0.0,
+            "reranks": 0,
+            "rerank_rejections": 0,  # False positives caught by reranker
         }
         
         logger.info(
             f"SemanticCache initialized with threshold={self.threshold}, "
-            f"ttl={self.default_ttl}s, max_entries={self.max_entries}"
+            f"ttl={self.default_ttl}s, max_entries={self.max_entries}, "
+            f"reranking={'enabled' if self.enable_reranking else 'disabled'}"
         )
     
     async def initialize(self) -> bool:
@@ -279,6 +298,11 @@ class SemanticCache:
         """
         Look up query in semantic cache.
         
+        Applies conditional reranking for uncertain matches (gray zone):
+        - Distance < 0.20 → Clear HIT, skip reranking
+        - Distance > 0.35 → Clear MISS, skip reranking
+        - Distance 0.20-0.35 → Apply cross-encoder to confirm
+        
         Args:
             query: User's query text
             
@@ -300,6 +324,10 @@ class SemanticCache:
             else:
                 result = await self._search_fallback(query, embedding)
             
+            # Apply conditional reranking for gray zone matches
+            if result.hit and self.enable_reranking and should_rerank(result.distance):
+                result = await self._apply_reranking(query, result)
+            
             # Update stats
             lookup_time = (time.perf_counter() - start_time) * 1000
             result.lookup_time_ms = lookup_time
@@ -319,6 +347,55 @@ class SemanticCache:
             self._stats["errors"] += 1
             logger.error(f"Cache lookup failed: {e}")
             return CacheResult(hit=False)
+    
+    async def _apply_reranking(self, query: str, result: CacheResult) -> CacheResult:
+        """
+        Apply cross-encoder reranking to confirm a gray zone match.
+        
+        If the reranker says the queries are not similar,
+        convert the HIT to a MISS (false positive prevention).
+        
+        Args:
+            query: New user query
+            result: Initial cache result from embedding search
+            
+        Returns:
+            Updated CacheResult (may change hit=True to hit=False)
+        """
+        if not result.entry or not result.entry.query:
+            return result
+        
+        self._stats["reranks"] += 1
+        
+        # Run reranking (synchronous but fast ~20-50ms)
+        rerank_result = rerank_pair(query, result.entry.query)
+        
+        result.reranked = True
+        result.rerank_score = rerank_result.score
+        
+        if rerank_result.is_similar:
+            logger.debug(
+                f"Reranker CONFIRMED: distance={result.distance:.3f}, "
+                f"rerank_score={rerank_result.score:.3f}, "
+                f"query='{query[:40]}...'"
+            )
+            return result
+        else:
+            # Reranker says NOT similar - convert to MISS
+            self._stats["rerank_rejections"] += 1
+            logger.info(
+                f"Reranker REJECTED false positive: distance={result.distance:.3f}, "
+                f"rerank_score={rerank_result.score:.3f}, "
+                f"query='{query[:40]}...' vs cached='{result.entry.query[:40]}...'"
+            )
+            return CacheResult(
+                hit=False,
+                response=None,
+                distance=result.distance,
+                entry=None,
+                reranked=True,
+                rerank_score=rerank_result.score,
+            )
     
     async def _search_redisearch(self, query: str, embedding: list[float]) -> CacheResult:
         """
@@ -609,6 +686,8 @@ class SemanticCache:
                 "sets": 0,
                 "errors": 0,
                 "total_lookup_time_ms": 0.0,
+                "reranks": 0,
+                "rerank_rejections": 0,
             }
             
             return True
@@ -622,7 +701,7 @@ class SemanticCache:
         Get cache statistics.
         
         Returns:
-            Dict with hit rate, total entries, memory usage, etc.
+            Dict with hit rate, total entries, memory usage, reranking stats, etc.
         """
         try:
             client = await get_redis_client(RedisDatabase.SEMANTIC_CACHE)
@@ -647,8 +726,18 @@ class SemanticCache:
                 else 0.0
             )
             
+            # Reranking stats
+            rerank_rejection_rate = (
+                self._stats["rerank_rejections"] / self._stats["reranks"] * 100
+                if self._stats["reranks"] > 0
+                else 0.0
+            )
+            
             # Get memory info
             info = await client.info("memory")
+            
+            # Get reranker info
+            reranker_info = get_reranker_info()
             
             return {
                 "entries": count,
@@ -663,6 +752,13 @@ class SemanticCache:
                 "max_entries": self.max_entries,
                 "redis_stack_available": self._redis_stack_available,
                 "used_memory_human": info.get("used_memory_human", "unknown"),
+                # Reranking stats
+                "reranking_enabled": self.enable_reranking,
+                "reranks_total": self._stats["reranks"],
+                "rerank_rejections": self._stats["rerank_rejections"],
+                "rerank_rejection_rate_percent": round(rerank_rejection_rate, 2),
+                "reranker_model": reranker_info.get("model"),
+                "reranker_available": reranker_info.get("available", False),
             }
             
         except Exception as e:
@@ -682,6 +778,26 @@ class SemanticCache:
         old_threshold = self.threshold
         self.threshold = new_threshold
         logger.info(f"Updated cache threshold: {old_threshold} -> {new_threshold}")
+    
+    def set_reranking_enabled(self, enabled: bool) -> bool:
+        """
+        Enable or disable cross-encoder reranking.
+        
+        Args:
+            enabled: Whether to enable reranking
+            
+        Returns:
+            Actual state after setting (may be False if reranker unavailable)
+        """
+        if enabled and not is_reranker_available():
+            logger.warning("Cannot enable reranking - model not available")
+            self.enable_reranking = False
+            return False
+        
+        old_state = self.enable_reranking
+        self.enable_reranking = enabled
+        logger.info(f"Reranking {'enabled' if enabled else 'disabled'} (was: {old_state})")
+        return enabled
 
 
 # Singleton instance

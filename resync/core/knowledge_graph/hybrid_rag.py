@@ -231,7 +231,7 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
 
         # Normalize: lowercase, collapse whitespace, limit length
         normalized = " ".join(query.lower().split())[:200]
-        return hashlib.md5(normalized.encode(), usedforsecurity=False).hexdigest()
+        return hashlib.md5(normalized.encode()).hexdigest()
 
     def _get_from_cache(self, key: str) -> QueryIntent | None:
         """Get from LRU cache and update access order."""
@@ -397,7 +397,7 @@ Respond with ONLY the category name (e.g., "DEPENDENCY_CHAIN"). No explanation."
             return intent
 
         except Exception as e:
-            logger.warning("llm_classification_failed", error=str(e), exc_info=True)
+            logger.warning("llm_classification_failed", error=str(e))
             return None
 
     async def _get_llm(self):
@@ -571,7 +571,7 @@ class HybridRAG:
             except ImportError:
                 logger.debug("continual_learning_module_not_available")
             except Exception as e:
-                logger.warning("context_enrichment_error", error=str(e), exc_info=True)
+                logger.warning("context_enrichment_error", error=str(e))
         # === END Context Enrichment ===
 
         # Classify query - use async version for LLM fallback
@@ -627,7 +627,7 @@ class HybridRAG:
 
                     # Get RAG similarity score
                     rag_similarity = 0.0
-                    if result["rag_results"] and isinstance(result["rag_results"], list):  # noqa: SIM102
+                    if result["rag_results"] and isinstance(result["rag_results"], list):
                         if result["rag_results"] and "score" in result["rag_results"][0]:
                             rag_similarity = float(result["rag_results"][0].get("score", 0))
 
@@ -646,7 +646,7 @@ class HybridRAG:
                 except ImportError:
                     logger.debug("continual_learning_module_not_available")
                 except Exception as e:
-                    logger.warning("active_learning_check_error", error=str(e), exc_info=True)
+                    logger.warning("active_learning_check_error", error=str(e))
             # === END Active Learning Check ===
 
         return result
@@ -732,7 +732,7 @@ class HybridRAG:
             return {"type": "semantic_search", "query": query_text, "documents": results}
 
         except Exception as e:
-            logger.error("rag_query_failed", error=str(e), exc_info=True)
+            logger.error("rag_query_failed", error=str(e))
             return {"error": str(e), "documents": []}
 
     # =========================================================================
@@ -776,7 +776,7 @@ Answer in the same language as the question."""
         try:
             return await llm.generate(prompt)
         except Exception as e:
-            logger.error("response_generation_failed", error=str(e), exc_info=True)
+            logger.error("response_generation_failed", error=str(e))
             return self._format_results_as_text(results)
 
     def _format_graph_results(self, results: dict[str, Any]) -> str:

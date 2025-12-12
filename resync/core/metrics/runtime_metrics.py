@@ -92,7 +92,7 @@ class RuntimeMetricsCollector:
         if correlation_id in self._correlations:
             data = self._correlations.pop(correlation_id)
             duration_ms = (time.time() - data["start_time"]) * 1000
-            return duration_ms  # noqa: RET504
+            return duration_ms
         return 0.0
 
     def record_health_check(

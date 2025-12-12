@@ -840,7 +840,7 @@ async def validate_environment():
             )
 
         # Check pattern
-        if value and schema.validation_pattern:  # noqa: SIM102
+        if value and schema.validation_pattern:
             if not re.match(schema.validation_pattern, value):
                 issues.append(
                     {

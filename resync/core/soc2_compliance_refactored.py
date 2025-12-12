@@ -19,12 +19,10 @@ logger = get_logger(__name__)
 
 
 # Import shared types to avoid circular dependency
-import contextlib  # noqa: E402
+import contextlib
 
-from resync.core.compliance.types import (  # noqa: E402
-    SOC2ComplianceManager as BaseSOC2ComplianceManager,  # noqa: E402
-)
-from resync.core.compliance.types import SOC2TrustServiceCriteria  # noqa: E402
+from resync.core.compliance.types import SOC2ComplianceManager as BaseSOC2ComplianceManager
+from resync.core.compliance.types import SOC2TrustServiceCriteria
 
 
 class ControlCategory(Enum):
@@ -550,7 +548,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             return test_result
 
         except Exception as e:
-            logger.error(f"Control testing failed for {control_id}: {e}", exc_info=True)
+            logger.error(f"Control testing failed for {control_id}: {e}")
             control.mark_tested(False)
             return {"success": False, "error": str(e)}
 
@@ -821,7 +819,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Control testing worker error: {e}", exc_info=True)
+                logger.error(f"Control testing worker error: {e}")
 
     async def _monitoring_worker(self) -> None:
         """Background worker for continuous monitoring."""
@@ -850,7 +848,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Monitoring worker error: {e}", exc_info=True)
+                logger.error(f"Monitoring worker error: {e}")
 
     async def _reporting_worker(self) -> None:
         """Background worker for compliance reporting."""
@@ -874,7 +872,7 @@ class SOC2ComplianceManager(BaseSOC2ComplianceManager):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Reporting worker error: {e}", exc_info=True)
+                logger.error(f"Reporting worker error: {e}")
 
     def _generate_recommendations(self, report: dict[str, Any]) -> list[str]:
         """Generate recommendations based on compliance report."""

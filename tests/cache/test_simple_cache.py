@@ -65,9 +65,9 @@ sys.modules["resync.core.metrics"] = MockRuntimeMetrics()
 sys.modules["resync.core.exceptions"] = MockExceptions()
 
 # Now import the cache components
-from resync.core.cache.memory_manager import CacheEntry, CacheMemoryManager  # noqa: E402
-from resync.core.cache.persistence_manager import CachePersistenceManager  # noqa: E402
-from resync.core.cache.transaction_manager import CacheTransactionManager  # noqa: E402
+from resync.core.cache.memory_manager import CacheEntry, CacheMemoryManager
+from resync.core.cache.persistence_manager import CachePersistenceManager
+from resync.core.cache.transaction_manager import CacheTransactionManager
 
 
 async def test_components():

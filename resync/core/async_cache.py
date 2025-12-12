@@ -728,7 +728,7 @@ class AsyncTTLCache:
 
                         if not eviction_found:
                             # If we couldn't find anything to evict, check if it's because we're in a tiny cache
-                            if eviction_count == 0 and self.max_entries < 2:  # noqa: SIM102
+                            if eviction_count == 0 and self.max_entries < 2:
                                 # For tiny caches, check if we're trying to add a second item
                                 if len(shard) > 1 or any(
                                     len(s) > 0
@@ -998,7 +998,7 @@ class AsyncTTLCache:
                                     shard[op["key"]] = entry
                                 else:
                                     shard.pop(op["key"], None)
-                            elif op["operation"] == "delete":  # noqa: SIM102
+                            elif op["operation"] == "delete":
                                 # Restore deleted item
                                 if "previous_value" in op:
                                     current_time = time()
@@ -1197,7 +1197,6 @@ class AsyncTTLCache:
                         }
                     )
                 },
-                exc_info=True,
             )
             # If we can't estimate memory, just check the size limit
             max_safe_size = self.max_entries  # Use configurable max entries
@@ -1806,7 +1805,7 @@ class AsyncTTLCache:
                 runtime_metrics.cache_sets.increment()
                 runtime_metrics.cache_size.set(self.size())
         except Exception as e:
-            logger.error("WAL_replay_SET_failed", key=repr(key), error=str(e), exc_info=True)
+            logger.error("WAL_replay_SET_failed", key=repr(key), error=str(e))
 
     async def apply_wal_delete(self, key: str):
         """
@@ -1821,7 +1820,7 @@ class AsyncTTLCache:
                     runtime_metrics.cache_evictions.increment()
                     runtime_metrics.cache_size.set(self.size())
         except Exception as e:
-            logger.error("WAL_replay_DELETE_failed", key=key, error=str(e), exc_info=True)
+            logger.error("WAL_replay_DELETE_failed", key=key, error=str(e))
 
 
 async def get_redis_client():
@@ -1846,5 +1845,5 @@ async def get_redis_client():
         )
 
     except Exception as e:
-        logger.error("Failed to create Redis client", error=str(e), exc_info=True)
+        logger.error("Failed to create Redis client", error=str(e))
         raise

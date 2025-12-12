@@ -233,7 +233,7 @@ class PerformanceTracker:
             return round(min(1.0, max(0.0, health_score)), 4)
 
         except Exception as e:
-            logger.warning("failed_to_calculate_health_score", error=str(e), exc_info=True)
+            logger.warning("failed_to_calculate_health_score", error=str(e))
             return 0.0
 
     def _calculate_response_time_score(self, metrics: list[PerformanceMetrics]) -> float:
@@ -352,7 +352,7 @@ class PerformanceTracker:
                     break
 
         except Exception as e:
-            logger.warning("failed_to_cleanup_metrics", error=str(e), exc_info=True)
+            logger.warning("failed_to_cleanup_metrics", error=str(e))
 
     def get_detailed_report(self) -> dict[str, Any]:
         """Get detailed performance report."""

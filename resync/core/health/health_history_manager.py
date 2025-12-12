@@ -148,7 +148,7 @@ class HealthHistoryManager:
                     self.health_history = self.health_history[-min_entries:]
 
             except Exception as e:
-                logger.error("error_during_health_history_cleanup", error=str(e), exc_info=True)
+                logger.error("error_during_health_history_cleanup", error=str(e))
 
     async def _update_memory_usage(self) -> None:
         """Update memory usage tracking for health history."""
@@ -171,7 +171,7 @@ class HealthHistoryManager:
                 self._memory_usage_mb = 0.0
 
         except Exception as e:
-            logger.error("error_updating_memory_usage", error=str(e), exc_info=True)
+            logger.error("error_updating_memory_usage", error=str(e))
 
     def get_memory_usage(self) -> dict[str, Any]:
         """
@@ -264,7 +264,7 @@ class HealthHistoryManager:
         # Filter entries that contain the component
         component_history = []
         for entry in self.health_history:
-            if entry.timestamp >= cutoff_time:  # noqa: SIM102
+            if entry.timestamp >= cutoff_time:
                 if component_name in entry.component_changes:
                     component_history.append(
                         {

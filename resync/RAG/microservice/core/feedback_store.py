@@ -72,15 +72,11 @@ class RAGFeedbackStore:
 FeedbackStore = RAGFeedbackStore
 
 _instance: RAGFeedbackStore | None = None
-_instance_lock = __import__("threading").Lock()
 
 
 def get_rag_feedback_store() -> RAGFeedbackStore:
-    """Get the singleton RAGFeedbackStore instance (thread-safe)."""
+    """Get the singleton RAGFeedbackStore instance."""
     global _instance
     if _instance is None:
-        with _instance_lock:
-            # Double-check locking pattern
-            if _instance is None:
-                _instance = RAGFeedbackStore()
+        _instance = RAGFeedbackStore()
     return _instance

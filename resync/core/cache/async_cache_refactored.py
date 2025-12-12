@@ -236,7 +236,7 @@ class AsyncTTLCacheRefactored(
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"cache_cleanup_error: {e}", exc_info=True)
+                logger.error(f"cache_cleanup_error: {e}")
 
     def start_cleanup_task(self) -> None:
         """Start the background cleanup task."""

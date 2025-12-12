@@ -25,7 +25,6 @@ from resync.core.langfuse.prompt_manager import (
     PromptConfig,
     PromptManager,
     PromptTemplate,
-    PromptType,
     get_prompt_manager,
 )
 
@@ -34,7 +33,6 @@ __all__ = [
     "get_prompt_manager",
     "PromptConfig",
     "PromptTemplate",
-    "PromptType",
     "LangFuseTracer",
     "get_tracer",
     "trace_llm_call",

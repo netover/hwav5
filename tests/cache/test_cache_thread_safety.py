@@ -95,7 +95,7 @@ async def main():
             logger.error("❌ Thread-safe cache operations test failed!")
             return False
     except Exception as e:
-        logger.error(f"❌ Test failed with error: {e}", exc_info=True)
+        logger.error(f"❌ Test failed with error: {e}")
         return False
 
     return True

@@ -84,7 +84,7 @@ class CacheMigrationManager:
             logger.info("CacheMigrationManager initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize CacheMigrationManager: {e}", exc_info=True)
+            logger.error(f"Failed to initialize CacheMigrationManager: {e}")
             raise
 
     async def shutdown(self):
@@ -121,7 +121,7 @@ class CacheMigrationManager:
                         return legacy_result
 
             except Exception as e:
-                logger.warning(f"Error in new cache, falling back to legacy: {e}", exc_info=True)
+                logger.warning(f"Error in new cache, falling back to legacy: {e}")
                 if self.enable_metrics:
                     migration_errors.labels(component="cache", error_type="new_cache_error").inc()
                     migration_fallbacks.labels(component="cache", reason="error").inc()
@@ -135,7 +135,7 @@ class CacheMigrationManager:
                         )
                         return result
                     except Exception as e2:
-                        logger.error(f"Error in legacy cache fallback: {e2}", exc_info=True)
+                        logger.error(f"Error in legacy cache fallback: {e2}")
                         if self.enable_metrics:
                             migration_errors.labels(
                                 component="cache", error_type="legacy_cache_error"
@@ -152,7 +152,7 @@ class CacheMigrationManager:
                 )
                 return result
             except Exception as e:
-                logger.error(f"Error in legacy cache: {e}", exc_info=True)
+                logger.error(f"Error in legacy cache: {e}")
                 if self.enable_metrics:
                     migration_errors.labels(
                         component="cache", error_type="legacy_cache_error"
@@ -231,13 +231,13 @@ class CacheMigrationManager:
             try:
                 stats["legacy_stats"] = self.legacy_cache.get_stats()
             except Exception as e:
-                logger.warning(f"Error getting legacy stats: {e}", exc_info=True)
+                logger.warning(f"Error getting legacy stats: {e}")
 
         if self.new_cache:
             try:
                 stats["new_stats"] = await self.new_cache.get_stats()
             except Exception as e:
-                logger.warning(f"Error getting new stats: {e}", exc_info=True)
+                logger.warning(f"Error getting new stats: {e}")
 
         return stats
 
@@ -275,7 +275,7 @@ class TWSMigrationManager:
             logger.info("TWSMigrationManager initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize TWSMigrationManager: {e}", exc_info=True)
+            logger.error(f"Failed to initialize TWSMigrationManager: {e}")
             raise
 
     async def connect(self) -> bool:
@@ -287,7 +287,7 @@ class TWSMigrationManager:
                     migration_new_hits.labels(component="tws").inc()
                 return result
             except Exception as e:
-                logger.warning(f"Error in new TWS client, falling back: {e}", exc_info=True)
+                logger.warning(f"Error in new TWS client, falling back: {e}")
                 if self.enable_metrics:
                     migration_errors.labels(component="tws", error_type="new_client_error").inc()
                     migration_fallbacks.labels(component="tws", reason="error").inc()
@@ -301,7 +301,7 @@ class TWSMigrationManager:
                     migration_legacy_hits.labels(component="tws").inc()
                 return result
             except Exception as e:
-                logger.error(f"Error in legacy TWS client: {e}", exc_info=True)
+                logger.error(f"Error in legacy TWS client: {e}")
                 if self.enable_metrics:
                     migration_errors.labels(component="tws", error_type="legacy_client_error").inc()
 
@@ -319,7 +319,7 @@ class TWSMigrationManager:
                 )
                 return result
             except Exception as e:
-                logger.warning(f"Error in new TWS client, falling back: {e}", exc_info=True)
+                logger.warning(f"Error in new TWS client, falling back: {e}")
                 if self.enable_metrics:
                     migration_fallbacks.labels(component="tws", reason="error").inc()
 
@@ -332,7 +332,7 @@ class TWSMigrationManager:
                 )
                 return result
             except Exception as e:
-                logger.error(f"Error in legacy TWS client: {e}", exc_info=True)
+                logger.error(f"Error in legacy TWS client: {e}")
 
         raise RuntimeError("No TWS client available") from None
 
@@ -348,7 +348,7 @@ class TWSMigrationManager:
                 )
                 return result
             except Exception as e:
-                logger.warning(f"Error in new TWS client, falling back: {e}", exc_info=True)
+                logger.warning(f"Error in new TWS client, falling back: {e}")
                 if self.enable_metrics:
                     migration_fallbacks.labels(component="tws", reason="error").inc()
 
@@ -361,7 +361,7 @@ class TWSMigrationManager:
                 )
                 return result
             except Exception as e:
-                logger.error(f"Error in legacy TWS client: {e}", exc_info=True)
+                logger.error(f"Error in legacy TWS client: {e}")
 
         raise RuntimeError("No TWS client available") from None
 

@@ -29,26 +29,7 @@ logger = get_logger(__name__)
 security = HTTPBearer(auto_error=False)
 
 # Secret key for JWT tokens
-# SECURITY: Must be set via SECRET_KEY environment variable in production
-_configured_secret = getattr(settings, "SECRET_KEY", None) or getattr(settings, "secret_key", None)
-if not _configured_secret:
-    import os
-    import warnings
-    if os.getenv("ENVIRONMENT", "development").lower() == "production":
-        raise RuntimeError(
-            "SECRET_KEY must be configured in production! "
-            "Set SECRET_KEY environment variable with: "
-            "python -c 'import secrets; print(secrets.token_urlsafe(32))'"
-        )
-    warnings.warn(
-        "SECRET_KEY not configured. Using random key (sessions won't persist across restarts). "
-        "Set SECRET_KEY environment variable for production.",
-        RuntimeWarning,
-        stacklevel=2
-    )
-    _configured_secret = secrets.token_urlsafe(32)
-
-SECRET_KEY = _configured_secret
+SECRET_KEY = getattr(settings, "SECRET_KEY", "fallback_secret_key_for_development")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

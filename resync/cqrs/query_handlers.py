@@ -55,7 +55,7 @@ class GetSystemStatusQueryHandler(IQueryHandler[GetSystemStatusQuery, QueryResul
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetWorkstationsStatusQueryHandler(IQueryHandler[GetWorkstationsStatusQuery, QueryResult]):
@@ -83,7 +83,7 @@ class GetWorkstationsStatusQueryHandler(IQueryHandler[GetWorkstationsStatusQuery
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetJobsStatusQueryHandler(IQueryHandler[GetJobsStatusQuery, QueryResult]):
@@ -111,7 +111,7 @@ class GetJobsStatusQueryHandler(IQueryHandler[GetJobsStatusQuery, QueryResult]):
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetCriticalPathStatusQueryHandler(IQueryHandler[GetCriticalPathStatusQuery, QueryResult]):
@@ -139,7 +139,7 @@ class GetCriticalPathStatusQueryHandler(IQueryHandler[GetCriticalPathStatusQuery
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetJobStatusQueryHandler(IQueryHandler[GetJobStatusQuery, QueryResult]):
@@ -169,7 +169,7 @@ class GetJobStatusQueryHandler(IQueryHandler[GetJobStatusQuery, QueryResult]):
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetJobStatusBatchQueryHandler(IQueryHandler[GetJobStatusBatchQuery, QueryResult]):
@@ -209,7 +209,7 @@ class GetJobStatusBatchQueryHandler(IQueryHandler[GetJobStatusBatchQuery, QueryR
             return QueryResult(success=True, data=results)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetSystemHealthQueryHandler(IQueryHandler[GetSystemHealthQuery, QueryResult]):
@@ -224,7 +224,7 @@ class GetSystemHealthQueryHandler(IQueryHandler[GetSystemHealthQuery, QueryResul
             return QueryResult(success=True, data=health_report)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class SearchJobsQueryHandler(IQueryHandler[SearchJobsQuery, QueryResult]):
@@ -253,7 +253,7 @@ class SearchJobsQueryHandler(IQueryHandler[SearchJobsQuery, QueryResult]):
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetPerformanceMetricsQueryHandler(IQueryHandler[GetPerformanceMetricsQuery, QueryResult]):
@@ -268,7 +268,7 @@ class GetPerformanceMetricsQueryHandler(IQueryHandler[GetPerformanceMetricsQuery
             return QueryResult(success=True, data=performance_metrics)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class CheckTWSConnectionQueryHandler(IQueryHandler[CheckTWSConnectionQuery, QueryResult]):
@@ -283,7 +283,7 @@ class CheckTWSConnectionQueryHandler(IQueryHandler[CheckTWSConnectionQuery, Quer
             return QueryResult(success=True, data={"connected": is_connected})
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetJobDetailsQueryHandler(IQueryHandler[GetJobDetailsQuery, QueryResult]):
@@ -311,7 +311,7 @@ class GetJobDetailsQueryHandler(IQueryHandler[GetJobDetailsQuery, QueryResult]):
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetJobHistoryQueryHandler(IQueryHandler[GetJobHistoryQuery, QueryResult]):
@@ -339,7 +339,7 @@ class GetJobHistoryQueryHandler(IQueryHandler[GetJobHistoryQuery, QueryResult]):
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetJobLogQueryHandler(IQueryHandler[GetJobLogQuery, QueryResult]):
@@ -366,7 +366,7 @@ class GetJobLogQueryHandler(IQueryHandler[GetJobLogQuery, QueryResult]):
             return QueryResult(success=True, data=job_log)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetPlanDetailsQueryHandler(IQueryHandler[GetPlanDetailsQuery, QueryResult]):
@@ -394,7 +394,7 @@ class GetPlanDetailsQueryHandler(IQueryHandler[GetPlanDetailsQuery, QueryResult]
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetJobDependenciesQueryHandler(IQueryHandler[GetJobDependenciesQuery, QueryResult]):
@@ -422,7 +422,7 @@ class GetJobDependenciesQueryHandler(IQueryHandler[GetJobDependenciesQuery, Quer
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetResourceUsageQueryHandler(IQueryHandler[GetResourceUsageQuery, QueryResult]):
@@ -450,7 +450,7 @@ class GetResourceUsageQueryHandler(IQueryHandler[GetResourceUsageQuery, QueryRes
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))
 
 
 class GetEventLogQueryHandler(IQueryHandler[GetEventLogQuery, QueryResult]):
@@ -478,4 +478,4 @@ class GetEventLogQueryHandler(IQueryHandler[GetEventLogQuery, QueryResult]):
             return QueryResult(success=True, data=result)
         except Exception as e:
             logger.error("exception_caught", error=str(e), exc_info=True)
-            return QueryResult(success=False, error=str(e), exc_info=True)
+            return QueryResult(success=False, error=str(e))

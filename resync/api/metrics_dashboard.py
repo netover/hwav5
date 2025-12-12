@@ -237,7 +237,7 @@ async def get_dashboard_data(
         )
 
     except Exception as e:
-        logger.error("dashboard_data_error", error=str(e), exc_info=True)
+        logger.error("dashboard_data_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -277,7 +277,7 @@ async def get_metric_series(
             ],
         }
     except Exception as e:
-        logger.error("metric_series_error", error=str(e), exc_info=True)
+        logger.error("metric_series_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -299,7 +299,7 @@ async def get_metrics_summary():
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
-        logger.error("metrics_summary_error", error=str(e), exc_info=True)
+        logger.error("metrics_summary_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -350,7 +350,7 @@ async def get_current_gauges():
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
-        logger.error("gauges_error", error=str(e), exc_info=True)
+        logger.error("gauges_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -406,7 +406,7 @@ async def get_cl_dashboard_data(
         return await cl_metrics.get_dashboard_data(hours=hours)
 
     except Exception as e:
-        logger.error("cl_dashboard_error", error=str(e), exc_info=True)
+        logger.error("cl_dashboard_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -467,5 +467,5 @@ async def get_feedback_analysis(
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
-        logger.error("feedback_analysis_error", error=str(e), exc_info=True)
+        logger.error("feedback_analysis_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e

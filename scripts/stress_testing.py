@@ -311,7 +311,7 @@ class StressTester:
                                 raise ValueError("Invalid metrics format")
                         elif op_type == "get_agent":
                             # Try to get non-existent agent (expected to fail gracefully)
-                            try:  # noqa: SIM105
+                            try:
                                 await manager.get_agent(f"non_existent_{worker_id}_{op_num}")
                             except ValueError:
                                 pass  # Expected

@@ -17,7 +17,7 @@ from resync.core.agent_manager import unified_agent
 from resync.RAG.microservice.core.embedding_service import EmbeddingService
 from resync.RAG.microservice.core.ingest import IngestService
 from resync.RAG.microservice.core.retriever import RagRetriever
-from resync.RAG.microservice.core.pgvector_store import get_default_store
+from resync.RAG.microservice.core.vector_store import get_default_store
 
 from ..dependencies import get_logger
 from ..models.request_models import ChatHistoryQuery, ChatMessageRequest
@@ -55,7 +55,7 @@ async def _get_rag_components():
                 logger.info("RAG components initialized successfully (lazy)")
         except Exception as e:
             if logger:
-                logger.error(f"Failed to initialize RAG components: {e}", exc_info=True)
+                logger.error(f"Failed to initialize RAG components: {e}")
             _rag_embedding_service = None
             _rag_vector_store = None
             _rag_retriever = None
@@ -163,7 +163,7 @@ async def analyze_message(request: ChatMessageRequest, logger_instance=Depends(g
         }
 
     except Exception as e:
-        logger_instance.error("analyze_message_error", error=str(e), exc_info=True)
+        logger_instance.error("analyze_message_error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to analyze message"
         ) from e

@@ -12,7 +12,7 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from resync.core.rag_health_check import (  # noqa: E402
+from resync.core.rag_health_check import (
     RAGHealthCheck,
     get_rag_health_summary,
     run_rag_health_check,

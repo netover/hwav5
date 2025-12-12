@@ -15,7 +15,7 @@ os.environ["USE_REDIS_AUDIT_STREAMS"] = os.environ.get("USE_REDIS_AUDIT_STREAMS"
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from resync.core.audit_db import (  # noqa: E402
+from resync.core.audit_db import (
     USE_REDIS_STREAMS,
     add_audit_record,
     get_pending_audits,

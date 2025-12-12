@@ -115,7 +115,7 @@ class ProactiveMonitoringSystem:
             )
 
         except Exception as e:
-            logger.error("proactive_health_checks_failed", error=str(e), exc_info=True)
+            logger.error("proactive_health_checks_failed", error=str(e))
             results["error"] = str(e)
 
         return results
@@ -160,7 +160,7 @@ class ProactiveMonitoringSystem:
                 pass
 
         except Exception as e:
-            logger.warning("connection_pool_health_check_failed", error=str(e), exc_info=True)
+            logger.warning("connection_pool_health_check_failed", error=str(e))
 
         return {"error": "Unable to check connection pool health"}
 

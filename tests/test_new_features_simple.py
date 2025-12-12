@@ -94,7 +94,7 @@ def test_audit_logger_functionality():
     # Mock the logger
     mock_logger = Mock()
 
-    with patch("resync.api.audit.logger", mock_logger):  # noqa: SIM117
+    with patch("resync.api.audit.logger", mock_logger):
         with patch("resync.core.logger.log_with_correlation"):
             logger = AuditLogger()
 

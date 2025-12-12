@@ -157,6 +157,7 @@ def retry_on_exception(
 
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
+            import time
             logger_instance = logger or logging.getLogger(func.__module__)
             current_delay = delay
 
@@ -169,7 +170,7 @@ def retry_on_exception(
                             f"Attempt {attempt + 1} failed: {e}. "
                             f"Retrying in {current_delay:.2f} seconds..."
                         )
-                        await asyncio.sleep(current_delay)
+                        time.sleep(current_delay)  # Use sync sleep for sync functions
                         current_delay *= backoff
                     else:
                         logger_instance.error(

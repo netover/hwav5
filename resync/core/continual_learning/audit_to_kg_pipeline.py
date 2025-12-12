@@ -389,7 +389,6 @@ class AuditToKGPipeline:
                     "failed_to_add_triplet",
                     subject=triplet.subject,
                     error=str(e),
-                    exc_info=True,
                 )
 
         return added
@@ -455,7 +454,7 @@ class AuditToKGPipeline:
             )
 
         except Exception as e:
-            logger.warning("failed_to_get_error_patterns", error=str(e), exc_info=True)
+            logger.warning("failed_to_get_error_patterns", error=str(e))
 
         return patterns
 
@@ -480,12 +479,12 @@ class AuditToKGPipeline:
         for _entity_type, entity_list in entities.items():
             for _entity in entity_list:
                 # Check if entity has INCORRECT_ASSOCIATION edges
-                try:  # noqa: SIM105
+                try:
                     # This would query the graph for error edges
                     # For now, return False (no known issues)
                     pass
-                except Exception as e:
-                    logger.debug("kg_error_check_failed", error=str(e), exc_info=True)
+                except Exception:
+                    pass
 
         return False, None
 

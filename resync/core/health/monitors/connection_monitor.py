@@ -125,7 +125,7 @@ class ConnectionPoolMonitor:
             # Sanitize error message for security
             secure_message = str(e)
 
-            logger.error("connection_pools_health_check_failed", error=str(e), exc_info=True)
+            logger.error("connection_pools_health_check_failed", error=str(e))
             return ComponentHealth(
                 name="connection_pools",
                 component_type=ComponentType.CONNECTION_POOL,
@@ -179,7 +179,7 @@ class ConnectionPoolMonitor:
         except Exception as e:
             response_time = (time.time() - start_time) * 1000
 
-            logger.error("websocket_pool_health_check_failed", error=str(e), exc_info=True)
+            logger.error("websocket_pool_health_check_failed", error=str(e))
             return ComponentHealth(
                 name="websocket_pool",
                 component_type=ComponentType.CONNECTION_POOL,

@@ -210,7 +210,7 @@ class KGCacheManager:
                 return True
 
             except Exception as e:
-                logger.error("cache_refresh_failed", error=str(e), exc_info=True)
+                logger.error("cache_refresh_failed", error=str(e))
                 raise
 
     async def invalidate(self) -> None:
@@ -267,7 +267,7 @@ class KGCacheManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("background_refresh_error", error=str(e), exc_info=True)
+                logger.error("background_refresh_error", error=str(e))
                 # Continue loop even on error
                 await asyncio.sleep(60)  # Wait a bit before retrying
 

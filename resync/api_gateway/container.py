@@ -128,7 +128,7 @@ class Container:
                 try:
                     await instance.close()
                 except Exception as e:
-                    self._logger.error(f"Error disposing instance: {e}", exc_info=True)
+                    self._logger.error(f"Error disposing instance: {e}")
 
         self._instances.clear()
 

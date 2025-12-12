@@ -36,7 +36,7 @@ class QueryBatch:
 
     def __post_init__(self):
         """Generate batch ID after initialization."""
-        if not self.batch_id:  # noqa: SIM102
+        if not self.batch_id:
             # Create deterministic batch ID based on first query
             if self.queries:
                 sql, params = self.queries[0]
@@ -329,7 +329,6 @@ class DatabaseOptimizer:
                 batch_id=batch.batch_id,
                 error=str(e),
                 query_count=len(batch.queries),
-                exc_info=True,
             )
             raise
 
@@ -380,7 +379,7 @@ class DatabaseOptimizer:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Batch processor error: {e}", exc_info=True)
+                logger.error(f"Batch processor error: {e}")
 
     def _apply_optimization_rules(
         self, sql: str, params: tuple[Any, ...]
@@ -399,7 +398,7 @@ class DatabaseOptimizer:
                         sql_preview=optimized_sql[:50],
                     )
                 except Exception as e:
-                    logger.warning("optimization_rule_failed", rule=rule.optimization, error=str(e), exc_info=True)
+                    logger.warning("optimization_rule_failed", rule=rule.optimization, error=str(e))
 
         return optimized_sql, optimized_params
 
@@ -410,7 +409,7 @@ class DatabaseOptimizer:
 
         # Look for existing batch of same type
         for batch_id, batch in self.batches.items():
-            if batch_id.startswith(f"{query_type}_") and not batch.is_full and not batch.is_expired:  # noqa: SIM102
+            if batch_id.startswith(f"{query_type}_") and not batch.is_full and not batch.is_expired:
                 if batch.add_query(sql, params):
                     return batch_id
 

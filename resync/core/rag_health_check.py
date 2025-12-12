@@ -137,7 +137,7 @@ class RAGHealthCheck:
             }
 
         except Exception as e:
-            logger.error("knowledge_base_directory_check_failed", error=str(e), exc_info=True)
+            logger.error("knowledge_base_directory_check_failed", error=str(e))
             return {
                 "healthy": False,
                 "error": str(e),
@@ -191,7 +191,7 @@ class RAGHealthCheck:
             }
 
         except Exception as e:
-            logger.error("file_system_permissions_check_failed", error=str(e), exc_info=True)
+            logger.error("file_system_permissions_check_failed", error=str(e))
             return {
                 "healthy": False,
                 "error": str(e),
@@ -243,7 +243,7 @@ class RAGHealthCheck:
             }
 
         except Exception as e:
-            logger.error("document_processing_check_failed", error=str(e), exc_info=True)
+            logger.error("document_processing_check_failed", error=str(e))
             return {
                 "healthy": False,
                 "error": str(e),
@@ -266,7 +266,7 @@ class RAGHealthCheck:
                 await self.knowledge_graph.add_content(test_content, test_metadata)
                 content_added = True
             except Exception as e:
-                logger.warning("knowledge_graph_add_content_failed", error=str(e), exc_info=True)
+                logger.warning("knowledge_graph_add_content_failed", error=str(e))
                 content_added = False
 
             # Try to get relevant context
@@ -274,7 +274,7 @@ class RAGHealthCheck:
                 context = await self.knowledge_graph.get_relevant_context("test query")
                 context_retrieved = isinstance(context, str)
             except Exception as e:
-                logger.warning("knowledge_graph_get_context_failed", error=str(e), exc_info=True)
+                logger.warning("knowledge_graph_get_context_failed", error=str(e))
                 context_retrieved = False
 
             healthy = content_added or context_retrieved  # At least one operation should work
@@ -287,7 +287,7 @@ class RAGHealthCheck:
             }
 
         except Exception as e:
-            logger.error("knowledge_graph_connectivity_check_failed", error=str(e), exc_info=True)
+            logger.error("knowledge_graph_connectivity_check_failed", error=str(e))
             return {
                 "healthy": False,
                 "error": str(e),
@@ -349,7 +349,7 @@ class RAGHealthCheck:
             }
 
         except Exception as e:
-            logger.error("search_functionality_check_failed", error=str(e), exc_info=True)
+            logger.error("search_functionality_check_failed", error=str(e))
             return {
                 "healthy": False,
                 "error": str(e),
@@ -381,7 +381,7 @@ class RAGHealthCheck:
                     )
                     file_saved = True
                 except Exception as e:
-                    logger.warning("file_save_test_failed", error=str(e), exc_info=True)
+                    logger.warning("file_save_test_failed", error=str(e))
 
             # Test ingestion pipeline
             ingestion_works = False
@@ -395,7 +395,7 @@ class RAGHealthCheck:
                         file_path.unlink()
 
                 except Exception as e:
-                    logger.warning("file_ingestion_test_failed", error=str(e), exc_info=True)
+                    logger.warning("file_ingestion_test_failed", error=str(e))
 
             healthy = (
                 ingestion_works or not file_saved
@@ -409,7 +409,7 @@ class RAGHealthCheck:
             }
 
         except Exception as e:
-            logger.error("file_ingestion_pipeline_check_failed", error=str(e), exc_info=True)
+            logger.error("file_ingestion_pipeline_check_failed", error=str(e))
             return {
                 "healthy": False,
                 "error": str(e),

@@ -227,7 +227,7 @@ class TestAgentLiteLLMIntegration:
             agent = await manager.get_or_create_agent(agent_config_chat.id)
 
             # Primeira tentativa - erro
-            with pytest.raises(Exception):  # noqa: B017
+            with pytest.raises(Exception):
                 await agent.arun("Query 1")
 
             # Segunda tentativa - sucesso
@@ -256,7 +256,7 @@ class TestAgentToolTWSIntegration:
 
         manager = AgentManager()
 
-        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_client):  # noqa: SIM117
+        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_client):
             with patch.object(manager, "_create_agent_instance") as mock_create:
                 # Mock agent que usa ferramenta
                 mock_agent = AsyncMock()
@@ -298,7 +298,7 @@ class TestAgentToolTWSIntegration:
             side_effect=ConnectionError("TWS não disponível")
         )
 
-        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_error):  # noqa: SIM117
+        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_error):
             with patch.object(manager, "_create_agent_instance") as mock_create:
                 mock_agent = AsyncMock()
                 mock_agent.name = agent_config_task.name
@@ -322,7 +322,7 @@ class TestAgentToolTWSIntegration:
 
         manager = AgentManager()
 
-        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_client):  # noqa: SIM117
+        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_client):
             with patch.object(manager, "_create_agent_instance") as mock_create:
                 mock_agent = AsyncMock()
                 mock_agent.name = agent_config_task.name
@@ -669,7 +669,7 @@ class TestCompleteAgentFlow:
 
         manager = AgentManager()
 
-        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_client):  # noqa: SIM117
+        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_client):
             with patch.object(manager, "_create_agent_instance") as mock_create:
                 mock_agent = AsyncMock()
                 mock_agent.name = agent_config_chat.name
@@ -749,7 +749,7 @@ class TestAgentErrorHandling:
 
         manager = AgentManager()
 
-        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_error):  # noqa: SIM117
+        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_error):
             with patch.object(manager, "_create_agent_instance") as mock_create:
                 mock_agent = AsyncMock()
                 mock_agent.name = agent_config_chat.name
@@ -780,14 +780,14 @@ class TestAgentErrorHandling:
 
         manager = AgentManager()
 
-        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_client):  # noqa: SIM117
+        with patch("resync.core.fastapi_di.get_service", return_value=mock_tws_client):
             with patch.object(manager, "_create_agent_instance") as mock_create:
                 mock_agent = AsyncMock()
                 mock_agent.name = agent_config_chat.name
 
                 async def partial_failure(*args, **kwargs):
                     # Tentar RAG
-                    try:  # noqa: SIM105
+                    try:
                         await mock_rag_service.search(args[0])
                     except Exception:
                         pass  # Ignorar erro RAG

@@ -113,7 +113,7 @@ class HealthCheckService:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("monitoring_loop_error", error=str(e), exc_info=True)
+                logger.error("monitoring_loop_error", error=str(e))
                 await asyncio.sleep(interval)
 
     # =========================================================================
@@ -161,7 +161,7 @@ class HealthCheckService:
             return result
 
         except Exception as e:
-            logger.error("health_check_failed", error=str(e), exc_info=True)
+            logger.error("health_check_failed", error=str(e))
             return self._create_error_result(start_time, str(e))
 
     async def _execute_all_checks(

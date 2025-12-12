@@ -30,7 +30,7 @@ async def handle_config_change() -> None:
         from resync.core.connection_manager import ConnectionManager
 
         container = _get_container()
-        IAgentManager, IConnectionManager = _get_interfaces()  # noqa: N806
+        IAgentManager, IConnectionManager = _get_interfaces()
 
         agent_manager = cast(AgentManager, container.get(IAgentManager))
         connection_manager = cast(ConnectionManager, container.get(IConnectionManager))

@@ -636,7 +636,7 @@ async def get_query_examples():
 # DASHBOARD ROUTE
 # =============================================================================
 
-from fastapi.responses import HTMLResponse  # noqa: E402
+from fastapi.responses import HTMLResponse
 
 
 @monitoring_router.get("/dashboard", response_class=HTMLResponse)
@@ -817,7 +817,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         logger.info("websocket_client_disconnected", client_id=client_id)
     except Exception as e:
-        logger.error("websocket_error", client_id=client_id, error=str(e), exc_info=True)
+        logger.error("websocket_error", client_id=client_id, error=str(e))
     finally:
         await bus.unregister_websocket(client_id)
 

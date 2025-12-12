@@ -423,7 +423,7 @@ class TestSetupWebSocketSession:
             return None
 
         mock_manager.get_agent = mock_get_agent_none
-        with patch("resync.api.chat.get_agent_manager", return_value=mock_manager):  # noqa: SIM117
+        with patch("resync.api.chat.get_agent_manager", return_value=mock_manager):
             with patch("resync.api.chat.send_error_message") as mock_error:
                 with contextlib.suppress(WebSocketDisconnect):
                     await _setup_websocket_session(mock_websocket, "invalid")
@@ -514,7 +514,7 @@ class TestHandleAgentInteraction:
         self, mock_websocket, mock_agent, mock_knowledge_graph
     ):
         """Teste caminho otimizado (LLM optimization)"""
-        with patch("resync.api.chat._should_use_llm_optimization", return_value=True):  # noqa: SIM117
+        with patch("resync.api.chat._should_use_llm_optimization", return_value=True):
             with patch("resync.api.chat._get_optimized_response") as mock_opt:
                 with patch("resync.api.chat._finalize_and_store_interaction") as mock_fin:
                     mock_opt.return_value = AsyncMock(return_value="Optimized")
@@ -535,7 +535,7 @@ class TestHandleAgentInteraction:
         self, mock_websocket, mock_agent, mock_knowledge_graph
     ):
         """Teste caminho normal (RAG + streaming)"""
-        with patch("resync.api.chat._should_use_llm_optimization", return_value=False):  # noqa: SIM117
+        with patch("resync.api.chat._should_use_llm_optimization", return_value=False):
             with patch("resync.api.chat._get_enhanced_query") as mock_enh:
                 with patch("resync.api.chat.AgentResponseStreamer") as mock_stream:
                     mock_enh.return_value = AsyncMock(return_value="Enhanced query")
@@ -559,7 +559,7 @@ class TestHandleAgentInteraction:
         self, mock_websocket, mock_agent, mock_knowledge_graph
     ):
         """Teste que mensagem do usuário é ecoada"""
-        with patch("resync.api.chat._should_use_llm_optimization", return_value=True):  # noqa: SIM117
+        with patch("resync.api.chat._should_use_llm_optimization", return_value=True):
             with patch(
                 "resync.api.chat._get_optimized_response",
                 return_value=AsyncMock(return_value="Response"),
@@ -578,7 +578,7 @@ class TestHandleAgentInteraction:
         self, mock_websocket, mock_agent, mock_knowledge_graph
     ):
         """Teste que input é sanitizado"""
-        with patch("resync.api.chat.sanitize_input") as mock_sanitize:  # noqa: SIM117
+        with patch("resync.api.chat.sanitize_input") as mock_sanitize:
             with patch("resync.api.chat._should_use_llm_optimization", return_value=True):
                 with patch(
                     "resync.api.chat._get_optimized_response",
@@ -607,7 +607,7 @@ class TestWebSocketEndpoint:
     @pytest.mark.asyncio
     async def test_websocket_endpoint_normal_disconnect(self, mock_websocket, mock_knowledge_graph):
         """Teste desconexão normal do cliente"""
-        with patch("resync.api.chat._setup_websocket_session") as mock_setup:  # noqa: SIM117
+        with patch("resync.api.chat._setup_websocket_session") as mock_setup:
             with patch("resync.api.chat._message_processing_loop") as mock_loop:
                 mock_setup.return_value = AsyncMock(return_value=MagicMock())
                 mock_loop.side_effect = WebSocketDisconnect()
@@ -618,7 +618,7 @@ class TestWebSocketEndpoint:
     @pytest.mark.asyncio
     async def test_websocket_endpoint_llm_error(self, mock_websocket, mock_knowledge_graph):
         """Teste erro de LLM"""
-        with patch("resync.api.chat._setup_websocket_session") as mock_setup:  # noqa: SIM117
+        with patch("resync.api.chat._setup_websocket_session") as mock_setup:
             with patch("resync.api.chat._message_processing_loop") as mock_loop:
                 mock_setup.return_value = AsyncMock(return_value=MagicMock())
                 mock_loop.side_effect = LLMError("LLM failed")
@@ -630,7 +630,7 @@ class TestWebSocketEndpoint:
     @pytest.mark.asyncio
     async def test_websocket_endpoint_tool_error(self, mock_websocket, mock_knowledge_graph):
         """Teste erro de tool"""
-        with patch("resync.api.chat._setup_websocket_session") as mock_setup:  # noqa: SIM117
+        with patch("resync.api.chat._setup_websocket_session") as mock_setup:
             with patch("resync.api.chat._message_processing_loop") as mock_loop:
                 with patch("resync.api.chat.send_error_message") as mock_error:
                     mock_setup.return_value = AsyncMock(return_value=MagicMock())
@@ -642,7 +642,7 @@ class TestWebSocketEndpoint:
     @pytest.mark.asyncio
     async def test_websocket_endpoint_agent_error(self, mock_websocket, mock_knowledge_graph):
         """Teste erro de agent"""
-        with patch("resync.api.chat._setup_websocket_session") as mock_setup:  # noqa: SIM117
+        with patch("resync.api.chat._setup_websocket_session") as mock_setup:
             with patch("resync.api.chat._message_processing_loop") as mock_loop:
                 mock_setup.return_value = AsyncMock(return_value=MagicMock())
                 mock_loop.side_effect = AgentExecutionError("Agent failed")
@@ -652,7 +652,7 @@ class TestWebSocketEndpoint:
     @pytest.mark.asyncio
     async def test_websocket_endpoint_unexpected_error(self, mock_websocket, mock_knowledge_graph):
         """Teste erro inesperado"""
-        with patch("resync.api.chat._setup_websocket_session") as mock_setup:  # noqa: SIM117
+        with patch("resync.api.chat._setup_websocket_session") as mock_setup:
             with patch("resync.api.chat._message_processing_loop") as mock_loop:
                 with patch("resync.api.chat.send_error_message") as mock_error:
                     mock_setup.return_value = AsyncMock(return_value=MagicMock())
@@ -675,7 +675,7 @@ class TestWebSocketEndpoint:
         """Teste fluxo completo bem-sucedido"""
         mock_agent = MagicMock(name="Test Agent")
 
-        with patch("resync.api.chat._setup_websocket_session") as mock_setup:  # noqa: SIM117
+        with patch("resync.api.chat._setup_websocket_session") as mock_setup:
             with patch("resync.api.chat._message_processing_loop") as mock_loop:
                 mock_setup.return_value = AsyncMock(return_value=mock_agent)
                 mock_loop.return_value = AsyncMock()
@@ -693,7 +693,7 @@ class TestWebSocketEndpoint:
         mock_websocket.state.code = 1001
         mock_websocket.state.reason = "Going away"
 
-        with patch("resync.api.chat._setup_websocket_session") as mock_setup:  # noqa: SIM117
+        with patch("resync.api.chat._setup_websocket_session") as mock_setup:
             with patch("resync.api.chat._message_processing_loop") as mock_loop:
                 mock_setup.return_value = AsyncMock(return_value=MagicMock())
                 mock_loop.side_effect = WebSocketDisconnect()

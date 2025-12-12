@@ -142,7 +142,7 @@ class CacheTTLManager:
                 await self._cleanup_expired_entries(storage)
                 await asyncio.sleep(self.cleanup_interval)
             except Exception as e:
-                logger.error("cache_cleanup_error", error=str(e), exc_info=True)
+                logger.error("cache_cleanup_error", error=str(e))
                 await asyncio.sleep(self.cleanup_interval)
 
     async def _cleanup_expired_entries(self, storage: CacheStorage) -> None:

@@ -115,7 +115,7 @@ class RouterNode(BaseNode):
             try:
                 intent, confidence = await self._classify_with_llm(message)
             except Exception as e:
-                logger.warning("router_llm_failed", error=str(e), exc_info=True)
+                logger.warning("router_llm_failed", error=str(e))
                 if self.config.fallback_to_keywords:
                     intent, confidence = self._classify_with_keywords(message)
                 else:

@@ -87,7 +87,7 @@ async def migrate_sqlite_to_postgresql():
                 try:
                     await pg_conn.execute(query, *list(row))
                 except Exception as e:
-                    logger.warning(f"  Row insert failed: {e}", exc_info=True)
+                    logger.warning(f"  Row insert failed: {e}")
 
             logger.info(f"  Migrated {len(rows)} rows")
 
@@ -103,7 +103,7 @@ async def migrate_sqlite_to_postgresql():
         logger.info("Install with: pip install asyncpg")
         return False
     except Exception as e:
-        logger.error(f"Migration failed: {e}", exc_info=True)
+        logger.error(f"Migration failed: {e}")
         return False
 
 

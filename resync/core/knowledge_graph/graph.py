@@ -207,7 +207,7 @@ class TWSKnowledgeGraph:
                     edges=self._graph.number_of_edges(),
                 )
             except Exception as e:
-                logger.error("knowledge_graph_init_failed", error=str(e), exc_info=True)
+                logger.error("knowledge_graph_init_failed", error=str(e))
                 # Continue with empty graph
                 self._initialized = True
 

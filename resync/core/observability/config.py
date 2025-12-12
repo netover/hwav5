@@ -162,7 +162,7 @@ async def setup_langfuse() -> bool:
         logger.warning("langfuse_not_installed", hint="pip install langfuse")
         return False
     except Exception as e:
-        logger.error("langfuse_init_failed", error=str(e), exc_info=True)
+        logger.error("langfuse_init_failed", error=str(e))
         return False
 
 
@@ -181,7 +181,7 @@ async def shutdown_langfuse():
             _langfuse_client.shutdown()
             logger.info("langfuse_shutdown")
         except Exception as e:
-            logger.warning("langfuse_shutdown_error", error=str(e), exc_info=True)
+            logger.warning("langfuse_shutdown_error", error=str(e))
         finally:
             _langfuse_client = None
 
@@ -364,7 +364,7 @@ class EvidentlyMonitor:
             return report_data
 
         except Exception as e:
-            logger.error("drift_check_failed", error=str(e), exc_info=True)
+            logger.error("drift_check_failed", error=str(e))
             return {"error": str(e)}
 
     def _save_report(self, report: dict[str, Any]) -> None:
@@ -391,7 +391,7 @@ class EvidentlyMonitor:
             self._cleanup_old_reports()
 
         except Exception as e:
-            logger.warning("report_save_failed", error=str(e), exc_info=True)
+            logger.warning("report_save_failed", error=str(e))
 
     def _cleanup_old_reports(self) -> None:
         """Remove reports older than retention period."""
@@ -412,8 +412,8 @@ class EvidentlyMonitor:
                 if file_time < cutoff:
                     os.remove(filepath)
                     logger.debug("old_report_deleted", filename=filename)
-            except Exception as e:
-                logger.debug("report_cleanup_failed", filename=filename, error=str(e), exc_info=True)
+            except Exception:
+                pass
 
     def get_statistics(self) -> dict[str, Any]:
         """Get monitoring statistics."""

@@ -18,7 +18,7 @@ TResult = TypeVar("TResult")
 
 
 @dataclass
-class ICommand(ABC):  # noqa: B024
+class ICommand(ABC):
     """
     Base interface for command objects in the CQRS pattern.
     Commands represent operations that change the system state.
@@ -26,7 +26,7 @@ class ICommand(ABC):  # noqa: B024
 
 
 @dataclass
-class IQuery(ABC):  # noqa: B024
+class IQuery(ABC):
     """
     Base interface for query objects in the CQRS pattern.
     Queries represent operations that read data without changing the system state.

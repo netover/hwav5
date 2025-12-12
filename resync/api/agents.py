@@ -37,7 +37,7 @@ async def list_all_agents(
             for agent in agents
         ]
     except Exception as e:
-        logger.error(f"Error listing agents: {e}", exc_info=True)
+        logger.error(f"Error listing agents: {e}")
         return []
 
 
@@ -70,5 +70,5 @@ async def get_agent_details(
     except NotFoundError:
         raise
     except Exception as e:
-        logger.error(f"Error getting agent details for {agent_id}: {e}", exc_info=True)
+        logger.error(f"Error getting agent details for {agent_id}: {e}")
         raise NotFoundError(f"Agent with ID '{agent_id}' not found.") from None

@@ -1,11 +1,12 @@
 """
 Admin routes for Semantic Cache management.
 
-v5.3.16 - Admin endpoints for:
+v5.3.17 - Admin endpoints for:
 - Cache statistics and metrics
 - Threshold configuration
 - Cache invalidation
 - Health checks
+- Cross-encoder reranking configuration (NEW)
 
 Security: All endpoints require admin authentication.
 """
@@ -25,6 +26,12 @@ from resync.core.cache.redis_config import (
     redis_health_check,
 )
 from resync.core.cache.semantic_cache import get_semantic_cache
+from resync.core.cache.reranker import (
+    get_reranker_info,
+    preload_reranker,
+    update_reranker_config,
+    is_reranker_available,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -557,6 +564,179 @@ async def test_redis_connection() -> dict[str, Any]:
             "message": f"Connection failed: {str(e)}",
             "error": str(e),
         }
+
+
+# =============================================================================
+# Reranker Endpoints (v5.3.17)
+# =============================================================================
+
+class RerankerInfoResponse(BaseModel):
+    """Response model for reranker information."""
+    
+    available: bool = Field(description="Whether reranker is available")
+    enabled: bool = Field(description="Whether reranking is enabled for cache")
+    model: str | None = Field(description="Reranker model name")
+    loaded: bool = Field(description="Whether model is loaded in memory")
+    threshold: float = Field(description="Cross-encoder similarity threshold")
+    gray_zone_min: float = Field(description="Minimum distance for gray zone")
+    gray_zone_max: float = Field(description="Maximum distance for gray zone")
+    stats: dict[str, Any] = Field(description="Reranking statistics")
+
+
+class RerankerConfigRequest(BaseModel):
+    """Request model for updating reranker configuration."""
+    
+    threshold: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Cross-encoder similarity threshold (0-1, higher = stricter)",
+    )
+    gray_zone_min: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Minimum embedding distance for gray zone",
+    )
+    gray_zone_max: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Maximum embedding distance for gray zone",
+    )
+
+
+@router.get(
+    "/reranker",
+    response_model=RerankerInfoResponse,
+    summary="Get reranker information",
+    description="Returns information about the cross-encoder reranker configuration and stats.",
+)
+async def get_reranker_status() -> RerankerInfoResponse:
+    """Get reranker status and configuration."""
+    try:
+        cache = await get_semantic_cache()
+        info = get_reranker_info()
+        
+        stats = await cache.get_stats()
+        
+        return RerankerInfoResponse(
+            available=info.get("available", False),
+            enabled=cache.enable_reranking,
+            model=info.get("model"),
+            loaded=info.get("loaded", False),
+            threshold=info.get("threshold", 0.5),
+            gray_zone_min=info.get("gray_zone_min", 0.20),
+            gray_zone_max=info.get("gray_zone_max", 0.35),
+            stats={
+                "reranks_total": stats.get("reranks_total", 0),
+                "rerank_rejections": stats.get("rerank_rejections", 0),
+                "rerank_rejection_rate_percent": stats.get("rerank_rejection_rate_percent", 0),
+            },
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to get reranker info: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get reranker info: {str(e)}",
+        )
+
+
+@router.put(
+    "/reranker/enabled",
+    summary="Toggle reranking on/off",
+    description="Enable or disable cross-encoder reranking for gray zone queries.",
+)
+async def toggle_reranking(
+    enabled: Annotated[bool, Query(description="Whether to enable reranking")],
+) -> dict[str, Any]:
+    """Enable or disable reranking."""
+    try:
+        cache = await get_semantic_cache()
+        actual_state = cache.set_reranking_enabled(enabled)
+        
+        return {
+            "requested": enabled,
+            "actual": actual_state,
+            "message": (
+                f"Reranking {'enabled' if actual_state else 'disabled'}"
+                if actual_state == enabled
+                else f"Reranking could not be enabled (model not available)"
+            ),
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to toggle reranking: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to toggle reranking: {str(e)}",
+        )
+
+
+@router.put(
+    "/reranker/config",
+    summary="Update reranker configuration",
+    description="Update cross-encoder threshold and gray zone boundaries.",
+)
+async def update_reranker_configuration(
+    request: RerankerConfigRequest,
+) -> dict[str, Any]:
+    """Update reranker configuration."""
+    try:
+        new_config = update_reranker_config(
+            threshold=request.threshold,
+            gray_zone_min=request.gray_zone_min,
+            gray_zone_max=request.gray_zone_max,
+        )
+        
+        return {
+            "success": True,
+            "config": new_config,
+            "message": "Reranker configuration updated",
+        }
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Failed to update reranker config: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update config: {str(e)}",
+        )
+
+
+@router.post(
+    "/reranker/preload",
+    summary="Preload reranker model",
+    description="Preload the cross-encoder model into memory to avoid cold-start latency.",
+)
+async def preload_reranker_model() -> dict[str, Any]:
+    """Preload reranker model."""
+    try:
+        success = preload_reranker()
+        info = get_reranker_info()
+        
+        return {
+            "success": success,
+            "model": info.get("model"),
+            "loaded": info.get("loaded", False),
+            "message": (
+                "Reranker model loaded successfully"
+                if success
+                else "Failed to load reranker model"
+            ),
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to preload reranker: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to preload model: {str(e)}",
+        )
 
 
 # =============================================================================

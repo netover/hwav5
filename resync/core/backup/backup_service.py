@@ -261,7 +261,7 @@ class BackupService:
                     schedules=len(self._schedules),
                 )
             except Exception as e:
-                logger.warning("backup_metadata_load_failed", error=str(e), exc_info=True)
+                logger.warning("backup_metadata_load_failed", error=str(e))
 
     def _save_metadata(self) -> None:
         """Save backup metadata to file."""
@@ -277,7 +277,7 @@ class BackupService:
 
             logger.debug("backup_metadata_saved")
         except Exception as e:
-            logger.error("backup_metadata_save_failed", error=str(e), exc_info=True)
+            logger.error("backup_metadata_save_failed", error=str(e))
 
     async def create_database_backup(
         self,
@@ -400,7 +400,7 @@ class BackupService:
             backup.error = str(e)
             backup.completed_at = datetime.utcnow()
 
-            logger.error("database_backup_failed", backup_id=backup_id, error=str(e), exc_info=True)
+            logger.error("database_backup_failed", backup_id=backup_id, error=str(e))
 
             # Clean up partial file
             if filepath.exists():
@@ -505,7 +505,7 @@ class BackupService:
             backup.error = str(e)
             backup.completed_at = datetime.utcnow()
 
-            logger.error("config_backup_failed", backup_id=backup_id, error=str(e), exc_info=True)
+            logger.error("config_backup_failed", backup_id=backup_id, error=str(e))
 
             if filepath.exists():
                 filepath.unlink()
@@ -592,7 +592,7 @@ class BackupService:
             backup.error = str(e)
             backup.completed_at = datetime.utcnow()
 
-            logger.error("full_backup_failed", backup_id=backup_id, error=str(e), exc_info=True)
+            logger.error("full_backup_failed", backup_id=backup_id, error=str(e))
 
         self._save_metadata()
         return backup
@@ -863,7 +863,6 @@ class BackupService:
                                 "scheduled_backup_failed",
                                 schedule_id=schedule.id,
                                 error=str(e),
-                                exc_info=True,
                             )
 
                         # Update schedule
@@ -877,7 +876,7 @@ class BackupService:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("scheduler_error", error=str(e), exc_info=True)
+                logger.error("scheduler_error", error=str(e))
                 await asyncio.sleep(60)
 
     def get_statistics(self) -> dict[str, Any]:

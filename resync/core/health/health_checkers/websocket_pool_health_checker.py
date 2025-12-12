@@ -60,7 +60,7 @@ class WebSocketPoolHealthChecker(BaseHealthChecker):
             )
         except Exception as e:
             response_time = (time.time() - start_time) * 1000
-            logger.error("websocket_pool_health_check_failed", error=str(e), exc_info=True)
+            logger.error("websocket_pool_health_check_failed", error=str(e))
             return ComponentHealth(
                 name=self.component_name,
                 component_type=self.component_type,

@@ -32,7 +32,7 @@ class CypherQuery:
         return self.query
 
 
-class CypherQueryBuilder(ABC):  # noqa: B024
+class CypherQueryBuilder(ABC):
     """
     Abstract base class for Cypher query builders.
 

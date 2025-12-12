@@ -253,7 +253,7 @@ class QueryCacheManager:
             return result
 
         except Exception as e:
-            logger.error(f"Query execution failed: {e}", exc_info=True)
+            logger.error(f"Query execution failed: {e}")
             self._update_cache_stats(hit=False, execution_time=time.time() - start_time, error=True)
             raise
 
@@ -297,7 +297,7 @@ class QueryCacheManager:
                 # Invalidate all queries that depend on this table
                 invalidated = 0
                 for query_key in tracker.tracked_queries:
-                    if query_key in self.query_stats:  # noqa: SIM102
+                    if query_key in self.query_stats:
                         # Invalidate cache entry
                         if self.cache_manager:
                             invalidated += await self.cache_manager.invalidate(
@@ -368,7 +368,7 @@ class QueryCacheManager:
                 # Result invalidated due to table changes
                 await self.cache_manager.invalidate(cache_key, cascade=False)
         except Exception as e:
-            logger.warning(f"Cache retrieval error for {cache_key}: {e}", exc_info=True)
+            logger.warning(f"Cache retrieval error for {cache_key}: {e}")
 
         return None
 

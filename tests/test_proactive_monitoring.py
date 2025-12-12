@@ -301,11 +301,11 @@ class TestMonitoringConfig:
         from resync.core.monitoring_config import MonitoringConfig
 
         # Intervalo muito pequeno deve falhar
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception):
             MonitoringConfig(polling_interval_seconds=1)
 
         # Intervalo muito grande deve falhar
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception):
             MonitoringConfig(polling_interval_seconds=500)
 
     def test_frontend_config(self):

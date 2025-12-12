@@ -86,7 +86,7 @@ class PerformanceBenchmark:
                     func(*args, **kwargs)
             except Exception as e:
                 errors += 1
-                self.logger.error("benchmark_error_in_iteration", iteration=i, error=str(e), exc_info=True)
+                self.logger.error("benchmark_error_in_iteration", iteration=i, error=str(e))
             finally:
                 end_time = time.perf_counter()
                 times.append(end_time - start_time)

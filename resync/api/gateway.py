@@ -28,8 +28,6 @@ from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import aiohttp
-
-from resync.settings import settings
 import jwt
 from aiohttp import web
 
@@ -468,9 +466,8 @@ class APIGateway:
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
             try:
-                # Validate JWT token using configured secret key
-                secret_key = settings.secret_key.get_secret_value() if hasattr(settings.secret_key, 'get_secret_value') else str(settings.secret_key)
-                payload = jwt.decode(token, secret_key, algorithms=["HS256"])
+                # This would validate JWT token (simplified)
+                payload = jwt.decode(token, "secret", algorithms=["HS256"])
                 request["user_id"] = payload.get("user_id")
                 request["user_roles"] = payload.get("roles", [])
                 return {"authenticated": True}
@@ -481,7 +478,7 @@ class APIGateway:
 
         # API Key authentication
         api_key = request.headers.get("X-API-Key")
-        if api_key:  # noqa: SIM102
+        if api_key:
             # This would validate API key (simplified)
             if api_key.startswith("api_key_"):
                 request["api_key_valid"] = True
@@ -619,7 +616,7 @@ class APIGateway:
             # Create HTTP client session
             timeout = aiohttp.ClientTimeout(total=route_config.timeout_seconds)
 
-            async with aiohttp.ClientSession(timeout=timeout) as session:  # noqa: SIM117
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 # Forward request
                 async with session.request(
                     method=request.method,
@@ -752,7 +749,7 @@ class APIGateway:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Cleanup worker error: {e}", exc_info=True)
+                logger.error(f"Cleanup worker error: {e}")
 
     async def _health_check_worker(self) -> None:
         """Background worker for service health checks."""
@@ -771,7 +768,7 @@ class APIGateway:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Health check worker error: {e}", exc_info=True)
+                logger.error(f"Health check worker error: {e}")
 
     async def _metrics_worker(self) -> None:
         """Background worker for metrics collection."""
@@ -793,7 +790,7 @@ class APIGateway:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Metrics worker error: {e}", exc_info=True)
+                logger.error(f"Metrics worker error: {e}")
 
     def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive gateway metrics."""

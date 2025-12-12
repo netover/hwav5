@@ -293,7 +293,6 @@ class TeamsIntegration:
                 "teams_notification_unexpected_error",
                 error=str(e),
                 webhook=self._mask_webhook_url(self.config.webhook_url),
-                exc_info=True,
             )
             raise NotificationError(f"Unexpected error sending Teams notification: {e}") from e
 
@@ -418,9 +417,9 @@ class TeamsIntegration:
             try:
                 await self.send_notification(notification)
             except NotificationError as e:
-                logger.error("job_status_notification_failed", error=str(e), exc_info=True)
+                logger.error("job_status_notification_failed", error=str(e))
             except Exception as e:
-                logger.error("job_status_notification_unexpected_error", error=str(e), exc_info=True)
+                logger.error("job_status_notification_unexpected_error", error=str(e))
 
     async def learn_from_conversation(self, message: str, context: dict[str, Any]) -> None:
         """Learn from Teams conversation and store in Knowledge Graph."""
@@ -448,7 +447,7 @@ class TeamsIntegration:
         except ImportError:
             logger.debug("knowledge_graph_not_available")
         except Exception as e:
-            logger.warning("knowledge_graph_storage_failed", error=str(e), exc_info=True)
+            logger.warning("knowledge_graph_storage_failed", error=str(e))
 
     async def send_alert(
         self,
@@ -500,7 +499,6 @@ class TeamsIntegration:
                     "teams_webhook_health_check_failed",
                     error=str(e),
                     webhook=self._mask_webhook_url(self.config.webhook_url),
-                    exc_info=True,
                 )
 
         return status

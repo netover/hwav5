@@ -273,7 +273,7 @@ class TestSQLInjectionMiddleware:
             request = mock_request(query_params={"id": injection_attempt})
 
             if should_detect:
-                with pytest.raises(Exception):  # HTTPException  # noqa: B017
+                with pytest.raises(Exception):  # HTTPException
                     asyncio.run(middleware._analyze_request_for_sql_injection(request))
             else:
                 # Should not raise exception

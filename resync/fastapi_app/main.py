@@ -1,39 +1,23 @@
 """
 FastAPI Application Main Entry Point
 
-Resync v5.3.12 - AI Interface for HCL Workload Automation
+Resync v5.2 - AI Interface for HCL Workload Automation
 - Unified Agent Routing (automatic intent detection)
 - Internal Monitoring Dashboard (replaces Prometheus/Grafana)
 - WebSocket real-time updates
 - Proactive TWS Monitoring (background polling)
 - Real-time Event Broadcasting
-- CSP Security Headers
-- Request Correlation ID Tracking
-- Cached Static Files with ETags
-
-ARCHITECTURE NOTE (v5.3.12):
-This is the OFFICIAL application entry point.
-- resync/api/app.py is DEPRECATED
-- resync/app_factory.py features have been merged here
 """
 
-import hashlib
-import pathlib
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import Depends, FastAPI, Request, WebSocket
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette.responses import Response as StarletteResponse
-from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 
 from resync.api.litellm_config import router as litellm_config_router
-
-# Security & Middleware imports
-from resync.api.middleware.correlation_id import CorrelationIdMiddleware
-from resync.api.middleware.csp_middleware import CSPMiddleware
-from resync.api.middleware.error_handler import GlobalExceptionHandlerMiddleware
 
 # Import monitoring dashboard router (replaces Prometheus/Grafana)
 from resync.api.monitoring_dashboard import router as monitoring_router
@@ -64,13 +48,6 @@ from resync.fastapi_app.api.v1.routes.admin_threshold_tuning import (
 # Import TWS multi-instance management router
 from resync.fastapi_app.api.v1.routes.admin_tws_instances import router as tws_instances_router
 
-# Import additional admin routers
-from resync.fastapi_app.api.v1.routes.admin_connectors import router as admin_connectors_router
-from resync.fastapi_app.api.v1.routes.admin_environment import router as admin_environment_router
-from resync.fastapi_app.api.v1.routes.admin_monitoring import router as admin_monitoring_router
-from resync.fastapi_app.api.v1.routes.admin_users import router as admin_users_router
-from resync.fastapi_app.api.v1.routes.admin_semantic_cache import router as semantic_cache_router
-
 from .api.v1.routes.admin_config import router as admin_config_router
 from .api.v1.routes.agents import router as agents_router
 from .api.v1.routes.audit import router as audit_router
@@ -80,52 +57,7 @@ from .api.v1.routes.rag import router as rag_router
 from .api.v1.routes.status import router as status_router
 from .api.websocket.handlers import websocket_handler
 
-# Auth dependency for admin routes
-from resync.api.auth import verify_admin_credentials
-
 logger = structlog.get_logger(__name__)
-
-
-# =============================================================================
-# CACHED STATIC FILES WITH ETAGS (from app_factory.py)
-# =============================================================================
-
-
-class CachedStaticFiles(StarletteStaticFiles):
-    """Static files handler with cache headers and ETag support.
-
-    Improves performance by:
-    - Setting Cache-Control headers for browser caching
-    - Generating ETags based on file content hash
-    - Supporting conditional requests (If-None-Match)
-    """
-
-    def __init__(self, *args, cache_max_age: int = 86400, **kwargs):
-        """Initialize with cache configuration.
-
-        Args:
-            cache_max_age: Max age for Cache-Control header (default: 1 day)
-        """
-        super().__init__(*args, **kwargs)
-        self.cache_max_age = cache_max_age
-
-    async def get_response(self, path: str, scope) -> StarletteResponse:
-        """Get response with cache headers and ETag."""
-        response = await super().get_response(path, scope)
-
-        if response.status_code == 200:
-            # Set cache headers
-            response.headers["Cache-Control"] = f"public, max-age={self.cache_max_age}"
-
-            # Generate ETag from file path hash (lightweight)
-            # For production, consider using file content hash
-            try:
-                etag_value = hashlib.md5(path.encode(), usedforsecurity=False).hexdigest()[:16]
-                response.headers["ETag"] = f'"{etag_value}"'
-            except Exception:
-                response.headers["ETag"] = f'"{hash(path)}"'
-
-        return response
 
 
 @asynccontextmanager
@@ -181,7 +113,7 @@ async def lifespan(app: FastAPI):
     except ImportError as e:
         logger.warning(f"Could not initialize proactive monitoring: {e}")
     except Exception as e:
-        logger.error(f"Error starting proactive monitoring: {e}", exc_info=True)
+        logger.error(f"Error starting proactive monitoring: {e}")
 
     logger.info("Application startup complete")
 
@@ -206,7 +138,7 @@ async def lifespan(app: FastAPI):
     except ImportError as e:
         logger.warning(f"Could not initialize AI monitoring: {e}")
     except Exception as e:
-        logger.error(f"Error starting AI monitoring: {e}", exc_info=True)
+        logger.error(f"Error starting AI monitoring: {e}")
 
     # Initialize Specialist Agents Team
     try:
@@ -227,7 +159,7 @@ async def lifespan(app: FastAPI):
     except ImportError as e:
         logger.warning(f"Could not initialize specialist agents: {e}")
     except Exception as e:
-        logger.error(f"Error initializing specialist agents: {e}", exc_info=True)
+        logger.error(f"Error initializing specialist agents: {e}")
 
     # Initialize Observability (LangFuse + Evidently)
     try:
@@ -242,7 +174,7 @@ async def lifespan(app: FastAPI):
     except ImportError as e:
         logger.warning(f"Could not initialize observability: {e}")
     except Exception as e:
-        logger.error(f"Error initializing observability: {e}", exc_info=True)
+        logger.error(f"Error initializing observability: {e}")
 
     # Start Backup Scheduler
     try:
@@ -254,7 +186,7 @@ async def lifespan(app: FastAPI):
     except ImportError as e:
         logger.warning(f"Could not start backup scheduler: {e}")
     except Exception as e:
-        logger.error(f"Error starting backup scheduler: {e}", exc_info=True)
+        logger.error(f"Error starting backup scheduler: {e}")
 
     yield  # Application runs here
 
@@ -267,7 +199,7 @@ async def lifespan(app: FastAPI):
         await shutdown_monitoring_system()
         logger.info("Proactive monitoring stopped")
     except Exception as e:
-        logger.error(f"Error stopping proactive monitoring: {e}", exc_info=True)
+        logger.error(f"Error stopping proactive monitoring: {e}")
 
     # Shutdown AI Monitoring Service
     try:
@@ -278,7 +210,7 @@ async def lifespan(app: FastAPI):
             await service.stop()
             logger.info("AI monitoring service stopped")
     except Exception as e:
-        logger.error(f"Error stopping AI monitoring: {e}", exc_info=True)
+        logger.error(f"Error stopping AI monitoring: {e}")
 
     # Shutdown Backup Scheduler
     try:
@@ -288,7 +220,7 @@ async def lifespan(app: FastAPI):
         await backup_service.stop_scheduler()
         logger.info("Backup scheduler stopped")
     except Exception as e:
-        logger.error(f"Error stopping backup scheduler: {e}", exc_info=True)
+        logger.error(f"Error stopping backup scheduler: {e}")
 
     # Shutdown Observability
     try:
@@ -297,49 +229,24 @@ async def lifespan(app: FastAPI):
         await shutdown_observability()
         logger.info("Observability services stopped")
     except Exception as e:
-        logger.error(f"Error stopping observability: {e}", exc_info=True)
+        logger.error(f"Error stopping observability: {e}")
 
     logger.info("Application shutdown complete")
 
 
 app = FastAPI(
     title="Resync API",
-    version="5.3.16",
+    version="5.2.1",
     description="AI Interface for HCL Workload Automation - Proactive Monitoring & Real-time Dashboard",
     lifespan=lifespan,
 )
 
-# =============================================================================
-# MIDDLEWARE CONFIGURATION (ORDER MATTERS!)
-# =============================================================================
-# Middleware is executed in REVERSE order of addition (last added = first executed)
-# So we add in this order: Error Handler → CSP → Correlation ID
-# Which means execution order is: Correlation ID → CSP → Error Handler
-
-# 1. Global Exception Handler (catches all unhandled exceptions)
-app.add_middleware(GlobalExceptionHandlerMiddleware)
-
-# 2. CSP Middleware (adds Content-Security-Policy headers)
-# report_only=True for development, False for production
-try:
-    from resync.settings import settings
-    is_production = getattr(settings, 'is_production', False)
-except ImportError:
-    is_production = False
-app.add_middleware(CSPMiddleware, report_only=not is_production)
-
-# 3. Correlation ID Middleware (adds X-Correlation-ID to all requests)
-app.add_middleware(CorrelationIdMiddleware)
-
-logger.info("middleware_configured", middlewares=["CorrelationId", "CSP", "GlobalExceptionHandler"])
-
-# =============================================================================
-# STATIC FILES WITH CACHING
-# =============================================================================
-# Use CachedStaticFiles for better performance (ETags + Cache-Control)
-app.mount("/static", CachedStaticFiles(directory="static", cache_max_age=86400), name="static")
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Setup templates - use absolute path from project root
+import pathlib
+
 project_root = pathlib.Path(__file__).parent.parent.parent
 templates = Jinja2Templates(directory=str(project_root / "templates"))
 
@@ -352,13 +259,7 @@ app.include_router(rag_router, prefix="/api/v1", tags=["RAG"])
 app.include_router(status_router, prefix="/api/v1", tags=["Status"])
 
 # Include admin configuration routes under a dedicated namespace
-# SECURITY: Requires admin authentication
-app.include_router(
-    admin_config_router,
-    prefix="/api/v1/admin",
-    tags=["Admin"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
+app.include_router(admin_config_router, prefix="/api/v1/admin", tags=["Admin"])
 
 # Include monitoring dashboard router (lightweight internal monitoring)
 # Replaces need for Prometheus + Grafana (~1.2GB → ~50MB)
@@ -374,102 +275,22 @@ app.include_router(system_config_router, tags=["System Configuration"])
 app.include_router(litellm_config_router, tags=["LiteLLM Configuration"])
 
 # Include TWS multi-instance management router
-# SECURITY: Requires admin authentication
-app.include_router(
-    tws_instances_router,
-    prefix="/api/v1/admin",
-    tags=["TWS Instances"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
+app.include_router(tws_instances_router, prefix="/api/v1/admin", tags=["TWS Instances"])
 
 # Include Threshold Tuning router for Active Learning threshold calibration
-# SECURITY: Requires admin authentication
-app.include_router(
-    threshold_tuning_router,
-    prefix="/api/v1/admin",
-    tags=["Threshold Tuning"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
+app.include_router(threshold_tuning_router, prefix="/api/v1/admin", tags=["Threshold Tuning"])
 
 # Include AI Monitoring router (Specialist Agents + Evidently drift detection)
-# SECURITY: Requires admin authentication
-app.include_router(
-    ai_monitoring_router,
-    prefix="/api/v1/admin",
-    tags=["AI Monitoring"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
+app.include_router(ai_monitoring_router, prefix="/api/v1/admin", tags=["AI Monitoring"])
 
 # Include Backup management router
-# SECURITY: Requires admin authentication
-app.include_router(
-    backup_router,
-    prefix="/api/v1",
-    tags=["Backup Management"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
+app.include_router(backup_router, prefix="/api/v1", tags=["Backup Management"])
 
 # Include Observability management router (LangFuse + Evidently config)
-# SECURITY: Requires admin authentication
-app.include_router(
-    observability_router,
-    prefix="/api/v1",
-    tags=["Observability"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
+app.include_router(observability_router, prefix="/api/v1", tags=["Observability"])
 
 # Include Teams integration router
-# SECURITY: Requires admin authentication
-app.include_router(
-    teams_router,
-    prefix="/api/v1",
-    tags=["Teams Integration"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
-
-# Include Admin Connectors router
-# SECURITY: Requires admin authentication
-app.include_router(
-    admin_connectors_router,
-    prefix="/api/v1/admin",
-    tags=["Admin Connectors"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
-
-# Include Admin Environment router
-# SECURITY: Requires admin authentication
-app.include_router(
-    admin_environment_router,
-    prefix="/api/v1/admin",
-    tags=["Admin Environment"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
-
-# Include Admin Monitoring router
-# SECURITY: Requires admin authentication
-app.include_router(
-    admin_monitoring_router,
-    prefix="/api/v1/admin",
-    tags=["Admin Monitoring"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
-
-# Include Admin Users router
-# SECURITY: Requires admin authentication
-app.include_router(
-    admin_users_router,
-    prefix="/api/v1/admin",
-    tags=["Admin Users"],
-    dependencies=[Depends(verify_admin_credentials)]
-)
-
-# Include Semantic Cache admin router (v5.3.16)
-# SECURITY: Requires admin authentication
-app.include_router(
-    semantic_cache_router,
-    prefix="/api/v1",
-    tags=["Semantic Cache"],
-)
+app.include_router(teams_router, prefix="/api/v1", tags=["Teams Integration"])
 
 
 # WebSocket endpoint

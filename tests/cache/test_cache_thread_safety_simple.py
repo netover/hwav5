@@ -72,7 +72,7 @@ async def main():
             logger.error("❌ Test failed!")
             return False
     except Exception as e:
-        logger.error(f"❌ Test failed with error: {e}", exc_info=True)
+        logger.error(f"❌ Test failed with error: {e}")
         import traceback
 
         traceback.print_exc()

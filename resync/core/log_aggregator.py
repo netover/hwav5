@@ -412,7 +412,7 @@ class LogAggregator:
         """Add a log source configuration."""
         self.sources[config.name] = config
 
-        if config.source_type == LogSource.FILE and config.file_path:  # noqa: SIM102
+        if config.source_type == LogSource.FILE and config.file_path:
             # Initialize file position
             if os.path.exists(config.file_path):
                 self.file_positions[config.name] = os.path.getsize(config.file_path)
@@ -513,7 +513,7 @@ class LogAggregator:
                 return {"error": f"Elasticsearch query failed: {response.status}"}
 
         except Exception as e:
-            logger.error(f"Log search failed: {e}", exc_info=True)
+            logger.error(f"Log search failed: {e}")
             return {"error": str(e)}
 
     async def _initialize_kibana(self) -> None:
@@ -539,7 +539,7 @@ class LogAggregator:
                 else:
                     logger.warning(f"Kibana connection failed: {response.status}")
         except Exception as e:
-            logger.error(f"Kibana initialization failed: {e}", exc_info=True)
+            logger.error(f"Kibana initialization failed: {e}")
 
     async def _create_standard_dashboards(self) -> None:
         """Create standard Kibana dashboards."""
@@ -566,7 +566,7 @@ class LogAggregator:
                             f"Failed to create dashboard {dashboard.title}: {response.status}"
                         )
             except Exception as e:
-                logger.error(f"Dashboard creation failed: {e}", exc_info=True)
+                logger.error(f"Dashboard creation failed: {e}")
 
     def _create_overview_dashboard(self) -> KibanaDashboard:
         """Create overview dashboard."""
@@ -683,7 +683,7 @@ class LogAggregator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Log collection worker error: {e}", exc_info=True)
+                logger.error(f"Log collection worker error: {e}")
 
     async def _collect_from_file(self, source_config: LogSourceConfig) -> None:
         """Collect logs from a file source."""
@@ -693,7 +693,7 @@ class LogAggregator:
         try:
             # Open file if not already open
             if source_config.name not in self.file_handles:
-                handle = open(source_config.file_path, encoding=source_config.file_encoding)  # noqa: SIM115
+                handle = open(source_config.file_path, encoding=source_config.file_encoding)
                 self.file_handles[source_config.name] = handle
                 # Seek to end if following
                 if source_config.follow_file:
@@ -725,7 +725,7 @@ class LogAggregator:
                     await self._process_log_line(line, source_config)
 
         except Exception as e:
-            logger.error(f"File collection failed for {source_config.name}: {e}", exc_info=True)
+            logger.error(f"File collection failed for {source_config.name}: {e}")
 
     async def _collect_from_network(self, source_config: LogSourceConfig) -> None:
         """Collect logs from a network source."""
@@ -735,11 +735,11 @@ class LogAggregator:
     async def _process_log_line(self, line: str, source_config: LogSourceConfig) -> None:
         """Process a single log line."""
         # Apply filters
-        if source_config.include_patterns:  # noqa: SIM102
+        if source_config.include_patterns:
             if not any(re.search(pattern, line) for pattern in source_config.include_patterns):
                 return
 
-        if source_config.exclude_patterns:  # noqa: SIM102
+        if source_config.exclude_patterns:
             if any(re.search(pattern, line) for pattern in source_config.exclude_patterns):
                 return
 
@@ -797,7 +797,7 @@ class LogAggregator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Log processing worker error: {e}", exc_info=True)
+                logger.error(f"Log processing worker error: {e}")
                 self.metrics["indexing_errors"] += 1
 
     async def _index_log_batch(self, batch: list[LogEntry]) -> None:
@@ -847,7 +847,7 @@ class LogAggregator:
                     self.metrics["indexing_errors"] += len(batch)
 
         except Exception as e:
-            logger.error(f"Log indexing failed: {e}", exc_info=True)
+            logger.error(f"Log indexing failed: {e}")
             self.metrics["indexing_errors"] += len(batch)
 
     async def _cleanup_worker(self) -> None:
@@ -868,7 +868,7 @@ class LogAggregator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Cleanup worker error: {e}", exc_info=True)
+                logger.error(f"Cleanup worker error: {e}")
 
     async def _cleanup_old_indices(self) -> None:
         """Clean up old Elasticsearch indices."""
@@ -902,7 +902,7 @@ class LogAggregator:
                                     logger.warning(f"Failed to delete index {index_name}")
 
         except Exception as e:
-            logger.error(f"Index cleanup failed: {e}", exc_info=True)
+            logger.error(f"Index cleanup failed: {e}")
 
     def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive log aggregation metrics."""

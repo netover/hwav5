@@ -1003,7 +1003,7 @@ class SecurityDashboard:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Metric collection worker error: {e}", exc_info=True)
+                logger.error(f"Metric collection worker error: {e}")
 
     async def _collect_system_metrics(self) -> None:
         """Collect metrics from system components."""
@@ -1035,7 +1035,7 @@ class SecurityDashboard:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Alert checking worker error: {e}", exc_info=True)
+                logger.error(f"Alert checking worker error: {e}")
 
     async def _handle_triggered_alert(self, alert: dict[str, Any]) -> None:
         """Handle a triggered alert."""
@@ -1084,7 +1084,7 @@ class SecurityDashboard:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Report generation worker error: {e}", exc_info=True)
+                logger.error(f"Report generation worker error: {e}")
 
 
 # Global security dashboard instance

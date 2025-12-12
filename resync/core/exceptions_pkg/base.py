@@ -65,7 +65,7 @@ class ErrorSeverity(str, Enum):
     CRITICAL = "critical"
 
 
-class BaseAppException(Exception):  # noqa: N818
+class BaseAppException(Exception):
     """
     Base exception class for all application exceptions.
 

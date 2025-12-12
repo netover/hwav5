@@ -183,7 +183,7 @@ class TWSHistoryRAG:
 
                         return start, end
                 except Exception as e:
-                    logger.warning("time_extraction_error", pattern=pattern, error=str(e), exc_info=True)
+                    logger.warning("time_extraction_error", pattern=pattern, error=str(e))
 
         # Default: últimas 24 horas
         end = datetime.now()
@@ -287,7 +287,7 @@ class TWSHistoryRAG:
                 context["patterns"] = patterns
 
         except Exception as e:
-            logger.error("context_gathering_error", error=str(e), exc_info=True)
+            logger.error("context_gathering_error", error=str(e))
 
         return context
 
@@ -330,7 +330,7 @@ RESPOSTA:"""
             return await self.llm_client.generate(prompt)
 
         except Exception as e:
-            logger.error("llm_response_error", error=str(e), exc_info=True)
+            logger.error("llm_response_error", error=str(e))
             return self._generate_template_response(context)
 
     def _format_context_for_llm(self, context: dict[str, Any]) -> str:

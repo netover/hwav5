@@ -19,7 +19,7 @@ from resync.settings import settings
 
 logger = structlog.get_logger(__name__)
 
-from dataclasses import dataclass  # noqa: E402
+from dataclasses import dataclass
 
 
 @dataclass

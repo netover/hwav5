@@ -9,13 +9,13 @@ sys.path.insert(0, os.path.join(".", "resync", "core"))
 print("=== TESTING XLSX/DOCX FALLBACKS ===")
 
 # Import required modules using proper Python imports
-from resync.core.file_ingestor import FileIngestor, read_docx_sync, read_excel_sync  # noqa: E402
-from resync.core.utils.executors import OptimizedExecutors  # noqa: E402
+from resync.core.file_ingestor import FileIngestor, read_docx_sync, read_excel_sync
+from resync.core.utils.executors import OptimizedExecutors
 
 
 # Create test XLSX file (similar to benchmark)
 def create_test_xlsx():
-    temp_file = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)  # noqa: SIM115
+    temp_file = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
 
     with zipfile.ZipFile(temp_file.name, "w", zipfile.ZIP_DEFLATED) as xlsx_zip:
         xlsx_zip.writestr(
@@ -95,7 +95,7 @@ def create_test_xlsx():
 
 # Create test DOCX file
 def create_test_docx():
-    temp_file = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)  # noqa: SIM115
+    temp_file = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
 
     with zipfile.ZipFile(temp_file.name, "w", zipfile.ZIP_DEFLATED) as docx_zip:
         docx_zip.writestr(

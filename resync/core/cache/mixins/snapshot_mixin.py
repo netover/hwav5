@@ -94,7 +94,7 @@ class CacheSnapshotMixin:
             return True
 
         except Exception as e:
-            logger.error(f"Snapshot restore failed: {e}", exc_info=True)
+            logger.error(f"Snapshot restore failed: {e}")
             return False
 
     def get_snapshot_metadata(self, snapshot: dict[str, Any]) -> dict[str, Any]:

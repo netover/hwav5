@@ -6,8 +6,6 @@ Contains all SQLAlchemy models for PostgreSQL storage.
 
 from .stores import (
     ActiveLearningCandidate,
-    # Admin Models
-    AdminUser,
     # Audit Models
     AuditEntry,
     AuditQueueItem,
@@ -70,8 +68,6 @@ __all__ = [
     # Metrics Models
     "MetricDataPoint",
     "MetricAggregation",
-    # Admin Models
-    "AdminUser",
     # Helper
     "get_all_models",
 ]

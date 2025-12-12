@@ -60,7 +60,7 @@ class OptimizedValidator:
             }
         )
 
-    @lru_cache(maxsize=128)  # noqa: B019
+    @lru_cache(maxsize=128)
     def validate_email(self, email: str) -> bool:
         """
         Validate email with caching.
@@ -82,7 +82,7 @@ class OptimizedValidator:
         self.cache.set(cache_key, result)
         return result
 
-    @lru_cache(maxsize=128)  # noqa: B019
+    @lru_cache(maxsize=128)
     def validate_username(self, username: str) -> bool:
         """
         Validate username efficiently.
@@ -96,7 +96,7 @@ class OptimizedValidator:
         self.cache.set(cache_key, result)
         return result
 
-    @lru_cache(maxsize=128)  # noqa: B019
+    @lru_cache(maxsize=128)
     def validate_api_key_name(self, name: str) -> bool:
         """
         Validate API key name efficiently.
@@ -110,7 +110,7 @@ class OptimizedValidator:
         self.cache.set(cache_key, result)
         return result
 
-    @lru_cache(maxsize=128)  # noqa: B019
+    @lru_cache(maxsize=128)
     def validate_tool_name(self, tool: str) -> bool:
         """
         Validate tool name efficiently.
@@ -124,7 +124,7 @@ class OptimizedValidator:
         self.cache.set(cache_key, result)
         return result
 
-    @lru_cache(maxsize=128)  # noqa: B019
+    @lru_cache(maxsize=128)
     def validate_tag_name(self, tag: str) -> bool:
         """
         Validate tag name efficiently.
@@ -138,7 +138,7 @@ class OptimizedValidator:
         self.cache.set(cache_key, result)
         return result
 
-    @lru_cache(maxsize=128)  # noqa: B019
+    @lru_cache(maxsize=128)
     def validate_mime_type(self, mime_type: str) -> bool:
         """
         Validate MIME type efficiently.
@@ -152,7 +152,7 @@ class OptimizedValidator:
         self.cache.set(cache_key, result)
         return result
 
-    @lru_cache(maxsize=128)  # noqa: B019
+    @lru_cache(maxsize=128)
     def validate_metadata_key(self, key: str) -> bool:
         """
         Validate metadata key efficiently.
@@ -166,7 +166,7 @@ class OptimizedValidator:
         self.cache.set(cache_key, result)
         return result
 
-    @lru_cache(maxsize=128)  # noqa: B019
+    @lru_cache(maxsize=128)
     def validate_config_key(self, key: str) -> bool:
         """
         Validate configuration key efficiently.

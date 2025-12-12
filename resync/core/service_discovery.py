@@ -107,7 +107,7 @@ class ServiceInstance:
         if self.status == ServiceStatus.HEALTHY:
             # Penalize based on response time and failures
             base_score = 100.0
-            if self.response_time_avg > 0:  # noqa: SIM102
+            if self.response_time_avg > 0:
                 # Penalize slow responses (>500ms)
                 if self.response_time_avg > 0.5:
                     base_score -= min(30, (self.response_time_avg - 0.5) * 20)
@@ -226,7 +226,7 @@ class ConsulBackend(DiscoveryBackendInterface):
             ) as response:
                 return response.status == 200
         except Exception as e:
-            logger.error(f"Consul registration failed: {e}", exc_info=True)
+            logger.error(f"Consul registration failed: {e}")
             return False
 
     async def deregister_service(self, service_name: str, instance_id: str) -> bool:
@@ -239,7 +239,7 @@ class ConsulBackend(DiscoveryBackendInterface):
             ) as response:
                 return response.status == 200
         except Exception as e:
-            logger.error(f"Consul deregistration failed: {e}", exc_info=True)
+            logger.error(f"Consul deregistration failed: {e}")
             return False
 
     async def discover_services(self, service_name: str) -> list[ServiceInstance]:
@@ -281,7 +281,7 @@ class ConsulBackend(DiscoveryBackendInterface):
                 return instances
 
         except Exception as e:
-            logger.error(f"Consul service discovery failed: {e}", exc_info=True)
+            logger.error(f"Consul service discovery failed: {e}")
             return []
 
     async def watch_service(self, service_name: str, callback: callable) -> None:
@@ -371,7 +371,7 @@ class KubernetesBackend(DiscoveryBackendInterface):
                 return instances
 
         except Exception as e:
-            logger.error(f"Kubernetes service discovery failed: {e}", exc_info=True)
+            logger.error(f"Kubernetes service discovery failed: {e}")
             return []
 
     async def watch_service(self, service_name: str, callback: callable) -> None:
@@ -670,7 +670,7 @@ class ServiceDiscoveryManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Discovery worker error: {e}", exc_info=True)
+                logger.error(f"Discovery worker error: {e}")
 
     async def _health_monitor_worker(self) -> None:
         """Background worker for health monitoring."""
@@ -691,7 +691,7 @@ class ServiceDiscoveryManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Health monitor worker error: {e}", exc_info=True)
+                logger.error(f"Health monitor worker error: {e}")
 
     async def _perform_health_check(self, instance: ServiceInstance) -> None:
         """Perform health check on service instance."""
@@ -726,7 +726,7 @@ class ServiceDiscoveryManager:
             instance.last_health_check = time.time()
 
             if instance.consecutive_failures >= 3:
-                logger.warning(f"Service instance {instance.instance_id} is unhealthy: {e}", exc_info=True)
+                logger.warning(f"Service instance {instance.instance_id} is unhealthy: {e}")
 
     async def _metrics_worker(self) -> None:
         """Background worker for metrics logging."""
@@ -747,7 +747,7 @@ class ServiceDiscoveryManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Metrics worker error: {e}", exc_info=True)
+                logger.error(f"Metrics worker error: {e}")
 
     def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive service discovery metrics."""

@@ -144,7 +144,7 @@ class PgVectorService:
                     await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
                     logger.info("pgvector_extension_created")
                 except Exception as e:
-                    logger.error("pgvector_extension_creation_failed", error=str(e), exc_info=True)
+                    logger.error("pgvector_extension_creation_failed", error=str(e))
                     raise RuntimeError(
                         "pgvector extension is required. Install with: CREATE EXTENSION vector"
                     ) from e
@@ -185,7 +185,7 @@ class PgVectorService:
                     WITH (m = 16, ef_construction = 64)
                 """)
             except Exception as e:
-                logger.warning("hnsw_index_creation_failed", error=str(e), exc_info=True)
+                logger.warning("hnsw_index_creation_failed", error=str(e))
 
         self._initialized = True
         logger.info("pgvector_service_initialized", dimension=self._embedding_dimension)

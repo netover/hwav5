@@ -18,6 +18,8 @@ Additional Features:
 - Cache with TTL for automatic graph refresh
 - Incremental sync with TWS
 - LLM-based query routing fallback
+- 15+ TWS relation types (v5.4.0)
+- Automatic graph expansion from TWS API (v5.4.0)
 
 Usage:
     from resync.core.knowledge_graph import (
@@ -32,6 +34,15 @@ Usage:
         # Sync management
         start_sync_task,
         get_sync_manager,
+        # TWS Relations (v5.4.0)
+        TWSRelationType,
+        TWSNodeType,
+        TWSRelation,
+        TWSNode,
+        TWSRelationBuilder,
+        # Graph Expander (v5.4.0)
+        TWSGraphExpander,
+        expand_kg_from_tws,
     )
 
     # Initialize with cache and sync
@@ -45,6 +56,10 @@ Usage:
     # Query
     chain = await kg.get_dependency_chain("BATCH_PROC")
     critical = await kg.get_critical_jobs()
+    
+    # Expand from TWS (v5.4.0)
+    expander = TWSGraphExpander(tws_client=client)
+    stats = await expander.expand_full()
 """
 
 from resync.core.knowledge_graph.cache_manager import (
@@ -94,6 +109,27 @@ from resync.core.knowledge_graph.sync_manager import (
     stop_sync_task,
 )
 
+# v5.4.0 - TWS Relations
+from resync.core.knowledge_graph.tws_relations import (
+    TWSRelationType,
+    TWSNodeType,
+    TWSNode,
+    TWSRelation,
+    TWSRelationBuilder,
+    TWSQueryPatterns,
+    get_relation_types_info,
+    get_node_types_info,
+)
+
+# v5.4.0 - Graph Expander
+from resync.core.knowledge_graph.tws_graph_expander import (
+    TWSGraphExpander,
+    GraphExpansionConfig,
+    ExpansionStats,
+    expand_kg_from_tws,
+    expand_kg_from_job,
+)
+
 __all__ = [
     # Models
     "GraphNode",
@@ -135,4 +171,19 @@ __all__ = [
     "get_sync_manager",
     "start_sync_task",
     "stop_sync_task",
+    # v5.4.0 - TWS Relations
+    "TWSRelationType",
+    "TWSNodeType",
+    "TWSNode",
+    "TWSRelation",
+    "TWSRelationBuilder",
+    "TWSQueryPatterns",
+    "get_relation_types_info",
+    "get_node_types_info",
+    # v5.4.0 - Graph Expander
+    "TWSGraphExpander",
+    "GraphExpansionConfig",
+    "ExpansionStats",
+    "expand_kg_from_tws",
+    "expand_kg_from_job",
 ]

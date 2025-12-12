@@ -44,8 +44,18 @@ class RagConfig:
     ef_search_max: int = int(os.getenv("RAG_EF_SEARCH_MAX", "128"))
     max_neighbors: int = int(os.getenv("RAG_MAX_NEIGHBORS", "32"))
 
-    # Reranking
+    # Reranking (legacy)
     enable_rerank: bool = _bool("RAG_RERANKER_ON", False)
+    
+    # Cross-encoder reranking (v5.3.17+)
+    enable_cross_encoder: bool = _bool("RAG_CROSS_ENCODER_ON", True)
+    cross_encoder_model: str = os.getenv(
+        "RAG_CROSS_ENCODER_MODEL", "BAAI/bge-reranker-small"
+    )
+    cross_encoder_top_k: int = int(os.getenv("RAG_CROSS_ENCODER_TOP_K", "5"))
+    cross_encoder_threshold: float = float(
+        os.getenv("RAG_CROSS_ENCODER_THRESHOLD", "0.3")
+    )
 
 
 CFG = RagConfig()

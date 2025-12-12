@@ -8,13 +8,10 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from functools import lru_cache
-from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
 from resync.api.auth import verify_admin_credentials
@@ -28,16 +25,7 @@ logger = logging.getLogger(__name__)
 # API Router for admin endpoints
 admin_router = APIRouter(prefix="/admin", tags=["Admin"])
 
-
-# Singleton pattern for Jinja2Templates to avoid re-creating on every request
-# This improves performance by caching the template environment
-@lru_cache(maxsize=1)
-def _get_templates() -> Jinja2Templates:
-    """Get cached Jinja2Templates instance (singleton)."""
-    templates_dir = Path(settings.BASE_DIR) / "templates"
-    logger.debug(f"Initializing Jinja2Templates from {templates_dir}")
-    return Jinja2Templates(directory=str(templates_dir))
-
+# Templates will be obtained from app state at runtime
 
 # Module-level singleton variables for dependency injection to avoid B008 errors
 teams_integration_dependency = Depends(get_teams_integration)
@@ -98,8 +86,13 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
     Renders the HTML interface for managing system configuration.
     """
     try:
-        # Use cached singleton templates instance for better performance
-        templates = _get_templates()
+        # Create a new Jinja2Templates instance to avoid CSP/asyncio issues
+        from pathlib import Path
+
+        from fastapi.templating import Jinja2Templates
+
+        templates_dir = Path(settings.BASE_DIR) / "templates"
+        templates = Jinja2Templates(directory=str(templates_dir))
         return templates.TemplateResponse("admin.html", {"request": request})
     except Exception as e:
         logger.error(f"Failed to render admin dashboard: {e}", exc_info=True)
@@ -611,7 +604,7 @@ async def clear_cache(
                     cleared.append("redis")
                     logger.info("Redis cache cleared")
             except Exception as e:
-                logger.warning(f"Failed to clear Redis cache: {e}", exc_info=True)
+                logger.warning(f"Failed to clear Redis cache: {e}")
 
         if cache_type in ("all", "memory"):
             # Clear in-memory caches

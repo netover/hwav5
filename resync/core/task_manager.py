@@ -197,7 +197,7 @@ class TaskManager:
                     await self._execute_task(task)
 
             except Exception as e:
-                logger.error(f"Error processing tasks: {e}", exc_info=True)
+                logger.error(f"Error processing tasks: {e}")
 
     async def _execute_task(self, task: Task):
         """Execute a single task."""

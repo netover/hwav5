@@ -327,7 +327,7 @@ class EncryptedAuditTrail:
             try:
                 self.chain_hash = chain_file.read_text().strip()
             except Exception as e:
-                logger.warning(f"Failed to load chain hash: {e}", exc_info=True)
+                logger.warning(f"Failed to load chain hash: {e}")
                 self.chain_hash = ""
 
         # Load block counter
@@ -336,7 +336,7 @@ class EncryptedAuditTrail:
             try:
                 self.block_counter = int(counter_file.read_text().strip())
             except Exception as e:
-                logger.warning(f"Failed to load block counter: {e}", exc_info=True)
+                logger.warning(f"Failed to load block counter: {e}")
                 self.block_counter = 0
 
     async def start(self) -> None:
@@ -765,7 +765,7 @@ class EncryptedAuditTrail:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Flush worker error: {e}", exc_info=True)
+                logger.error(f"Flush worker error: {e}")
 
     async def _archival_worker(self) -> None:
         """Background worker for log archival."""
@@ -778,7 +778,7 @@ class EncryptedAuditTrail:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Archival worker error: {e}", exc_info=True)
+                logger.error(f"Archival worker error: {e}")
 
     async def _archive_old_logs(self) -> None:
         """Archive old log blocks."""
@@ -819,7 +819,7 @@ class EncryptedAuditTrail:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Verification worker error: {e}", exc_info=True)
+                logger.error(f"Verification worker error: {e}")
 
 
 # Global encrypted audit trail instance

@@ -133,7 +133,7 @@ async def _check_tcp(host: str, port: int, timeout: float = 3.0) -> bool:
     try:
         _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
         writer.close()
-        try:  # noqa: SIM105
+        try:
             await writer.wait_closed()
         except (OSError, ConnectionError, RuntimeError):
             # alguns transports podem não suportar wait_closed; ignore
@@ -204,13 +204,13 @@ async def run_startup_health_checks(settings: "Settings") -> dict[str, Any]:
                 aiohttp.ServerDisconnectedError,
                 aiohttp.ClientConnectionError,
             ) as e:
-                startup_logger.warning("llm_service_check_unexpected_error", error=str(e), exc_info=True)
+                startup_logger.warning("llm_service_check_unexpected_error", error=str(e))
                 health_results["llm_service"] = False
             except aiohttp.ClientError as e:
-                startup_logger.warning("llm_service_check_failed", error=str(e), exc_info=True)
+                startup_logger.warning("llm_service_check_failed", error=str(e))
                 health_results["llm_service"] = False
             except RuntimeError as e:
-                startup_logger.warning("llm_service_check_unexpected_error", error=str(e), exc_info=True)
+                startup_logger.warning("llm_service_check_unexpected_error", error=str(e))
                 health_results["llm_service"] = False
 
         # Overall health assessment
@@ -233,7 +233,7 @@ async def run_startup_health_checks(settings: "Settings") -> dict[str, Any]:
         return health_results
 
     except (RuntimeError, ConnectionError, OSError) as e:
-        startup_logger.error("startup_health_checks_failed", error=str(e), exc_info=True)
+        startup_logger.error("startup_health_checks_failed", error=str(e))
         return health_results
 
 
@@ -273,7 +273,7 @@ def cleanup_resources() -> None:
         _settings_cache.clear_cache()
         startup_logger.info("resource_cleanup_completed")
     except (RuntimeError, OSError) as e:
-        startup_logger.error("resource_cleanup_failed", error=str(e), exc_info=True)
+        startup_logger.error("resource_cleanup_failed", error=str(e))
 
 
 async def validate_configuration_on_startup(fail_fast: bool = True) -> "Settings":
@@ -355,16 +355,16 @@ async def validate_configuration_on_startup(fail_fast: bool = True) -> "Settings
         if isinstance(e, ConfigurationValidationError):
             startup_logger.warning(
                 "configuration_setup_required",
-                admin_username="<set ADMIN_USERNAME env>",
-                admin_password="<set ADMIN_PASSWORD env>",
+                admin_username="admin",
+                admin_password="suasenha123",
                 secret_key_generation=(
                     "python -c 'import secrets; print(secrets.token_urlsafe(32))'"
                 ),
                 redis_url="redis://localhost:6379",
                 tws_host="localhost",
                 tws_port=31111,
-                tws_user="<set TWS_USERNAME env>",
-                tws_password="<set TWS_PASSWORD env>",
+                tws_user="twsuser",
+                tws_password="twspass",
             )
 
         if fail_fast:

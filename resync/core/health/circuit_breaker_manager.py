@@ -96,7 +96,6 @@ class CircuitBreakerManager:
                 "circuit_breaker_execution_failed",
                 breaker_name=breaker_name,
                 error=str(e),
-                exc_info=True,
             )
             raise
 
@@ -147,7 +146,6 @@ class CircuitBreakerManager:
                 "failed_to_get_circuit_breaker_status",
                 breaker_name=breaker_name,
                 error=str(e),
-                exc_info=True,
             )
             return {
                 "name": breaker_name,
@@ -203,7 +201,7 @@ class CircuitBreakerManager:
             return True
 
         except Exception as e:
-            logger.error("circuit_breaker_reset_failed", breaker_name=breaker_name, error=str(e), exc_info=True)
+            logger.error("circuit_breaker_reset_failed", breaker_name=breaker_name, error=str(e))
             return False
 
     async def reset_all_circuit_breakers(self) -> dict[str, bool]:
@@ -240,7 +238,6 @@ class CircuitBreakerManager:
                     "failed_to_check_circuit_breaker_state",
                     breaker_name=breaker_name,
                     error=str(e),
-                    exc_info=True,
                 )
 
         return open_breakers

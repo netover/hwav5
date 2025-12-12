@@ -491,49 +491,6 @@ class MetricAggregation(Base):
 
 
 # =============================================================================
-# ADMIN USER MODEL (for authentication and user management)
-# =============================================================================
-
-
-class AdminUser(Base):
-    """Admin user for authentication and system management.
-
-    This model provides persistent storage for admin users with:
-    - Secure password hashing (bcrypt recommended)
-    - Role-based access control
-    - Account status management
-    - Login tracking
-
-    NOTE: This replaces the in-memory _users dict in admin_users.py
-    """
-
-    __tablename__ = "admin_users"
-    __table_args__ = (
-        Index("idx_admin_users_username", "username"),
-        Index("idx_admin_users_email", "email"),
-        Index("idx_admin_users_role", "role"),
-        {"schema": "core"},
-    )
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    full_name: Mapped[str | None] = mapped_column(String(255))
-    role: Mapped[str] = mapped_column(String(50), default="user", nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
-    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    last_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=func.now(), onupdate=func.now()
-    )
-    metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB)
-
-
-# =============================================================================
 # HELPER FUNCTION TO GET ALL MODELS
 # =============================================================================
 
@@ -564,6 +521,4 @@ def get_all_models():
         # Metrics
         MetricDataPoint,
         MetricAggregation,
-        # Admin
-        AdminUser,
     ]

@@ -54,7 +54,7 @@ class TestWebSocketAsync:
         mock_manager = client_with_mocks["agent_manager"]
         mock_manager.get_agent.return_value = None  # Simulate agent not found
 
-        with pytest.raises(WebSocketDisconnect) as excinfo:  # noqa: SIM117
+        with pytest.raises(WebSocketDisconnect) as excinfo:
             with client.websocket_connect("/ws/nonexistent-agent") as websocket:
                 websocket.receive_json()  # Connection should be closed by server
 

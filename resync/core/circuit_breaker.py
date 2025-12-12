@@ -46,7 +46,7 @@ class CircuitBreaker:
             # If we've exceeded threshold, open the circuit
             if self.failure_count >= self.failure_threshold:
                 self.state = "open"
-                logger.warning("circuit_breaker_opened", failure_count=self.failure_count, exc_info=True)
+                logger.warning("circuit_breaker_opened", failure_count=self.failure_count)
             raise e
 
 

@@ -170,7 +170,7 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
                 await session.commit()
             logger.info("checkpoint_table_ensured")
         except Exception as e:
-            logger.warning("checkpoint_table_creation_failed", error=str(e), exc_info=True)
+            logger.warning("checkpoint_table_creation_failed", error=str(e))
 
     def _serialize(self, data: dict[str, Any]) -> tuple[str | None, bytes | None]:
         """
@@ -261,7 +261,7 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
                 return (config, checkpoint_data, metadata or {}, parent_id)
 
         except Exception as e:
-            logger.error("checkpoint_get_failed", thread_id=thread_id, error=str(e), exc_info=True)
+            logger.error("checkpoint_get_failed", thread_id=thread_id, error=str(e))
             return None
 
     async def aput(
@@ -339,7 +339,7 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
             )
 
         except Exception as e:
-            logger.error("checkpoint_save_failed", thread_id=thread_id, error=str(e), exc_info=True)
+            logger.error("checkpoint_save_failed", thread_id=thread_id, error=str(e))
             raise
 
         # Return updated config
@@ -444,7 +444,7 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
                 return checkpoints
 
         except Exception as e:
-            logger.error("checkpoint_list_failed", thread_id=thread_id, error=str(e), exc_info=True)
+            logger.error("checkpoint_list_failed", thread_id=thread_id, error=str(e))
             return []
 
     # =========================================================================
@@ -479,7 +479,7 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
                 return deleted
 
         except Exception as e:
-            logger.error("checkpoint_cleanup_failed", error=str(e), exc_info=True)
+            logger.error("checkpoint_cleanup_failed", error=str(e))
             return 0
 
     async def delete_thread(self, thread_id: str) -> int:
@@ -511,7 +511,7 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
                 return deleted
 
         except Exception as e:
-            logger.error("thread_delete_failed", thread_id=thread_id, error=str(e), exc_info=True)
+            logger.error("thread_delete_failed", thread_id=thread_id, error=str(e))
             return 0
 
     async def get_stats(self) -> dict[str, Any]:
@@ -545,7 +545,7 @@ class PostgresCheckpointer(BaseCheckpointSaver if LANGGRAPH_AVAILABLE else objec
                 }
 
         except Exception as e:
-            logger.error("checkpoint_stats_failed", error=str(e), exc_info=True)
+            logger.error("checkpoint_stats_failed", error=str(e))
             return {}
 
 

@@ -147,7 +147,7 @@ class TripletExtractor:
             return triplets
 
         except Exception as e:
-            logger.error("triplet_extraction_failed", error=str(e), exc_info=True)
+            logger.error("triplet_extraction_failed", error=str(e))
             return []
 
     def _build_extraction_prompt(self, text: str) -> str:
@@ -275,11 +275,11 @@ RELATIONSHIPS:"""
         expected_types = ALLOWED_RELATIONS[predicate]
 
         # Wildcard match
-        if expected_types[0] != "*" and triplet.subject_type != expected_types[0]:  # noqa: SIM102
+        if expected_types[0] != "*" and triplet.subject_type != expected_types[0]:
             if triplet.subject_type != "unknown":
                 return False
 
-        if expected_types[1] != "*" and triplet.object_type != expected_types[1]:  # noqa: SIM102
+        if expected_types[1] != "*" and triplet.object_type != expected_types[1]:
             if triplet.object_type != "unknown":
                 return False
 

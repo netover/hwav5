@@ -174,7 +174,7 @@ class FilterParams(BaseValidatedModel):
             if operator in {"in", "not_in"} and not isinstance(value, list):
                 raise ValueError(f"Filter operator '{operator}' requires a list value")
             # Check for malicious content in string values
-            if isinstance(value, str):  # noqa: SIM102
+            if isinstance(value, str):
                 if ValidationPatterns.SCRIPT_PATTERN.search(value):
                     raise ValueError(f"Filter value contains malicious content: {value}")
             # Check for SQL injection in field names and values

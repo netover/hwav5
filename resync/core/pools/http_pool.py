@@ -58,7 +58,7 @@ class HTTPConnectionPool(ConnectionPool[httpx.AsyncClient]):
                 f"HTTP connection pool '{self.config.pool_name}' initialized with {self.config.min_size}-{self.config.max_size} connections"
             )
         except Exception as e:
-            logger.error(f"Failed to setup HTTP connection pool: {e}", exc_info=True)
+            logger.error(f"Failed to setup HTTP connection pool: {e}")
             raise TWSConnectionError(f"Failed to setup HTTP connection pool: {e}") from e
 
     @asynccontextmanager
@@ -81,7 +81,7 @@ class HTTPConnectionPool(ConnectionPool[httpx.AsyncClient]):
 
         except Exception as e:
             await self.increment_stat("pool_misses")
-            logger.error(f"Failed to get HTTP connection: {e}", exc_info=True)
+            logger.error(f"Failed to get HTTP connection: {e}")
             raise TWSConnectionError(f"Failed to acquire HTTP connection: {e}") from e
         finally:
             wait_time = time.time() - start_time

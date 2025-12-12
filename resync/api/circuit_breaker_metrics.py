@@ -199,7 +199,7 @@ async def get_proactive_health_checks() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error("proactive_health_check_endpoint_failed", error=str(e), exc_info=True)
+        logger.error("proactive_health_check_endpoint_failed", error=str(e))
         raise HTTPException(
             status_code=500, detail=f"Proactive health check failed: {str(e)}"
         ) from e
@@ -227,7 +227,7 @@ async def analyze_system_health() -> dict[str, Any]:
         return {"status": "success", "analysis": analysis}
 
     except Exception as e:
-        logger.error("health_analysis_endpoint_failed", error=str(e), exc_info=True)
+        logger.error("health_analysis_endpoint_failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Health analysis failed: {str(e)}") from e
 
 

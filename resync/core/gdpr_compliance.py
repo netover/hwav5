@@ -310,7 +310,7 @@ class GDPRDataEncryptor:
             decrypted = self._cipher.decrypt(encrypted)
             return decrypted.decode()
         except Exception as e:
-            logger.error(f"Failed to decrypt data: {e}", exc_info=True)
+            logger.error(f"Failed to decrypt data: {e}")
             raise
 
     def _should_rotate_key(self) -> bool:
@@ -709,7 +709,7 @@ class GDPRComplianceManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Cleanup worker error: {e}", exc_info=True)
+                logger.error(f"Cleanup worker error: {e}")
 
     async def _audit_worker(self) -> None:
         """Background worker for audit trail maintenance."""
@@ -726,7 +726,7 @@ class GDPRComplianceManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Audit worker error: {e}", exc_info=True)
+                logger.error(f"Audit worker error: {e}")
 
     async def _breach_monitor(self) -> None:
         """Background monitor for data breach incidents."""
@@ -747,7 +747,7 @@ class GDPRComplianceManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Breach monitor error: {e}", exc_info=True)
+                logger.error(f"Breach monitor error: {e}")
 
     async def _audit_event(self, event_type: str, **kwargs) -> None:
         """Record an audit event."""
@@ -788,7 +788,7 @@ class GDPRComplianceManager:
 
         except Exception as e:
             request.status = "failed"
-            logger.error(f"Data erasure failed: {request.request_id} - {e}", exc_info=True)
+            logger.error(f"Data erasure failed: {request.request_id} - {e}")
 
     async def _process_data_portability(self, request: DataPortabilityRequest) -> None:
         """Process a data portability request."""
@@ -813,7 +813,7 @@ class GDPRComplianceManager:
 
         except Exception as e:
             request.status = "failed"
-            logger.error(f"Data portability failed: {request.request_id} - {e}", exc_info=True)
+            logger.error(f"Data portability failed: {request.request_id} - {e}")
 
     async def _handle_consent_withdrawal(
         self, user_id: str, data_categories: set[DataCategory]

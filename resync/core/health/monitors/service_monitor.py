@@ -116,7 +116,7 @@ class ServiceHealthMonitor:
 
         except Exception as e:
             response_time = (time.time() - start_time) * 1000
-            logger.error("service_dependency_check_failed", error=str(e), exc_info=True)
+            logger.error("service_dependency_check_failed", error=str(e))
 
             return ServiceDependencyStatus(
                 service_name=service_name,
@@ -168,7 +168,7 @@ class ServiceHealthMonitor:
 
         except Exception as e:
             response_time = (time.time() - start_time) * 1000
-            logger.error("component_health_check_failed", error=str(e), exc_info=True)
+            logger.error("component_health_check_failed", error=str(e))
 
             return ComponentHealth(
                 name="service_core",
@@ -217,7 +217,7 @@ class ServiceHealthMonitor:
 
         except Exception as e:
             response_time = (time.time() - start_time) * 1000
-            logger.error("external_service_check_failed", error=str(e), exc_info=True)
+            logger.error("external_service_check_failed", error=str(e))
 
             return ExternalServiceStatus(
                 service_name="external_services",

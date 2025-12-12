@@ -16,9 +16,9 @@ import structlog
 # Configure alerting logger
 alerting_logger = structlog.get_logger("resync.alerting")
 
-from resync.config.slo import KPI_DEFINITIONS, validate_slo_compliance  # noqa: E402
-from resync.core.metrics import runtime_metrics  # noqa: E402
-from resync.core.teams_integration import TeamsNotification, get_teams_integration  # noqa: E402
+from resync.config.slo import KPI_DEFINITIONS, validate_slo_compliance
+from resync.core.metrics import runtime_metrics
+from resync.core.teams_integration import TeamsNotification, get_teams_integration
 
 
 # Initialize default SLO alert rules at module level
@@ -387,7 +387,6 @@ class AlertingSystem:
                 alert_id=alert.id,
                 error=str(e),
                 error_type=type(e).__name__,
-                exc_info=True,
             )
 
     async def _apply_escalation_policy(self, alert: Alert):
@@ -404,7 +403,6 @@ class AlertingSystem:
                         escalation_policy=policy_name,
                         error=str(e),
                         error_type=type(e).__name__,
-                        exc_info=True,
                     )
 
     def acknowledge_alert(self, alert_id: str, acknowledged_by: str):

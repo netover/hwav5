@@ -160,7 +160,7 @@ class ConfigManager:
                 json.dump(self._config, f, indent=2, default=str)
             logger.info("Configuration saved")
         except Exception as e:
-            logger.error(f"Failed to save config: {e}", exc_info=True)
+            logger.error(f"Failed to save config: {e}")
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -246,7 +246,7 @@ class ConfigManager:
                 else:
                     callback(change)
             except Exception as e:
-                logger.error(f"Error notifying subscriber: {e}", exc_info=True)
+                logger.error(f"Error notifying subscriber: {e}")
 
     def get_all(self) -> dict[str, Any]:
         """Get all configuration as dictionary."""

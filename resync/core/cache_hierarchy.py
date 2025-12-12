@@ -195,7 +195,6 @@ class CacheHierarchy:
                     "encryption_failed",
                     error=str(e),
                     value_type=type(value).__name__,
-                    exc_info=True,
                 )
         return value
 
@@ -213,7 +212,6 @@ class CacheHierarchy:
                 logger.warning(
                     "decryption_failed",
                     error=str(e),
-                    exc_info=True,
                 )
         return value
 

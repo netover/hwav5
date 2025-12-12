@@ -1,16 +1,16 @@
 print("=== TESTING FILE CREATION ONLY ===")
-import json as orjson  # noqa: E402
-import os  # noqa: E402
-import sys  # noqa: E402
-import tempfile  # noqa: E402
-import zipfile  # noqa: E402
+import json as orjson
+import os
+import sys
+import tempfile
+import zipfile
 
 sys.path.insert(0, os.path.join(".", "resync", "core"))
 
 
 # Test file creation functions
 def create_test_json():
-    temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)  # noqa: SIM115
+    temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
     test_data = {"test": "data", "number": 123}
     temp_file.write(orjson.dumps(test_data).decode("utf-8"))
     temp_file.close()
@@ -18,7 +18,7 @@ def create_test_json():
 
 
 def create_test_xlsx():
-    temp_file = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)  # noqa: SIM115
+    temp_file = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
 
     with zipfile.ZipFile(temp_file.name, "w", zipfile.ZIP_DEFLATED) as xlsx_zip:
         xlsx_zip.writestr(

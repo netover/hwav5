@@ -17,14 +17,10 @@ async def test_litellm_nvidia():
         # Import litellm
         from litellm import acompletion
 
-        # Check for NVIDIA API key from environment
-        api_key = os.getenv("NVIDIA_API_KEY")
-        if not api_key:
-            print("⚠️  NVIDIA_API_KEY not set. Skipping test.")
-            print("   Set NVIDIA_API_KEY environment variable to run this test.")
-            return False
-        
-        os.environ["NVIDIA_API_KEY"] = api_key
+        # Set NVIDIA API key
+        os.environ["NVIDIA_API_KEY"] = (
+            "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"
+        )
 
         print("🚀 Testing NVIDIA LLM API with LiteLLM...")
         print("📡 Using model: nvidia/llama-3.3-nemotron-super-49b-v1.5")
@@ -68,13 +64,10 @@ async def test_litellm_streaming():
         # Import litellm streaming
         from litellm import acompletion
 
-        # Check for NVIDIA API key from environment
-        api_key = os.getenv("NVIDIA_API_KEY")
-        if not api_key:
-            print("⚠️  NVIDIA_API_KEY not set. Skipping streaming test.")
-            return False
-        
-        os.environ["NVIDIA_API_KEY"] = api_key
+        # Set NVIDIA API key
+        os.environ["NVIDIA_API_KEY"] = (
+            "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"
+        )
 
         print("\n🌊 Testing streaming response with LiteLLM...")
         print("=" * 50)

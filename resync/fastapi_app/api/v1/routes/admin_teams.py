@@ -260,7 +260,7 @@ async def send_notification(request: NotificationRequest):
             timestamp=datetime.now().isoformat(),
         )
     except Exception as e:
-        logger.error("notification_send_error", error=str(e), exc_info=True)
+        logger.error("notification_send_error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to send notification: {str(e)}",
@@ -313,7 +313,7 @@ async def send_test_notification():
 
     except Exception as e:
         response_time = (time.time() - start_time) * 1000
-        logger.error("test_notification_error", error=str(e), exc_info=True)
+        logger.error("test_notification_error", error=str(e))
         return TestNotificationResponse(
             success=False,
             message=f"Test failed: {str(e)}",

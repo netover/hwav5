@@ -86,7 +86,6 @@ class BaseHealthChecker(ABC):
                 component=self.component_name,
                 error=str(e),
                 response_time_ms=response_time,
-                exc_info=True,
             )
 
             return ComponentHealth(

@@ -235,7 +235,7 @@ class PromptManager:
                     )
                     logger.info("langfuse_client_initialized")
                 except Exception as e:
-                    logger.warning("langfuse_init_failed", error=str(e), exc_info=True)
+                    logger.warning("langfuse_init_failed", error=str(e))
 
             # Load prompts
             await self._load_default_prompts()
@@ -401,10 +401,10 @@ Se houver erros, explique o que pode ter acontecido.""",
                             "prompt_loaded_from_yaml", prompt_id=config.id, file=yaml_file.name
                         )
                     except Exception as e:
-                        logger.warning("invalid_prompt_in_yaml", file=yaml_file.name, error=str(e), exc_info=True)
+                        logger.warning("invalid_prompt_in_yaml", file=yaml_file.name, error=str(e))
 
             except Exception as e:
-                logger.warning("yaml_load_failed", file=yaml_file.name, error=str(e), exc_info=True)
+                logger.warning("yaml_load_failed", file=yaml_file.name, error=str(e))
 
     async def _sync_from_langfuse(self) -> None:
         """Sync prompts from LangFuse."""
@@ -421,7 +421,7 @@ Se houver erros, explique o que pode ter acontecido.""",
             logger.debug("langfuse_sync_placeholder")
 
         except Exception as e:
-            logger.warning("langfuse_sync_failed", error=str(e), exc_info=True)
+            logger.warning("langfuse_sync_failed", error=str(e))
 
     # =========================================================================
     # PUBLIC API
@@ -597,7 +597,7 @@ Se houver erros, explique o que pode ter acontecido.""",
             # LangFuse SDK prompt creation would go here
             logger.debug("langfuse_prompt_sync", prompt_id=config.id)
         except Exception as e:
-            logger.warning("langfuse_prompt_sync_failed", prompt_id=config.id, error=str(e), exc_info=True)
+            logger.warning("langfuse_prompt_sync_failed", prompt_id=config.id, error=str(e))
 
     # =========================================================================
     # A/B TESTING

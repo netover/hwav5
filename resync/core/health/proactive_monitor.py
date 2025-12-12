@@ -129,7 +129,7 @@ class ProactiveHealthMonitor:
             await self._add_to_monitoring_history(results)
 
         except Exception as e:
-            logger.error("proactive_health_checks_failed", error=str(e), exc_info=True)
+            logger.error("proactive_health_checks_failed", error=str(e))
             results["error"] = str(e)
 
         return results
@@ -170,7 +170,7 @@ class ProactiveHealthMonitor:
                 return basic_metrics
 
         except Exception as e:
-            logger.warning("connection_pool_health_check_failed", error=str(e), exc_info=True)
+            logger.warning("connection_pool_health_check_failed", error=str(e))
 
         return {"error": "Unable to check connection pool health"}
 
@@ -268,7 +268,7 @@ class ProactiveHealthMonitor:
                 )
 
         except Exception as e:
-            logger.error("predictive_analysis_failed", error=str(e), exc_info=True)
+            logger.error("predictive_analysis_failed", error=str(e))
 
         return alerts
 
@@ -312,7 +312,7 @@ class ProactiveHealthMonitor:
                         )
 
         except Exception as e:
-            logger.error("auto_recovery_execution_failed", error=str(e), exc_info=True)
+            logger.error("auto_recovery_execution_failed", error=str(e))
 
         return actions
 

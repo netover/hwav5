@@ -57,8 +57,8 @@ class ComplianceReportGenerator:
             soc2_manager: Optional SOC 2 compliance manager instance.
                          If not provided, uses the global instance.
         """
-        SOC2ComplianceManager = _get_soc2_compliance_manager()  # noqa: N806
-        ComplianceReport = _get_compliance_report()  # noqa: N806
+        SOC2ComplianceManager = _get_soc2_compliance_manager()
+        ComplianceReport = _get_compliance_report()
         self.soc2_manager = soc2_manager or SOC2ComplianceManager()
         # Use a forward reference for ComplianceReport to avoid NameError during runtime
         self._report_cache: dict[str, ComplianceReport] = {}
@@ -101,7 +101,7 @@ class ComplianceReportGenerator:
         soc2_data = self.soc2_manager.generate_compliance_report()
 
         # Create the compliance report
-        ComplianceReport = _get_compliance_report()  # noqa: N806
+        ComplianceReport = _get_compliance_report()
         report = ComplianceReport(
             report_id=report_id,
             report_type="soc2_compliance",
@@ -160,7 +160,7 @@ class ComplianceReportGenerator:
         gdpr_data = self._collect_gdpr_data(start_date, end_date)
 
         # Create the compliance report
-        ComplianceReport = _get_compliance_report()  # noqa: N806
+        ComplianceReport = _get_compliance_report()
         report = ComplianceReport(
             report_id=report_id,
             report_type="gdpr_compliance",

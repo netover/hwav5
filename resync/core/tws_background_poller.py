@@ -347,7 +347,6 @@ class TWSBackgroundPoller:
                     error=str(e),
                     polls_count=self._polls_count,
                     errors_count=self._errors_count,
-                    exc_info=True,
                 )
                 # Aguarda um pouco antes de tentar novamente
                 await asyncio.sleep(min(self.polling_interval, 10))
@@ -392,7 +391,7 @@ class TWSBackgroundPoller:
             )
 
         except Exception as e:
-            logger.error("snapshot_collection_failed", error=str(e), exc_info=True)
+            logger.error("snapshot_collection_failed", error=str(e))
             return None
 
     def _parse_workstations(self, data: Any) -> list[WorkstationStatus]:
@@ -715,7 +714,6 @@ class TWSBackgroundPoller:
                     "event_handler_error",
                     error=str(e),
                     event_type=event.event_type.value,
-                    exc_info=True,
                 )
 
     async def _notify_snapshot_handlers(self, snapshot: SystemSnapshot) -> None:
@@ -727,7 +725,7 @@ class TWSBackgroundPoller:
                 else:
                     handler(snapshot)
             except Exception as e:
-                logger.error("snapshot_handler_error", error=str(e), exc_info=True)
+                logger.error("snapshot_handler_error", error=str(e))
 
     async def _persist_snapshot(self, snapshot: SystemSnapshot) -> None:
         """Persiste snapshot no store."""
@@ -735,7 +733,7 @@ class TWSBackgroundPoller:
             try:
                 await self.status_store.save_snapshot(snapshot)
             except Exception as e:
-                logger.error("snapshot_persistence_error", error=str(e), exc_info=True)
+                logger.error("snapshot_persistence_error", error=str(e))
 
     # =========================================================================
     # PUBLIC API

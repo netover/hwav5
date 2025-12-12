@@ -54,7 +54,7 @@ class ConnectionManager:
         try:
             await websocket.send_text(message)
         except Exception as e:
-            logger.error(f"Failed to send message to WebSocket: {e}", exc_info=True)
+            logger.error(f"Failed to send message to WebSocket: {e}")
             self.disconnect(websocket)
 
     async def broadcast_to_agent(self, message: str, agent_id: str):
@@ -65,7 +65,7 @@ class ConnectionManager:
                 try:
                     await websocket.send_text(message)
                 except Exception as e:
-                    logger.error(f"Failed to broadcast to agent {agent_id}: {e}", exc_info=True)
+                    logger.error(f"Failed to broadcast to agent {agent_id}: {e}")
                     disconnected.append(websocket)
 
             # Clean up disconnected websockets
@@ -80,7 +80,7 @@ class ConnectionManager:
                 try:
                     await websocket.send_text(message)
                 except Exception as e:
-                    logger.error(f"Failed to broadcast to all: {e}", exc_info=True)
+                    logger.error(f"Failed to broadcast to all: {e}")
                     disconnected.append(websocket)
 
         # Clean up disconnected websockets
@@ -158,7 +158,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                         }
 
                     except Exception as e:
-                        logger.error(f"Error generating AI response: {e}", exc_info=True)
+                        logger.error(f"Error generating AI response: {e}")
                         # Fallback to mock response if LLM fails
                         final_response = {
                             "type": "message",
@@ -217,7 +217,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                             }
 
                         except Exception as e:
-                            logger.error(f"Error generating AI response: {e}", exc_info=True)
+                            logger.error(f"Error generating AI response: {e}")
                             # Fallback to mock response if LLM fails
                             final_response = {
                                 "type": "message",
@@ -237,7 +237,7 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
                         await manager.send_personal_message(json.dumps(error_response), websocket)
 
             except Exception as e:
-                logger.error(f"Error processing WebSocket message: {e}", exc_info=True)
+                logger.error(f"Error processing WebSocket message: {e}")
                 error_response = {
                     "type": "error",
                     "message": "Internal server error",
@@ -250,5 +250,5 @@ async def websocket_handler(websocket: WebSocket, agent_id: str):
         logger.info(f"WebSocket disconnected for agent {agent_id}")
 
     except Exception as e:
-        logger.error(f"Unexpected WebSocket error for agent {agent_id}: {e}", exc_info=True)
+        logger.error(f"Unexpected WebSocket error for agent {agent_id}: {e}")
         manager.disconnect(websocket)

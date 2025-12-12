@@ -259,7 +259,6 @@ class EventBus:
                 "failed_to_send_recent_events",
                 client_id=client_id,
                 error=str(e),
-                exc_info=True,
             )
 
     # =========================================================================
@@ -319,7 +318,7 @@ class EventBus:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("event_processing_error", error=str(e), exc_info=True)
+                logger.error("event_processing_error", error=str(e))
 
     async def _notify_subscribers(self, event_data: dict[str, Any]) -> None:
         """Notifica subscribers sobre um evento."""
@@ -345,7 +344,6 @@ class EventBus:
                     "subscriber_notification_error",
                     subscriber_id=subscriber.subscriber_id,
                     error=str(e),
-                    exc_info=True,
                 )
 
     async def _broadcast_to_websockets(self, event_data: dict[str, Any]) -> None:
@@ -382,7 +380,6 @@ class EventBus:
                     "websocket_send_error",
                     client_id=client.client_id,
                     error=str(e),
-                    exc_info=True,
                 )
                 disconnected.append(client.client_id)
 
@@ -475,8 +472,8 @@ class EventBus:
             try:
                 await client.websocket.send_text(msg_json)
                 delivered += 1
-            except Exception as e:
-                logger.debug("websocket_send_failed", client_id=client.client_id, error=str(e), exc_info=True)
+            except Exception:
+                pass
 
         return delivered
 

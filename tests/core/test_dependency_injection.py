@@ -87,7 +87,7 @@ class TestDependencyInjection:
             # Since get_tws_client uses the global agent_manager, we need to reset its client
             __import__("sys").modules["resync.core.dependencies"].agent_manager.tws_client = None
 
-            with patch("resync.core.agent_manager.OptimizedTWSClient") as MockClientClass:  # noqa: N806
+            with patch("resync.core.agent_manager.OptimizedTWSClient") as MockClientClass:
                 mock_instance = MagicMock()
                 MockClientClass.return_value = mock_instance
 

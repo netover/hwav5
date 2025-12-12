@@ -37,7 +37,7 @@ structlog.configure(
     logger_factory=structlog.PrintLoggerFactory(),
     cache_logger_on_first_use=True,
 )
-from resync.core.websocket_pool_manager import WebSocketPoolManager  # noqa: E402
+from resync.core.websocket_pool_manager import WebSocketPoolManager
 
 
 class TestConnectionPoolMetrics:
@@ -126,7 +126,7 @@ class TestConnectionPoolMetrics:
                     await asyncio.sleep(0.001 * (1 + connection_id * 0.1))
 
             except Exception as e:
-                op_logger.error("connection_failed", error=str(e), exc_info=True)
+                op_logger.error("connection_failed", error=str(e))
                 raise
 
         # Execute with timing and diagnostics
@@ -486,7 +486,7 @@ class TestPoolManagerMonitoring:
         manager = ConnectionPoolManager()
 
         # Mock pool creation
-        with patch.object(manager, "_setup_pool"):  # noqa: SIM117
+        with patch.object(manager, "_setup_pool"):
             with patch.object(manager, "health_check", return_value=True):
                 await manager.initialize()
                 yield manager

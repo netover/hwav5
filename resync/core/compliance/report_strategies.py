@@ -109,7 +109,7 @@ class ReportStrategy(ABC):
             self.validate_manager(manager)
             return self._execute_strategy(manager, context or {})
         except Exception as e:
-            logger.error(f"Error executing strategy {self.__class__.__name__}: {e}", exc_info=True)
+            logger.error(f"Error executing strategy {self.__class__.__name__}: {e}")
             if isinstance(e, (StrategyValidationError, ComplianceCalculationError)):
                 raise
             raise ComplianceCalculationError(f"Strategy execution failed: {e}") from e
@@ -249,7 +249,7 @@ class OverallComplianceStrategy(ReportStrategy):
                 return 0.0
 
             # Lazy import to avoid circular dependency
-            _, SOC2TrustServiceCriteria = _get_soc2_classes()  # noqa: N806
+            _, SOC2TrustServiceCriteria = _get_soc2_classes()
 
             weights = {
                 SOC2TrustServiceCriteria.SECURITY: 0.3,
@@ -651,5 +651,5 @@ class ReportGenerator:
         except StrategyValidationError:
             raise
         except Exception as e:
-            logger.error(f"Error generating compliance report: {e}", exc_info=True)
+            logger.error(f"Error generating compliance report: {e}")
             raise ComplianceCalculationError(f"Failed to generate compliance report: {e}") from None

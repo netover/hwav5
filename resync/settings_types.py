@@ -2,10 +2,7 @@
 
 This module contains shared types used by multiple settings-related modules
 to avoid circular imports.
-
-Note: Property names in CacheHierarchyConfig are intentionally uppercase for backward compatibility.
 """
-# ruff: noqa: N802
 
 from enum import Enum
 

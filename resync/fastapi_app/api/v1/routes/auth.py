@@ -29,35 +29,25 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 _token_blacklist: set[str] = set()
 
 # Demo users database (use real DB in production)
-# Lazy initialization to avoid bcrypt issues during module import
-_demo_users: dict | None = None
-
-
-def _get_demo_users() -> dict:
-    """Get demo users with lazy initialization."""
-    global _demo_users
-    if _demo_users is None:
-        _demo_users = {
-            "admin": {
-                "username": "admin",
-                "hashed_password": get_password_hash("admin"),
-                "role": "admin",
-                "permissions": ["read", "write", "admin"],
-            },
-            "user": {
-                "username": "user",
-                "hashed_password": get_password_hash("user"),
-                "role": "user",
-                "permissions": ["read"],
-            },
-        }
-    return _demo_users
+DEMO_USERS = {
+    "admin": {
+        "username": "admin",
+        "hashed_password": get_password_hash("admin"),
+        "role": "admin",
+        "permissions": ["read", "write", "admin"],
+    },
+    "user": {
+        "username": "user",
+        "hashed_password": get_password_hash("user"),
+        "role": "user",
+        "permissions": ["read"],
+    },
+}
 
 
 def authenticate_user(username: str, password: str) -> dict | None:
     """Authenticate user against demo database."""
-    demo_users = _get_demo_users()
-    user = demo_users.get(username)
+    user = DEMO_USERS.get(username)
     if not user:
         return None
     if not verify_password(password, user["hashed_password"]):

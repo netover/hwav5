@@ -68,7 +68,7 @@ def test_settings_validation_fails_in_production_with_insecure_values():
     Tests that validation fails in production with insecure default values.
     """
     # Test with insecure admin password - uses ADMIN_PASSWORD without APP_ prefix for security
-    with patch.dict(  # noqa: SIM117
+    with patch.dict(
         os.environ,
         {
             "APP_ENVIRONMENT": "production",
@@ -84,7 +84,7 @@ def test_settings_validation_fails_in_production_with_insecure_values():
     assert "insecure" in error_str and "password" in error_str
 
     # Test with insecure LLM API key
-    with patch.dict(  # noqa: SIM117
+    with patch.dict(
         os.environ,
         {
             "APP_ENVIRONMENT": "production",
@@ -260,7 +260,7 @@ def test_cors_credentials_with_wildcard_warning():
 
 def test_redis_pool_fallback_deprecation_warning():
     """Test that deprecated Redis connection settings trigger deprecation warning."""
-    with patch.dict(  # noqa: SIM117
+    with patch.dict(
         os.environ,
         {
             "APP_REDIS_MIN_CONNECTIONS": "5",

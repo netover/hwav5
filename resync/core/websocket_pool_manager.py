@@ -127,8 +127,8 @@ class WebSocketPoolManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in WebSocket cleanup loop: {e}", exc_info=True)
-                logger.error(f"Error in WebSocket cleanup loop: {e}", exc_info=True)
+                logger.error(f"Error in WebSocket cleanup loop: {e}")
+                logger.error(f"Error in WebSocket cleanup loop: {e}")
 
     async def _cleanup_connections(self) -> None:
         """Clean up stale and unhealthy WebSocket connections."""
@@ -163,7 +163,7 @@ class WebSocketPoolManager:
                                 f"Removing long-lived WebSocket connection: {client_id} (duration: {connection_duration:.1f}s, max: {max_duration}s)"
                             )
                     except Exception as e:
-                        logger.error(f"Error checking connection duration for {client_id}: {e}", exc_info=True)
+                        logger.error(f"Error checking connection duration for {client_id}: {e}")
                         connections_to_remove.append(client_id)
 
             # Remove stale/unhealthy connections
@@ -189,7 +189,7 @@ class WebSocketPoolManager:
             try:
                 await self._remove_connection(client_id)
             except Exception as e:
-                logger.error(f"Error closing WebSocket connection {client_id}: {e}", exc_info=True)
+                logger.error(f"Error closing WebSocket connection {client_id}: {e}")
 
     async def connect(self, websocket: WebSocket, client_id: str) -> None:
         """
@@ -261,7 +261,7 @@ class WebSocketPoolManager:
                 if not conn_info.websocket.client_state.DISCONNECTED:
                     await conn_info.websocket.close()
             except Exception as e:
-                logger.error(f"Error closing WebSocket for {client_id}: {e}", exc_info=True)
+                logger.error(f"Error closing WebSocket for {client_id}: {e}")
 
             # Update statistics
             if conn_info.is_healthy:
@@ -327,7 +327,7 @@ class WebSocketPoolManager:
             await self._remove_connection(client_id)
             return False
         except Exception as e:
-            logger.error(f"Unexpected error sending message to {client_id}: {e}", exc_info=True)
+            logger.error(f"Unexpected error sending message to {client_id}: {e}")
             conn_info.mark_error()
             return False
 
@@ -363,7 +363,7 @@ class WebSocketPoolManager:
                 if success:
                     successful_sends += 1
             except Exception as e:
-                logger.error(f"Error in broadcast task for {client_id}: {e}", exc_info=True)
+                logger.error(f"Error in broadcast task for {client_id}: {e}")
 
         logger.info(f"Message successfully broadcast to {successful_sends} clients")
         return successful_sends
@@ -395,7 +395,7 @@ class WebSocketPoolManager:
             logger.error(f"Runtime error during broadcast to {client_id}: {e}")
             return False
         except Exception as e:
-            logger.error(f"Unexpected error during broadcast to {client_id}: {e}", exc_info=True)
+            logger.error(f"Unexpected error during broadcast to {client_id}: {e}")
             return False
 
     async def broadcast_json(self, data: dict[str, Any]) -> int:
@@ -430,7 +430,7 @@ class WebSocketPoolManager:
                 if success:
                     successful_sends += 1
             except Exception as e:
-                logger.error(f"Error in JSON broadcast task for {client_id}: {e}", exc_info=True)
+                logger.error(f"Error in JSON broadcast task for {client_id}: {e}")
 
         logger.info(f"JSON data successfully broadcast to {successful_sends} clients")
         return successful_sends
@@ -472,7 +472,7 @@ class WebSocketPoolManager:
             logger.error(f"Runtime error during JSON broadcast to {client_id}: {e}")
             return False
         except Exception as e:
-            logger.error(f"Unexpected error during JSON broadcast to {client_id}: {e}", exc_info=True)
+            logger.error(f"Unexpected error during JSON broadcast to {client_id}: {e}")
             return False
 
     def get_connection_info(self, client_id: str) -> WebSocketConnectionInfo | None:
@@ -518,7 +518,7 @@ class WebSocketPoolManager:
             return stale_connections < self.stats.active_connections * 0.1  # Less than 10% stale
 
         except Exception as e:
-            logger.error(f"WebSocket pool health check failed: {e}", exc_info=True)
+            logger.error(f"WebSocket pool health check failed: {e}")
             return False
 
 

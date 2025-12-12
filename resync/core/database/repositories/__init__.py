@@ -5,12 +5,6 @@ Provides repository pattern implementations for all data stores.
 All repositories use PostgreSQL via SQLAlchemy async.
 """
 
-from .admin_users import (
-    AdminUserRepository,
-    get_admin_user_repository,
-    hash_password,
-    verify_password,
-)
 from .base import BaseRepository, TimestampedRepository
 from .stores import (
     ActiveLearningRepository,
@@ -52,11 +46,6 @@ __all__ = [
     # Base
     "BaseRepository",
     "TimestampedRepository",
-    # Admin Users
-    "AdminUserRepository",
-    "get_admin_user_repository",
-    "hash_password",
-    "verify_password",
     # TWS
     "JobStatus",
     "PatternMatch",

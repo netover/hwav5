@@ -51,7 +51,6 @@ class EncryptionService:
                 "decryption_failed",
                 encrypted_data_preview=encrypted_data[:50],
                 error=str(e),
-                exc_info=True,
             )
             raise ValueError(f"Decryption failed: {str(e)}") from e
 

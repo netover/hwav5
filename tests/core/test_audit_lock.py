@@ -181,7 +181,7 @@ class TestDistributedAuditLock:
 
         mock_redis_client.evalsha.side_effect = ResponseError("NOSCRIPT ...")
 
-        with caplog.at_level(logging.WARNING):  # noqa: SIM117
+        with caplog.at_level(logging.WARNING):
             # This should now raise DatabaseError, which we catch to inspect the process
             with pytest.raises(DatabaseError):
                 await audit_lock_context._release_lock()
