@@ -36,5 +36,5 @@ def __getattr__(name):
 
 
 # Version info
-__version__ = "0.7.0"
+__version__ = "5.2.3.27"
 __author__ = "Resync Team"

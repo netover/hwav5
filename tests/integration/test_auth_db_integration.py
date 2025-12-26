@@ -12,7 +12,7 @@ class TestUserModels:
 
     def test_user_role_enum(self):
         """Test UserRole enum values."""
-        from resync.fastapi_app.auth import UserRole
+        from resync.api.auth import UserRole
 
         assert UserRole.ADMIN.value == "admin"
         assert UserRole.USER.value == "user"
@@ -20,7 +20,7 @@ class TestUserModels:
 
     def test_user_create_model(self):
         """Test UserCreate model."""
-        from resync.fastapi_app.auth import UserCreate
+        from resync.api.auth import UserCreate
 
         user = UserCreate(
             username="testuser",
@@ -32,7 +32,7 @@ class TestUserModels:
 
     def test_user_update_model(self):
         """Test UserUpdate model."""
-        from resync.fastapi_app.auth import UserUpdate
+        from resync.api.auth import UserUpdate
 
         update = UserUpdate(full_name="Test User")
         assert update.full_name == "Test User"
@@ -44,7 +44,7 @@ class TestUserRepository:
 
     def test_repository_initialization(self):
         """Test repository can be initialized."""
-        from resync.fastapi_app.auth import UserRepository
+        from resync.api.auth import UserRepository
 
         repo = UserRepository(db_path=":memory:")
         assert repo is not None
@@ -52,7 +52,7 @@ class TestUserRepository:
     @pytest.mark.asyncio
     async def test_create_and_get_user(self):
         """Test creating and retrieving a user."""
-        from resync.fastapi_app.auth import UserRepository
+        from resync.api.auth import UserRepository
 
         repo = UserRepository(db_path=":memory:")
 
@@ -74,7 +74,7 @@ class TestUserRepository:
     @pytest.mark.asyncio
     async def test_update_user(self):
         """Test updating a user."""
-        from resync.fastapi_app.auth import UserRepository
+        from resync.api.auth import UserRepository
 
         repo = UserRepository(db_path=":memory:")
 
@@ -92,7 +92,7 @@ class TestUserRepository:
     @pytest.mark.asyncio
     async def test_delete_user(self):
         """Test deleting a user."""
-        from resync.fastapi_app.auth import UserRepository
+        from resync.api.auth import UserRepository
 
         repo = UserRepository(db_path=":memory:")
 
@@ -115,7 +115,7 @@ class TestAuthService:
 
     def test_service_initialization(self):
         """Test service can be initialized."""
-        from resync.fastapi_app.auth import AuthService, UserRepository
+        from resync.api.auth import AuthService, UserRepository
 
         repo = UserRepository(db_path=":memory:")
         service = AuthService(repository=repo)
@@ -124,7 +124,7 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_create_user(self):
         """Test user creation through service."""
-        from resync.fastapi_app.auth import AuthService, UserCreate, UserRepository
+        from resync.api.auth import AuthService, UserCreate, UserRepository
 
         repo = UserRepository(db_path=":memory:")
         service = AuthService(repository=repo)
@@ -142,7 +142,7 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_authenticate_success(self):
         """Test successful authentication."""
-        from resync.fastapi_app.auth import AuthService, UserCreate, UserRepository
+        from resync.api.auth import AuthService, UserCreate, UserRepository
 
         repo = UserRepository(db_path=":memory:")
         service = AuthService(repository=repo)
@@ -163,7 +163,7 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_authenticate_failure(self):
         """Test failed authentication."""
-        from resync.fastapi_app.auth import AuthService, UserCreate, UserRepository
+        from resync.api.auth import AuthService, UserCreate, UserRepository
 
         repo = UserRepository(db_path=":memory:")
         service = AuthService(repository=repo)
@@ -183,7 +183,7 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_create_and_verify_token(self):
         """Test token creation and verification."""
-        from resync.fastapi_app.auth import AuthService, UserCreate, UserRepository
+        from resync.api.auth import AuthService, UserCreate, UserRepository
 
         repo = UserRepository(db_path=":memory:")
         service = AuthService(repository=repo, secret_key="test-secret")
@@ -212,7 +212,7 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_list_users(self):
         """Test listing users."""
-        from resync.fastapi_app.auth import AuthService, UserCreate, UserRepository
+        from resync.api.auth import AuthService, UserCreate, UserRepository
 
         repo = UserRepository(db_path=":memory:")
         service = AuthService(repository=repo)
@@ -227,7 +227,7 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_grant_permission(self):
         """Test granting permission."""
-        from resync.fastapi_app.auth import AuthService, UserCreate, UserRepository
+        from resync.api.auth import AuthService, UserCreate, UserRepository
 
         repo = UserRepository(db_path=":memory:")
         service = AuthService(repository=repo)

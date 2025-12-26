@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from ..models import (
+from resync.core.database.models import (
     ActiveLearningCandidate,
     # Audit
     AuditEntry,
@@ -29,6 +29,7 @@ from ..models import (
     # Analytics
     UserProfile,
 )
+
 from .base import BaseRepository, TimestampedRepository
 
 logger = logging.getLogger(__name__)

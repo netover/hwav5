@@ -458,12 +458,9 @@ def stop_metrics_collector():
 router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
 
 
-@router.on_event("startup")
-async def startup_collector():
-    """Inicia o coletor no startup."""
-    global _collector_task
-    _collector_task = asyncio.create_task(metrics_collector_loop())
-    logger.info("Dashboard metrics collector iniciado")
+# Nota: @router.on_event("startup") foi removido (deprecado no FastAPI 0.111+)
+# Lógica de inicialização do metrics collector movida para app_factory.py lifespan manager
+# O collector é iniciado automaticamente no startup da aplicação
 
 
 @router.get("/current")

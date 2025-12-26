@@ -3,7 +3,6 @@ Tests for cache bounds and enforcement logic in AsyncTTLCache.
 """
 
 import pytest
-
 from resync.core.async_cache import AsyncTTLCache
 
 

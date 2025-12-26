@@ -12,7 +12,6 @@ Idiomas: Português (BR) e Inglês
 
 from resync.core.embedding_router import RouterIntent
 
-
 # =============================================================================
 # EXEMPLOS EXPANDIDOS (200+)
 # =============================================================================
@@ -44,7 +43,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "dependency tree",
         "jobs required before X",
     ],
-    
     RouterIntent.IMPACT_ANALYSIS: [
         # Português
         "qual o impacto se o job falhar",
@@ -71,7 +69,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "jobs impacted by failure",
         "domino effect analysis",
     ],
-    
     RouterIntent.RESOURCE_CONFLICT: [
         # Português
         "conflito de recursos",
@@ -98,7 +95,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "resource deadlock",
         "resource availability",
     ],
-    
     RouterIntent.CRITICAL_JOBS: [
         # Português
         "jobs críticos do dia",
@@ -125,7 +121,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "mission critical jobs",
         "top priority processes",
     ],
-    
     RouterIntent.JOB_LINEAGE: [
         # Português
         "linhagem do job",
@@ -152,7 +147,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "modification log",
         "job versioning",
     ],
-    
     RouterIntent.TROUBLESHOOTING: [
         # Português
         "como resolver erro X",
@@ -184,7 +178,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "recover failed job",
         "restart job",
     ],
-    
     RouterIntent.ERROR_LOOKUP: [
         # Português
         "o que significa RC 8",
@@ -211,7 +204,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "error catalog",
         "decode error message",
     ],
-    
     RouterIntent.DOCUMENTATION: [
         # Português
         "documentação do TWS",
@@ -238,7 +230,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "operation instructions",
         "user guide",
     ],
-    
     RouterIntent.EXPLANATION: [
         # Português
         "explique como funciona",
@@ -265,7 +256,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "what does X mean",
         "fundamentals",
     ],
-    
     RouterIntent.JOB_DETAILS: [
         # Português
         "status do job X",
@@ -297,7 +287,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "job configuration",
         "execution time",
     ],
-    
     RouterIntent.ROOT_CAUSE: [
         # Português
         "causa raiz do problema",
@@ -324,7 +313,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "deep analysis",
         "determine cause",
     ],
-    
     RouterIntent.GENERAL: [
         # Português
         "ajuda geral",
@@ -344,7 +332,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "help me",
         "getting started",
     ],
-    
     RouterIntent.GREETING: [
         # Português
         "olá",
@@ -364,7 +351,6 @@ INTENT_EXAMPLES_EXPANDED = {
         "good morning",
         "good afternoon",
     ],
-    
     RouterIntent.CHITCHAT: [
         # Português
         "como você está",
@@ -390,7 +376,7 @@ INTENT_EXAMPLES_EXPANDED = {
 def get_expanded_examples():
     """
     Retorna os exemplos expandidos.
-    
+
     Returns:
         Dict mapeando RouterIntent para lista de exemplos
     """
@@ -400,7 +386,7 @@ def get_expanded_examples():
 def get_example_stats():
     """
     Retorna estatísticas dos exemplos.
-    
+
     Returns:
         Dict com estatísticas
     """
@@ -408,80 +394,82 @@ def get_example_stats():
         "total_intents": len(INTENT_EXAMPLES_EXPANDED),
         "total_examples": 0,
         "by_intent": {},
-        "min_examples": float('inf'),
+        "min_examples": float("inf"),
         "max_examples": 0,
     }
-    
+
     for intent, examples in INTENT_EXAMPLES_EXPANDED.items():
         count = len(examples)
         stats["total_examples"] += count
         stats["by_intent"][intent.value] = count
         stats["min_examples"] = min(stats["min_examples"], count)
         stats["max_examples"] = max(stats["max_examples"], count)
-    
+
     stats["avg_examples"] = stats["total_examples"] / stats["total_intents"]
-    
+
     return stats
 
 
 def validate_examples():
     """
     Valida os exemplos de intent.
-    
+
     Raises:
         AssertionError se validação falhar
     """
     stats = get_example_stats()
-    
+
     # Validações
-    assert stats["total_examples"] >= 200, \
+    assert stats["total_examples"] >= 200, (
         f"Precisa de 200+ exemplos, tem {stats['total_examples']}"
-    
-    assert stats["min_examples"] >= 10, \
+    )
+
+    assert stats["min_examples"] >= 10, (
         f"Cada intent precisa de 10+ exemplos, mínimo atual: {stats['min_examples']}"
-    
+    )
+
     # Verificar duplicados
     all_examples = []
     for examples in INTENT_EXAMPLES_EXPANDED.values():
         all_examples.extend([e.lower() for e in examples])
-    
+
     duplicates = set([x for x in all_examples if all_examples.count(x) > 1])
     assert len(duplicates) == 0, f"Duplicados encontrados: {duplicates}"
-    
-    print(f"✅ Validação passou!")
+
+    print("✅ Validação passou!")
     print(f"   Total de intents: {stats['total_intents']}")
     print(f"   Total de exemplos: {stats['total_examples']}")
     print(f"   Média por intent: {stats['avg_examples']:.1f}")
     print(f"   Min/Max: {stats['min_examples']}/{stats['max_examples']}")
-    
+
     return True
 
 
 def merge_with_existing():
     """
     Mescla exemplos expandidos com os existentes no router.
-    
+
     Útil para atualizar o router sem perder exemplos existentes.
-    
+
     Returns:
         Dict com exemplos mesclados
     """
     from resync.core.embedding_router import INTENT_EXAMPLES
-    
+
     merged = {}
-    
+
     for intent in RouterIntent:
         existing = set(INTENT_EXAMPLES.get(intent, []))
         expanded = set(INTENT_EXAMPLES_EXPANDED.get(intent, []))
         merged[intent] = list(existing | expanded)
-    
+
     return merged
 
 
 if __name__ == "__main__":
     # Executar validação
     validate_examples()
-    
+
     # Mostrar estatísticas
     stats = get_example_stats()
     print("\n📊 Estatísticas por Intent:")

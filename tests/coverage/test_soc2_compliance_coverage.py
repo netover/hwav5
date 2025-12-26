@@ -1,5 +1,5 @@
 """
-Coverage tests for soc2_compliance_refactored module.
+Coverage tests for soc2_compliance module.
 """
 
 from unittest.mock import Mock, patch
@@ -12,14 +12,14 @@ class TestSOC2ComplianceImports:
 
     def test_module_exists(self):
         """Test module can be imported."""
-        from resync.core import soc2_compliance_refactored
+        from resync.core import soc2_compliance
 
-        assert soc2_compliance_refactored is not None
+        assert soc2_compliance is not None
 
     def test_compliance_checker_class(self):
         """Test ComplianceChecker class exists."""
         try:
-            from resync.core.soc2_compliance_refactored import ComplianceChecker
+            from resync.core.soc2_compliance import ComplianceChecker
 
             assert ComplianceChecker is not None
         except ImportError:
@@ -32,7 +32,7 @@ class TestComplianceChecks:
     def test_compliance_status(self):
         """Test compliance status enum."""
         try:
-            from resync.core.soc2_compliance_refactored import ComplianceStatus
+            from resync.core.soc2_compliance import ComplianceStatus
 
             assert ComplianceStatus is not None
         except ImportError:
@@ -41,7 +41,7 @@ class TestComplianceChecks:
     def test_control_categories(self):
         """Test control categories are defined."""
         try:
-            from resync.core.soc2_compliance_refactored import ControlCategory
+            from resync.core.soc2_compliance import ControlCategory
 
             assert ControlCategory is not None
         except ImportError:

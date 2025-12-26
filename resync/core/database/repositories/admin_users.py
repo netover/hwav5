@@ -15,7 +15,8 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, update
 
-from ..models import AdminUser
+from resync.api.models import AdminUser
+
 from .base import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -104,17 +105,13 @@ class AdminUserRepository(BaseRepository[AdminUser]):
     async def get_by_username(self, username: str) -> AdminUser | None:
         """Get user by username."""
         async with self._get_session() as session:
-            result = await session.execute(
-                select(AdminUser).where(AdminUser.username == username)
-            )
+            result = await session.execute(select(AdminUser).where(AdminUser.username == username))
             return result.scalar_one_or_none()
 
     async def get_by_email(self, email: str) -> AdminUser | None:
         """Get user by email."""
         async with self._get_session() as session:
-            result = await session.execute(
-                select(AdminUser).where(AdminUser.email == email)
-            )
+            result = await session.execute(select(AdminUser).where(AdminUser.email == email))
             return result.scalar_one_or_none()
 
     async def authenticate(self, username: str, password: str) -> AdminUser | None:
@@ -200,9 +197,7 @@ class AdminUserRepository(BaseRepository[AdminUser]):
         password_hash, _ = hash_password(new_password)
         async with self._get_session() as session:
             result = await session.execute(
-                update(AdminUser)
-                .where(AdminUser.id == user_id)
-                .values(password_hash=password_hash)
+                update(AdminUser).where(AdminUser.id == user_id).values(password_hash=password_hash)
             )
             await session.commit()
             return result.rowcount > 0

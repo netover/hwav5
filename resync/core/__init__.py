@@ -62,7 +62,8 @@ class CorrelationIdFilter(logging.Filter):
 
 # Lazy loading for heavy imports to avoid collection issues
 _LAZY_EXPORTS = {
-    "AsyncTTLCache": ("resync.core.async_cache", "AsyncTTLCache"),
+    # v5.9.7: Fixed module path (AsyncTTLCache lives in resync.core.cache.async_cache)
+    "AsyncTTLCache": ("resync.core.cache.async_cache", "AsyncTTLCache"),
 }
 _LOADED_EXPORTS = {}
 _LAZY_LOAD_LOCK = threading.Lock()
@@ -91,10 +92,10 @@ def __getattr__(name: str):
 
 # SOC2 Compliance - import available but commented to avoid circular imports
 # SOC2 Compliance - import available but commented to avoid circular imports
-# Use direct import when needed: from resync.core.soc2_compliance_refactored
+# Use direct import when needed: from resync.core.soc2_compliance
 # import (
 #     SOC2ComplianceManager)
-# from .soc2_compliance_refactored import (
+# from .soc2_compliance import (
 #     SOC2ComplianceManager, soc2_compliance_manager,
 #     get_soc2_compliance_manager)
 

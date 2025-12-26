@@ -158,6 +158,7 @@ def retry_on_exception(
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             import time
+
             logger_instance = logger or logging.getLogger(func.__module__)
             current_delay = delay
 

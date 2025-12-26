@@ -20,10 +20,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import psutil
+from resync.core.async_cache import AsyncTTLCache
 
 from resync.core import get_environment_tags, get_global_correlation_id
 from resync.core.agent_manager import AgentManager
-from resync.core.async_cache import AsyncTTLCache
 from resync.core.audit_db import add_audit_records_batch, get_audit_metrics
 from resync.core.metrics import log_with_correlation, runtime_metrics
 

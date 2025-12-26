@@ -147,7 +147,7 @@ class AuditToKGPipeline:
     async def _get_kg(self):
         """Get Knowledge Graph instance."""
         if self._kg is None:
-            from resync.core.knowledge_graph.graph import get_kg_instance
+            from resync.knowledge.retrieval.graph import get_kg_instance
 
             self._kg = await get_kg_instance()
         return self._kg
@@ -155,7 +155,7 @@ class AuditToKGPipeline:
     async def _get_rag_feedback(self):
         """Get RAG feedback store."""
         if self._rag_feedback is None:
-            from resync.RAG.microservice.core.feedback_store import get_feedback_store
+            from resync.knowledge.store.feedback_store import get_feedback_store
 
             self._rag_feedback = get_feedback_store()
             await self._rag_feedback.initialize()

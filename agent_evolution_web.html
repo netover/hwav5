@@ -1,0 +1,564 @@
+<!-- Agent Evolution Dashboard -->
+<!-- Add to templates/admin.html in sidebar and main content area -->
+
+<!-- SIDEBAR LINK (add to AI & LEARNING section) -->
+<li>
+    <a href="#" onclick="switchSection('agent-evolution'); return false;">
+        <i class="fas fa-brain me-2"></i>
+        <span>Agent Evolution</span>
+        <span class="badge bg-warning ms-2" id="pendingSuggestions">0</span>
+    </a>
+</li>
+
+<!-- MAIN CONTENT SECTION -->
+<div id="agent-evolution" class="content-section" style="display: none;">
+    <h2 class="mb-4">
+        <i class="fas fa-brain me-2"></i>
+        Supervised Agent Evolution
+        <span class="badge bg-info ms-2">Human-Approved</span>
+    </h2>
+    
+    <!-- Info Banner -->
+    <div class="alert alert-info mb-4" role="alert">
+        <div class="d-flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle fa-2x"></i>
+            </div>
+            <div class="flex-grow-1 ms-3">
+                <h5>How It Works</h5>
+                <p class="mb-0">
+                    Agents learn from your feedback to improve over time. System detects patterns 
+                    and suggests improvements, but <strong>YOU approve</strong> all changes after sandbox testing.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="evolutionTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="performance-tab" data-bs-toggle="tab" 
+                    data-bs-target="#performance" type="button">
+                <i class="fas fa-chart-line me-1"></i>Performance
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="suggestions-tab" data-bs-toggle="tab" 
+                    data-bs-target="#suggestions" type="button">
+                <i class="fas fa-lightbulb me-1"></i>Suggestions
+                <span class="badge bg-warning ms-1" id="suggestionsBadge">0</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="patterns-tab" data-bs-toggle="tab" 
+                    data-bs-target="#patterns" type="button">
+                <i class="fas fa-project-diagram me-1"></i>Patterns
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="history-tab" data-bs-toggle="tab" 
+                    data-bs-target="#history" type="button">
+                <i class="fas fa-history me-1"></i>History
+            </button>
+        </li>
+    </ul>
+    
+    <!-- Tab Content -->
+    <div class="tab-content" id="evolutionTabContent">
+        
+        <!-- Performance Tab -->
+        <div class="tab-pane fade show active" id="performance" role="tabpanel">
+            <div class="row">
+                
+                <!-- Job Analyst -->
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Job Analyst Agent</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center mb-3">
+                                <div class="col">
+                                    <h3 class="text-success" id="jobAnalystAccuracy">85%</h3>
+                                    <small class="text-muted">Accuracy</small>
+                                </div>
+                                <div class="col">
+                                    <h3 class="text-info" id="jobAnalystTasks">150</h3>
+                                    <small class="text-muted">Tasks (30d)</small>
+                                </div>
+                                <div class="col">
+                                    <h3>
+                                        <i class="fas fa-arrow-up text-success" id="jobAnalystTrend"></i>
+                                    </h3>
+                                    <small class="text-muted">Trend</small>
+                                </div>
+                            </div>
+                            
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar bg-success" id="jobAnalystBar" style="width: 85%">
+                                    <span class="fw-bold">85%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <span class="text-success">
+                                    <i class="fas fa-thumbs-up"></i> 
+                                    <span id="jobAnalystPositive">135</span>
+                                </span>
+                                <span class="text-danger">
+                                    <i class="fas fa-thumbs-down"></i> 
+                                    <span id="jobAnalystNegative">15</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dependency Specialist -->
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Dependency Specialist</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center mb-3">
+                                <div class="col">
+                                    <h3 class="text-success" id="depSpecialistAccuracy">92%</h3>
+                                    <small class="text-muted">Accuracy</small>
+                                </div>
+                                <div class="col">
+                                    <h3 class="text-info" id="depSpecialistTasks">200</h3>
+                                    <small class="text-muted">Tasks (30d)</small>
+                                </div>
+                                <div class="col">
+                                    <h3>
+                                        <i class="fas fa-minus text-warning" id="depSpecialistTrend"></i>
+                                    </h3>
+                                    <small class="text-muted">Trend</small>
+                                </div>
+                            </div>
+                            
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar bg-success" id="depSpecialistBar" style="width: 92%">
+                                    <span class="fw-bold">92%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <span class="text-success">
+                                    <i class="fas fa-thumbs-up"></i> 
+                                    <span id="depSpecialistPositive">184</span>
+                                </span>
+                                <span class="text-danger">
+                                    <i class="fas fa-thumbs-down"></i> 
+                                    <span id="depSpecialistNegative">16</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+        <!-- Suggestions Tab -->
+        <div class="tab-pane fade" id="suggestions" role="tabpanel">
+            <div id="suggestions-list">
+                <p class="text-center text-muted">Loading suggestions...</p>
+            </div>
+        </div>
+        
+        <!-- Patterns Tab -->
+        <div class="tab-pane fade" id="patterns" role="tabpanel">
+            <div id="patterns-list">
+                <p class="text-center text-muted">Loading patterns...</p>
+            </div>
+        </div>
+        
+        <!-- History Tab -->
+        <div class="tab-pane fade" id="history" role="tabpanel">
+            <div id="history-list">
+                <p class="text-center text-muted">Loading history...</p>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Alerts -->
+    <div id="evolution-alerts" class="mt-3"></div>
+</div>
+
+<!-- JAVASCRIPT -->
+<script>
+// ============================================================================
+// AGENT EVOLUTION SYSTEM
+// ============================================================================
+
+let currentSuggestions = [];
+
+// Load performance metrics
+async function loadAgentPerformance() {
+    try {
+        // Job Analyst
+        const jobAnalyst = await fetch('/api/admin/agents/job_analyst/performance?period_days=30');
+        const jobAnalystData = await jobAnalyst.json();
+        
+        updatePerformanceCard('jobAnalyst', jobAnalystData);
+        
+        // Dependency Specialist
+        const depSpecialist = await fetch('/api/admin/agents/dependency_specialist/performance?period_days=30');
+        const depSpecialistData = await depSpecialist.json();
+        
+        updatePerformanceCard('depSpecialist', depSpecialistData);
+        
+    } catch (error) {
+        console.error('Failed to load performance:', error);
+    }
+}
+
+// Update performance card
+function updatePerformanceCard(prefix, data) {
+    const accuracy = (data.accuracy * 100).toFixed(0);
+    
+    document.getElementById(`${prefix}Accuracy`).textContent = `${accuracy}%`;
+    document.getElementById(`${prefix}Tasks`).textContent = data.total_tasks;
+    document.getElementById(`${prefix}Positive`).textContent = data.positive_feedback;
+    document.getElementById(`${prefix}Negative`).textContent = data.negative_feedback;
+    
+    const bar = document.getElementById(`${prefix}Bar`);
+    bar.style.width = `${accuracy}%`;
+    bar.querySelector('span').textContent = `${accuracy}%`;
+    
+    // Update trend
+    const trendIcon = document.getElementById(`${prefix}Trend`);
+    if (data.trend === 'improving') {
+        trendIcon.className = 'fas fa-arrow-up text-success';
+    } else if (data.trend === 'degrading') {
+        trendIcon.className = 'fas fa-arrow-down text-danger';
+    } else {
+        trendIcon.className = 'fas fa-minus text-warning';
+    }
+}
+
+// Load improvement suggestions
+async function loadSuggestions() {
+    try {
+        const response = await fetch('/api/admin/agents/improvements?status=pending');
+        const suggestions = await response.json();
+        
+        currentSuggestions = suggestions;
+        
+        // Update badge
+        document.getElementById('suggestionsBadge').textContent = suggestions.length;
+        document.getElementById('pendingSuggestions').textContent = suggestions.length;
+        
+        const listDiv = document.getElementById('suggestions-list');
+        
+        if (suggestions.length === 0) {
+            listDiv.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-check-circle fa-3x mb-3"></i>
+                    <p>No pending suggestions. All agents performing well!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        
+        suggestions.forEach(suggestion => {
+            html += `
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>
+                            Suggestion for ${formatAgentName(suggestion.agent_name)}
+                        </h5>
+                        <span class="badge bg-warning">Pending Review</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Current Prompt:</h6>
+                                <pre class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">${escapeHtml(suggestion.current_prompt)}</pre>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Proposed Prompt:</h6>
+                                <pre class="bg-success bg-opacity-10 p-3 rounded" style="max-height: 200px; overflow-y: auto;">${escapeHtml(suggestion.proposed_prompt)}</pre>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6>Rationale:</h6>
+                                <p>${suggestion.rationale}</p>
+                                
+                                <p class="mb-0">
+                                    <strong>Estimated Impact:</strong> 
+                                    <span class="badge bg-success">${suggestion.estimated_impact}</span>
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button class="btn btn-primary btn-sm mb-2" 
+                                        onclick="testSuggestion('${suggestion.id}')">
+                                    <i class="fas fa-flask me-1"></i>Test in Sandbox
+                                </button>
+                                <br>
+                                <button class="btn btn-success btn-sm mb-2" 
+                                        onclick="approveSuggestion('${suggestion.id}')" 
+                                        disabled id="approve-${suggestion.id}">
+                                    <i class="fas fa-check me-1"></i>Approve & Deploy
+                                </button>
+                                <br>
+                                <button class="btn btn-danger btn-sm" 
+                                        onclick="rejectSuggestion('${suggestion.id}')">
+                                    <i class="fas fa-times me-1"></i>Reject
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        listDiv.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Failed to load suggestions:', error);
+    }
+}
+
+// Test suggestion in sandbox
+async function testSuggestion(suggestionId) {
+    showEvolutionAlert('info', 'Testing suggestion in sandbox... This may take a minute.');
+    
+    try {
+        const response = await fetch(`/api/admin/agents/improvements/${suggestionId}/test`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        // Show results modal
+        showTestResults(suggestionId, result);
+        
+        // Enable approve button if safe
+        if (result.safe_to_deploy) {
+            document.getElementById(`approve-${suggestionId}`).disabled = false;
+        }
+        
+    } catch (error) {
+        showEvolutionAlert('danger', `Test failed: ${error.message}`);
+    }
+}
+
+// Show test results
+function showTestResults(suggestionId, result) {
+    const improvementPct = (result.improvement_pct * 100).toFixed(1);
+    const currentAcc = (result.current_accuracy * 100).toFixed(1);
+    const improvedAcc = (result.improved_accuracy * 100).toFixed(1);
+    
+    let statusClass = result.safe_to_deploy ? 'success' : 'warning';
+    let statusIcon = result.safe_to_deploy ? 'check-circle' : 'exclamation-triangle';
+    let statusText = result.safe_to_deploy ? 'Safe to Deploy' : 'Review Required';
+    
+    let html = `
+        <div class="alert alert-${statusClass}" role="alert">
+            <h5>
+                <i class="fas fa-${statusIcon} me-2"></i>
+                Sandbox Test Results
+            </h5>
+            
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h3>${currentAcc}%</h3>
+                        <small>Current Accuracy</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h3 class="text-success">${improvedAcc}%</h3>
+                        <small>Improved Accuracy</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h3 class="text-success">+${improvementPct}%</h3>
+                        <small>Improvement</small>
+                    </div>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <p class="mb-1"><strong>Test Cases:</strong> ${result.test_cases_count}</p>
+            <p class="mb-1"><strong>Status:</strong> <span class="badge bg-${statusClass}">${statusText}</span></p>
+            
+            ${result.regressions_detected.length > 0 ? `
+                <div class="alert alert-warning mt-3">
+                    <strong>⚠️ Regressions Detected:</strong>
+                    <ul class="mb-0">
+                        ${result.regressions_detected.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    // Insert after the suggestion card
+    const card = document.querySelector(`[onclick*="testSuggestion('${suggestionId}')"]`).closest('.card');
+    const resultsDiv = document.createElement('div');
+    resultsDiv.innerHTML = html;
+    card.after(resultsDiv);
+}
+
+// Approve suggestion
+async function approveSuggestion(suggestionId) {
+    if (!confirm('Deploy this improvement? System will monitor performance for 24h with auto-rollback if needed.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/admin/agents/improvements/${suggestionId}/approve`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        showEvolutionAlert('success', 
+            `✅ Improvement deployed! Monitoring active for 24h with auto-rollback protection.`);
+        
+        // Reload suggestions
+        await loadSuggestions();
+        
+    } catch (error) {
+        showEvolutionAlert('danger', `Failed to approve: ${error.message}`);
+    }
+}
+
+// Reject suggestion
+async function rejectSuggestion(suggestionId) {
+    if (!confirm('Reject this suggestion?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/admin/agents/improvements/${suggestionId}/reject`, {
+            method: 'POST'
+        });
+        
+        showEvolutionAlert('info', 'Suggestion rejected');
+        
+        // Reload suggestions
+        await loadSuggestions();
+        
+    } catch (error) {
+        showEvolutionAlert('danger', `Failed to reject: ${error.message}`);
+    }
+}
+
+// Load detected patterns
+async function loadPatterns() {
+    try {
+        const response = await fetch('/api/admin/agents/job_analyst/patterns');
+        const patterns = await response.json();
+        
+        const listDiv = document.getElementById('patterns-list');
+        
+        if (patterns.length === 0) {
+            listDiv.innerHTML = '<p class="text-center text-muted">No patterns detected yet</p>';
+            return;
+        }
+        
+        let html = '';
+        
+        patterns.forEach(pattern => {
+            html += `
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-project-diagram text-info me-2"></i>
+                            ${pattern.pattern_type}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Description:</strong> ${pattern.description}</p>
+                        <p><strong>Job Pattern:</strong> <code>${pattern.job_pattern || 'N/A'}</code></p>
+                        <p><strong>Frequency:</strong> ${pattern.frequency} occurrences</p>
+                        <p><strong>Confidence:</strong> 
+                            <span class="badge bg-${pattern.confidence > 0.8 ? 'success' : 'warning'}">
+                                ${(pattern.confidence * 100).toFixed(0)}%
+                            </span>
+                        </p>
+                        <p><strong>Examples:</strong></p>
+                        <ul>
+                            ${pattern.examples.map(ex => `<li><code>${ex}</code></li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        });
+        
+        listDiv.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Failed to load patterns:', error);
+    }
+}
+
+// Helper functions
+function formatAgentName(name) {
+    return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showEvolutionAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.getElementById('evolution-alerts').prepend(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Initialize when section is opened
+document.addEventListener('DOMContentLoaded', function() {
+    const evolutionTab = document.querySelector('[data-bs-target="#agent-evolution"]');
+    if (evolutionTab) {
+        evolutionTab.addEventListener('shown.bs.tab', function() {
+            loadAgentPerformance();
+            loadSuggestions();
+            loadPatterns();
+        });
+    }
+});
+</script>
+
+<style>
+#agent-evolution pre {
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+#agent-evolution .card {
+    transition: box-shadow 0.3s ease;
+}
+
+#agent-evolution .card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+</style>

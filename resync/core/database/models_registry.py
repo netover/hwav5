@@ -31,24 +31,22 @@ def register_all_models():
     # Import all model modules to register them with Base
     # NOTE: These imports are for side-effects only (model registration)
     try:
-        # FastAPI app models (Users, Sessions, etc.)
-        from resync.fastapi_app.db.models import (  # noqa: F401
-            APIKey,
-            Session,
+        # Auth models (v5.4.7 - consolidated to core/database)
+        from resync.core.database.models.auth import (  # noqa: F401
+            AuditLog,
             User,
         )
 
-        logger.debug("Registered fastapi_app models")
+        logger.debug("Registered auth models")
     except ImportError as e:
-        logger.warning(f"Could not import fastapi_app models: {e}")
+        logger.warning(f"Could not import auth models: {e}")
 
     try:
-        # Knowledge Graph models
-        from resync.core.knowledge_graph.models import (  # noqa: F401
+        # Knowledge Graph models (v5.9.3 - simplified)
+        from resync.knowledge.models import (  # noqa: F401
             ExtractedTriplet,
-            GraphEdge,
-            GraphNode,
-            GraphSnapshot,
+            # GraphNode, GraphEdge, GraphSnapshot removed in v5.9.3
+            # Graph is now built on-demand from TWS API
         )
 
         logger.debug("Registered knowledge_graph models")

@@ -1,0 +1,33 @@
+[Unit]
+Description=Resync AI Interface
+After=network.target redis-server.service
+Documentation=https://github.com/resync/resync
+
+[Service]
+# User/Group to run as (recommended: create a specific user)
+User=www-data
+Group=www-data
+
+# Directory where the application is located
+# UPDATE THIS PATH for your production environment
+WorkingDirectory=/opt/resync
+
+# Environment variables
+# UPDATE THIS PATH for your production environment
+EnvironmentFile=/opt/resync/.env
+
+# Execution command
+# UPDATE THIS PATH for your production environment
+ExecStart=/opt/resync/.venv/bin/gunicorn -c gunicorn.conf.py resync.main:app
+
+# Restart policy for resilience
+Restart=always
+RestartSec=5
+
+# Logging to standard syslog
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=resync
+
+[Install]
+WantedBy=multi-user.target

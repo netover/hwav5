@@ -10,8 +10,7 @@ import asyncio
 import logging
 from typing import Any
 
-from resync.core.async_cache import AsyncTTLCache
-from resync.core.improved_cache import ImprovedAsyncCache
+from resync.core.cache import AsyncTTLCache, ImprovedAsyncCache
 from resync.core.metrics_compat import Counter, Histogram
 from resync.services.tws_client_factory import TWSClientFactory
 from resync.services.tws_service import OptimizedTWSClient
@@ -260,13 +259,15 @@ class TWSMigrationManager:
         """Inicializar ambos os clientes TWS."""
         try:
             # Cliente legado
+            hostname = settings.TWS_HOST or "localhost"
+            port = settings.TWS_PORT or 31111
+            base_url = f"http://{hostname}:{port}"
             self.legacy_client = OptimizedTWSClient(
-                hostname=settings.TWS_HOST,
-                port=settings.TWS_PORT,
+                base_url=base_url,
                 username=settings.TWS_USER,
                 password=settings.TWS_PASSWORD,
-                engine_name=getattr(settings, "TWS_ENGINE_NAME", None),
-                engine_owner=getattr(settings, "TWS_ENGINE_OWNER", None),
+                engine_name=getattr(settings, "TWS_ENGINE_NAME", ""),
+                engine_owner=getattr(settings, "TWS_ENGINE_OWNER", ""),
             )
 
             # Cliente novo via factory

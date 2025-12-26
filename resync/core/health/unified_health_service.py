@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
-from resync.core.health_models import (
+from resync.core.health.health_models import (
     ComponentHealth,
     ComponentType,
     HealthCheckConfig,
@@ -183,7 +183,7 @@ class UnifiedHealthService:
 
             # Build result
             result = HealthCheckResult(
-                status=overall_status,
+                overall_status=overall_status,
                 components=components,
                 timestamp=datetime.now(),
                 duration_ms=(time.time() - start_time) * 1000,
@@ -213,7 +213,7 @@ class UnifiedHealthService:
         except Exception as e:
             logger.error("comprehensive_health_check_failed", error=str(e))
             return HealthCheckResult(
-                status=HealthStatus.UNHEALTHY,
+                overall_status=HealthStatus.UNHEALTHY,
                 components={},
                 timestamp=datetime.now(),
                 duration_ms=(time.time() - start_time) * 1000,
@@ -323,7 +323,7 @@ class UnifiedHealthService:
             message=error,
             response_time_ms=0,
             component_type=ComponentType.SERVICE,
-            details={"error": error},
+            metadata={"error": error},
         )
 
     # =========================================================================
@@ -339,7 +339,7 @@ class UnifiedHealthService:
         """
         history_entry = HealthStatusHistory(
             timestamp=result.timestamp,
-            status=result.status,
+            overall_status=result.overall_status,
             component_count=len(result.components),
             duration_ms=result.duration_ms,
         )

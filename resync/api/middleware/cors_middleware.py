@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +12,61 @@ from resync.settings import settings
 logger = logging.getLogger(__name__)
 
 
+def _get_secure_cors_origins(allow_origins: list[str] | None) -> list[str]:
+    """
+    Get CORS origins with security validation.
+
+    SECURITY (v5.4.1):
+    - Production: Wildcard "*" is NOT allowed
+    - Development: Wildcard allowed with warning
+
+    Args:
+        allow_origins: Provided origins list
+
+    Returns:
+        Safe origins list
+
+    Raises:
+        ValueError: If wildcard used in production without explicit origins
+    """
+    env = os.getenv("ENVIRONMENT", "development").lower()
+
+    # If origins provided explicitly
+    if allow_origins:
+        if "*" in allow_origins and env == "production":
+            logger.error(
+                "cors_wildcard_in_production - Wildcard CORS origins not allowed in production"
+            )
+            raise ValueError(
+                "CORS wildcard '*' is not allowed in production. "
+                "Set explicit CORS_ALLOWED_ORIGINS environment variable."
+            )
+        if "*" in allow_origins:
+            logger.warning(
+                "cors_wildcard_enabled env=%s - Using wildcard CORS - not recommended for production",
+                env,
+            )
+        return allow_origins
+
+    # No origins provided - use secure defaults
+    if env == "production":
+        # In production, fail closed - no CORS by default
+        logger.warning(
+            "cors_no_origins_configured - No CORS origins configured - defaulting to same-origin only"
+        )
+        return []  # Empty = same-origin only
+
+    # Development - allow localhost variants
+    dev_origins = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
+    ]
+    logger.info("cors_using_dev_defaults origins=%s", dev_origins)
+    return dev_origins
+
+
 class LoggingCORSMiddleware(BaseHTTPMiddleware):
     """
     Custom CORS middleware with enhanced logging and security monitoring.
@@ -20,6 +76,10 @@ class LoggingCORSMiddleware(BaseHTTPMiddleware):
     - Dynamic origin validation with regex patterns
     - Environment-specific CORS policies
     - Performance metrics for CORS operations
+
+    SECURITY (v5.4.1):
+    - No wildcard fallback in production
+    - Secure defaults for development
     """
 
     def __init__(
@@ -40,7 +100,7 @@ class LoggingCORSMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             policy: CORS policy configuration
-            allow_origins: List of allowed origins
+            allow_origins: List of allowed origins (secure default if None)
             allow_methods: List of allowed methods
             allow_headers: List of allowed headers
             allow_credentials: Whether to allow credentials
@@ -49,7 +109,10 @@ class LoggingCORSMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
         self.policy = policy
-        self.allow_origins = allow_origins or ["*"]
+
+        # SECURITY: Use secure CORS origin defaults
+        self.allow_origins = _get_secure_cors_origins(allow_origins)
+
         self.allow_methods = allow_methods or [
             "GET",
             "POST",

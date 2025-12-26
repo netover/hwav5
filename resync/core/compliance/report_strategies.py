@@ -26,8 +26,8 @@ def _get_soc2_classes():
     """Lazy import to avoid circular dependency."""
     from resync.core.compliance.types import SOC2TrustServiceCriteria
 
-    # Get the actual implementation from soc2_compliance_refactored
-    from resync.core.soc2_compliance_refactored import SOC2ComplianceManager
+    # Get the actual implementation from soc2_compliance
+    from resync.core.soc2_compliance import SOC2ComplianceManager
 
     return SOC2ComplianceManager, SOC2TrustServiceCriteria
 
@@ -249,14 +249,14 @@ class OverallComplianceStrategy(ReportStrategy):
                 return 0.0
 
             # Lazy import to avoid circular dependency
-            _, SOC2TrustServiceCriteria = _get_soc2_classes()
+            _, soc2_trust_service_criteria_cls = _get_soc2_classes()
 
             weights = {
-                SOC2TrustServiceCriteria.SECURITY: 0.3,
-                SOC2TrustServiceCriteria.AVAILABILITY: 0.25,
-                SOC2TrustServiceCriteria.PROCESSING_INTEGRITY: 0.2,
-                SOC2TrustServiceCriteria.CONFIDENTIALITY: 0.15,
-                SOC2TrustServiceCriteria.PRIVACY: 0.1,
+                soc2_trust_service_criteria_cls.SECURITY: 0.3,
+                soc2_trust_service_criteria_cls.AVAILABILITY: 0.25,
+                soc2_trust_service_criteria_cls.PROCESSING_INTEGRITY: 0.2,
+                soc2_trust_service_criteria_cls.CONFIDENTIALITY: 0.15,
+                soc2_trust_service_criteria_cls.PRIVACY: 0.1,
             }
 
             weighted_score = 0.0

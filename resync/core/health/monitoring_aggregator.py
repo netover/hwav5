@@ -3,13 +3,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from resync.core.health_models import (
+from resync.core.health.health_models import (
     ComponentHealth,
     ComponentType,
     HealthCheckResult,
     HealthStatus,
 )
-from resync.core.health_service import HealthCheckService
+from resync.core.health.health_service import HealthCheckService
 
 
 @dataclass
@@ -103,7 +103,7 @@ class HealthMonitoringAggregator:
     async def get_health_service(self) -> HealthCheckService:
         """Get or create the health check service instance."""
         if self.health_service is None:
-            from resync.core.health_service import get_health_check_service
+            from resync.core.health.health_service import get_health_check_service
 
             self.health_service = await get_health_check_service()
         return self.health_service
@@ -266,7 +266,7 @@ class HealthMonitoringAggregator:
             degraded_count=status_counts.get(HealthStatus.DEGRADED, 0),
             unhealthy_count=status_counts.get(HealthStatus.UNHEALTHY, 0),
             unknown_count=status_counts.get(HealthStatus.UNKNOWN, 0),
-            average_response_time=(
+            average_response_time_ms=(
                 round(average_response_time, 2) if average_response_time else None
             ),
             components=components,

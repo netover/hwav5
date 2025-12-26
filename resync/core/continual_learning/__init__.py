@@ -8,6 +8,7 @@ This module provides continuous improvement capabilities:
 3. **Audit-to-KG Pipeline** - Converts audit errors into knowledge graph entries
 4. **Context Enrichment** - Enhances queries with learned context
 5. **Active Learning** - Identifies uncertain responses for human review
+6. **Knowledge Incorporator** - Transforms approved feedback into searchable knowledge (v5.2.3.20)
 
 Usage:
     from resync.core.continual_learning import (
@@ -16,6 +17,7 @@ Usage:
         get_audit_to_kg_pipeline,
         get_context_enricher,
         get_active_learning_manager,
+        get_knowledge_incorporator,  # v5.2.3.20
     )
 
 Architecture:
@@ -27,6 +29,8 @@ Architecture:
                               [If uncertain → Human Review Queue]
                                         ↓
                               Feedback Recording → Feedback Store
+                                        ↓
+                              [If approved → Knowledge Incorporator → Vector DB]
                                         ↓
                               [If error detected → Audit-to-KG Pipeline]
                                         ↓
@@ -62,11 +66,13 @@ from resync.core.continual_learning.feedback_retriever import (
     create_feedback_aware_retriever,
 )
 from resync.core.continual_learning.feedback_store import (
-    DocumentScore,
-    FeedbackRating,
-    FeedbackRecord,
     FeedbackStore,
     get_feedback_store,
+)
+from resync.core.continual_learning.knowledge_incorporator import (
+    KnowledgeIncorporator,
+    get_knowledge_incorporator,
+    incorporate_feedback,
 )
 from resync.core.continual_learning.orchestrator import (
     ContinualLearningOrchestrator,
@@ -88,10 +94,11 @@ from resync.core.continual_learning.threshold_tuning import (
 __all__ = [
     # Feedback Store
     "FeedbackStore",
-    "FeedbackRating",
-    "FeedbackRecord",
-    "DocumentScore",
     "get_feedback_store",
+    # Knowledge Incorporator (v5.2.3.20)
+    "KnowledgeIncorporator",
+    "get_knowledge_incorporator",
+    "incorporate_feedback",
     # Feedback-Aware Retriever
     "FeedbackAwareRetriever",
     "create_feedback_aware_retriever",

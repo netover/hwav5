@@ -3,7 +3,6 @@ import contextlib
 import time
 
 import pytest
-
 from resync.core.async_cache import AsyncTTLCache
 
 

@@ -1,451 +1,177 @@
-# 🚀 Guia Rápido de Início - Projeto Resync
+# ⚡ QUICK START - AGENT SCRIPTS (1 PÁGINA)
 
-## 📋 Pré-requisitos
+## 🎯 **OBJETIVO**
+Coletar métricas de CPU, Memory, Disk das FTAs → Enviar para Resync → Habilitar Capacity Forecasting
 
-- Python 3.13+
-- Redis (opcional, usa in-memory se não disponível)
-- Git
-
-## ⚡ Início Rápido (5 minutos)
-
-### 1. Clone e Setup
-
-```bash
-# Clone o repositório
-git clone <repository-url>
-cd resync
-
-# Crie ambiente virtual
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# ou
-venv\Scripts\activate  # Windows
-
-# Instale dependências
-pip install -r requirements.txt
-```
-
-### 2. Configure (Opcional)
-
-```bash
-# Copie arquivo de configuração de exemplo
-cp .env.example .env
-
-# Edite conforme necessário
-nano .env
-```
-
-**Configurações Mínimas**:
-```env
-PROJECT_NAME=Resync
-DEBUG=True
-LOG_LEVEL=INFO
-```
-
-### 3. Inicie o Servidor
-
-```bash
-# Desenvolvimento
-uvicorn resync.main:app --reload --port 8000
-
-# Ou use o script
-python -m resync.main
-```
-
-### 4. Acesse a Documentação
-
-```bash
-# Swagger UI (interativo)
-open http://localhost:8000/docs
-
-# ReDoc (documentação)
-open http://localhost:8000/redoc
-```
-
-## 🎯 Testando as Novas Funcionalidades
-
-### Teste 1: Idempotency Keys (30 segundos)
-
-```bash
-# Gere uma idempotency key
-IDEM_KEY=$(uuidgen)  # Linux/Mac
-# ou
-IDEM_KEY=$(powershell -Command "[guid]::NewGuid().ToString()")  # Windows
-
-# Crie um recurso
-curl -X POST "http://localhost:8000/api/v1/operations/resources" \
-  -H "X-Idempotency-Key: $IDEM_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "My First Resource",
-    "description": "Testing idempotency"
-  }'
-
-# Repita a mesma requisição (deve retornar o mesmo resultado)
-curl -X POST "http://localhost:8000/api/v1/operations/resources" \
-  -H "X-Idempotency-Key: $IDEM_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "My First Resource",
-    "description": "Testing idempotency"
-  }'
-```
-
-**Resultado Esperado**: Ambas as requisições retornam o mesmo recurso (mesmo ID).
+**ROI:** +$200k/ano | **Tempo:** 2 semanas | **Custo:** $3.7k
 
 ---
 
-### Teste 2: RFC 7807 - Error Handling (30 segundos)
+## 📦 **ARQUIVOS**
 
-```bash
-# Teste erro 404
-curl -v "http://localhost:8000/api/v1/examples/books/invalid-id"
-
-# Teste erro de validação
-curl -X POST "http://localhost:8000/api/v1/examples/books" \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
-
-**Resultado Esperado**: 
-- Erro 404 com formato RFC 7807
-- Erro 400 com lista de campos inválidos
+1. **README.md** - Overview completo
+2. **EXECUTIVE_SUMMARY.md** - ROI, timeline, recursos
+3. **DEPLOYMENT_GUIDE.md** - Passo a passo detalhado
+4. **DEPLOYMENT_CHECKLIST.md** - Checklist tracking
+5. **collect_metrics.sh** - Script para FTAs
+6. **workstation_metrics_api.py** - API endpoint Resync
+7. **alembic_migration_workstation_metrics.py** - Migration DB
+8. **test_metrics_simulator.sh** - Testes
 
 ---
 
-### Teste 3: HATEOAS - Navegação (1 minuto)
+## 🚀 **SETUP RÁPIDO (30 MINUTOS)**
+
+### **1. Setup Resync (15 min)**
 
 ```bash
-# Liste livros com paginação
-curl "http://localhost:8000/api/v1/examples/books?page=1&page_size=1"
+# A. Migration
+cd /opt/resync
+cp alembic_migration_workstation_metrics.py alembic/versions/
+# Editar: ajustar down_revision
+alembic upgrade head
 
-# Observe o campo "_links" na resposta
-# Copie o href do link "next" (se existir)
-# Faça nova requisição com esse link
+# B. API
+cp workstation_metrics_api.py resync/api/v1/metrics/workstation.py
+# Editar main.py: incluir router
+systemctl restart resync
 
-# Exemplo:
-curl "http://localhost:8000/api/v1/examples/books?page=2&page_size=1"
-```
+# C. API Key
+resync-cli api-key create --name "FTA Metrics"
+# Copiar: rsk_abc123xyz789...
 
-**Resultado Esperado**: 
-- Resposta com campo `_links`
-- Links para `self`, `first`, `last`, `next`, `prev`
-- Cada item tem seus próprios links
-
----
-
-### Teste 4: Criar e Navegar (2 minutos)
-
-```bash
-# 1. Crie um livro
-RESPONSE=$(curl -s -X POST "http://localhost:8000/api/v1/examples/books" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "My Book",
-    "author": "John Doe",
-    "published_year": 2024
-  }')
-
-echo $RESPONSE | jq .
-
-# 2. Extraia o ID do livro
-BOOK_ID=$(echo $RESPONSE | jq -r '.id')
-
-# 3. Busque o livro criado
-curl "http://localhost:8000/api/v1/examples/books/$BOOK_ID"
-
-# 4. Delete o livro
-curl -X DELETE "http://localhost:8000/api/v1/examples/books/$BOOK_ID"
-
-# 5. Tente buscar novamente (deve retornar 404)
-curl -v "http://localhost:8000/api/v1/examples/books/$BOOK_ID"
+# D. Testar
+./test_metrics_simulator.sh https://resync.company.com/api/v1/metrics/workstation rsk_abc123 3
 ```
 
 ---
 
-## 📚 Endpoints Disponíveis
-
-### Idempotency Examples
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| POST | `/api/v1/operations/resources` | Criar recurso (requer X-Idempotency-Key) |
-| POST | `/api/v1/operations/transactions` | Criar transação (requer X-Idempotency-Key) |
-| GET | `/api/v1/operations/idempotency-example` | Documentação de idempotency |
-
-### RFC Examples (HATEOAS)
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/api/v1/examples/books` | Listar livros (paginado) |
-| GET | `/api/v1/examples/books/{id}` | Obter livro específico |
-| POST | `/api/v1/examples/books` | Criar novo livro |
-| DELETE | `/api/v1/examples/books/{id}` | Deletar livro |
-| GET | `/api/v1/examples/rfc-examples` | Documentação RFC |
-
-### Health & Monitoring
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/health` | Health check |
-| GET | `/api/health/detailed` | Health detalhado |
-| GET | `/docs` | Swagger UI |
-| GET | `/redoc` | ReDoc |
-
----
-
-## 🔧 Desenvolvimento
-
-### Estrutura do Projeto
-
-```
-resync/
-├── api/                    # Endpoints da API
-│   ├── dependencies.py     # Dependências compartilhadas
-│   ├── operations.py       # Endpoints de idempotency
-│   ├── rfc_examples.py     # Endpoints de exemplo RFC
-│   └── models/
-│       ├── links.py        # Modelos HATEOAS
-│       └── responses.py    # Modelos de resposta
-├── core/                   # Lógica de negócio
-│   ├── idempotency.py      # Sistema de idempotency
-│   ├── exceptions.py       # Exceções customizadas
-│   └── structured_logger.py
-└── docs/                   # Documentação
-    ├── FASE_2.5_IDEMPOTENCY_IMPLEMENTATION.md
-    ├── FASE_3_RFC_IMPLEMENTATION.md
-    └── IMPLEMENTATION_SUMMARY.md
-```
-
-### Adicionar Novo Endpoint com Idempotency
-
-```python
-from fastapi import APIRouter, Depends
-from resync.api.dependencies import (
-    get_idempotency_manager,
-    require_idempotency_key
-)
-from resync.core.idempotency import IdempotencyManager
-
-router = APIRouter()
-
-@router.post("/my-endpoint")
-async def my_endpoint(
-    data: MyModel,
-    idempotency_key: str = Depends(require_idempotency_key),
-    manager: IdempotencyManager = Depends(get_idempotency_manager)
-):
-    async def _process():
-        # Sua lógica aqui
-        return {"result": "success"}
-    
-    return await manager.execute_idempotent(
-        key=idempotency_key,
-        func=_process,
-        ttl_seconds=3600
-    )
-```
-
-### Adicionar Links HATEOAS
-
-```python
-from resync.api.models.links import LinkBuilder
-
-builder = LinkBuilder()
-
-# Adicionar links a um recurso
-resource_dict = resource.model_dump()
-resource_dict["_links"] = {
-    "self": builder.build_self_link(
-        path=f"/api/v1/resources/{resource.id}"
-    ).model_dump(),
-    "update": builder.build_link(
-        path=f"/api/v1/resources/{resource.id}",
-        rel="update",
-        method="PUT"
-    ).model_dump()
-}
-```
-
-### Criar Resposta Paginada
-
-```python
-from resync.api.models.responses import create_paginated_response
-
-response = create_paginated_response(
-    items=items,
-    total=total_count,
-    page=page,
-    page_size=page_size,
-    base_path="/api/v1/resources",  # Para links automáticos
-    query_params={"filter": "active"}  # Parâmetros adicionais
-)
-```
-
----
-
-## 🧪 Testes
-
-### Executar Testes
+### **2. Deploy 1 FTA Piloto (15 min)**
 
 ```bash
-# Todos os testes
-pytest
+# A. Configurar script
+nano collect_metrics.sh
+# Linha 19: RESYNC_URL="https://resync.company.com/api/v1/metrics/workstation"
+# Linha 22: API_KEY="rsk_abc123xyz789..."
 
-# Com cobertura
-pytest --cov=resync --cov-report=html
+# B. Copiar para FTA
+scp collect_metrics.sh usuario@ws-dev-01:/tmp/
 
-# Testes específicos
-pytest tests/test_idempotency.py
-pytest tests/test_rfc_examples.py
+# C. Instalar
+ssh usuario@ws-dev-01
+sudo mkdir -p /opt/tws/scripts
+sudo mv /tmp/collect_metrics.sh /opt/tws/scripts/
+sudo chmod +x /opt/tws/scripts/collect_metrics.sh
+
+# D. Testar
+sudo /opt/tws/scripts/collect_metrics.sh
+tail /var/log/tws_metrics_collector.log
+# Ver: SUCCESS: Metrics sent (HTTP 201) ✅
+
+# E. Cron
+echo '*/5 * * * * /opt/tws/scripts/collect_metrics.sh' | sudo crontab -
+
+# F. Validar
+sleep 300  # 5 minutos
+psql -U resync -d resync -c "SELECT * FROM workstation_metrics_history WHERE workstation='WS-DEV-01' ORDER BY received_at DESC LIMIT 3;"
 ```
 
-### Testes Manuais com Swagger
-
-1. Acesse http://localhost:8000/docs
-2. Clique em "Try it out" em qualquer endpoint
-3. Preencha os parâmetros
-4. Clique em "Execute"
-5. Veja a resposta
+**✅ Se tudo OK: rollout demais FTAs!**
 
 ---
 
-## 🐛 Troubleshooting
+## 📋 **ROLLOUT DEMAIS FTAS**
 
-### Erro: "Idempotency service not initialized"
-
-**Causa**: Redis não está disponível e fallback falhou.
-
-**Solução**:
+### **Opção A: Manual (FTA por FTA)**
 ```bash
-# Instale Redis
-# Ubuntu/Debian
-sudo apt-get install redis-server
-
-# Mac
-brew install redis
-
-# Inicie Redis
-redis-server
-
-# Ou use Docker
-docker run -d -p 6379:6379 redis:alpine
+FTA="WS-PROD-01"
+scp collect_metrics.sh usuario@$FTA:/tmp/
+ssh usuario@$FTA 'sudo mv /tmp/collect_metrics.sh /opt/tws/scripts/ && sudo chmod +x /opt/tws/scripts/collect_metrics.sh && echo "*/5 * * * * /opt/tws/scripts/collect_metrics.sh" | sudo crontab -'
 ```
 
-### Erro: "Module not found"
-
-**Causa**: Dependências não instaladas.
-
-**Solução**:
+### **Opção B: Loop**
 ```bash
-pip install -r requirements.txt
+while read FTA; do
+  echo "Deploying to $FTA..."
+  scp collect_metrics.sh usuario@$FTA:/tmp/
+  ssh usuario@$FTA 'sudo mv /tmp/collect_metrics.sh /opt/tws/scripts/ && sudo chmod +x /opt/tws/scripts/collect_metrics.sh && echo "*/5 * * * * /opt/tws/scripts/collect_metrics.sh" | sudo crontab -'
+  echo "✅ $FTA done"
+done < fta_list.txt
 ```
 
-### Erro: "Port already in use"
+### **Opção C: Ansible** (Ver DEPLOYMENT_GUIDE.md)
 
-**Causa**: Porta 8000 já está em uso.
+---
 
-**Solução**:
-```bash
-# Use outra porta
-uvicorn resync.main:app --reload --port 8001
+## ✅ **VALIDAÇÃO**
 
-# Ou mate o processo
-# Linux/Mac
-lsof -ti:8000 | xargs kill -9
+```sql
+-- Quantas FTAs?
+SELECT COUNT(DISTINCT workstation) FROM workstation_metrics_history WHERE received_at > NOW() - INTERVAL '1 hour';
+-- Target: 20
 
-# Windows
-netstat -ano | findstr :8000
-taskkill /PID <PID> /F
+-- Última métrica?
+SELECT workstation, MAX(received_at) FROM workstation_metrics_history GROUP BY workstation ORDER BY MAX(received_at) DESC;
+-- Target: Todas < 10 min
+
+-- Volume?
+SELECT COUNT(*) FROM workstation_metrics_history WHERE received_at > NOW() - INTERVAL '1 hour';
+-- Target: ~240 (20 FTAs × 12/hora)
 ```
 
 ---
 
-## 📖 Documentação Adicional
+## 🐛 **TROUBLESHOOTING RÁPIDO**
 
-### Guias Completos
+| Problema | Solução Rápida |
+|----------|----------------|
+| **Script não envia** | `bash -x collect_metrics.sh` (debug) |
+| **Sem conectividade** | `curl -v https://resync.../metrics/health` |
+| **Sem no banco** | Verificar logs: `tail /var/log/resync/api.log` |
+| **Cron não roda** | `sudo crontab -l` + `sudo tail /var/log/cron` |
 
-- **Idempotency**: `docs/FASE_2.5_IDEMPOTENCY_IMPLEMENTATION.md`
-- **RFC 7807 & HATEOAS**: `docs/FASE_3_RFC_IMPLEMENTATION.md`
-- **Resumo Geral**: `docs/IMPLEMENTATION_SUMMARY.md`
-
-### Exemplos Online
-
-- **Swagger UI**: http://localhost:8000/docs
-- **Idempotency Docs**: http://localhost:8000/api/v1/operations/idempotency-example
-- **RFC Docs**: http://localhost:8000/api/v1/examples/rfc-examples
+**Detalhes:** Ver DEPLOYMENT_GUIDE.md seção "Troubleshooting"
 
 ---
 
-## 🎯 Próximos Passos
+## 📊 **MÉTRICAS DE SUCESSO**
 
-1. ✅ Explore os endpoints de exemplo
-2. ✅ Leia a documentação completa
-3. ✅ Teste com Swagger UI
-4. ✅ Implemente seus próprios endpoints
-5. ✅ Adicione testes
+- [ ] 100% FTAs enviando (20/20)
+- [ ] Frequência: 12 metrics/FTA/hora
+- [ ] Latência: < 1s p99
+- [ ] Uptime: > 99.5%
+- [ ] Storage: < 100 MB/mês
 
 ---
 
-## 💡 Dicas
+## 🎯 **PRÓXIMOS PASSOS**
 
-### Gerar Idempotency Keys
+1. ✅ **Agora:** Setup Resync + Deploy piloto (30 min)
+2. ✅ **Semana 1:** Deploy todas FTAs DEV/QA (3 dias)
+3. ✅ **Semana 2:** Deploy todas FTAs PROD (2 dias)
+4. ✅ **Semana 3:** Validar 7 dias de dados
+5. ✅ **Semana 4+:** Implementar workflows ($750k ROI!)
 
-```bash
-# Linux/Mac
-uuidgen
+---
 
-# Python
-python -c "import uuid; print(uuid.uuid4())"
+## 📞 **AJUDA**
 
-# Node.js
-node -e "console.log(require('crypto').randomUUID())"
+- **Documentação Completa:** DEPLOYMENT_GUIDE.md
+- **Checklist:** DEPLOYMENT_CHECKLIST.md
+- **ROI/Timeline:** EXECUTIVE_SUMMARY.md
 
-# PowerShell
-[guid]::NewGuid().ToString()
-```
+---
 
-### Testar com HTTPie (alternativa ao curl)
+**COMECE AGORA!** ⚡
 
 ```bash
-# Instalar
-pip install httpie
+# Passo 1: Setup Resync (15 min)
+alembic upgrade head
+# ...
 
-# Usar
-http POST localhost:8000/api/v1/operations/resources \
-  X-Idempotency-Key:$(uuidgen) \
-  name="Test" \
-  description="Testing"
+# Passo 2: Deploy piloto (15 min)
+scp collect_metrics.sh usuario@ws-dev-01:/tmp/
+# ...
+
+# ✅ 30 minutos = Piloto funcionando!
 ```
-
-### Testar com Postman
-
-1. Importe a coleção OpenAPI: http://localhost:8000/openapi.json
-2. Configure variável `idempotency_key` com `{{$guid}}`
-3. Execute as requisições
-
----
-
-## 🤝 Contribuindo
-
-1. Crie uma branch: `git checkout -b feature/minha-feature`
-2. Faça suas alterações
-3. Adicione testes
-4. Execute os testes: `pytest`
-5. Commit: `git commit -m "feat: minha feature"`
-6. Push: `git push origin feature/minha-feature`
-7. Abra um Pull Request
-
----
-
-## 📞 Suporte
-
-- **Documentação**: `docs/` directory
-- **Issues**: GitHub Issues
-- **Swagger**: http://localhost:8000/docs
-
----
-
-**Última Atualização**: 2024-01-15  
-**Versão**: 1.0.0  
-**Status**: ✅ Pronto para Desenvolvimento

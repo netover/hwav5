@@ -468,12 +468,21 @@ class EventBus:
         async with self._websocket_lock:
             clients = list(self._websocket_clients.values())
 
+        failed = 0
         for client in clients:
             try:
                 await client.websocket.send_text(msg_json)
                 delivered += 1
-            except Exception:
-                pass
+            except Exception as e:
+                failed += 1
+                logger.debug(
+                    "websocket_send_failed",
+                    client_id=getattr(client, "id", "unknown"),
+                    error=str(e),
+                )
+
+        if failed > 0:
+            logger.debug("websocket_broadcast_partial", delivered=delivered, failed=failed)
 
         return delivered
 

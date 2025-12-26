@@ -14,7 +14,7 @@ from typing import Any
 import structlog
 
 from resync.core.connection_pool_manager import get_advanced_connection_pool_manager
-from resync.core.health_models import RecoveryResult
+from resync.core.health.health_models import RecoveryResult
 from resync.core.pools.pool_manager import (
     get_connection_pool_manager,  # Basic pool manager fallback
 )
@@ -359,7 +359,7 @@ class HealthRecoveryManager:
         """Test cache connectivity and performance."""
         try:
             # Import and test cache implementation
-            from resync.core.async_cache import AsyncTTLCache
+            from resync.core.cache import AsyncTTLCache
 
             test_cache = AsyncTTLCache(ttl_seconds=60, cleanup_interval=30)
 

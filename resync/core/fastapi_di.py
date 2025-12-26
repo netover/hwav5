@@ -57,9 +57,11 @@ def get_tws_client_factory():
         logger.info("TWS_MOCK_MODE is enabled. Creating MockTWSClient.")
         return MockTWSClient()
     logger.info("Creating OptimizedTWSClient.")
+    hostname = settings.TWS_HOST or "localhost"
+    port = settings.TWS_PORT or 31111
+    base_url = f"http://{hostname}:{port}"
     return OptimizedTWSClient(
-        hostname=settings.TWS_HOST,
-        port=settings.TWS_PORT,
+        base_url=base_url,
         username=settings.TWS_USER,
         password=settings.TWS_PASSWORD,
         engine_name=settings.TWS_ENGINE_NAME,

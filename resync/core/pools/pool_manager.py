@@ -11,7 +11,12 @@ from .db_pool import DatabasePool, get_db_pool
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["PoolManager", "ConnectionPoolManager", "get_pool_manager", "get_connection_pool_manager"]
+__all__ = [
+    "PoolManager",
+    "ConnectionPoolManager",
+    "get_pool_manager",
+    "get_connection_pool_manager",
+]
 
 
 class PoolManager:

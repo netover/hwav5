@@ -18,8 +18,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 import pytest_asyncio
-import structlog
 
+import structlog
 from resync.core.connection_pool_manager import (
     ConnectionPoolConfig,
     ConnectionPoolManager,

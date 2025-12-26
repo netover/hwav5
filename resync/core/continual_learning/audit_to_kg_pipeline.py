@@ -122,7 +122,7 @@ class AuditToKGPipeline:
     async def _get_kg(self):
         """Get or create Knowledge Graph instance."""
         if self._kg is None:
-            from resync.core.knowledge_graph.graph import get_knowledge_graph
+            from resync.knowledge.retrieval.graph import get_knowledge_graph
 
             # get_knowledge_graph may or may not be async
             kg = get_knowledge_graph()

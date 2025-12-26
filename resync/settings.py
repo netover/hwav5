@@ -10,25 +10,25 @@ Settings are organized into logical groups:
 - Security and authentication
 - Logging and monitoring
 - AI/ML model configurations
+
+v5.4.9: Legacy properties integrated directly (settings_legacy.py removed)
 """
 
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .settings_legacy import SettingsLegacyProperties
-
-# Import shared types, validators and legacy properties from separate modules
-from .settings_types import Environment
+# Import shared types and validators from separate modules
+from .settings_types import CacheHierarchyConfig, Environment
 from .settings_validators import SettingsValidators
 
 
-class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
+class Settings(BaseSettings, SettingsValidators):
     """
     Configurações da aplicação com validação type-safe.
 
@@ -49,8 +49,11 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     # ============================================================================
     # APLICAÇÃO
     # ============================================================================
+    # v5.9.7: Accept both APP_ENVIRONMENT (preferred) and legacy ENVIRONMENT
     environment: Environment = Field(
-        default=Environment.DEVELOPMENT, description="Ambiente de execução"
+        default=Environment.DEVELOPMENT,
+        validation_alias=AliasChoices("ENVIRONMENT", "APP_ENVIRONMENT"),
+        description="Ambiente de execução",
     )
 
     project_name: str = Field(
@@ -60,7 +63,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     )
 
     project_version: str = Field(
-        default="1.0.0",
+        default="5.9.6",
         pattern=(
             r"^\d+\.\d+\.\d+(?:-(?:(?:0|[1-9]\d*|[a-zA-Z-][0-9a-zA-Z-]*)"
             r"(?:\.(?:0|[1-9]\d*|[a-zA-Z-][0-9a-zA-Z-]*))*))?"
@@ -93,8 +96,11 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
         description="Diretório base da aplicação",
     )
 
+    # v5.9.7: Accept both APP_LOG_LEVEL (preferred) and legacy LOG_LEVEL
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
-        default="INFO", description="Nível de logging"
+        default="INFO",
+        validation_alias=AliasChoices("LOG_LEVEL", "APP_LOG_LEVEL"),
+        description="Nível de logging",
     )
 
     # ============================================================================
@@ -110,29 +116,35 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     )
 
     # ============================================================================
-    # CONNECTION POOLS (PostgreSQL)
+    # CONNECTION POOLS (PostgreSQL) - v5.3.22 adjusted for single VM
+    # For Docker/K8s: increase via environment variables
     # ============================================================================
-    db_pool_min_size: int = Field(default=20, ge=1, le=100)
-    db_pool_max_size: int = Field(default=100, ge=1, le=1000)
-    db_pool_idle_timeout: int = Field(default=1200, ge=60)
-    db_pool_connect_timeout: int = Field(default=60, ge=5)
+    db_pool_min_size: int = Field(default=5, ge=1, le=100)  # Reduced from 20
+    db_pool_max_size: int = Field(default=20, ge=1, le=1000)  # Reduced from 100
+    db_pool_idle_timeout: int = Field(default=600, ge=60)  # Reduced from 1200
+    db_pool_connect_timeout: int = Field(default=30, ge=5)  # Reduced from 60
     db_pool_health_check_interval: int = Field(default=60, ge=10)
     db_pool_max_lifetime: int = Field(default=1800, ge=300)
 
     # ============================================================================
-    # REDIS
+    # REDIS - v5.3.22 adjusted for single VM
     # ============================================================================
-    redis_url: str = Field(default="redis://localhost:6379/0", description="URL de conexão Redis")
+    # v5.9.7: Accept both APP_REDIS_URL (preferred) and legacy REDIS_URL
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        validation_alias=AliasChoices("REDIS_URL", "APP_REDIS_URL"),
+        description="URL de conexão Redis",
+    )
 
     redis_min_connections: int = Field(default=1, ge=1, le=100)
     redis_max_connections: int = Field(default=10, ge=1, le=1000)
     redis_timeout: float = Field(default=30.0, gt=0)
 
     # Connection Pool - Redis
-    redis_pool_min_size: int = Field(default=5, ge=1, le=100)
-    redis_pool_max_size: int = Field(default=20, ge=1, le=1000)
+    redis_pool_min_size: int = Field(default=2, ge=1, le=100)  # Reduced from 5
+    redis_pool_max_size: int = Field(default=10, ge=1, le=1000)  # Reduced from 20
     redis_pool_idle_timeout: int = Field(default=300, ge=60)
-    redis_pool_connect_timeout: int = Field(default=30, ge=5)
+    redis_pool_connect_timeout: int = Field(default=15, ge=5)  # Reduced from 30
     redis_pool_health_check_interval: int = Field(default=60, ge=10)
     redis_pool_max_lifetime: int = Field(default=1800, ge=300)
 
@@ -177,7 +189,7 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     # ============================================================================
     llm_endpoint: str = Field(
         default="https://integrate.api.nvidia.com/v1",
-        description="Endpoint da API LLM (NVIDIA)",
+        description="Endpoint da API LLM (NVIDIA) - usado como fallback se Ollama falhar",
     )
 
     llm_api_key: SecretStr = Field(
@@ -192,15 +204,61 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     )
 
     llm_timeout: float = Field(
-        default=60.0, gt=0, description="Timeout para chamadas LLM em segundos"
+        default=8.0,
+        gt=0,
+        description="Timeout para chamadas LLM em segundos (8s para fallback rápido ao cloud)",
     )
 
     auditor_model_name: str = Field(default="gpt-3.5-turbo")
     agent_model_name: str = Field(default="gpt-4o")
 
     llm_model: str = Field(
-        default="meta/llama-3.1-70b-instruct",
-        description="Default LLM model for NVIDIA API",
+        default="ollama/qwen2.5:3b",
+        description="Modelo LLM padrão (Ollama local ou cloud)",
+    )
+
+    # ============================================================================
+    # OLLAMA - LOCAL LLM (v5.2.3.21)
+    # ============================================================================
+    ollama_enabled: bool = Field(
+        default=True,
+        description="Habilitar Ollama como provider primário de LLM",
+    )
+
+    ollama_base_url: str = Field(
+        default="http://localhost:11434",
+        description="URL base do servidor Ollama",
+    )
+
+    ollama_model: str = Field(
+        default="qwen2.5:3b",
+        description="Modelo Ollama padrão (sem prefixo ollama/)",
+    )
+
+    ollama_num_ctx: int = Field(
+        default=4096,
+        ge=512,
+        le=32768,
+        description="Tamanho da janela de contexto do Ollama",
+    )
+
+    ollama_num_thread: int = Field(
+        default=4,
+        ge=1,
+        le=32,
+        description="Número de threads CPU para Ollama (usar = núcleos físicos)",
+    )
+
+    ollama_timeout: float = Field(
+        default=8.0,
+        gt=0,
+        description="Timeout para Ollama em segundos (agressivo para fallback rápido)",
+    )
+
+    # Fallback cloud model quando Ollama falha
+    llm_fallback_model: str = Field(
+        default="gpt-4o-mini",
+        description="Modelo de fallback na nuvem quando Ollama timeout/falha",
     )
 
     # ============================================================================
@@ -263,22 +321,123 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     )
 
     # ============================================================================
-    # APACHE AGE - GRAPH DATABASE
+    # HYBRID RETRIEVER - BM25 + Vector Search (v5.2.3.22)
     # ============================================================================
-    age_graph_name: str = Field(
-        default="tws_graph",
-        description="Name of the Apache AGE graph in PostgreSQL",
+    hybrid_vector_weight: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Peso base da busca vetorial (semântica) no hybrid retriever",
     )
 
-    age_max_traversal_depth: int = Field(
+    hybrid_bm25_weight: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Peso base da busca BM25 (keywords) no hybrid retriever",
+    )
+
+    hybrid_auto_weight: bool = Field(
+        default=True,
+        description="Ajustar pesos automaticamente baseado no tipo de query (TWS patterns)",
+    )
+
+    # v5.2.3.23: Field boost weights for BM25 indexing
+    hybrid_boost_job_name: float = Field(
+        default=4.0,
+        ge=0.0,
+        le=10.0,
+        description="Boost para nome de job no BM25 (mais alto = mais importante)",
+    )
+
+    hybrid_boost_error_code: float = Field(
+        default=3.5,
+        ge=0.0,
+        le=10.0,
+        description="Boost para códigos de erro (RC, ABEND) no BM25",
+    )
+
+    hybrid_boost_workstation: float = Field(
+        default=3.0,
+        ge=0.0,
+        le=10.0,
+        description="Boost para nome de workstation no BM25",
+    )
+
+    hybrid_boost_job_stream: float = Field(
+        default=2.5,
+        ge=0.0,
+        le=10.0,
+        description="Boost para nome de job stream no BM25",
+    )
+
+    hybrid_boost_message_id: float = Field(
+        default=2.5,
+        ge=0.0,
+        le=10.0,
+        description="Boost para IDs de mensagem TWS (EQQQ...) no BM25",
+    )
+
+    hybrid_boost_resource: float = Field(
+        default=2.0,
+        ge=0.0,
+        le=10.0,
+        description="Boost para nome de resource no BM25",
+    )
+
+    hybrid_boost_title: float = Field(
+        default=1.5,
+        ge=0.0,
+        le=10.0,
+        description="Boost para título do documento no BM25",
+    )
+
+    hybrid_boost_content: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=10.0,
+        description="Boost para conteúdo geral no BM25 (baseline)",
+    )
+
+    # ============================================================================
+    # CACHE CONFIGURATION (v5.9.3 - TTL Diferenciado)
+    # ============================================================================
+    # Near Real-Time strategy: protect TWS API while providing fresh data
+
+    # Dynamic status (jobs, workstations) - very short TTL
+    cache_ttl_job_status: int = Field(
         default=10,
-        ge=1,
-        le=50,
-        description="Maximum depth for graph traversals (dependency chains)",
+        ge=5,
+        le=60,
+        description="TTL in seconds for job status cache (near real-time)",
+    )
+
+    # Logs and output - short TTL
+    cache_ttl_job_logs: int = Field(
+        default=30,
+        ge=10,
+        le=120,
+        description="TTL in seconds for job logs/stdlist cache",
+    )
+
+    # Static structure (dependencies, job definitions) - longer TTL
+    cache_ttl_static_structure: int = Field(
+        default=3600,
+        ge=300,
+        le=86400,
+        description="TTL in seconds for static structure (dependencies, definitions)",
+    )
+
+    # Graph cache TTL
+    cache_ttl_graph: int = Field(
+        default=300,
+        ge=60,
+        le=3600,
+        description="TTL in seconds for dependency graph cache",
     )
 
     # ============================================================================
-    # CACHE CONFIGURATION
+    # CACHE CONFIGURATION (Legacy)
     # ============================================================================
     # Cache Hierarchy Configuration
     cache_hierarchy_l1_max_size: int = Field(
@@ -468,8 +627,58 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     # ============================================================================
     # SEGURANÇA
     # ============================================================================
+    # JWT Configuration (v5.3.20 - consolidated from fastapi_app/core/config.py)
+    secret_key: SecretStr = Field(
+        default=SecretStr("CHANGE_ME_IN_PRODUCTION_USE_ENV_VAR"),
+        validation_alias="SECRET_KEY",
+        description="Secret key for JWT signing. MUST be set via SECRET_KEY env var in production.",
+        exclude=True,
+        repr=False,
+    )
+    jwt_algorithm: str = Field(
+        default="HS256",
+        description="Algorithm for JWT token signing",
+    )
+    access_token_expire_minutes: int = Field(
+        default=30,
+        ge=5,
+        le=1440,
+        description="Access token expiration time in minutes",
+    )
+
+    # Debug mode
+    debug: bool = Field(
+        default=False,
+        description="Enable debug mode (never True in production)",
+    )
+
+    # Proxy settings for corporate environments
+    use_system_proxy: bool = Field(
+        default=False,
+        description="Use system proxy settings for outbound connections",
+    )
+
+    # File upload settings
+    upload_dir: Path = Field(
+        default_factory=lambda: Path("uploads"),
+        description="Directory for file uploads",
+    )
+    max_file_size: int = Field(
+        default=10 * 1024 * 1024,  # 10MB
+        ge=1024,
+        description="Maximum file size for uploads in bytes",
+    )
+    allowed_extensions: list[str] = Field(
+        default=[".txt", ".pdf", ".docx", ".md", ".json"],
+        description="Allowed file extensions for uploads",
+    )
+
+    # v5.9.7: Accept both APP_ADMIN_USERNAME (preferred) and legacy ADMIN_USERNAME
     admin_username: str = Field(
-        default="admin", min_length=3, description="Nome de usuário do administrador"
+        default="admin",
+        min_length=3,
+        validation_alias=AliasChoices("ADMIN_USERNAME", "APP_ADMIN_USERNAME"),
+        description="Nome de usuário do administrador",
     )
     admin_password: SecretStr | None = Field(
         default=None,
@@ -498,17 +707,138 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     server_port: int = Field(default=8000, ge=1024, le=65535, description="Porta do servidor")
 
     # ============================================================================
-    # RATE LIMITING
+    # RATE LIMITING (v5.3.22 - Production-hardened defaults)
     # ============================================================================
-    rate_limit_public_per_minute: int = Field(default=100, ge=1)
-    rate_limit_authenticated_per_minute: int = Field(default=1000, ge=1)
-    rate_limit_critical_per_minute: int = Field(default=50, ge=1)
-    rate_limit_error_handler_per_minute: int = Field(default=15, ge=1)
-    rate_limit_websocket_per_minute: int = Field(default=30, ge=1)
+    rate_limit_public_per_minute: int = Field(default=60, ge=1)
+    rate_limit_authenticated_per_minute: int = Field(default=300, ge=1)
+    rate_limit_critical_per_minute: int = Field(default=10, ge=1)  # Reduced for security
+    rate_limit_error_handler_per_minute: int = Field(default=10, ge=1)
+    rate_limit_websocket_per_minute: int = Field(default=20, ge=1)
     rate_limit_dashboard_per_minute: int = Field(default=10, ge=1)
     rate_limit_storage_uri: str = Field(default="redis://localhost:6379/1")
     rate_limit_key_prefix: str = Field(default="resync:ratelimit:")
     rate_limit_sliding_window: bool = Field(default=True)
+
+    # ============================================================================
+    # COMPRESSION (v5.3.22 - Production optimization)
+    # ============================================================================
+    compression_enabled: bool = Field(
+        default=True,
+        description="Enable GZip compression for responses",
+    )
+    compression_minimum_size: int = Field(
+        default=500,
+        ge=0,
+        description="Minimum response size in bytes to compress",
+    )
+    compression_level: int = Field(
+        default=6,
+        ge=1,
+        le=9,
+        description="GZip compression level (1=fastest, 9=best compression)",
+    )
+
+    # ============================================================================
+    # HTTPS/TLS SECURITY (v5.3.22)
+    # ============================================================================
+    enforce_https: bool = Field(
+        default=False,
+        description="Enable HSTS and force HTTPS (set True in production behind TLS)",
+    )
+    ssl_redirect: bool = Field(
+        default=False,
+        description="Redirect HTTP to HTTPS (use when not behind reverse proxy)",
+    )
+
+    # ============================================================================
+    # SESSION SECURITY (v5.3.22)
+    # ============================================================================
+    session_timeout_minutes: int = Field(
+        default=30,
+        ge=5,
+        le=480,
+        description="Session timeout in minutes (reduced for security)",
+    )
+    session_secure_cookie: bool = Field(
+        default=True,
+        description="Use secure cookies (HTTPS only)",
+    )
+    session_http_only: bool = Field(
+        default=True,
+        description="Prevent JavaScript access to session cookies",
+    )
+    session_same_site: str = Field(
+        default="lax",
+        description="SameSite cookie policy (strict, lax, none)",
+    )
+
+    # ============================================================================
+    # WORKER CONFIGURATION (v5.3.22 - Docker/K8s compatible)
+    # ============================================================================
+    workers: int = Field(
+        default=1,
+        ge=1,
+        le=32,
+        description="Number of worker processes (set based on CPU cores)",
+    )
+    worker_class: str = Field(
+        default="uvicorn.workers.UvicornWorker",
+        description="Gunicorn worker class for async support",
+    )
+    worker_timeout: int = Field(
+        default=120,
+        ge=30,
+        description="Worker timeout in seconds",
+    )
+    worker_keepalive: int = Field(
+        default=5,
+        ge=1,
+        le=30,
+        description="Keep-alive timeout for worker connections",
+    )
+    graceful_timeout: int = Field(
+        default=30,
+        ge=5,
+        description="Graceful shutdown timeout in seconds",
+    )
+
+    # ============================================================================
+    # BACKUP CONFIGURATION (v5.3.22)
+    # ============================================================================
+    backup_enabled: bool = Field(
+        default=True,
+        description="Enable automatic backups",
+    )
+    backup_dir: Path = Field(
+        default_factory=lambda: Path("backups"),
+        description="Directory for backup files",
+    )
+    backup_retention_days: int = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description="Number of days to retain backups",
+    )
+    backup_schedule_cron: str = Field(
+        default="0 2 * * *",
+        description="Backup schedule in cron format (default: 2 AM daily)",
+    )
+    backup_include_database: bool = Field(
+        default=True,
+        description="Include database in backups",
+    )
+    backup_include_uploads: bool = Field(
+        default=True,
+        description="Include uploaded files in backups",
+    )
+    backup_include_config: bool = Field(
+        default=True,
+        description="Include configuration files in backups",
+    )
+    backup_compression: bool = Field(
+        default=True,
+        description="Compress backup files",
+    )
 
     # ============================================================================
     # COMPUTED FIELDS
@@ -546,11 +876,418 @@ class Settings(BaseSettings, SettingsValidators, SettingsLegacyProperties):
     )
 
     # ============================================================================
-    # BACKWARD COMPATIBILITY PROPERTIES
+    # ENTERPRISE MODULES (v5.5.0)
     # ============================================================================
-    # Legacy properties are now imported from settings_legacy.py
+    # Phase 1: Essential
+    enterprise_enable_incident_response: bool = Field(
+        default=True,
+        description="Enable incident response module",
+    )
+    enterprise_enable_auto_recovery: bool = Field(
+        default=True,
+        description="Enable auto-recovery module",
+    )
+    enterprise_enable_runbooks: bool = Field(
+        default=True,
+        description="Enable runbooks automation",
+    )
 
-    # End of legacy block
+    # Phase 2: Compliance
+    enterprise_enable_gdpr: bool = Field(
+        default=False,
+        description="Enable GDPR compliance (required for EU)",
+    )
+    enterprise_enable_encrypted_audit: bool = Field(
+        default=True,
+        description="Enable encrypted audit trail",
+    )
+    enterprise_enable_siem: bool = Field(
+        default=False,
+        description="Enable SIEM integration",
+    )
+    enterprise_siem_endpoint: str | None = Field(
+        default=None,
+        description="SIEM endpoint URL",
+    )
+    enterprise_siem_api_key: SecretStr | None = Field(
+        default=None,
+        description="SIEM API key",
+    )
+
+    # Phase 3: Observability
+    enterprise_enable_log_aggregator: bool = Field(
+        default=True,
+        description="Enable log aggregation",
+    )
+    enterprise_enable_anomaly_detection: bool = Field(
+        default=True,
+        description="Enable ML anomaly detection",
+    )
+    enterprise_anomaly_sensitivity: float = Field(
+        default=0.95,
+        ge=0.0,
+        le=1.0,
+        description="Anomaly detection sensitivity (0-1)",
+    )
+
+    # Phase 4: Resilience
+    enterprise_enable_chaos_engineering: bool = Field(
+        default=False,
+        description="Enable chaos engineering (staging only!)",
+    )
+    enterprise_enable_service_discovery: bool = Field(
+        default=False,
+        description="Enable service discovery for microservices",
+    )
+    enterprise_service_discovery_backend: str = Field(
+        default="consul",
+        description="Service discovery backend (consul, kubernetes, etcd)",
+    )
+
+    # Auto-recovery settings
+    enterprise_auto_recovery_max_retries: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum auto-recovery retry attempts",
+    )
+    enterprise_auto_recovery_cooldown: int = Field(
+        default=60,
+        ge=10,
+        description="Cooldown between recovery attempts (seconds)",
+    )
+
+    # Incident settings
+    enterprise_incident_auto_escalate: bool = Field(
+        default=True,
+        description="Automatically escalate unresolved incidents",
+    )
+    enterprise_incident_escalation_timeout: int = Field(
+        default=15,
+        ge=5,
+        description="Minutes before incident escalation",
+    )
+
+    # GDPR settings
+    enterprise_gdpr_data_retention_days: int = Field(
+        default=365,
+        ge=30,
+        description="Data retention period in days",
+    )
+    enterprise_gdpr_anonymization_enabled: bool = Field(
+        default=True,
+        description="Enable data anonymization for GDPR",
+    )
+
+    # ============================================================================
+    # BACKWARD COMPATIBILITY PROPERTIES (UPPER_CASE aliases)
+    # ============================================================================
+    # v5.4.9: Integrated from settings_legacy.py
+
+    # pylint: disable=invalid-name
+    @property
+    def RAG_SERVICE_URL(self) -> str:
+        """Legacy alias for rag_service_url."""
+        return self.rag_service_url
+
+    @property
+    def BASE_DIR(self) -> Path:
+        """Legacy alias for base_dir."""
+        return self.base_dir
+
+    @property
+    def PROJECT_NAME(self) -> str:
+        """Legacy alias for project_name."""
+        return self.project_name
+
+    @property
+    def PROJECT_VERSION(self) -> str:
+        """Legacy alias for project_version."""
+        return self.project_version
+
+    @property
+    def DESCRIPTION(self) -> str:
+        """Legacy alias for description."""
+        return self.description
+
+    @property
+    def LOG_LEVEL(self) -> str:
+        """Legacy alias for log_level."""
+        return self.log_level
+
+    @property
+    def ENVIRONMENT(self) -> str:
+        """Legacy alias for environment."""
+        env = self.environment
+        return env.value if hasattr(env, "value") else str(env)
+
+    @property
+    def DEBUG(self) -> bool:
+        """Legacy alias: True when environment == DEVELOPMENT."""
+        env = self.environment
+        return env == Environment.DEVELOPMENT
+
+    @property
+    def REDIS_URL(self) -> str:
+        """Legacy alias for redis_url."""
+        return self.redis_url
+
+    @property
+    def LLM_ENDPOINT(self) -> str | None:
+        """Legacy alias for llm_endpoint."""
+        return self.llm_endpoint
+
+    @property
+    def LLM_API_KEY(self) -> Any:
+        """Legacy alias for llm_api_key."""
+        return self.llm_api_key
+
+    @property
+    def LLM_TIMEOUT(self) -> float:
+        """Legacy alias for llm_timeout."""
+        return self.llm_timeout
+
+    @property
+    def ADMIN_USERNAME(self) -> str:
+        """Legacy alias for admin_username."""
+        return self.admin_username
+
+    @property
+    def ADMIN_PASSWORD(self) -> Any:
+        """Legacy alias for admin_password."""
+        return self.admin_password
+
+    @property
+    def TWS_MOCK_MODE(self) -> bool:
+        """Legacy alias for tws_mock_mode."""
+        return self.tws_mock_mode
+
+    @property
+    def TWS_HOST(self) -> str | None:
+        """Legacy alias for tws_host."""
+        return self.tws_host
+
+    @property
+    def TWS_PORT(self) -> int | None:
+        """Legacy alias for tws_port."""
+        return self.tws_port
+
+    @property
+    def TWS_USER(self) -> str | None:
+        """Legacy alias for tws_user."""
+        return self.tws_user
+
+    @property
+    def TWS_PASSWORD(self) -> Any:
+        """Legacy alias for tws_password."""
+        return self.tws_password
+
+    @property
+    def SERVER_HOST(self) -> str:
+        """Legacy alias for server_host."""
+        return self.server_host
+
+    @property
+    def SERVER_PORT(self) -> int:
+        """Legacy alias for server_port."""
+        return self.server_port
+
+    @property
+    def CORS_ALLOWED_ORIGINS(self) -> list[str]:
+        """Legacy alias for cors_allowed_origins."""
+        return self.cors_allowed_origins
+
+    @property
+    def CORS_ALLOW_CREDENTIALS(self) -> bool:
+        """Legacy alias for cors_allow_credentials."""
+        return self.cors_allow_credentials
+
+    @property
+    def CORS_ALLOW_METHODS(self) -> list[str]:
+        """Legacy alias for cors_allow_methods."""
+        return self.cors_allow_methods
+
+    @property
+    def CORS_ALLOW_HEADERS(self) -> list[str]:
+        """Legacy alias for cors_allow_headers."""
+        return self.cors_allow_headers
+
+    @property
+    def STATIC_CACHE_MAX_AGE(self) -> int:
+        """Legacy alias for static_cache_max_age."""
+        return self.static_cache_max_age
+
+    @property
+    def JINJA2_TEMPLATE_CACHE_SIZE(self) -> int:
+        """Legacy alias derived from environment."""
+        env = self.environment
+        return 400 if env == Environment.PRODUCTION else 0
+
+    @property
+    def AGENT_CONFIG_PATH(self) -> Path:
+        """Legacy alias computed from base_dir."""
+        return self.base_dir / "config" / "agents.json"
+
+    @property
+    def MAX_CONCURRENT_AGENT_CREATIONS(self) -> int:
+        """Legacy constant for compatibility."""
+        return 5
+
+    @property
+    def TWS_ENGINE_NAME(self) -> str:
+        """Legacy constant for compatibility."""
+        return "TWS"
+
+    @property
+    def TWS_ENGINE_OWNER(self) -> str:
+        """Legacy constant for compatibility."""
+        return "twsuser"
+
+    @property
+    def TWS_REQUEST_TIMEOUT(self) -> float:
+        """Legacy alias for tws_request_timeout."""
+        return self.tws_request_timeout
+
+    @property
+    def AUDITOR_MODEL_NAME(self) -> str:
+        """Legacy alias for auditor_model_name."""
+        return self.auditor_model_name
+
+    @property
+    def AGENT_MODEL_NAME(self) -> str:
+        """Legacy alias for agent_model_name."""
+        return self.agent_model_name
+
+    @cached_property
+    def CACHE_HIERARCHY(self) -> CacheHierarchyConfig:
+        """Legacy alias exposing cache hierarchy configuration object."""
+        return CacheHierarchyConfig(
+            l1_max_size=self.cache_hierarchy_l1_max_size,
+            l2_ttl_seconds=self.cache_hierarchy_l2_ttl,
+            l2_cleanup_interval=self.cache_hierarchy_l2_cleanup_interval,
+            num_shards=self.cache_hierarchy_num_shards,
+            max_workers=self.cache_hierarchy_max_workers,
+        )
+
+    @property
+    def DB_POOL_MIN_SIZE(self) -> int:
+        """Legacy alias for db_pool_min_size."""
+        return self.db_pool_min_size
+
+    @property
+    def DB_POOL_MAX_SIZE(self) -> int:
+        """Legacy alias for db_pool_max_size."""
+        return self.db_pool_max_size
+
+    @property
+    def DB_POOL_IDLE_TIMEOUT(self) -> int:
+        """Legacy alias for db_pool_idle_timeout."""
+        return self.db_pool_idle_timeout
+
+    @property
+    def DB_POOL_CONNECT_TIMEOUT(self) -> int:
+        """Legacy alias for db_pool_connect_timeout."""
+        return self.db_pool_connect_timeout
+
+    @property
+    def DB_POOL_HEALTH_CHECK_INTERVAL(self) -> int:
+        """Legacy alias for db_pool_health_check_interval."""
+        return self.db_pool_health_check_interval
+
+    @property
+    def DB_POOL_MAX_LIFETIME(self) -> int:
+        """Legacy alias for db_pool_max_lifetime."""
+        return self.db_pool_max_lifetime
+
+    @property
+    def REDIS_POOL_MIN_SIZE(self) -> int:
+        """Legacy alias for redis_pool_min_size."""
+        return self.redis_pool_min_size
+
+    @property
+    def REDIS_POOL_MAX_SIZE(self) -> int:
+        """Legacy alias for redis_pool_max_size."""
+        return self.redis_pool_max_size
+
+    @property
+    def REDIS_POOL_IDLE_TIMEOUT(self) -> int:
+        """Legacy alias for redis_pool_idle_timeout."""
+        return self.redis_pool_idle_timeout
+
+    @property
+    def REDIS_POOL_CONNECT_TIMEOUT(self) -> int:
+        """Legacy alias for redis_pool_connect_timeout."""
+        return self.redis_pool_connect_timeout
+
+    @property
+    def REDIS_POOL_HEALTH_CHECK_INTERVAL(self) -> int:
+        """Legacy alias for redis_pool_health_check_interval."""
+        return self.redis_pool_health_check_interval
+
+    @property
+    def REDIS_POOL_MAX_LIFETIME(self) -> int:
+        """Legacy alias for redis_pool_max_lifetime."""
+        return self.redis_pool_max_lifetime
+
+    @property
+    def HTTP_POOL_MIN_SIZE(self) -> int:
+        """Legacy alias for http_pool_min_size."""
+        return self.http_pool_min_size
+
+    @property
+    def HTTP_POOL_MAX_SIZE(self) -> int:
+        """Legacy alias for http_pool_max_size."""
+        return self.http_pool_max_size
+
+    @property
+    def HTTP_POOL_IDLE_TIMEOUT(self) -> int:
+        """Legacy alias for http_pool_idle_timeout."""
+        return self.http_pool_idle_timeout
+
+    @property
+    def HTTP_POOL_CONNECT_TIMEOUT(self) -> int:
+        """Legacy alias for http_pool_connect_timeout."""
+        return self.http_pool_connect_timeout
+
+    @property
+    def HTTP_POOL_HEALTH_CHECK_INTERVAL(self) -> int:
+        """Legacy alias for http_pool_health_check_interval."""
+        return self.http_pool_health_check_interval
+
+    @property
+    def HTTP_POOL_MAX_LIFETIME(self) -> int:
+        """Legacy alias for http_pool_max_lifetime."""
+        return self.http_pool_max_lifetime
+
+    @property
+    def KNOWLEDGE_BASE_DIRS(self) -> list[Path]:
+        """Legacy alias for knowledge_base_dirs."""
+        return self.knowledge_base_dirs
+
+    @property
+    def PROTECTED_DIRECTORIES(self) -> list[Path]:
+        """Legacy alias for protected_directories."""
+        return self.protected_directories
+
+    # pylint: enable=invalid-name
+
+    # ============================================================================
+    # ENVIRONMENT CHECKS (v5.9.3 FIX)
+    # ============================================================================
+    @property
+    def is_production(self) -> bool:
+        """Check if running in production environment."""
+        return self.environment == Environment.PRODUCTION
+
+    @property
+    def is_development(self) -> bool:
+        """Check if running in development environment."""
+        return self.environment == Environment.DEVELOPMENT
+
+    @property
+    def is_test(self) -> bool:
+        """Check if running in test environment."""
+        return self.environment == Environment.TEST
 
     # ============================================================================
     # MIGRATION GRADUAL - FEATURE FLAGS

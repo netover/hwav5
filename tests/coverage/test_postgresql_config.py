@@ -89,21 +89,21 @@ class TestFastAPIDB:
 
     def test_fastapi_db_import(self):
         """Test FastAPI DB module import."""
-        from resync.fastapi_app.db import get_db, init_db
+        from resync.core.database import get_db, init_db
 
         assert callable(get_db)
         assert callable(init_db)
 
     def test_user_model_import(self):
         """Test User model import."""
-        from resync.fastapi_app.db import User, UserRole
+        from resync.core.database.models.auth import User, UserRole
 
         assert User is not None
         assert UserRole.ADMIN.value == "admin"
 
     def test_user_service_import(self):
         """Test UserService import."""
-        from resync.fastapi_app.db import UserService
+        from resync.core.database.repositories.user_repository import UserRepository as UserService
 
         assert UserService is not None
 
@@ -113,12 +113,12 @@ class TestMonitoringRoutes:
 
     def test_monitoring_module_import(self):
         """Test monitoring module import."""
-        from resync.fastapi_app.api.v1.routes import admin_monitoring
+        from resync.api.routes.monitoring import admin_monitoring
 
         assert admin_monitoring is not None
 
     def test_monitoring_router_exists(self):
         """Test monitoring router exists."""
-        from resync.fastapi_app.api.v1.routes.admin_monitoring import router
+        from resync.api.routes.monitoring.admin_monitoring import router
 
         assert router is not None

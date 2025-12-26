@@ -3,7 +3,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 
-from resync.core.exceptions_enhanced import NotFoundError
+from resync.core.exceptions import NotFoundError
 from resync.core.fastapi_di import get_agent_manager
 from resync.core.security import SafeAgentID
 

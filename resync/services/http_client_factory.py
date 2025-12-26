@@ -1,9 +1,13 @@
-"""
-HTTP client factory for creating configured httpx.AsyncClient instances.
+"""HTTP client factory.
 
-This module provides a centralized way to create HTTP clients with
-consistent configuration, timeouts, and limits across the application.
+Centralizes creation of httpx clients with consistent timeouts/limits.
+
+Production notes
+- Do not rely on non-existent legacy imports (e.g. config.base).
+- Keep import-time side effects minimal; settings are imported lazily.
 """
+
+from __future__ import annotations
 
 import logging
 
@@ -19,28 +23,28 @@ from resync.core.constants import (
     DEFAULT_WRITE_TIMEOUT,
 )
 
-# ---------------------------------------------------------------------------
-# Import application settings
-#
-# The original code referenced `resync_new.config.settings`, which does not
-# exist in this codebase. We attempt to import a `settings` instance from
-# various known locations. If none are available we fall back to creating
-# a new instance from the top‑level configuration defined in `config.base`.
-try:
-    # Preferred: use the settings proxy defined in the resync package
-    from resync.settings import settings  # type: ignore[attr-defined]
-except Exception as _e:
+logger = logging.getLogger(__name__)
+
+
+def _get_settings():
+    """Lazily import and return the Resync settings proxy.
+
+    Returns:
+        settings proxy instance or None if it cannot be imported.
+
+    Rationale:
+        Some tooling / isolated test contexts may import this module without the
+        full application settings being available.
+    """
     try:
-        # Fallback: instantiate settings from the top‑level config
-        from config.base import Settings as BaseSettings  # type: ignore
+        from resync.settings import settings  # type: ignore
 
-        settings = BaseSettings()  # type: ignore[assignment]
-    except Exception as _e:
-        # Final fallback: define a minimal settings object with no attributes
-        class _DummySettings:
-            """_ dummy settings."""
-
-        settings = _DummySettings()  # type: ignore[assignment]
+        return settings
+    except Exception as e:
+        # Avoid raising at import-time. Call sites that require settings should
+        # provide explicit parameters (e.g. base_url).
+        logger.debug("settings_import_failed", exc_info=e)
+        return None
 
 
 def create_async_http_client(
@@ -54,60 +58,50 @@ def create_async_http_client(
     max_connections: int | None = None,
     max_keepalive: int | None = None,
 ) -> httpx.AsyncClient:
-    """
-    Creates a configured httpx.AsyncClient with sensible defaults.
-
-    Provides centralized HTTP client configuration with override capabilities
-    for specific use cases while maintaining consistent defaults.
+    """Create a configured httpx.AsyncClient.
 
     Args:
-        base_url: Base URL for the client
-        auth: Optional authentication credentials
-        verify: Whether to verify SSL certificates (default: True)
-        connect_timeout: Override default connect timeout
-        read_timeout: Override default read timeout
-        write_timeout: Override default write timeout
-        pool_timeout: Override default pool timeout
-        max_connections: Override default max connections
-        max_keepalive: Override default max keepalive connections
+        base_url: Base URL for the client.
+        auth: Optional authentication.
+        verify: Whether to verify TLS.
+        connect_timeout/read_timeout/write_timeout/pool_timeout: Optional overrides.
+        max_connections/max_keepalive: Optional overrides.
 
     Returns:
-        Configured httpx.AsyncClient instance with proper timeouts and limits
-
-    Example:
-        ```python
-        client = create_async_http_client(
-            base_url="https://api.example.com",
-            auth=httpx.BasicAuth("user", "pass"),
-            connect_timeout=5.0
-        )
-        ```
+        Configured httpx.AsyncClient.
     """
+
+    s = _get_settings()
+
+    timeout = httpx.Timeout(
+        connect=connect_timeout
+        or (getattr(s, "TWS_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT) if s else DEFAULT_CONNECT_TIMEOUT),
+        read=read_timeout
+        or (getattr(s, "TWS_READ_TIMEOUT", DEFAULT_READ_TIMEOUT) if s else DEFAULT_READ_TIMEOUT),
+        write=write_timeout
+        or (getattr(s, "TWS_WRITE_TIMEOUT", DEFAULT_WRITE_TIMEOUT) if s else DEFAULT_WRITE_TIMEOUT),
+        pool=pool_timeout
+        or (getattr(s, "TWS_POOL_TIMEOUT", DEFAULT_POOL_TIMEOUT) if s else DEFAULT_POOL_TIMEOUT),
+    )
+
+    limits = httpx.Limits(
+        max_connections=max_connections
+        or (getattr(s, "TWS_MAX_CONNECTIONS", DEFAULT_MAX_CONNECTIONS) if s else DEFAULT_MAX_CONNECTIONS),
+        max_keepalive_connections=max_keepalive
+        or (
+            getattr(s, "TWS_MAX_KEEPALIVE", DEFAULT_MAX_KEEPALIVE_CONNECTIONS)
+            if s
+            else DEFAULT_MAX_KEEPALIVE_CONNECTIONS
+        ),
+    )
+
     return httpx.AsyncClient(
         base_url=base_url,
         auth=auth,
         verify=verify,
-        timeout=httpx.Timeout(
-            connect=connect_timeout
-            or getattr(settings, "TWS_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT),
-            read=read_timeout or getattr(settings, "TWS_READ_TIMEOUT", DEFAULT_READ_TIMEOUT),
-            write=write_timeout or getattr(settings, "TWS_WRITE_TIMEOUT", DEFAULT_WRITE_TIMEOUT),
-            pool=pool_timeout or getattr(settings, "TWS_POOL_TIMEOUT", DEFAULT_POOL_TIMEOUT),
-        ),
-        limits=httpx.Limits(
-            max_connections=max_connections
-            or getattr(settings, "TWS_MAX_CONNECTIONS", DEFAULT_MAX_CONNECTIONS),
-            max_keepalive_connections=max_keepalive
-            or getattr(
-                settings,
-                "TWS_MAX_KEEPALIVE",
-                DEFAULT_MAX_KEEPALIVE_CONNECTIONS,
-            ),
-        ),
+        timeout=timeout,
+        limits=limits,
     )
-
-
-logger = logging.getLogger(__name__)
 
 
 def create_tws_http_client(
@@ -117,33 +111,53 @@ def create_tws_http_client(
     verify: bool | str | None = None,
     **kwargs,
 ) -> AsyncClient:
-    # Use http by default for TWS
-    host = settings.TWS_HOST
-    port = settings.TWS_PORT
-    final_base = base_url or f"http://{host}:{port}"
-    # Enforce TWS-specific verification setting
-    verify_param = settings.TWS_VERIFY if verify is None else verify
+    """Create an httpx.AsyncClient configured for the TWS API.
 
-    # Define timeout values based on settings
+    If base_url is not provided, resync.settings must be importable to build one.
+    """
+
+    s = _get_settings()
+
+    if base_url is None:
+        if s is None:
+            raise RuntimeError(
+                "create_tws_http_client requires base_url when resync.settings cannot be imported"
+            )
+        # Use http by default for TWS
+        host = getattr(s, "TWS_HOST", None)
+        port = getattr(s, "TWS_PORT", None)
+        if not host or not port:
+            raise RuntimeError(
+                "TWS_HOST/TWS_PORT are not configured; provide base_url explicitly or configure settings"
+            )
+        base_url = f"http://{host}:{port}"
+
+    # Verification and timeouts
+    verify_param = (
+        getattr(s, "TWS_VERIFY", True) if (verify is None and s is not None) else (verify if verify is not None else True)
+    )
+
     timeout = httpx.Timeout(
-        connect=getattr(settings, "TWS_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT),
-        read=getattr(settings, "TWS_READ_TIMEOUT", DEFAULT_READ_TIMEOUT),
-        write=getattr(settings, "TWS_WRITE_TIMEOUT", DEFAULT_WRITE_TIMEOUT),
-        pool=getattr(settings, "TWS_POOL_TIMEOUT", DEFAULT_POOL_TIMEOUT),
+        connect=getattr(s, "TWS_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT) if s else DEFAULT_CONNECT_TIMEOUT,
+        read=getattr(s, "TWS_READ_TIMEOUT", DEFAULT_READ_TIMEOUT) if s else DEFAULT_READ_TIMEOUT,
+        write=getattr(s, "TWS_WRITE_TIMEOUT", DEFAULT_WRITE_TIMEOUT) if s else DEFAULT_WRITE_TIMEOUT,
+        pool=getattr(s, "TWS_POOL_TIMEOUT", DEFAULT_POOL_TIMEOUT) if s else DEFAULT_POOL_TIMEOUT,
     )
 
     limits = httpx.Limits(
-        max_connections=getattr(settings, "TWS_MAX_CONNECTIONS", DEFAULT_MAX_CONNECTIONS),
-        max_keepalive_connections=getattr(
-            settings, "TWS_MAX_KEEPALIVE", DEFAULT_MAX_KEEPALIVE_CONNECTIONS
+        max_connections=getattr(s, "TWS_MAX_CONNECTIONS", DEFAULT_MAX_CONNECTIONS) if s else DEFAULT_MAX_CONNECTIONS,
+        max_keepalive_connections=(
+            getattr(s, "TWS_MAX_KEEPALIVE", DEFAULT_MAX_KEEPALIVE_CONNECTIONS)
+            if s
+            else DEFAULT_MAX_KEEPALIVE_CONNECTIONS
         ),
     )
 
     return AsyncClient(
-        base_url=final_base,
+        base_url=base_url,
         auth=auth,
         timeout=timeout,
         limits=limits,
-        verify=verify_param,  # Apply TWS verification setting
+        verify=verify_param,
         **kwargs,
     )

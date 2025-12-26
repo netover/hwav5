@@ -30,10 +30,10 @@ from resync.core.exceptions import (
 from resync.core.exceptions import (
     ResyncException as BaseResyncException,
 )
-from resync.core.exceptions_enhanced import (
+from resync.core.exceptions import (
     ResyncException as EnhancedResyncException,
 )
-from resync.core.soc2_compliance_refactored import (
+from resync.core.soc2_compliance import (
     AvailabilityMetric,
     ConfidentialityIncident,
     ControlCategory,

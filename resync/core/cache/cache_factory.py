@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 from resync.core.cache.base_cache import BaseCache
 
 if TYPE_CHECKING:
-    from resync.core.cache_with_stampede_protection import CacheConfig
+    from resync.core.cache.cache_with_stampede_protection import CacheConfig
 
 
 @dataclass

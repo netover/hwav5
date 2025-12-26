@@ -1,21 +1,26 @@
 """
-TWS Specialist Agents Implementation.
+TWS Specialist Agents Implementation (v5.2.3.24 - Agno-Free).
 
-Provides 4 specialized AI agents coordinated by an orchestrator team:
+Provides 4 specialized AI agents coordinated by an orchestrator:
 1. Job Analyst - Return codes, ABENDs, execution analysis
 2. Dependency Specialist - Predecessors, successors, impact analysis
 3. Resource Specialist - Workstations, CPU/memory, conflicts
 4. Knowledge Specialist - Documentation RAG, troubleshooting
 
+v5.2.3.24: Removed Agno dependency, using native LiteLLM + prompts.
+
 Author: Resync Team
-Version: 5.2.3.29
+Version: 5.2.3.24
 """
 
 import asyncio
+import re
 import time
-from typing import Any, Optional
+from pathlib import Path
+from typing import Any
 
 import structlog
+import yaml
 
 from resync.core.specialists.models import (
     DEFAULT_SPECIALIST_CONFIGS,
@@ -25,7 +30,6 @@ from resync.core.specialists.models import (
     SpecialistResponse,
     SpecialistType,
     TeamConfig,
-    TeamExecutionMode,
     TeamResponse,
 )
 from resync.core.specialists.tools import (
@@ -38,165 +42,162 @@ from resync.core.specialists.tools import (
 
 logger = structlog.get_logger(__name__)
 
-# ============================================================================
-# AGNO AVAILABILITY CHECK
-# ============================================================================
 
-try:
-    from agno.agent import Agent
-    from agno.models.litellm import LiteLLM
-    from agno.team.team import Team
+# =============================================================================
+# PROMPT LOADER
+# =============================================================================
 
-    AGNO_AVAILABLE = True
-    logger.info("agno_framework_available", version="1.x+")
-except ImportError:
-    AGNO_AVAILABLE = False
-    logger.warning("agno_framework_not_available", fallback="mock_agents")
-
-    # Mock classes for development/testing
-    class Agent:
-        """Mock Agent when Agno is not available."""
-
-        def __init__(self, **kwargs):
-            self.name = kwargs.get("name", "MockAgent")
-            self.instructions = kwargs.get("instructions", [])
-            self.tools = kwargs.get("tools", [])
-
-        async def arun(self, message: str) -> str:
-            return f"[Mock {self.name}] Processing: {message[:50]}..."
-
-    class Team:
-        """Mock Team when Agno is not available."""
-
-        def __init__(self, **kwargs):
-            self.name = kwargs.get("name", "MockTeam")
-            self.members = kwargs.get("members", [])
-
-        async def arun(self, message: str) -> str:
-            responses = []
-            for member in self.members:
-                resp = await member.arun(message)
-                responses.append(resp)
-            return "\n".join(responses)
-
-    class LiteLLM:
-        """Mock LiteLLM model."""
-
-        def __init__(self, id: str = "gpt-4o", **kwargs):
-            self.id = id
+def _load_specialist_prompts() -> dict[str, Any]:
+    """Load specialist prompts from YAML file."""
+    prompts_path = Path(__file__).parent.parent.parent / "prompts" / "specialist_prompts.yaml"
+    
+    if prompts_path.exists():
+        with open(prompts_path) as f:
+            return yaml.safe_load(f)
+    
+    logger.warning("specialist_prompts_not_found", path=str(prompts_path))
+    return {}
 
 
-# ============================================================================
+SPECIALIST_PROMPTS = _load_specialist_prompts()
+
+
+# =============================================================================
+# LITELLM INTEGRATION (REPLACES AGNO)
+# =============================================================================
+
+async def _call_llm(
+    prompt: str,
+    system_prompt: str,
+    model: str = "ollama/qwen2.5:3b",
+    max_tokens: int = 1024,
+    temperature: float = 0.1,
+) -> str:
+    """
+    Call LLM using LiteLLM (unified interface).
+    
+    v5.2.3.24: Replaces Agno agent.arun() calls.
+    """
+    try:
+        import litellm
+        litellm.suppress_debug_info = True
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ]
+        
+        response = await litellm.acompletion(
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        
+        return response.choices[0].message.content
+        
+    except Exception as e:
+        logger.error("llm_call_failed", error=str(e))
+        return f"[LLM Error] {str(e)}"
+
+
+# =============================================================================
 # QUERY CLASSIFIER
-# ============================================================================
+# =============================================================================
 
 
 class QueryClassifier:
     """
     Classifies queries to determine which specialists should handle them.
+    
+    Uses pattern matching for fast classification without LLM calls.
     """
 
     # Intent patterns (Portuguese + English)
     PATTERNS = {
-        "job_analysis": [
-            r"\b(abend|erro|error|falha|failed|falhou)\b",
-            r"\b(rc|return\s*code)\s*=?\s*\d+",
-            r"\b(log|output|saída)\s*(do\s*)?job\b",
-            r"\bpor\s*que\b.*\b(falhou|erro|abend)\b",
-            r"\bwhy\s+did\b.*\b(fail|error)\b",
+        SpecialistType.JOB_ANALYST: [
+            r"\bRC[=:]\s*\d+",
+            r"\bABEND\s+\w+",
+            r"\b(failed|falhou|erro|error)\b",
+            r"\b(log|logs|sysout)\b",
+            r"\breturn\s*code\b",
+            r"\b(S0C\d|U\d{4})\b",
         ],
-        "dependency": [
-            r"\b(dependência|dependency|predecessor|sucessor|successor)\b",
-            r"\b(cadeia|chain|upstream|downstream)\b",
-            r"\b(impacto|impact)\b.*\b(se|if)\b",
-            r"\b(o\s*que\s*acontece|what\s*happens)\s*(se|if)\b",
-            r"\b(critical\s*path|caminho\s*crítico)\b",
+        SpecialistType.DEPENDENCY: [
+            r"\b(depende|depends?|dependency|dependência)\b",
+            r"\b(predecessor|predecessores|antecessor)\b",
+            r"\b(successor|sucessor|downstream|upstream)\b",
+            r"\b(impact|impacto|afeta|affects?)\b",
+            r"\b(chain|cadeia|flow|fluxo)\b",
         ],
-        "resource": [
-            r"\b(workstation|estação|servidor|server)\b",
-            r"\b(cpu|memória|memory|disco|disk)\b",
-            r"\b(conflito|conflict|recurso|resource)\b",
-            r"\b(online|offline|status)\b.*\b(workstation|agent)\b",
-            r"\b(capacidade|capacity|disponível|available)\b",
+        SpecialistType.RESOURCE: [
+            r"\b(workstation|WS\d+|servidor|server)\b",
+            r"\b(resource|recurso|capacity|capacidade)\b",
+            r"\b(available|disponível|status)\b",
+            r"\b(schedule|agenda|calendar|calendário)\b",
+            r"\b(CPU|memory|memória|slot)\b",
         ],
-        "knowledge": [
-            r"\b(como|how)\s+(fazer|to|do|resolver|fix)\b",
-            r"\b(documentação|documentation|manual|guide)\b",
-            r"\b(procedimento|procedure|processo|process)\b",
-            r"\b(o\s*que\s*é|what\s*is)\b",
-            r"\b(troubleshooting|solução|solution)\b",
+        SpecialistType.KNOWLEDGE: [
+            r"\b(how\s+to|como)\b",
+            r"\b(documentation|documentação|manual)\b",
+            r"\b(procedure|procedimento|processo)\b",
+            r"\b(best\s+practice|boas?\s+práticas?)\b",
+            r"\b(configure|configurar|setup)\b",
+            r"\b(explain|explicar?|what\s+is|o\s+que\s+é)\b",
         ],
-    }
-
-    SPECIALIST_MAPPING = {
-        "job_analysis": SpecialistType.JOB_ANALYST,
-        "dependency": SpecialistType.DEPENDENCY,
-        "resource": SpecialistType.RESOURCE,
-        "knowledge": SpecialistType.KNOWLEDGE,
     }
 
     def classify(self, query: str) -> QueryClassification:
         """
-        Classify a query and determine which specialists to use.
-
-        Args:
-            query: User query text
-
-        Returns:
-            QueryClassification with recommended specialists
+        Classify query to determine routing.
+        
+        Returns QueryClassification with recommended specialists.
         """
-        import re
-
         query_lower = query.lower()
-        matches: dict[str, int] = {}
-
-        for intent, patterns in self.PATTERNS.items():
-            match_count = 0
-            for pattern in patterns:
-                if re.search(pattern, query_lower, re.IGNORECASE):
-                    match_count += 1
-            if match_count > 0:
-                matches[intent] = match_count
-
-        # Sort by match count
-        sorted_matches = sorted(matches.items(), key=lambda x: x[1], reverse=True)
-
-        # Determine recommended specialists
-        recommended = []
-        for intent, _count in sorted_matches:
-            specialist = self.SPECIALIST_MAPPING.get(intent)
-            if specialist:
-                recommended.append(specialist)
-
-        # If no clear match, use all specialists
-        if not recommended:
-            recommended = list(SpecialistType)
-
-        # Calculate confidence
-        total_matches = sum(matches.values()) if matches else 0
-        confidence = min(0.95, 0.5 + (total_matches * 0.15))
-
-        # Determine query type
-        query_type = sorted_matches[0][0] if sorted_matches else "general"
-
+        
+        # Match patterns
+        specialist_scores: dict[SpecialistType, int] = {}
+        
+        for spec_type, patterns in self.PATTERNS.items():
+            score = sum(
+                1 for pattern in patterns 
+                if re.search(pattern, query_lower, re.IGNORECASE)
+            )
+            if score > 0:
+                specialist_scores[spec_type] = score
+        
+        # Sort by score
+        recommended = sorted(
+            specialist_scores.keys(),
+            key=lambda x: specialist_scores[x],
+            reverse=True,
+        )
+        
         # Extract entities
         entities = self._extract_entities(query)
-
+        
+        # Determine query type
+        if SpecialistType.JOB_ANALYST in recommended[:2]:
+            query_type = "troubleshooting"
+        elif SpecialistType.DEPENDENCY in recommended[:2]:
+            query_type = "dependency_analysis"
+        elif SpecialistType.RESOURCE in recommended[:2]:
+            query_type = "resource_status"
+        elif SpecialistType.KNOWLEDGE in recommended[:2]:
+            query_type = "documentation"
+        else:
+            query_type = "general"
+        
         return QueryClassification(
             query_type=query_type,
-            recommended_specialists=recommended,
-            confidence=confidence,
-            requires_graph="dependency" in matches,
-            requires_rag="knowledge" in matches,
-            requires_realtime_data="job_analysis" in matches or "resource" in matches,
+            recommended_specialists=recommended or [SpecialistType.KNOWLEDGE],
             entities=entities,
+            confidence=min(0.95, 0.5 + 0.15 * len(recommended)),
         )
 
     def _extract_entities(self, query: str) -> dict[str, list[str]]:
-        """Extract entities from query."""
-        import re
-
-        entities: dict[str, list[str]] = {
+        """Extract TWS entities from query."""
+        entities = {
             "jobs": [],
             "workstations": [],
             "error_codes": [],
@@ -207,84 +208,91 @@ class QueryClassifier:
         entities["jobs"] = re.findall(job_pattern, query)
 
         # Workstation names
-        ws_pattern = r"\b(TWS_[A-Z0-9_]+)\b"
+        ws_pattern = r"\b(WS\d+|TWS_[A-Z0-9_]+)\b"
         entities["workstations"] = re.findall(ws_pattern, query, re.IGNORECASE)
 
         # Error/ABEND codes
         abend_pattern = r"\b([SU]\d{3}[A-Z]?)\b"
-        rc_pattern = r"(?:rc|return\s*code)\s*=?\s*(\d+)"
-        entities["error_codes"] = re.findall(abend_pattern, query, re.IGNORECASE) + [
-            f"RC={rc}" for rc in re.findall(rc_pattern, query, re.IGNORECASE)
-        ]
+        rc_pattern = r"RC[=:]\s*(\d+)"
+        entities["error_codes"] = (
+            re.findall(abend_pattern, query, re.IGNORECASE) +
+            [f"RC={rc}" for rc in re.findall(rc_pattern, query, re.IGNORECASE)]
+        )
 
         return entities
 
 
-# ============================================================================
-# SPECIALIST AGENT CLASSES
-# ============================================================================
+# =============================================================================
+# SPECIALIST AGENT CLASSES (AGNO-FREE)
+# =============================================================================
 
 
 class BaseSpecialist:
-    """Base class for specialist agents."""
+    """
+    Base class for specialist agents.
+    
+    v5.2.3.24: Uses direct LiteLLM calls instead of Agno.
+    """
 
     specialist_type: SpecialistType
 
     def __init__(
         self,
         config: SpecialistConfig | None = None,
-        model: Any | None = None,
+        model_name: str | None = None,
     ):
         self.config = config or DEFAULT_SPECIALIST_CONFIGS.get(
             self.specialist_type, SpecialistConfig(specialist_type=self.specialist_type)
         )
-        self.model = model or LiteLLM(id=self.config.model_name)
-        self._agent: Agent | None = None
-        self._initialized = False
+        self.model_name = model_name or self.config.model_name
+        self._system_prompt = self._load_system_prompt()
 
     @property
     def name(self) -> str:
         """Agent display name."""
         return f"TWS {self.specialist_type.value.replace('_', ' ').title()}"
 
-    @property
-    def agent(self) -> Agent:
-        """Lazy initialization of agent."""
-        if self._agent is None:
-            self._agent = self._create_agent()
-        return self._agent
+    def _load_system_prompt(self) -> str:
+        """Load system prompt from YAML."""
+        prompt_key = self.specialist_type.value.lower()
+        
+        if prompt_key in SPECIALIST_PROMPTS:
+            return SPECIALIST_PROMPTS[prompt_key].get("system_prompt", "")
+        
+        return f"You are a TWS {self.specialist_type.value} specialist."
 
-    def _create_agent(self) -> Agent:
-        """Create the Agno agent. Override in subclasses."""
-        raise NotImplementedError
+    def _get_tools(self) -> list:
+        """Get available tools. Override in subclasses."""
+        return []
+
+    async def _execute_tools(self, query: str, context: dict | None) -> str:
+        """Execute relevant tools and format results."""
+        # Base implementation - override in subclasses
+        return ""
 
     async def process(self, query: str, context: dict | None = None) -> SpecialistResponse:
         """
         Process a query and return a response.
-
-        Args:
-            query: User query
-            context: Additional context (entities, history, etc.)
-
-        Returns:
-            SpecialistResponse with results
+        
+        v5.2.3.24: Uses LiteLLM directly instead of Agno.
         """
         start_time = time.time()
         tools_used = []
 
         try:
-            # Format query with context
-            formatted_query = self._format_query(query, context)
-
-            # Run the agent
-            if AGNO_AVAILABLE:
-                response = await self.agent.arun(formatted_query)
-                # Extract tools used if available
-                if hasattr(response, "tool_calls"):
-                    tools_used = [tc.name for tc in response.tool_calls]
-                response_text = str(response)
-            else:
-                response_text = await self.agent.arun(formatted_query)
+            # Execute tools to get data
+            tool_results = await self._execute_tools(query, context)
+            tools_used = self._get_tool_names()
+            
+            # Format prompt with context and tool results
+            formatted_prompt = self._format_prompt(query, context, tool_results)
+            
+            # Call LLM
+            response_text = await _call_llm(
+                prompt=formatted_prompt,
+                system_prompt=self._system_prompt,
+                model=self.model_name,
+            )
 
             processing_time = int((time.time() - start_time) * 1000)
 
@@ -311,33 +319,34 @@ class BaseSpecialist:
                 error=str(e),
             )
 
-    def _format_query(self, query: str, context: dict | None) -> str:
-        """Format query with context for the agent."""
-        if not context:
-            return query
-
+    def _format_prompt(self, query: str, context: dict | None, tool_results: str) -> str:
+        """Format the prompt with context and tool results."""
         parts = [query]
 
-        if entities := context.get("entities"):
-            if jobs := entities.get("jobs"):
-                parts.append(f"\nJobs mentioned: {', '.join(jobs)}")
-            if ws := entities.get("workstations"):
-                parts.append(f"\nWorkstations: {', '.join(ws)}")
-            if errors := entities.get("error_codes"):
-                parts.append(f"\nError codes: {', '.join(errors)}")
+        if context:
+            if entities := context.get("entities"):
+                if jobs := entities.get("jobs"):
+                    parts.append(f"\nJobs mentioned: {', '.join(jobs)}")
+                if ws := entities.get("workstations"):
+                    parts.append(f"\nWorkstations: {', '.join(ws)}")
+                if errors := entities.get("error_codes"):
+                    parts.append(f"\nError codes: {', '.join(errors)}")
+
+        if tool_results:
+            parts.append(f"\n\n--- Tool Results ---\n{tool_results}")
 
         return "\n".join(parts)
+
+    def _get_tool_names(self) -> list[str]:
+        """Get names of tools used."""
+        return [t.__name__ if callable(t) else str(t) for t in self._get_tools()]
 
 
 class JobAnalystAgent(BaseSpecialist):
     """
     Specialist for job execution analysis.
-
-    Capabilities:
-    - Analyze return codes and ABEND codes
-    - Review job logs and execution history
-    - Identify error patterns and trends
-    - Provide diagnostic recommendations
+    
+    v5.2.3.24: Agno-free implementation.
     """
 
     specialist_type = SpecialistType.JOB_ANALYST
@@ -347,45 +356,44 @@ class JobAnalystAgent(BaseSpecialist):
         self.job_log_tool = JobLogTool()
         self.error_code_tool = ErrorCodeTool()
 
-    def _create_agent(self) -> Agent:
-        """Create Job Analyst agent."""
-        instructions = [
-            "You are a TWS Job Analyst specialist.",
-            "Your expertise is analyzing job failures, return codes, and ABEND codes.",
-            "When analyzing a job failure:",
-            "1. First check the return code and explain its meaning",
-            "2. If there's an ABEND code, provide detailed explanation",
-            "3. Review job history for patterns",
-            "4. Provide specific, actionable recommendations",
-            "Always be precise and include relevant error codes in your response.",
+    def _get_tools(self) -> list:
+        return [
+            self.job_log_tool.get_job_log,
+            self.job_log_tool.analyze_return_code,
+            self.error_code_tool.lookup_error,
         ]
 
-        if self.config.custom_instructions:
-            instructions.append(self.config.custom_instructions)
-
-        return Agent(
-            name=self.name,
-            model=self.model,
-            tools=[
-                self.job_log_tool.get_job_log,
-                self.job_log_tool.analyze_return_code,
-                self.job_log_tool.analyze_abend_code,
-                self.job_log_tool.get_job_history,
-                self.error_code_tool.lookup_error,
-            ],
-            instructions=instructions,
-        )
+    async def _execute_tools(self, query: str, context: dict | None) -> str:
+        """Execute job analysis tools."""
+        results = []
+        entities = (context or {}).get("entities", {})
+        
+        # Get job logs for mentioned jobs
+        for job in entities.get("jobs", [])[:2]:  # Limit to 2 jobs
+            try:
+                log = await self.job_log_tool.get_job_log(job)
+                if log:
+                    results.append(f"Log for {job}:\n{log[:500]}...")
+            except Exception as e:
+                logger.debug(f"Could not get log for {job}: {e}")
+        
+        # Lookup error codes
+        for code in entities.get("error_codes", [])[:3]:
+            try:
+                info = await self.error_code_tool.lookup_error(code)
+                if info:
+                    results.append(f"Error {code}: {info}")
+            except Exception as e:
+                logger.debug(f"Could not lookup {code}: {e}")
+        
+        return "\n\n".join(results)
 
 
 class DependencySpecialist(BaseSpecialist):
     """
     Specialist for dependency and workflow analysis.
-
-    Capabilities:
-    - Trace predecessor/successor chains
-    - Analyze job dependencies
-    - Assess impact of failures
-    - Identify critical paths
+    
+    v5.2.3.24: Agno-free implementation.
     """
 
     specialist_type = SpecialistType.DEPENDENCY
@@ -394,44 +402,39 @@ class DependencySpecialist(BaseSpecialist):
         super().__init__(config, **kwargs)
         self.dependency_tool = DependencyGraphTool()
 
-    def _create_agent(self) -> Agent:
-        """Create Dependency Specialist agent."""
-        instructions = [
-            "You are a TWS Dependency Specialist.",
-            "Your expertise is analyzing job dependencies and workflow graphs.",
-            "When analyzing dependencies:",
-            "1. Identify all predecessor and successor jobs",
-            "2. Trace the critical path through the workflow",
-            "3. Assess impact of failures on downstream jobs",
-            "4. Identify potential bottlenecks",
-            "Present dependency information in a clear, hierarchical format.",
+    def _get_tools(self) -> list:
+        return [
+            self.dependency_tool.get_predecessors,
+            self.dependency_tool.get_successors,
+            self.dependency_tool.analyze_impact,
         ]
 
-        if self.config.custom_instructions:
-            instructions.append(self.config.custom_instructions)
-
-        return Agent(
-            name=self.name,
-            model=self.model,
-            tools=[
-                self.dependency_tool.get_predecessors,
-                self.dependency_tool.get_successors,
-                self.dependency_tool.analyze_impact,
-                self.dependency_tool.detect_cycles,
-            ],
-            instructions=instructions,
-        )
+    async def _execute_tools(self, query: str, context: dict | None) -> str:
+        """Execute dependency analysis tools."""
+        results = []
+        entities = (context or {}).get("entities", {})
+        
+        for job in entities.get("jobs", [])[:2]:
+            try:
+                preds = await self.dependency_tool.get_predecessors(job)
+                succs = await self.dependency_tool.get_successors(job)
+                
+                if preds:
+                    results.append(f"Predecessors of {job}: {', '.join(preds)}")
+                if succs:
+                    results.append(f"Successors of {job}: {', '.join(succs)}")
+                    
+            except Exception as e:
+                logger.debug(f"Could not get dependencies for {job}: {e}")
+        
+        return "\n".join(results)
 
 
 class ResourceSpecialist(BaseSpecialist):
     """
     Specialist for resource and capacity analysis.
-
-    Capabilities:
-    - Monitor workstation status
-    - Analyze resource usage
-    - Detect conflicts
-    - Check scheduling windows
+    
+    v5.2.3.24: Agno-free implementation.
     """
 
     specialist_type = SpecialistType.RESOURCE
@@ -441,45 +444,33 @@ class ResourceSpecialist(BaseSpecialist):
         self.workstation_tool = WorkstationTool()
         self.calendar_tool = CalendarTool()
 
-    def _create_agent(self) -> Agent:
-        """Create Resource Specialist agent."""
-        instructions = [
-            "You are a TWS Resource Specialist.",
-            "Your expertise is monitoring resources, workstations, and capacity.",
-            "When analyzing resources:",
-            "1. Check workstation status and availability",
-            "2. Identify resource conflicts or contention",
-            "3. Verify scheduling windows and calendars",
-            "4. Recommend optimal scheduling",
-            "Provide clear status information and actionable recommendations.",
+    def _get_tools(self) -> list:
+        return [
+            self.workstation_tool.get_workstation_status,
+            self.calendar_tool.get_calendar_schedule,
         ]
 
-        if self.config.custom_instructions:
-            instructions.append(self.config.custom_instructions)
-
-        return Agent(
-            name=self.name,
-            model=self.model,
-            tools=[
-                self.workstation_tool.get_workstation_status,
-                self.workstation_tool.check_resource_availability,
-                self.workstation_tool.get_resource_conflicts,
-                self.calendar_tool.get_calendar_schedule,
-                self.calendar_tool.check_scheduling_window,
-            ],
-            instructions=instructions,
-        )
+    async def _execute_tools(self, query: str, context: dict | None) -> str:
+        """Execute resource analysis tools."""
+        results = []
+        entities = (context or {}).get("entities", {})
+        
+        for ws in entities.get("workstations", [])[:3]:
+            try:
+                status = await self.workstation_tool.get_workstation_status(ws)
+                if status:
+                    results.append(f"Status of {ws}: {status}")
+            except Exception as e:
+                logger.debug(f"Could not get status for {ws}: {e}")
+        
+        return "\n".join(results)
 
 
 class KnowledgeSpecialist(BaseSpecialist):
     """
     Specialist for documentation and troubleshooting knowledge.
-
-    Capabilities:
-    - Search TWS documentation
-    - Find troubleshooting guides
-    - Provide best practices
-    - Answer how-to questions
+    
+    v5.2.3.24: Agno-free implementation using RAG.
     """
 
     specialist_type = SpecialistType.KNOWLEDGE
@@ -493,50 +484,38 @@ class KnowledgeSpecialist(BaseSpecialist):
         super().__init__(config, **kwargs)
         self.knowledge_base = knowledge_base
 
-    def _create_agent(self) -> Agent:
-        """Create Knowledge Specialist agent."""
-        instructions = [
-            "You are a TWS Knowledge Specialist.",
-            "Your expertise is TWS documentation, procedures, and best practices.",
-            "When providing information:",
-            "1. Search the knowledge base for relevant documentation",
-            "2. Provide step-by-step procedures when applicable",
-            "3. Reference official IBM/HCL documentation",
-            "4. Include best practices and common pitfalls",
-            "Always cite sources and provide actionable guidance.",
-        ]
+    def _get_tools(self) -> list:
+        return ["rag_search"]
 
-        if self.config.custom_instructions:
-            instructions.append(self.config.custom_instructions)
-
-        agent_kwargs = {
-            "name": self.name,
-            "model": self.model,
-            "instructions": instructions,
-        }
-
-        # Add knowledge base if available and Agno supports it
-        if AGNO_AVAILABLE and self.knowledge_base:
-            agent_kwargs["knowledge"] = self.knowledge_base
-            agent_kwargs["search_knowledge"] = True
-
-        return Agent(**agent_kwargs)
+    async def _execute_tools(self, query: str, context: dict | None) -> str:
+        """Search knowledge base for relevant documents."""
+        if not self.knowledge_base:
+            return ""
+        
+        try:
+            # Use RAG to search
+            results = await self.knowledge_base.search(query, top_k=3)
+            
+            if results:
+                docs = [f"- {r.get('content', '')[:200]}..." for r in results]
+                return "Relevant documentation:\n" + "\n".join(docs)
+                
+        except Exception as e:
+            logger.debug(f"Knowledge search failed: {e}")
+        
+        return ""
 
 
-# ============================================================================
-# TEAM ORCHESTRATOR
-# ============================================================================
+# =============================================================================
+# TEAM ORCHESTRATOR (AGNO-FREE)
+# =============================================================================
 
 
 class TWSSpecialistTeam:
     """
     Orchestrates the 4 specialist agents as a coordinated team.
-
-    Handles:
-    - Query classification and routing
-    - Parallel specialist execution
-    - Response synthesis
-    - Error handling and fallbacks
+    
+    v5.2.3.24: Removed Agno Team dependency, uses direct orchestration.
     """
 
     def __init__(
@@ -553,13 +532,11 @@ class TWSSpecialistTeam:
         self.specialists: dict[SpecialistType, BaseSpecialist] = {}
         self._init_specialists()
 
-        # Initialize team (if Agno available)
-        self._team: Team | None = None
-
         logger.info(
             "specialist_team_initialized",
             specialists=list(self.specialists.keys()),
             execution_mode=self.config.execution_mode,
+            agno_free=True,
         )
 
     def _init_specialists(self):
@@ -583,32 +560,6 @@ class TWSSpecialistTeam:
 
                 self.specialists[spec_type] = spec_class(config=spec_config, **kwargs)
 
-    @property
-    def team(self) -> Team | None:
-        """Lazy initialization of Agno Team."""
-        if not AGNO_AVAILABLE:
-            return None
-
-        if self._team is None and self.specialists:
-            members = [spec.agent for spec in self.specialists.values()]
-
-            self._team = Team(
-                name="TWS AI Assistant Team",
-                mode=self.config.execution_mode.value,
-                model=LiteLLM(id=self.config.orchestrator_model),
-                members=members,
-                enable_agentic_context=True,
-                send_team_context_to_members=True,
-                instructions=[
-                    "Analyze the query and delegate to appropriate specialists.",
-                    "Run independent specialists in parallel when possible.",
-                    "Synthesize findings into a coherent, actionable response.",
-                    "If specialists provide conflicting information, note the discrepancy.",
-                ],
-            )
-
-        return self._team
-
     async def process(
         self,
         query: str,
@@ -617,14 +568,8 @@ class TWSSpecialistTeam:
     ) -> TeamResponse:
         """
         Process a query using the specialist team.
-
-        Args:
-            query: User query
-            context: Additional context
-            use_all_specialists: Force all specialists to respond
-
-        Returns:
-            TeamResponse with synthesized results
+        
+        v5.2.3.24: Agno-free implementation.
         """
         start_time = time.time()
 
@@ -641,9 +586,12 @@ class TWSSpecialistTeam:
                 if spec_type in self.specialists
             ]
 
-        # If no specialists matched, use all
+        # If no specialists matched, use Knowledge as fallback
         if not specialists_to_use:
-            specialists_to_use = list(self.specialists.values())
+            if SpecialistType.KNOWLEDGE in self.specialists:
+                specialists_to_use = [self.specialists[SpecialistType.KNOWLEDGE]]
+            else:
+                specialists_to_use = list(self.specialists.values())[:1]
 
         logger.info(
             "processing_query",
@@ -660,9 +608,7 @@ class TWSSpecialistTeam:
         if self.config.parallel_execution:
             specialist_responses = await self._execute_parallel(specialists_to_use, query, context)
         else:
-            specialist_responses = await self._execute_sequential(
-                specialists_to_use, query, context
-            )
+            specialist_responses = await self._execute_sequential(specialists_to_use, query, context)
 
         # Synthesize responses
         synthesized = await self._synthesize_responses(query, specialist_responses, classification)
@@ -743,112 +689,46 @@ class TWSSpecialistTeam:
         successful_responses = [r for r in responses if r.is_successful]
 
         if not successful_responses:
-            return "Desculpe, não foi possível processar sua consulta no momento. Por favor, tente novamente."
+            return "Desculpe, não foi possível processar sua consulta. Por favor, tente novamente."
 
-        # If using Agno Team with synthesizer
-        if self.team and AGNO_AVAILABLE:
-            try:
-                synthesis_prompt = self._build_synthesis_prompt(
-                    query, successful_responses, classification
-                )
-                result = await self.team.arun(synthesis_prompt)
-                return str(result)
-            except Exception as e:
-                logger.warning("team_synthesis_failed", error=str(e))
+        # If single response, return directly
+        if len(successful_responses) == 1:
+            return successful_responses[0].response
 
-        # Fallback: simple concatenation with structure
-        return self._simple_synthesis(query, successful_responses, classification)
+        # Multiple responses - synthesize with LLM
+        responses_text = "\n\n".join([
+            f"### {r.specialist_type.value.title()}\n{r.response}"
+            for r in successful_responses
+        ])
 
-    def _build_synthesis_prompt(
-        self,
-        query: str,
-        responses: list[SpecialistResponse],
-        classification: QueryClassification,
-    ) -> str:
-        """Build prompt for synthesis."""
-        parts = [
-            f"Original query: {query}",
-            f"Query type: {classification.query_type}",
-            "",
-            "Specialist findings:",
-        ]
+        synthesis_prompt = SPECIALIST_PROMPTS.get("synthesis", {}).get(
+            "combine_responses",
+            "Combine these specialist responses into a unified answer:\n\n{responses}"
+        )
 
-        for resp in responses:
-            parts.append(f"\n## {resp.specialist_type.value.replace('_', ' ').title()}")
-            parts.append(resp.response)
+        synthesized = await _call_llm(
+            prompt=synthesis_prompt.format(responses=responses_text),
+            system_prompt="You are a helpful assistant that synthesizes technical information.",
+            model=self.config.orchestrator_model,
+        )
 
-        parts.append("\n\nSynthesize these findings into a coherent response.")
-
-        return "\n".join(parts)
-
-    def _simple_synthesis(
-        self,
-        query: str,
-        responses: list[SpecialistResponse],
-        classification: QueryClassification,
-    ) -> str:
-        """Simple synthesis without LLM."""
-        parts = [f"**Análise: {classification.query_type.replace('_', ' ').title()}**\n"]
-
-        for resp in responses:
-            title = resp.specialist_type.value.replace("_", " ").title()
-            parts.append(f"### {title}")
-            parts.append(resp.response)
-            parts.append("")
-
-        return "\n".join(parts)
+        return synthesized
 
     def _calculate_confidence(self, responses: list[SpecialistResponse]) -> float:
         """Calculate overall confidence from specialist responses."""
-        successful = [r.confidence for r in responses if r.is_successful]
+        successful = [r for r in responses if r.is_successful]
+        
         if not successful:
             return 0.0
-        return sum(successful) / len(successful)
+        
+        return sum(r.confidence for r in successful) / len(successful)
 
 
-# ============================================================================
-# SINGLETON AND FACTORY
-# ============================================================================
-
-_specialist_team_instance: TWSSpecialistTeam | None = None
-
-
-def get_specialist_team() -> TWSSpecialistTeam | None:
-    """Get the singleton specialist team instance."""
-    return _specialist_team_instance
-
-
-async def create_specialist_team(
-    config: TeamConfig | None = None,
-    knowledge_base: Any | None = None,
-) -> TWSSpecialistTeam:
-    """
-    Create and initialize the specialist team.
-
-    Args:
-        config: Team configuration
-        knowledge_base: Knowledge base for RAG
-
-    Returns:
-        Initialized TWSSpecialistTeam
-    """
-    global _specialist_team_instance
-
-    _specialist_team_instance = TWSSpecialistTeam(
-        config=config,
-        knowledge_base=knowledge_base,
-    )
-
-    logger.info("specialist_team_created")
-    return _specialist_team_instance
-
-
-# ============================================================================
+# =============================================================================
 # EXPORTS
-# ============================================================================
+# =============================================================================
 
 __all__ = [
-    "AGNO_AVAILABLE",
     "QueryClassifier",
     "BaseSpecialist",
     "JobAnalystAgent",
@@ -856,6 +736,5 @@ __all__ = [
     "ResourceSpecialist",
     "KnowledgeSpecialist",
     "TWSSpecialistTeam",
-    "get_specialist_team",
-    "create_specialist_team",
+    "SPECIALIST_PROMPTS",
 ]

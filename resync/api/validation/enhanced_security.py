@@ -21,7 +21,9 @@ from typing import (
 )
 
 import structlog
-from jose import JWTError, jwt
+
+# Use unified JWT module (PyJWT)
+from resync.core.jwt_utils import JWTError, jwt
 
 try:
     from passlib.context import CryptContext

@@ -4,7 +4,7 @@ Health Checker Factory
 This module provides a factory for creating and managing health checker instances.
 """
 
-from resync.core.health_models import ComponentType, HealthCheckConfig
+from resync.core.health.health_models import ComponentType, HealthCheckConfig
 
 from .base_health_checker import BaseHealthChecker
 from .cache_health_checker import CacheHealthChecker

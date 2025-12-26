@@ -213,12 +213,11 @@ class TimeBasedCache(Generic[K, V]):
         self._clean_expired(current_time)
 
         # Check size limit
-        if len(self._cache) >= self.max_size:
+        if len(self._cache) >= self.max_size and self._heap:
             # Remove oldest entry
-            if self._heap:
-                oldest_time, oldest_key = heapq.heappop(self._heap)
-                if oldest_key in self._cache:
-                    del self._cache[oldest_key]
+            oldest_time, oldest_key = heapq.heappop(self._heap)
+            if oldest_key in self._cache:
+                del self._cache[oldest_key]
 
         # Add new entry
         self._cache[key] = (value, current_time)

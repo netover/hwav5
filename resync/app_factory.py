@@ -101,7 +101,8 @@ class ApplicationFactory:
                 ITWSClient,
             )
             from resync.core.tws_monitor import get_tws_monitor, shutdown_tws_monitor
-            from resync.cqrs.dispatcher import initialize_dispatcher
+
+            # CQRS removed in v5.9.3
             from resync.lifespan import initialize_redis_with_retry
 
             # Store container reference
@@ -115,13 +116,12 @@ class ApplicationFactory:
             knowledge_graph = await app_container.get(IKnowledgeGraph)
 
             # Initialize TWS monitor
-            tws_monitor = await get_tws_monitor(tws_client)
+            await get_tws_monitor(tws_client)
 
             # Setup dependencies
             setup_dependencies(tws_client, agent_manager, knowledge_graph)
 
-            # Initialize CQRS dispatcher
-            initialize_dispatcher(tws_client, tws_monitor)
+            # CQRS dispatcher removed in v5.9.3 (was unused)
 
             # Initialize Redis with retry
             # This function now handles idempotency manager initialization internally
@@ -148,6 +148,95 @@ class ApplicationFactory:
                     "proactive_monitoring_init_failed",
                     error=str(e),
                     hint="Monitoring will be unavailable but app will continue",
+                )
+
+            # Initialize metrics collector for monitoring dashboard
+            # (migrado de @router.on_event("startup"))
+            try:
+                from resync.api import monitoring_dashboard
+                from resync.core.task_tracker import create_tracked_task
+
+                monitoring_dashboard._collector_task = await create_tracked_task(
+                    monitoring_dashboard.metrics_collector_loop(),
+                    name="metrics-collector"
+                )
+                app_logger.info("dashboard_metrics_collector_started")
+            except Exception as e:
+                app_logger.warning(
+                    "metrics_collector_start_failed",
+                    error=str(e),
+                    hint="Dashboard metrics will be unavailable",
+                )
+
+            # v5.9.8: Cache warming on startup
+            try:
+                from resync.core.cache_utils import warmup_cache_on_startup
+
+                await warmup_cache_on_startup()
+                app_logger.info("cache_warming_completed")
+            except Exception as e:
+                app_logger.warning(
+                    "cache_warming_failed",
+                    error=str(e),
+                    hint="Cache will start cold but will warm naturally",
+                )
+
+            # v5.9.8: Initialize GraphRAG (Subgraph Retrieval + Auto-Discovery)
+            try:
+                from resync.core.graphrag_integration import initialize_graphrag
+                from resync.services.llm_service import get_llm_service
+                from resync.services.tws_service import get_tws_client
+                from resync.core.redis_init import get_redis_client
+                from resync.knowledge.retrieval.graph import get_knowledge_graph
+
+                # Check if GraphRAG should be enabled
+                graphrag_enabled = getattr(settings, "GRAPHRAG_ENABLED", True)
+                
+                if graphrag_enabled:
+                    llm_service = get_llm_service()
+                    kg = await get_knowledge_graph()
+                    tws_client = await get_tws_client()
+                    
+                    try:
+                        redis_client = get_redis_client()
+                    except Exception:
+                        redis_client = None
+                        app_logger.warning("GraphRAG will run without Redis cache")
+                    
+                    await initialize_graphrag(
+                        llm_service=llm_service,
+                        knowledge_graph=kg,
+                        tws_client=tws_client,
+                        redis_client=redis_client,
+                        enabled=True
+                    )
+                    
+                    app_logger.info("graphrag_initialized", features=["subgraph_retrieval", "auto_discovery"])
+                else:
+                    app_logger.info("graphrag_disabled_by_config")
+                    
+            except Exception as e:
+                app_logger.warning(
+                    "graphrag_initialization_failed",
+                    error=str(e),
+                    hint="GraphRAG features will be disabled, but system will continue normally",
+                )
+
+            # ✅ v5.9.8: Initialize unified config system with hot reload
+            try:
+                from resync.core.unified_config import initialize_config_system
+                
+                await initialize_config_system()
+                logger.info(
+                    "unified_config_initialized",
+                    hot_reload=True,
+                    message="All configs loaded with hot reload support"
+                )
+            except Exception as e:
+                logger.error(
+                    "unified_config_initialization_failed",
+                    error=str(e),
+                    hint="Config hot reload disabled, but system will use static configs",
                 )
 
             logger.info("application_startup_completed")
@@ -223,6 +312,40 @@ class ApplicationFactory:
                 except Exception as e:
                     app_logger.warning("proactive_monitoring_shutdown_error", error=str(e))
 
+                # Shutdown health check service
+                # (migrado de @router.on_event("shutdown"))
+                try:
+                    from resync.core.health import shutdown_health_check_service
+
+                    await shutdown_health_check_service()
+                    app_logger.info("health_service_shutdown_successful")
+                except Exception as e:
+                    app_logger.warning("health_service_shutdown_error", error=str(e))
+
+                # Cancel all background tasks
+                # Prevents task leaks and ensures graceful shutdown
+                try:
+                    from resync.core.task_tracker import cancel_all_tasks
+
+                    stats = await cancel_all_tasks(timeout=5.0)
+                    app_logger.info(
+                        "background_tasks_cancelled",
+                        total=stats["total"],
+                        cancelled=stats["cancelled"],
+                        completed=stats.get("completed", 0),
+                    )
+                except Exception as e:
+                    app_logger.warning("background_tasks_cancel_error", error=str(e))
+
+                # Shutdown unified config system
+                try:
+                    from resync.core.unified_config import shutdown_config_system
+                    
+                    shutdown_config_system()
+                    app_logger.info("unified_config_shutdown_successful")
+                except Exception as e:
+                    app_logger.warning("unified_config_shutdown_error", error=str(e))
+
                 await shutdown_tws_monitor()
                 logger.info("application_shutdown_completed")
                 app_logger.info("application_shutdown_successful")
@@ -280,15 +403,35 @@ class ApplicationFactory:
 
         # Production-specific validations
         if settings.is_production:
-            if settings.admin_password in ["change_me_please", "admin", "password"]:
+            # Admin credentials
+            admin_pw = (
+                settings.admin_password.get_secret_value() if settings.admin_password else ""
+            )
+            if not admin_pw or len(admin_pw.strip()) < 8:
+                errors.append("ADMIN_PASSWORD must be set (>= 8 chars) in production")
+            elif admin_pw.strip().lower() in {"change_me_please", "admin", "password"}:
                 errors.append("Insecure admin password in production")
 
-            if "*" in settings.cors_allowed_origins:
+            # JWT secret key
+            secret = settings.secret_key.get_secret_value()
+            if (
+                not secret
+                or len(secret.strip()) < 32
+                or secret.startswith("CHANGE_ME_IN_PRODUCTION")
+            ):
+                errors.append("SECRET_KEY must be set (>= 32 chars) in production")
+
+            # Debug must remain disabled
+            if getattr(settings, "debug", False):
+                errors.append("Debug mode must be disabled in production")
+
+            # CORS hardening
+            if any(origin.strip() == "*" for origin in settings.cors_allowed_origins):
                 errors.append("Wildcard CORS origins not allowed in production")
 
-            if settings.llm_api_key == "dummy_key_for_development":
+            # LLM configuration hardening
+            if getattr(settings, "llm_api_key", "") == "dummy_key_for_development":
                 errors.append("Invalid LLM API key in production")
-
         # Raise if any critical errors
         if errors:
             for error in errors:
@@ -338,6 +481,35 @@ class ApplicationFactory:
         # 1. Correlation ID (must be first)
         self.app.add_middleware(CorrelationIdMiddleware)
 
+        # 1.5. Rate Limiting (após Correlation ID, antes de Exception Handler)
+        # Apenas em produção para não interferir em desenvolvimento
+        if settings.is_production:
+            try:
+                from resync.api.middleware.rate_limiter import RateLimitMiddleware
+                from resync.core.redis_init import get_redis_client
+                
+                redis_client = get_redis_client()
+                self.app.add_middleware(
+                    RateLimitMiddleware,
+                    redis=redis_client,
+                    enabled=True,
+                    default_limit=100,  # 100 req/min para endpoints normais
+                    default_window=60,
+                )
+                logger.info(
+                    "rate_limiting_enabled",
+                    default_limit=100,
+                    auth_limit=5,
+                    llm_limit=10,
+                )
+            except Exception as e:
+                # Não bloqueia startup se rate limiting falhar
+                logger.warning(
+                    "rate_limiting_disabled",
+                    error=str(e),
+                    reason="Redis não disponível ou erro na configuração",
+                )
+
         # 2. Global Exception Handler
         self.app.add_middleware(GlobalExceptionHandlerMiddleware)
 
@@ -379,8 +551,14 @@ class ApplicationFactory:
         logger.info("dependency_injection_configured")
 
     def _register_routers(self) -> None:
-        """Register all API routers."""
-        # Import routers
+        """
+        Register all API routers.
+
+        v5.8.0: Unified API structure - all routes under resync/api/routes/
+        """
+        # =================================================================
+        # CORE ROUTERS (from resync/api/ - backward compatible)
+        # =================================================================
         from resync.api.admin import admin_router
         from resync.api.admin_prompts import prompt_router
         from resync.api.agents import agents_router
@@ -397,12 +575,38 @@ class ApplicationFactory:
             from resync.api.health import config_router
             from resync.api.rag_upload import router as rag_upload_router
 
-            # Register additional routers
             self.app.include_router(api_router, prefix="/api")
             self.app.include_router(config_router, prefix="/api/v1")
             self.app.include_router(rag_upload_router, prefix="/api/v1")
         except ImportError as e:
             logger.warning("optional_routers_not_available", error=str(e))
+
+        # v5.9.8: Enhanced endpoints (orchestrator-based)
+        try:
+            from resync.api.enhanced_endpoints import enhanced_router
+
+            self.app.include_router(enhanced_router)
+            logger.info("enhanced_endpoints_registered", prefix="/api/v2")
+        except ImportError as e:
+            logger.warning("enhanced_endpoints_not_available", error=str(e))
+
+        # v5.9.8: GraphRAG admin endpoints
+        try:
+            from resync.api.graphrag_admin import router as graphrag_admin_router
+
+            self.app.include_router(graphrag_admin_router)
+            logger.info("graphrag_admin_endpoints_registered", prefix="/api/admin/graphrag")
+        except ImportError as e:
+            logger.warning("graphrag_admin_not_available", error=str(e))
+
+        # Register unified config API (v5.9.8)
+        try:
+            from resync.api.unified_config_api import router as unified_config_router
+            
+            self.app.include_router(unified_config_router)
+            logger.info("unified_config_endpoints_registered", prefix="/api/admin/config")
+        except ImportError as e:
+            logger.warning("unified_config_api_not_available", error=str(e))
 
         # Register monitoring routers
         try:
@@ -415,7 +619,88 @@ class ApplicationFactory:
         except ImportError as e:
             logger.warning("monitoring_routers_not_available", error=str(e))
 
-        # Register core routers
+        # =================================================================
+        # v5.8.0: UNIFIED ROUTES (migrated from fastapi_app/)
+        # =================================================================
+        try:
+            # Admin routes (migrated from fastapi_app)
+            from resync.api.routes.admin.backup import router as backup_router
+            from resync.api.routes.admin.config import router as admin_config_router
+            from resync.api.routes.admin.connectors import router as connectors_router
+            from resync.api.routes.admin.environment import router as environment_router
+            from resync.api.routes.admin.feedback_curation import (
+                router as feedback_curation_router,
+            )
+            from resync.api.routes.admin.rag_reranker import router as rag_reranker_router
+            from resync.api.routes.admin.semantic_cache import router as semantic_cache_router
+            from resync.api.routes.admin.teams import router as teams_router
+            from resync.api.routes.admin.threshold_tuning import router as threshold_tuning_router
+            from resync.api.routes.admin.tws_instances import router as tws_instances_router
+            from resync.api.routes.admin.users import router as admin_users_router
+            from resync.api.routes.admin.v2 import router as admin_v2_router
+
+            # Other routes (migrated from fastapi_app)
+            from resync.api.routes.core.status import router as status_router
+            from resync.api.routes.monitoring.admin_monitoring import (
+                router as admin_monitoring_router,
+            )
+
+            # Monitoring routes (migrated from fastapi_app)
+            from resync.api.routes.monitoring.ai_monitoring import router as ai_monitoring_router
+            from resync.api.routes.monitoring.metrics_dashboard import (
+                router as metrics_dashboard_router,
+            )
+            from resync.api.routes.monitoring.observability import router as observability_router
+
+            # learning_router removed in v5.9.3 (drift/eval features unused)
+            from resync.api.routes.rag.query import router as rag_query_router
+
+            # Register unified admin routes
+            unified_admin_routers = [
+                (backup_router, "/api/v1/admin", ["Admin - Backup"]),
+                (admin_config_router, "/api/v1/admin", ["Admin - Config"]),
+                (teams_router, "/api/v1/admin", ["Admin - Teams"]),
+                (tws_instances_router, "/api/v1/admin", ["Admin - TWS Instances"]),
+                (admin_users_router, "/api/v1/admin", ["Admin - Users"]),
+                (semantic_cache_router, "/api/v1/admin", ["Admin - Semantic Cache"]),
+                (rag_reranker_router, "/api/v1", ["Admin - RAG Reranker"]),
+                (threshold_tuning_router, "/api/v1/admin", ["Admin - Threshold Tuning"]),
+                (environment_router, "/api/v1/admin", ["Admin - Environment"]),
+                (connectors_router, "/api/v1/admin", ["Admin - Connectors"]),
+                (feedback_curation_router, "", ["Admin - Feedback Curation"]),
+                (admin_v2_router, "/api/v2/admin", ["Admin V2"]),
+            ]
+
+            # Register unified monitoring routes
+            unified_monitoring_routers = [
+                (ai_monitoring_router, "/api/v1/monitoring", ["Monitoring - AI"]),
+                (observability_router, "/api/v1/monitoring", ["Monitoring - Observability"]),
+                (metrics_dashboard_router, "/api/v1/monitoring", ["Monitoring - Metrics"]),
+                (admin_monitoring_router, "/api/v1/monitoring", ["Monitoring - Admin"]),
+            ]
+
+            # Register other unified routes
+            unified_other_routers = [
+                (status_router, "/api/v1", ["Status"]),
+                # learning_router removed in v5.9.3
+                (rag_query_router, "/api/v1/rag", ["RAG"]),
+            ]
+
+            for router, prefix, tags in unified_admin_routers + unified_monitoring_routers + unified_other_routers:
+                self.app.include_router(router, prefix=prefix, tags=tags)
+
+            logger.info(
+                "unified_routers_registered",
+                admin_count=len(unified_admin_routers),
+                monitoring_count=len(unified_monitoring_routers),
+                other_count=len(unified_other_routers),
+            )
+        except ImportError as e:
+            logger.warning("unified_routers_not_available", error=str(e))
+
+        # =================================================================
+        # LEGACY CORE ROUTERS (backward compatible)
+        # =================================================================
         routers = [
             (health_router, "/api/v1", ["Health"]),
             (agents_router, "/api/v1/agents", ["Agents"]),
@@ -425,9 +710,7 @@ class ApplicationFactory:
             (cors_monitor_router, "/api/v1", ["CORS"]),
             (performance_router, "/api", ["Performance"]),
             (admin_router, "/api/v1", ["Admin"]),
-            # Also register admin router at root level for /admin access
             (admin_router, "", ["Admin"]),
-            # Prompt management endpoints
             (prompt_router, "/api/v1", ["Admin - Prompts"]),
         ]
 

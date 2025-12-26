@@ -12,7 +12,7 @@ class TestDatabaseModels:
 
     def test_user_role_enum(self):
         """Test UserRole enum."""
-        from resync.fastapi_app.db.models import UserRole
+        from resync.core.database.models.auth import UserRole
 
         assert UserRole.ADMIN.value == "admin"
         assert UserRole.USER.value == "user"
@@ -20,13 +20,13 @@ class TestDatabaseModels:
 
     def test_user_model_import(self):
         """Test User model can be imported."""
-        from resync.fastapi_app.db.models import User
+        from resync.core.database.models.auth import User
 
         assert User is not None
 
     def test_database_import(self):
         """Test database module can be imported."""
-        from resync.fastapi_app.db import database
+        from resync.core import database
 
         assert database.Base is not None
 
@@ -36,13 +36,13 @@ class TestUserService:
 
     def test_user_service_import(self):
         """Test UserService can be imported."""
-        from resync.fastapi_app.db.user_service import UserService
+        from resync.core.database.repositories.user_repository import UserService
 
         assert UserService is not None
 
     def test_user_service_has_methods(self):
         """Test UserService has expected methods."""
-        from resync.fastapi_app.db.user_service import UserService
+        from resync.core.database.repositories.user_repository import UserService
 
         assert hasattr(UserService, "create_user")
         assert hasattr(UserService, "get_user_by_id")
@@ -54,7 +54,7 @@ class TestSecurityUpdates:
 
     def test_security_imports(self):
         """Test security module imports."""
-        from resync.fastapi_app.core.security import (
+        from resync.api.core.security import (
             check_permissions,
             create_access_token,
             get_current_user,
@@ -73,7 +73,7 @@ class TestSecurityUpdates:
 
     def test_password_hashing(self):
         """Test password hashing functions."""
-        from resync.fastapi_app.core.security import (
+        from resync.api.core.security import (
             get_password_hash,
             verify_password,
         )
@@ -91,7 +91,7 @@ class TestSecurityUpdates:
 
     def test_create_access_token(self):
         """Test token creation."""
-        from resync.fastapi_app.core.security import create_access_token
+        from resync.api.core.security import create_access_token
 
         token = create_access_token({"sub": "user123"})
         assert isinstance(token, str)
@@ -99,7 +99,7 @@ class TestSecurityUpdates:
 
     def test_verify_token(self):
         """Test token verification."""
-        from resync.fastapi_app.core.security import (
+        from resync.api.core.security import (
             create_access_token,
             verify_token,
         )
@@ -114,14 +114,14 @@ class TestSecurityUpdates:
 
     def test_verify_invalid_token(self):
         """Test invalid token returns None."""
-        from resync.fastapi_app.core.security import verify_token
+        from resync.api.core.security import verify_token
 
         result = verify_token("invalid_token")
         assert result is None
 
     def test_check_permissions(self):
         """Test permission checking."""
-        from resync.fastapi_app.core.security import check_permissions
+        from resync.api.core.security import check_permissions
 
         assert check_permissions(["read"], ["read", "write"])
         assert check_permissions(["read", "write"], ["read", "write", "delete"])
@@ -129,14 +129,14 @@ class TestSecurityUpdates:
 
     def test_require_permissions_decorator(self):
         """Test require_permissions creates dependency."""
-        from resync.fastapi_app.core.security import require_permissions
+        from resync.api.core.security import require_permissions
 
         checker = require_permissions(["read"])
         assert callable(checker)
 
     def test_require_role_decorator(self):
         """Test require_role creates dependency."""
-        from resync.fastapi_app.core.security import require_role
+        from resync.api.core.security import require_role
 
         checker = require_role(["admin"])
         assert callable(checker)

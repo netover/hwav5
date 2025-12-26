@@ -40,6 +40,19 @@ __doc__ = (
 # Mantém a API pública coesa e evita divergência entre imports e __all__.
 # ---------------------------------------------------------------------------
 _EXPORTS: dict[str, tuple[str, str]] = {
+    # === MODELS (v5.4.9 - moved from core/) ===
+    "ComponentHealth": ("health_models", "ComponentHealth"),
+    "ComponentType": ("health_models", "ComponentType"),
+    "HealthCheckConfig": ("health_models", "HealthCheckConfig"),
+    "HealthCheckResult": ("health_models", "HealthCheckResult"),
+    "HealthStatus": ("health_models", "HealthStatus"),
+    "SystemHealthStatus": ("health_models", "SystemHealthStatus"),
+    "get_status_color": ("health_models", "get_status_color"),
+    "get_status_description": ("health_models", "get_status_description"),
+    # === SERVICE (v5.4.9 - moved from core/) ===
+    "get_health_check_service": ("health_service", "get_health_check_service"),
+    "get_health_status": ("health_service", "get_health_status"),
+    "shutdown_health_check_service": ("health_service", "shutdown_health_check_service"),
     # === RECOMMENDED (v5.3.9+) ===
     # Unified service (consolidates orchestrator + enhanced)
     "UnifiedHealthService": ("unified_health_service", "UnifiedHealthService"),

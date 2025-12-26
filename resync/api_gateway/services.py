@@ -11,7 +11,7 @@ import logging
 from abc import abstractmethod
 from typing import Any, Protocol
 
-from resync.core.cache_hierarchy import (
+from resync.core.cache import (
     get_cache_hierarchy,
 )
 from resync.core.interfaces import (
@@ -97,7 +97,7 @@ class TWSService:
             result = await self.tws_client.get_system_status()
 
             # Store in cache
-            await self.cache.set(cache_key, result.dict(), ttl=30)
+            await self.cache.set(cache_key, result.dict(), ttl_seconds=30)
 
             return result
         except Exception as e:
@@ -121,7 +121,7 @@ class TWSService:
             result = await self.tws_client.get_workstations_status()
 
             # Store in cache
-            await self.cache.set(cache_key, [ws.dict() for ws in result], ttl=30)
+            await self.cache.set(cache_key, [ws.dict() for ws in result], ttl_seconds=30)
 
             return result
         except Exception as e:
@@ -145,7 +145,7 @@ class TWSService:
             result = await self.tws_client.get_jobs_status()
 
             # Store in cache
-            await self.cache.set(cache_key, [job.dict() for job in result], ttl=30)
+            await self.cache.set(cache_key, [job.dict() for job in result], ttl_seconds=30)
 
             return result
         except Exception as e:
@@ -169,7 +169,7 @@ class TWSService:
             result = await self.tws_client.get_critical_path_status()
 
             # Store in cache
-            await self.cache.set(cache_key, [cj.dict() for cj in result], ttl=30)
+            await self.cache.set(cache_key, [cj.dict() for cj in result], ttl_seconds=30)
 
             return result
         except Exception as e:
@@ -204,7 +204,7 @@ class TWSService:
                     await self.cache.set(
                         f"service_job_status_{job_id}",
                         job_status.dict() if job_status else None,
-                        ttl=30,
+                        ttl_seconds=30,
                     )
 
             return results

@@ -2,7 +2,7 @@ import logging
 import time
 from datetime import datetime
 
-from resync.core.health_models import (
+from resync.core.health.health_models import (
     ComponentHealth,
     ComponentType,
     HealthCheckResult,

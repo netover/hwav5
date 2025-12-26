@@ -73,10 +73,6 @@ class MockTWSClient:
             )
             self.mock_data = {}
             # Don't raise here to allow the service to continue with empty data
-        except (OSError, IsADirectoryError) as e:
-            logger.error("Failed to access mock data file at %s: %s", mock_data_path, e)
-            self.mock_data = {}
-            # Don't raise here to allow the service to continue with empty data
         except FileNotFoundError as e:
             logger.error("Mock data file not found at %s: %s", mock_data_path, e)
             self.mock_data = {}
@@ -87,6 +83,10 @@ class MockTWSClient:
                 mock_data_path,
                 e,
             )
+            self.mock_data = {}
+            # Don't raise here to allow the service to continue with empty data
+        except (OSError, IsADirectoryError) as e:
+            logger.error("Failed to access mock data file at %s: %s", mock_data_path, e)
             self.mock_data = {}
             # Don't raise here to allow the service to continue with empty data
         except UnicodeDecodeError as e:

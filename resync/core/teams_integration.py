@@ -433,7 +433,7 @@ class TeamsIntegration:
         )
 
         try:
-            from resync.core.knowledge_graph import get_knowledge_graph
+            from resync.knowledge.retrieval.graph import get_knowledge_graph
 
             kg = await get_knowledge_graph()
             if kg:

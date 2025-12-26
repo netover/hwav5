@@ -413,7 +413,7 @@ def register_exception_handlers(app):
     from starlette.exceptions import HTTPException as StarletteHTTPException
 
     from resync.core.exceptions import ResyncException as BaseResyncException
-    from resync.core.exceptions_enhanced import (
+    from resync.core.exceptions import (
         ResyncException as EnhancedResyncException,
     )
 

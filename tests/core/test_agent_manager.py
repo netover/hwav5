@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from resync.core.agent_manager import AgentManager
-from resync.tool_definitions.tws_tools import TWSStatusTool
+from resync.tools.definitions.tws import TWSStatusTool
 
 
 @pytest.fixture

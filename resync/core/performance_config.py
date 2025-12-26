@@ -44,7 +44,7 @@ class PerformanceConfig:
 
     # LLM Performance
     LLM_CONCURRENT_REQUESTS_MAX = 10
-    LLM_REQUEST_TIMEOUT = 120.0
+    LLM_REQUEST_TIMEOUT = 30.0  # 30s realistic timeout for production
     LLM_RATE_LIMIT_REQUESTS = 60  # per minute
     LLM_RATE_LIMIT_TOKENS = 100000  # per minute
 

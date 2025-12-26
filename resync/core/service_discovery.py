@@ -107,10 +107,9 @@ class ServiceInstance:
         if self.status == ServiceStatus.HEALTHY:
             # Penalize based on response time and failures
             base_score = 100.0
-            if self.response_time_avg > 0:
+            if self.response_time_avg > 0 and self.response_time_avg > 0.5:
                 # Penalize slow responses (>500ms)
-                if self.response_time_avg > 0.5:
-                    base_score -= min(30, (self.response_time_avg - 0.5) * 20)
+                base_score -= min(30, (self.response_time_avg - 0.5) * 20)
 
             # Penalize recent failures
             if self.consecutive_failures > 0:

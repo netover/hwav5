@@ -1,141 +1,142 @@
 # =============================================================================
-# Resync v5.3.0 - HCL Workload Automation AI Interface
+# Resync v5.9.4 - HCL Workload Automation AI Interface
 # =============================================================================
 # SINGLE SOURCE OF TRUTH for all Python dependencies
+# All versions PINNED for reproducible production builds
 # Install: pip install -r requirements.txt
 # =============================================================================
 
 # -----------------------------------------------------------------------------
 # Core Web Framework
 # -----------------------------------------------------------------------------
-fastapi>=0.109.0
-uvicorn[standard]>=0.27.0
-starlette>=0.35.0
-python-multipart>=0.0.6
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+starlette==0.41.3
+python-multipart==0.0.19
 
 # -----------------------------------------------------------------------------
 # Database - PostgreSQL Unified Stack (Relational + Graph + Vector)
 # -----------------------------------------------------------------------------
-sqlalchemy[asyncio]>=2.0.0
-asyncpg>=0.29.0              # PostgreSQL async driver (REQUIRED)
-alembic>=1.13.0              # Database migrations (async mode)
-pgvector>=0.3.0              # Vector similarity search extension
-
-# Note: Apache AGE extension for graph queries is installed via PostgreSQL
-# See docs/POSTGRESQL_EXTENSIONS_SETUP.md for installation instructions
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+pgvector==0.3.6
 
 # -----------------------------------------------------------------------------
 # Authentication & Security
 # -----------------------------------------------------------------------------
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-bcrypt>=4.0.0
+PyJWT==2.10.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
 
 # -----------------------------------------------------------------------------
 # HTTP Clients
 # -----------------------------------------------------------------------------
-httpx>=0.26.0
-aiohttp>=3.9.0
+httpx==0.28.1
+aiohttp==3.11.11
 
 # -----------------------------------------------------------------------------
 # Validation & Data Models
 # -----------------------------------------------------------------------------
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
-email-validator>=2.1.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+email-validator==2.2.0
 
 # -----------------------------------------------------------------------------
 # Configuration
 # -----------------------------------------------------------------------------
-python-dotenv>=1.0.0
-pyyaml>=6.0.0
-toml>=0.10.0
+python-dotenv==1.0.1
+pyyaml==6.0.2
+toml==0.10.2
 
 # -----------------------------------------------------------------------------
 # File Operations
 # -----------------------------------------------------------------------------
-watchdog>=3.0.0              # File watching for hot-reload
-aiofiles>=23.2.0             # Async file I/O
+watchdog==6.0.0
+aiofiles==24.1.0
 
 # -----------------------------------------------------------------------------
-# System Monitoring
+# System Monitoring & Runtime Utils
 # -----------------------------------------------------------------------------
-psutil>=5.9.0
+psutil==6.1.1
+numpy==2.2.1
+cachetools==5.5.0
+networkx==3.4.2
+python-docx==1.1.2
+openpyxl==3.1.5
 
 # -----------------------------------------------------------------------------
 # LLM Integration
 # -----------------------------------------------------------------------------
-litellm>=1.0.0               # Multi-provider LLM gateway
-openai>=1.0.0                # OpenAI API client
-anthropic>=0.18.0            # Anthropic API client
-tiktoken>=0.7.0              # Token counting for LLM context
+litellm==1.55.8
+openai==1.58.1
+anthropic==0.42.0
+tiktoken==0.8.0
 
 # -----------------------------------------------------------------------------
 # AI Agent Framework
 # -----------------------------------------------------------------------------
-agno>=1.1.0                  # Multi-agent orchestration (Agno Teams)
-langgraph>=0.2.0             # Agent state graphs and workflows
+langgraph==0.2.60
 
 # -----------------------------------------------------------------------------
 # AI Observability & Prompt Management
 # -----------------------------------------------------------------------------
-langfuse>=2.0.0              # Prompt versioning, A/B testing, tracing
+langfuse==2.57.1
 
 # -----------------------------------------------------------------------------
 # AI Monitoring & Drift Detection
 # -----------------------------------------------------------------------------
-evidently>=0.4.0             # Model monitoring and data drift detection
-pandas>=2.0.0                # DataFrame operations (required by Evidently)
+evidently==0.4.48
+pandas==2.2.3
 
 # -----------------------------------------------------------------------------
 # Resilience & Performance Patterns
 # -----------------------------------------------------------------------------
-tenacity>=8.2.0              # Retry with exponential backoff
-pybreaker>=1.1.0             # Circuit breaker pattern
-
-# -----------------------------------------------------------------------------
-# Metrics & Observability
-# -----------------------------------------------------------------------------
-# Note: Project uses custom Prometheus-compatible metrics in core/metrics_compat.py
-# No external prometheus-client dependency needed
+tenacity==9.0.0
+pybreaker==1.2.0
 
 # -----------------------------------------------------------------------------
 # Document Processing (RAG)
 # -----------------------------------------------------------------------------
-beautifulsoup4>=4.12.0       # HTML parsing for IBM/HCL documentation
-lxml>=5.0.0                  # Fast HTML/XML parser backend
-pypdf>=3.17.0                # PDF text extraction
+beautifulsoup4==4.12.3
+lxml==5.3.0
+pypdf==5.1.0
 
 # -----------------------------------------------------------------------------
 # Caching
 # -----------------------------------------------------------------------------
-redis[hiredis]>=5.0.0        # Redis with C extension for performance
-aiocache>=0.12.0             # Async caching abstraction
+redis[hiredis]==5.2.1
+aiocache==0.12.3
 
 # -----------------------------------------------------------------------------
 # Logging
 # -----------------------------------------------------------------------------
-structlog>=24.1.0            # Structured logging
+structlog==24.4.0
 
 # -----------------------------------------------------------------------------
 # Testing
 # -----------------------------------------------------------------------------
-pytest>=8.0.0
-pytest-asyncio>=0.23.0
-pytest-cov>=4.1.0
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-cov==6.0.0
 
 # -----------------------------------------------------------------------------
-# Development Tools (optional)
+# Performance optimizations
 # -----------------------------------------------------------------------------
-# black>=24.0                # Code formatter
-# isort>=5.13                # Import sorter
-# ruff>=0.3.0                # Fast linter
-# pylint>=3.0                # Static analysis
+uvloop==0.21.0
+httptools==0.6.4
 
 # -----------------------------------------------------------------------------
-# OpenTelemetry (optional - for distributed tracing)
+# Workflows & Automation (v5.9.8 - NEW!)
 # -----------------------------------------------------------------------------
-# opentelemetry-api>=1.22.0
-# opentelemetry-sdk>=1.22.0
-# opentelemetry-instrumentation-fastapi>=0.43b0
-# opentelemetry-instrumentation-httpx>=0.43b0
+langgraph==0.2.45
+prefect==3.1.9
+pandas==2.2.3
+numpy==2.0.2
+scikit-learn==1.5.2
+
+# -----------------------------------------------------------------------------
+# Enhanced Monitoring & Metrics (v5.9.8 - NEW!)
+# -----------------------------------------------------------------------------
+# All monitoring handled via existing dependencies (httpx, asyncpg)
+

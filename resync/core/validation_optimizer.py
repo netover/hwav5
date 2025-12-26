@@ -180,6 +180,20 @@ class OptimizedValidator:
         self.cache.set(cache_key, result)
         return result
 
+    @lru_cache(maxsize=128)
+    def validate_json_web_key(self, key: str) -> bool:
+        """
+        Validate JSON web key efficiently.
+        """
+        cache_key = f"json_web_key:{key}"
+        cached_result = self.cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+
+        result = bool(self._compiled_patterns["json_web_key"].match(key))
+        self.cache.set(cache_key, result)
+        return result
+
     def validate_field_names_batch(self, fields: list[str]) -> dict[str, bool]:
         """
         Validate multiple field names efficiently.

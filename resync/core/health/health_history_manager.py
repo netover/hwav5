@@ -11,7 +11,7 @@ from typing import Any
 
 import structlog
 
-from resync.core.health_models import (
+from resync.core.health.health_models import (
     ComponentHealth,
     HealthCheckResult,
     HealthStatus,
@@ -264,15 +264,14 @@ class HealthHistoryManager:
         # Filter entries that contain the component
         component_history = []
         for entry in self.health_history:
-            if entry.timestamp >= cutoff_time:
-                if component_name in entry.component_changes:
-                    component_history.append(
-                        {
-                            "timestamp": entry.timestamp,
-                            "status": entry.component_changes[component_name],
-                            "overall_status": entry.overall_status,
-                        }
-                    )
+            if entry.timestamp >= cutoff_time and component_name in entry.component_changes:
+                component_history.append(
+                    {
+                        "timestamp": entry.timestamp,
+                        "status": entry.component_changes[component_name],
+                        "overall_status": entry.overall_status,
+                    }
+                )
 
         # Apply entry limit if specified
         if max_entries is not None and len(component_history) > max_entries:

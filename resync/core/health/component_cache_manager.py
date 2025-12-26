@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 import structlog
 
-from resync.core.health_models import ComponentHealth
+from resync.core.health.health_models import ComponentHealth
 
 logger = structlog.get_logger(__name__)
 

@@ -11,8 +11,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
-
-from resync.api.health import health_router, shutdown_health_service
 from resync.core.health_models import (
     ComponentHealth,
     ComponentType,
@@ -20,6 +18,8 @@ from resync.core.health_models import (
     HealthStatus,
     HealthStatusHistory,
 )
+
+from resync.api.health import health_router, shutdown_health_service
 
 
 @pytest.fixture

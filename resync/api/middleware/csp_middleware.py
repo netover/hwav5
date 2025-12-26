@@ -20,16 +20,18 @@ class CSPMiddleware(BaseHTTPMiddleware):
     and adds appropriate CSP headers to protect against XSS and other attacks.
     """
 
-    def __init__(self, app, report_only: bool = False):
+    def __init__(self, app, report_only: bool = False, enforce_https: bool = False):
         """
         Initialize CSP middleware.
 
         Args:
             app: The FastAPI application
             report_only: If True, CSP violations are reported but not enforced
+            enforce_https: If True, add HSTS header for HTTPS enforcement
         """
         super().__init__(app)
         self.report_only = report_only
+        self.enforce_https = enforce_https
         # Don't import settings here to avoid potential circular imports
         # Import will be done lazily when needed
         self._settings = None  # Will be set when first needed
@@ -156,6 +158,19 @@ class CSPMiddleware(BaseHTTPMiddleware):
 
         # Add Referrer-Policy for privacy protection
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Add HSTS for HTTPS enforcement (1 year, include subdomains)
+        # Only set in production when behind HTTPS
+        if self.enforce_https:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains; preload"
+            )
+
+        # Add Permissions-Policy to restrict browser features
+        response.headers["Permissions-Policy"] = (
+            "accelerometer=(), camera=(), geolocation=(), gyroscope=(), "
+            "magnetometer=(), microphone=(), payment=(), usb=()"
+        )
 
     async def _handle_csp_violation_report(self, request: Request) -> None:
         """

@@ -36,14 +36,13 @@ class QueryBatch:
 
     def __post_init__(self):
         """Generate batch ID after initialization."""
-        if not self.batch_id:
+        if not self.batch_id and self.queries:
             # Create deterministic batch ID based on first query
-            if self.queries:
-                sql, params = self.queries[0]
-                batch_content = f"{sql}|{params}|{self.created_at}"
-                # Use BLAKE2b instead of MD5 for better security
-                hash_value = hashlib.blake2b(batch_content.encode(), digest_size=4).hexdigest()
-                self.batch_id = f"batch_{hash_value}"
+            sql, params = self.queries[0]
+            batch_content = f"{sql}|{params}|{self.created_at}"
+            # Use BLAKE2b instead of MD5 for better security
+            hash_value = hashlib.blake2b(batch_content.encode(), digest_size=4).hexdigest()
+            self.batch_id = f"batch_{hash_value}"
 
     @property
     def is_full(self) -> bool:
@@ -409,9 +408,13 @@ class DatabaseOptimizer:
 
         # Look for existing batch of same type
         for batch_id, batch in self.batches.items():
-            if batch_id.startswith(f"{query_type}_") and not batch.is_full and not batch.is_expired:
-                if batch.add_query(sql, params):
-                    return batch_id
+            if (
+                batch_id.startswith(f"{query_type}_")
+                and not batch.is_full
+                and not batch.is_expired
+                and batch.add_query(sql, params)
+            ):
+                return batch_id
 
         # Create new batch if none available
         if len(self.batches) < self.max_concurrent_batches:

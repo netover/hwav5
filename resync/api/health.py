@@ -7,14 +7,12 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
 
-from resync.core.health_models import (
+from resync.core.health import (
     ComponentType,
     HealthStatus,
+    get_health_check_service,
     get_status_color,
     get_status_description,
-)
-from resync.core.health_service import (
-    get_health_check_service,
     shutdown_health_check_service,
 )
 
@@ -295,10 +293,10 @@ async def get_detailed_health(
         ) from e
 
 
-@router.get("/ready")
-async def readiness_probe() -> dict[str, Any]:
+@router.get("/ready-detailed")
+async def readiness_probe_detailed() -> dict[str, Any]:
     """
-    Kubernetes readiness probe endpoint.
+    Kubernetes readiness probe endpoint (detailed version).
 
     Returns 503 Service Unavailable if core components are unhealthy,
     200 OK if system is ready to serve requests.
@@ -357,10 +355,10 @@ async def readiness_probe() -> dict[str, Any]:
         ) from e
 
 
-@router.get("/live")
-async def liveness_probe() -> dict[str, Any]:
+@router.get("/live-detailed")
+async def liveness_probe_detailed() -> dict[str, Any]:
     """
-    Kubernetes liveness probe endpoint.
+    Kubernetes liveness probe endpoint (detailed version).
 
     Returns 503 Service Unavailable if the health check system itself is failing,
     200 OK if the system is alive and responding.
@@ -598,11 +596,134 @@ async def list_components() -> dict[str, list[dict[str, str]]]:
     return {"components": components}
 
 
-@router.on_event("shutdown")
-async def shutdown_health_service():
-    """Shutdown health check service on application shutdown."""
+# =============================================================================
+# KUBERNETES/SYSTEMD HEALTH PROBES
+# =============================================================================
+# Implementação de health checks separados conforme melhores práticas 2024
+
+
+@router.get("/live")
+async def liveness_probe():
+    """
+    Liveness probe - Processo está vivo?
+    
+    Usado por Kubernetes/systemd para detectar processos mortos ou travados.
+    Retorna sempre 200 OK se o processo está respondendo.
+    
+    Returns:
+        Status simples indicando que o processo está vivo
+    """
+    return {
+        "status": "alive",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/ready")
+async def readiness_probe():
+    """
+    Readiness probe - Pronto para receber tráfego?
+    
+    Verifica se as dependências críticas estão disponíveis:
+    - PostgreSQL database
+    - Redis cache
+    
+    Usado para decidir se direcionar tráfego para esta instância.
+    
+    Returns:
+        Status 200 se pronto, 503 se não pronto
+    """
+    from fastapi.responses import JSONResponse
+    from sqlalchemy import text
+    
+    checks = {}
+    all_ready = True
+    
+    # Verifica PostgreSQL
     try:
-        await shutdown_health_check_service()
-        logger.info("Health service shutdown completed")
+        from resync.core.database.engine import get_engine
+        engine = get_engine()
+        async with engine.connect() as conn:
+            await conn.scalar(text("SELECT 1"))
+        checks["database"] = {"status": "ok", "type": "postgresql"}
     except Exception as e:
-        logger.error(f"Error during health service shutdown: {e}", exc_info=True)
+        checks["database"] = {
+            "status": "error",
+            "error": str(e),
+            "type": "postgresql"
+        }
+        all_ready = False
+    
+    # Verifica Redis
+    try:
+        from resync.core.redis_init import get_redis_client
+        redis = get_redis_client()
+        await redis.ping()
+        checks["redis"] = {"status": "ok"}
+    except Exception as e:
+        checks["redis"] = {
+            "status": "error", 
+            "error": str(e)
+        }
+        all_ready = False
+    
+    if all_ready:
+        return {
+            "status": "ready",
+            "timestamp": datetime.utcnow().isoformat(),
+            "checks": checks,
+        }
+    else:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "not_ready",
+                "timestamp": datetime.utcnow().isoformat(),
+                "checks": checks,
+            }
+        )
+
+
+@router.get("/startup")
+async def startup_probe():
+    """
+    Startup probe - Inicialização completa?
+    
+    Verifica se a aplicação completou a inicialização.
+    Usado pelo Kubernetes para saber quando começar a enviar tráfego.
+    
+    Returns:
+        Status 200 se inicializado, 503 se ainda iniciando
+    """
+    from fastapi.responses import JSONResponse
+    
+    # Verifica se app_container está inicializado
+    try:
+        from resync.core.container import app_container
+        
+        if hasattr(app_container, '_initialized') and app_container._initialized:
+            return {
+                "status": "started",
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={
+                    "status": "starting",
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            )
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "not_started",
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        )
+
+
+# Nota: @router.on_event("shutdown") foi removido (deprecado no FastAPI 0.111+)
+# Lógica de shutdown movida para app_factory.py lifespan manager

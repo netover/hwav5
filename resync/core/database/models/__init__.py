@@ -4,6 +4,12 @@ Database Models Package.
 Contains all SQLAlchemy models for PostgreSQL storage.
 """
 
+# Auth Models (v5.4.7 consolidation)
+from .auth import (
+    AuditLog,
+    User,
+    UserRole,
+)
 from .stores import (
     ActiveLearningCandidate,
     # Audit Models
@@ -45,6 +51,7 @@ __all__ = [
     "JobStatusEnum",
     "EventSeverity",
     "ContentType",
+    "UserRole",
     # TWS Models
     "TWSSnapshot",
     "TWSJobStatus",
@@ -58,6 +65,9 @@ __all__ = [
     # Audit Models
     "AuditEntry",
     "AuditQueueItem",
+    "AuditLog",
+    # Auth Models
+    "User",
     # Analytics Models
     "UserProfile",
     "SessionHistory",

@@ -230,12 +230,28 @@ class TWSBackgroundPoller:
         self._start_time: datetime | None = None
 
         # Configurações de detecção
+        # v5.3.20: Thresholds agora são configuráveis e baseados em porcentagem
         self.job_stuck_threshold_minutes = 60  # Job rodando há mais de 60 min
         self.job_late_threshold_minutes = 30  # Job atrasado mais de 30 min
+
+        # Thresholds para health status (configurable via settings)
+        # Podem ser absolutos ou percentuais dependendo do volume
+        self.failure_threshold_min = 5  # Mínimo de falhas para considerar degraded
+        self.failure_threshold_critical_min = 10  # Mínimo para critical
+        self.failure_threshold_percentage = 0.05  # 5% de falhas = degraded
+        self.failure_threshold_critical_percentage = 0.10  # 10% = critical
+        self.workstation_offline_threshold = 1  # Qualquer WS offline = degraded
+        self.workstation_offline_critical = 2  # 2+ WS offline = critical
 
         logger.info(
             "tws_background_poller_initialized",
             polling_interval=polling_interval,
+            failure_thresholds={
+                "min_degraded": self.failure_threshold_min,
+                "min_critical": self.failure_threshold_critical_min,
+                "pct_degraded": f"{self.failure_threshold_percentage * 100}%",
+                "pct_critical": f"{self.failure_threshold_critical_percentage * 100}%",
+            },
         )
 
     # =========================================================================
@@ -371,11 +387,31 @@ class TWSBackgroundPoller:
             jobs_pending = sum(1 for j in jobs if j.status in ["READY", "HOLD"])
 
             # Determina saúde do sistema
+            # v5.3.20: Lógica baseada em porcentagem + mínimos configuráveis
+            # Isso evita alert fatigue em ambientes com alto volume de jobs
             ws_offline = sum(1 for ws in workstations if ws.status != "LINKED")
+            total_jobs = len(jobs)
+
+            # Calcula thresholds dinâmicos baseados no volume
+            # Usa o MAIOR entre: threshold absoluto mínimo OU porcentagem do total
+            failure_threshold_degraded = max(
+                self.failure_threshold_min, int(total_jobs * self.failure_threshold_percentage)
+            )
+            failure_threshold_critical = max(
+                self.failure_threshold_critical_min,
+                int(total_jobs * self.failure_threshold_critical_percentage),
+            )
+
             system_health = "healthy"
-            if jobs_failed > 10 or ws_offline > 2:
+            if (
+                jobs_failed >= failure_threshold_critical
+                or ws_offline >= self.workstation_offline_critical
+            ):
                 system_health = "critical"
-            elif jobs_failed > 5 or ws_offline > 0:
+            elif (
+                jobs_failed >= failure_threshold_degraded
+                or ws_offline >= self.workstation_offline_threshold
+            ):
                 system_health = "degraded"
 
             return SystemSnapshot(

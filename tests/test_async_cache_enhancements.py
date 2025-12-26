@@ -6,13 +6,13 @@ import time
 from unittest.mock import patch
 
 import pytest
-
 from resync.core.adaptive_eviction import AdaptiveEviction
 from resync.core.async_cache import AsyncTTLCache
-from resync.core.incident_response import IncidentResponse
-from resync.core.metrics import runtime_metrics
 from resync.core.shard_balancer import ShardBalancer
 from resync.core.snapshot_cleaner import SnapshotCleaner
+
+from resync.core.incident_response import IncidentResponse
+from resync.core.metrics import runtime_metrics
 
 # Set test configuration
 os.environ["CACHE_VALIDATION_MODE"] = "strict"

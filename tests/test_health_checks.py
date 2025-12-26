@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from resync.core.health_models import (
     ComponentHealth,
     ComponentType,

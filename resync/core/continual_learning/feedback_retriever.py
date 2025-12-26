@@ -303,7 +303,7 @@ def create_feedback_aware_retriever(
     Returns:
         FeedbackAwareRetriever wrapping base RagRetriever
     """
-    from resync.RAG.microservice.core.retriever import RagRetriever
+    from resync.knowledge.retrieval.retriever import RagRetriever
 
     base_retriever = RagRetriever(embedder=embedder, store=store)
 

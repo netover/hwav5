@@ -1,85 +1,109 @@
+"""resync.core.encryption_service
+
+Encryption utilities intended for *explicit* use.
+
+Production notes:
+- Do not auto-generate encryption keys at runtime. If encryption is enabled, a stable
+  key must be provided via configuration (e.g., ENCRYPTION_KEY).
+- This module does **not** install global logging filters at import time.
+  Resync already performs sensitive-data redaction in structured logging.
+
+The original implementation generated a new key when ENCRYPTION_KEY was not set
+and installed an invalid logging filter (a function) on the root logger. Both
+behaviors are unsafe/unreliable for production.
+
+This refactor keeps backward compatibility for decrypting historical tokens that
+were "double base64" encoded by the legacy implementation.
 """
-Encryption service for Resync core.
-"""
+
+from __future__ import annotations
 
 import base64
 import logging
 import os
+from functools import lru_cache
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 logger = logging.getLogger(__name__)
+
+
+class EncryptionServiceError(RuntimeError):
+    """Raised when encryption/decryption cannot be performed safely."""
 
 
 class EncryptionService:
-    """Simple encryption service for sensitive data handling."""
+    """Simple Fernet-based encryption service for sensitive string data."""
 
-    def __init__(self, key: bytes | None = None):
-        # In production, the key should be stored securely
-        if key:
-            self.key = key
-        else:
-            env_key = os.getenv("ENCRYPTION_KEY")
-            if env_key:
-                self.key = env_key.encode()
-            else:
-                # This is still not ideal in production - key should be provided
-                self.key = Fernet.generate_key()
-        self.cipher_suite = Fernet(self.key)
+    def __init__(self, key: bytes):
+        # Fernet validates key format on construction.
+        try:
+            self._cipher = Fernet(key)
+        except Exception as e:  # pragma: no cover
+            raise EncryptionServiceError(
+                "Invalid Fernet key. ENCRYPTION_KEY must be a valid Fernet key generated via "
+                "cryptography.fernet.Fernet.generate_key()."
+            ) from e
+        self.key = key
 
     @staticmethod
     def generate_key() -> bytes:
-        """Generate a new encryption key."""
+        """Generate a new Fernet key."""
         return Fernet.generate_key()
 
     def encrypt(self, data: str) -> str:
-        """Encrypt sensitive data."""
+        """Encrypt a string and return a URL-safe token."""
+        if data is None:
+            raise ValueError("Cannot encrypt None")
         if not isinstance(data, str):
             data = str(data)
-        encrypted_data = self.cipher_suite.encrypt(data.encode())
-        return base64.b64encode(encrypted_data).decode()
+        token = self._cipher.encrypt(data.encode("utf-8"))
+        # Fernet tokens are already urlsafe base64 bytes.
+        return token.decode("utf-8")
 
     def decrypt(self, encrypted_data: str) -> str:
-        """Decrypt data."""
+        """Decrypt a token produced by :meth:`encrypt`.
+
+        Backward compatibility:
+        - Also supports legacy tokens that were additionally base64-encoded.
+        """
+        if encrypted_data is None:
+            raise ValueError("Cannot decrypt None")
+
+        if not isinstance(encrypted_data, str):
+            encrypted_data = str(encrypted_data)
+
+        # Fast path: token is a normal Fernet token string.
         try:
-            encrypted_bytes = base64.b64decode(encrypted_data.encode())
-            decrypted_data = self.cipher_suite.decrypt(encrypted_bytes)
-            return decrypted_data.decode()
+            clear = self._cipher.decrypt(encrypted_data.encode("utf-8"))
+            return clear.decode("utf-8")
+        except InvalidToken:
+            pass
+
+        # Legacy path: token was base64(token_bytes).
+        try:
+            raw = base64.b64decode(encrypted_data.encode("utf-8"))
+            clear = self._cipher.decrypt(raw)
+            return clear.decode("utf-8")
         except Exception as e:
-            # If decryption fails, raise an exception instead of returning original data
             logger.error(
                 "decryption_failed",
-                encrypted_data_preview=encrypted_data[:50],
-                error=str(e),
+                extra={"encrypted_data_preview": encrypted_data[:50], "error": str(e)},
             )
-            raise ValueError(f"Decryption failed: {str(e)}") from e
+            raise EncryptionServiceError("Decryption failed") from e
 
 
-# Global instance
-encryption_service = EncryptionService()
+def _load_key_from_env() -> bytes:
+    env_key = os.getenv("ENCRYPTION_KEY")
+    if not env_key:
+        raise EncryptionServiceError(
+            "ENCRYPTION_KEY is not set. Provide a stable Fernet key in production. "
+            "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+        )
+    return env_key.encode("utf-8")
 
 
-# Logger masking
-logger = logging.getLogger(__name__)
-
-
-def mask_sensitive_data_in_logs(record) -> None:
-    """Mask sensitive data in log records."""
-    if hasattr(record, "msg"):
-        msg_str = str(record.msg)
-        # Replace entire lines containing password with masked version
-        lines = msg_str.split("\n")
-        masked_lines = []
-
-        for line in lines:
-            if "password" in line.lower():
-                # Mask the entire line containing password
-                masked_lines.append("*** PASSWORD LOG ENTRY MASKED ***")
-            else:
-                masked_lines.append(line)
-
-        record.msg = "\n".join(masked_lines)
-    return True
-
-
-logging.getLogger().addFilter(mask_sensitive_data_in_logs)
+@lru_cache(maxsize=1)
+def get_encryption_service() -> EncryptionService:
+    """Return a singleton EncryptionService initialized from ENCRYPTION_KEY."""
+    return EncryptionService(_load_key_from_env())

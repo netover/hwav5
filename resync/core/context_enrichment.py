@@ -157,7 +157,7 @@ class ContextEnricher:
         """Get Knowledge Graph instance."""
         if self._kg is None:
             try:
-                from resync.core.knowledge_graph.graph import get_kg_instance
+                from resync.knowledge.retrieval.graph import get_kg_instance
 
                 self._kg = await get_kg_instance()
             except Exception as e:

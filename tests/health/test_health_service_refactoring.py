@@ -10,12 +10,11 @@ import asyncio
 import sys
 import time
 
+from resync.core.health_models import HealthCheckConfig
 from resync.core.health_service_refactored import (
     get_refactored_health_check_service,
     shutdown_refactored_health_check_service,
 )
-
-from resync.core.health_models import HealthCheckConfig
 
 # Add the project root to Python path
 sys.path.insert(0, "/d/Python/GITHUB/hwa-new")
@@ -140,6 +139,8 @@ async def test_observer_pattern():
     print("=" * 50)
 
     try:
+        from resync.core.health_models import HealthStatus
+
         from resync.core.health.health_monitoring_observer import (
             AlertingHealthObserver,
             HealthMonitoringEvent,
@@ -147,7 +148,6 @@ async def test_observer_pattern():
             LoggingHealthObserver,
             MetricsHealthObserver,
         )
-        from resync.core.health_models import HealthStatus
 
         # Create subject and observers
         subject = HealthMonitoringSubject()

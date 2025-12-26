@@ -49,21 +49,25 @@ class SettingsValidators:
         legacy_min_size = info.data.get("redis_min_connections")
         legacy_max_size = info.data.get("redis_max_connections")
 
-        if legacy_min_size is not None and legacy_max_size is not None:
+        if (
+            legacy_min_size is not None
+            and legacy_max_size is not None
+            and info.data.get("redis_pool_min_size") == 5
+            and v == 20
+        ):
             # Se os defaults ainda estão ativos, permite fallback de compat.
-            if info.data.get("redis_pool_min_size") == 5 and v == 20:
-                warnings.warn(
-                    "redis_min/max_connections are deprecated. "
-                    "Use redis_pool_min/max_size instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
+            warnings.warn(
+                "redis_min/max_connections are deprecated. "
+                "Use redis_pool_min/max_size instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            min_size = legacy_min_size
+            v = legacy_max_size
+            if v < min_size:
+                raise ValueError(
+                    f"redis_pool_max_size ({{v}}) must be >= redis_pool_min_size ({min_size})"
                 )
-                min_size = legacy_min_size
-                v = legacy_max_size
-                if v < min_size:
-                    raise ValueError(
-                        f"redis_pool_max_size ({{v}}) must be >= redis_pool_min_size ({min_size})"
-                    )
         return v
 
     @field_validator("redis_url")
@@ -142,9 +146,11 @@ class SettingsValidators:
     def validate_llm_api_key(cls, v: SecretStr, info: ValidationInfo) -> SecretStr:
         """Valida chave da API em produção."""
         env = info.data.get("environment")
-        if env == Environment.PRODUCTION:
-            if not v.get_secret_value() or v.get_secret_value() == ("dummy_key_for_development"):
-                raise ValueError("LLM_API_KEY must be set to a valid key in production")
+        if (
+            env == Environment.PRODUCTION
+            and (not v.get_secret_value() or v.get_secret_value() == "dummy_key_for_development")
+        ):
+            raise ValueError("LLM_API_KEY must be set to a valid key in production")
         return v
 
     @field_validator("tws_verify")
@@ -182,4 +188,122 @@ class SettingsValidators:
                 }
                 if v.get_secret_value().lower() in common_passwords:
                     raise ValueError("TWS_PASSWORD cannot be a common/default password")
+        return v
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, v: SecretStr, info: ValidationInfo) -> SecretStr:
+        """
+        Validate secret_key for JWT signing.
+
+        v5.3.20: Consolidated from fastapi_app/core/config.py
+        - In production: MUST be set via environment variable (not default)
+        - Must be at least 32 characters for security
+        """
+        env = info.data.get("environment")
+        secret_value = v.get_secret_value()
+
+        if env == Environment.PRODUCTION:
+            # Check for default/placeholder values
+            if "CHANGE_ME" in secret_value or secret_value == "":
+                raise ValueError(
+                    "SECRET_KEY must be set via environment variable in production. "
+                    "Generate a secure random key: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+                )
+            # Enforce minimum length for security
+            if len(secret_value) < 32:
+                raise ValueError(
+                    "SECRET_KEY must be at least 32 characters in production for security."
+                )
+        return v
+
+    @field_validator("debug")
+    @classmethod
+    def validate_debug_in_production(cls, v: bool, info: ValidationInfo) -> bool:
+        """Ensure debug mode is disabled in production."""
+        env = info.data.get("environment")
+        if env == Environment.PRODUCTION and v is True:
+            raise ValueError("Debug mode must be disabled in production")
+        return v
+
+    @field_validator("upload_dir")
+    @classmethod
+    def validate_upload_dir(cls, v: Path, info: ValidationInfo) -> Path:
+        """Warn if upload_dir is relative in production."""
+        env = info.data.get("environment")
+        if env == Environment.PRODUCTION and not v.is_absolute():
+            warnings.warn(
+                f"upload_dir '{v}' is relative. In production, use an absolute path "
+                "or mount a persistent volume to avoid data loss.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return v
+
+    @field_validator("cors_allowed_origins")
+    @classmethod
+    def validate_cors_origins(cls, v: list[str], info: ValidationInfo) -> list[str]:
+        """Ensure CORS origins are properly configured in production."""
+        env = info.data.get("environment")
+        if env == Environment.PRODUCTION and ("*" in v or "http://localhost" in str(v).lower()):
+            raise ValueError(
+                "CORS_ALLOW_ORIGINS cannot contain '*' or 'localhost' in production. "
+                "Specify exact production domains."
+            )
+        return v
+
+    @field_validator("enforce_https")
+    @classmethod
+    def validate_https_enforcement(cls, v: bool, info: ValidationInfo) -> bool:
+        """Warn if HTTPS is not enforced in production."""
+        env = info.data.get("environment")
+        if env == Environment.PRODUCTION and not v:
+            warnings.warn(
+                "enforce_https is False in production. HSTS headers will not be sent. "
+                "Enable this when running behind a TLS-terminating proxy.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return v
+
+    @field_validator("backup_dir")
+    @classmethod
+    def validate_backup_dir(cls, v: Path, info: ValidationInfo) -> Path:
+        """Warn if backup_dir is relative in production."""
+        env = info.data.get("environment")
+        if env == Environment.PRODUCTION and not v.is_absolute():
+            warnings.warn(
+                f"backup_dir '{v}' is relative. In production, use an absolute path "
+                "to ensure backups are stored in a persistent location.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return v
+
+    @field_validator("session_timeout_minutes")
+    @classmethod
+    def validate_session_timeout(cls, v: int, info: ValidationInfo) -> int:
+        """Enforce reasonable session timeout in production."""
+        env = info.data.get("environment")
+        if env == Environment.PRODUCTION and v > 60:
+            warnings.warn(
+                f"session_timeout_minutes is {v}, which is longer than recommended (30-60 min) "
+                "for production. Consider reducing for better security.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return v
+
+    @field_validator("log_level")
+    @classmethod
+    def validate_log_level(cls, v: str, info: ValidationInfo) -> str:
+        """Warn if log level is DEBUG in production."""
+        env = info.data.get("environment")
+        if env == Environment.PRODUCTION and v == "DEBUG":
+            warnings.warn(
+                "LOG_LEVEL is DEBUG in production. This may impact performance "
+                "and potentially expose sensitive information. Use INFO or WARNING.",
+                UserWarning,
+                stacklevel=2,
+            )
         return v

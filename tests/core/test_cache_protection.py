@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
-
 from resync.core.cache_with_stampede_protection import (
     CacheEntry,
     CacheWithStampedeProtection,

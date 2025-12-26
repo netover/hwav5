@@ -9,7 +9,7 @@ from typing import Any
 
 import structlog
 
-from resync.core.health_models import HealthCheckConfig
+from resync.core.health.health_models import HealthCheckConfig
 
 from .health_checkers.health_checker_factory import HealthCheckerFactory
 from .health_config_manager import HealthCheckConfigurationManager
@@ -93,9 +93,11 @@ class EnhancedHealthConfigurationManager(HealthCheckConfigurationManager):
                 config = checker.get_component_config()
                 # Merge with base thresholds
                 for key, value in config.items():
-                    if "threshold" in key.lower() or "percent" in key.lower():
-                        if isinstance(value, (int, float)):
-                            base_thresholds[f"checker_{key}"] = float(value)
+                    if (
+                        ("threshold" in key.lower() or "percent" in key.lower())
+                        and isinstance(value, (int, float))
+                    ):
+                        base_thresholds[f"checker_{key}"] = float(value)
 
         return base_thresholds
 

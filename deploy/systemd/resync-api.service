@@ -1,0 +1,55 @@
+# Resync API - Systemd Service
+# Install: sudo cp resync-api.service /etc/systemd/system/
+# Enable: sudo systemctl enable resync-api
+# Start: sudo systemctl start resync-api
+
+[Unit]
+Description=Resync TWS/HWA AI Interface API
+After=network.target postgresql.service redis.service
+Requires=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=resync
+Group=resync
+WorkingDirectory=/opt/resync
+
+# Load environment variables
+EnvironmentFile=/opt/resync/.env
+Environment="PATH=/opt/resync/.venv/bin:/usr/local/bin:/usr/bin"
+
+# Run the API
+ExecStart=/opt/resync/.venv/bin/uvicorn resync.main:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 4 \
+    --log-level info
+
+# Do NOT auto-restart here - let the monitor handle it!
+# This prevents restart loops
+Restart=no
+
+# Graceful shutdown
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/resync/logs /opt/resync/data /opt/resync/config/backups
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=4G
+CPUQuota=200%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=resync-api
+
+[Install]
+WantedBy=multi-user.target

@@ -6,9 +6,10 @@ This module contains unit tests for the HealthCheckerFactory class.
 
 from unittest.mock import MagicMock, patch
 
+from resync.core.health_models import ComponentType, HealthCheckConfig
+
 from resync.core.health.health_checkers.base_health_checker import BaseHealthChecker
 from resync.core.health.health_checkers.health_checker_factory import HealthCheckerFactory
-from resync.core.health_models import ComponentType, HealthCheckConfig
 
 
 class MockHealthChecker(BaseHealthChecker):

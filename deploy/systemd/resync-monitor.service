@@ -1,0 +1,38 @@
+# Resync Self-Healing Monitor - Systemd Service
+# Install: sudo cp resync-monitor.service /etc/systemd/system/
+# Enable: sudo systemctl enable resync-monitor
+# Start: sudo systemctl start resync-monitor
+
+[Unit]
+Description=Resync Self-Healing Health Monitor
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=resync
+Group=resync
+WorkingDirectory=/opt/resync
+Environment="PATH=/opt/resync/.venv/bin:/usr/local/bin:/usr/bin"
+
+# Run the monitor
+ExecStart=/opt/resync/.venv/bin/python -m resync.tools.self_healing
+
+# Restart the monitor itself if it crashes (meta-monitoring!)
+Restart=always
+RestartSec=10
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/resync/logs /opt/resync/data
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=resync-monitor
+
+[Install]
+WantedBy=multi-user.target

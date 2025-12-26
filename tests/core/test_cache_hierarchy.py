@@ -2,7 +2,6 @@ import asyncio
 
 import pytest
 import pytest_asyncio
-
 from resync.core.cache_hierarchy import (
     CacheHierarchy,
     CacheMetrics,

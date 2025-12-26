@@ -1,0 +1,137 @@
+# =============================================================================
+# Resync v5.9.6 - Production-Ready Multi-Stage Dockerfile
+# =============================================================================
+# 
+# Build Strategy:
+# - Multi-stage for minimal image size
+# - Non-root user for security
+# - Health checks included
+# - Optimized layer caching
+# - Python 3.12+ (recommended) or 3.10+
+#
+# Build:
+#   docker build -t resync:5.9.6 .
+#
+# Run:
+#   docker run -p 8000:8000 --env-file .env resync:5.9.6
+#
+# =============================================================================
+
+# =============================================================================
+# STAGE 1: Builder - Install dependencies
+# =============================================================================
+FROM python:3.12-slim AS builder
+
+# Build arguments
+ARG DEBIAN_FRONTEND=noninteractive
+ARG PYTHON_VERSION=3.12
+
+# Set working directory
+WORKDIR /build
+
+# Install system dependencies for building Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy only requirements first (for layer caching)
+COPY requirements.txt .
+
+# Create virtual environment and install dependencies
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
+
+# =============================================================================
+# STAGE 2: Runtime - Minimal production image
+# =============================================================================
+FROM python:3.12-slim AS runtime
+
+# Build arguments
+ARG DEBIAN_FRONTEND=noninteractive
+ARG APP_USER=resync
+ARG APP_UID=1000
+ARG APP_GID=1000
+
+# Labels for metadata
+LABEL maintainer="Resync Team" \
+      version="5.9.6" \
+      description="AI-Powered HCL Workload Automation Interface" \
+      org.opencontainers.image.source="https://github.com/resync/resync"
+
+# Install runtime dependencies only (PostgreSQL client, Redis tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    ca-certificates \
+    tini \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -g ${APP_GID} ${APP_USER} && \
+    useradd -u ${APP_UID} -g ${APP_GID} -m -s /bin/bash ${APP_USER}
+
+# Set working directory
+WORKDIR /app
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy application code
+COPY --chown=${APP_USER}:${APP_USER} . /app/
+
+# Create directories with correct permissions
+RUN mkdir -p /app/logs /app/backups /app/uploads /app/reports && \
+    chown -R ${APP_USER}:${APP_USER} /app
+
+# Set environment variables
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONIOENCODING=utf-8 \
+    PYTHONPATH=/app \
+    # FastAPI/Uvicorn settings
+    HOST=0.0.0.0 \
+    PORT=8000 \
+    # Application settings
+    ENVIRONMENT=production \
+    LOG_LEVEL=INFO
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+# Checks both /health/live (process running) and /health/ready (dependencies OK)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ready || exit 1
+
+# Switch to non-root user
+USER ${APP_USER}
+
+# Use tini as init system (proper signal handling)
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# Default command: Run with Gunicorn + Uvicorn workers
+# Can be overridden in docker-compose.yml or docker run
+CMD ["gunicorn", \
+     "-c", "gunicorn_config.py", \
+     "resync.main:app"]
+
+# =============================================================================
+# ALTERNATIVE COMMANDS (override with docker run --entrypoint or CMD)
+# =============================================================================
+
+# Development (single worker, auto-reload):
+# CMD ["uvicorn", "resync.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# Production (Uvicorn only, no Gunicorn):
+# CMD ["uvicorn", "resync.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+
+# With Granian (highest performance):
+# CMD ["granian", "--interface", "asgi", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "resync.main:app"]

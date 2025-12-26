@@ -13,7 +13,7 @@ from datetime import datetime
 import structlog
 
 from resync.core.exceptions import CacheHealthCheckError
-from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
+from resync.core.health.health_models import ComponentHealth, ComponentType, HealthStatus
 
 logger = structlog.get_logger(__name__)
 
@@ -45,7 +45,7 @@ class CacheHierarchyHealthMonitor:
 
         try:
             # Import and test the actual cache implementation
-            from resync.core.async_cache import AsyncTTLCache
+            from resync.core.cache import AsyncTTLCache
 
             # Create a test cache instance to verify functionality
             test_cache = AsyncTTLCache(ttl_seconds=60, cleanup_interval=30)

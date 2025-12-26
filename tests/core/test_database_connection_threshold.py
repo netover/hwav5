@@ -9,10 +9,10 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from resync.core.connection_pool_manager import ConnectionPoolStats
 from resync.core.health_models import HealthCheckConfig, HealthStatus
 from resync.core.health_service import HealthCheckService
+
+from resync.core.connection_pool_manager import ConnectionPoolStats
 
 
 class TestDatabaseConnectionThreshold:

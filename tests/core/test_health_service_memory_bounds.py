@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from resync.core.health_models import HealthCheckConfig, HealthCheckResult, HealthStatus
 from resync.core.health_service import HealthCheckService
 

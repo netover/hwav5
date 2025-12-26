@@ -10,6 +10,8 @@ This module provides intelligent anomaly detection capabilities using:
 - Self-learning and model updates
 """
 
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import hashlib
@@ -19,9 +21,19 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
-from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import StandardScaler
-from sklearn.svm import OneClassSVM
+
+try:
+    from sklearn.ensemble import IsolationForest
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.svm import OneClassSVM
+
+    SKLEARN_AVAILABLE = True
+except Exception:  # pragma: no cover
+    # Allow the module to be imported without scikit-learn; runtime code will fail fast
+    IsolationForest = None  # type: ignore[assignment]
+    StandardScaler = None  # type: ignore[assignment]
+    OneClassSVM = None  # type: ignore[assignment]
+    SKLEARN_AVAILABLE = False
 
 from resync.core.structured_logger import get_logger
 
@@ -470,6 +482,13 @@ class AnomalyDetectionEngine:
     def __init__(self, config: MLModelConfig | None = None):
         self.config = config or MLModelConfig()
 
+        if not SKLEARN_AVAILABLE:
+            raise RuntimeError(
+                "AnomalyDetectionEngine requires scikit-learn. "
+                "Install the ML extras (e.g., `pip install resync[ml]`) "
+                "or add scikit-learn to your deployment image."
+            )
+
         # Initialize detectors based on configuration
         if self.config.primary_model == "isolation_forest":
             self.primary_detector = IsolationForestDetector(self.config)
@@ -653,10 +672,12 @@ class AnomalyDetectionEngine:
         """Update ML models with new training data."""
         try:
             # Force retraining if needed
-            if hasattr(self.primary_detector, "_should_retrain"):
-                if self.primary_detector._should_retrain():
-                    # Retraining is handled automatically in detect() method
-                    pass
+            if (
+                hasattr(self.primary_detector, "_should_retrain")
+                and self.primary_detector._should_retrain()
+            ):
+                # Retraining is handled automatically in detect() method
+                pass
 
             self.last_model_update = time.time()
             logger.info("ML models updated with new training data")

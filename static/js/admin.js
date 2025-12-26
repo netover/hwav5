@@ -619,6 +619,11 @@ class AdminPanel {
         document.getElementById(sectionId)?.classList.add('active');
         
         this.currentSection = sectionId;
+        
+        // Load section-specific data
+        if (sectionId === 'graphrag' && typeof refreshGraphRAGStats === 'function') {
+            refreshGraphRAGStats();
+        }
     }
     
     setupSaveButtons() {

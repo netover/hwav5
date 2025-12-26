@@ -42,10 +42,16 @@ from .tws_repository import (
     TWSStore,
 )
 
+# Auth (v5.4.7 consolidation)
+from .user_repository import UserRepository, UserService
+
 __all__ = [
     # Base
     "BaseRepository",
     "TimestampedRepository",
+    # Auth
+    "UserRepository",
+    "UserService",  # Backward compatibility alias
     # TWS
     "JobStatus",
     "PatternMatch",

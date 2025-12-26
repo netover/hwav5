@@ -1,0 +1,29 @@
+# Lista de FTAs para deployment
+# Format: hostname ou IP
+# Usage: for FTA in $(cat fta_list.txt); do ... done
+
+# Development
+ws-dev-01.company.com
+ws-dev-02.company.com
+ws-dev-03.company.com
+
+# QA/Homologation
+ws-hml-01.company.com
+ws-hml-02.company.com
+ws-hml-03.company.com
+ws-hml-04.company.com
+
+# Production
+ws-prod-01.company.com
+ws-prod-02.company.com
+ws-prod-03.company.com
+ws-prod-04.company.com
+ws-prod-05.company.com
+ws-prod-06.company.com
+ws-prod-07.company.com
+ws-prod-08.company.com
+ws-prod-09.company.com
+ws-prod-10.company.com
+ws-prod-11.company.com
+ws-prod-12.company.com
+ws-prod-13.company.com

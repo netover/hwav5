@@ -9,9 +9,8 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
-from starlette.middleware.base import BaseHTTPMiddleware
-
 from resync.core.header_parser import CSPParser
+from starlette.middleware.base import BaseHTTPMiddleware
 
 
 # Create a simple CSP middleware for testing

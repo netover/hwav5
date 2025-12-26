@@ -62,7 +62,17 @@ class ErrorCode(str, Enum):
     INTEGRATION_ERROR = "INTEGRATION_ERROR"
     EXTERNAL_SERVICE_ERROR = "EXTERNAL_SERVICE_ERROR"
     TWS_CONNECTION_ERROR = "TWS_CONNECTION_ERROR"
+    # Erros de Autenticação TWS (401/502)
+    TWS_AUTHENTICATION_ERROR = "TWS_AUTHENTICATION_ERROR"
+    # Erros de Timeout TWS (504)
+    TWS_TIMEOUT_ERROR = "TWS_TIMEOUT_ERROR"
     LLM_ERROR = "LLM_ERROR"
+    # Erros de Autenticação LLM (401/502)
+    LLM_AUTHENTICATION_ERROR = "LLM_AUTHENTICATION_ERROR"
+    # Erros de Timeout LLM (504)
+    LLM_TIMEOUT_ERROR = "LLM_TIMEOUT_ERROR"
+    # Erros de Rate Limit LLM (429)
+    LLM_RATE_LIMIT_ERROR = "LLM_RATE_LIMIT_ERROR"
 
     # Erros de Disponibilidade (503)
     SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
@@ -757,6 +767,73 @@ class TWSConnectionError(IntegrationError):
         self.error_code = ErrorCode.TWS_CONNECTION_ERROR
 
 
+# Additional TWS-specific exceptions
+class TWSAuthenticationError(IntegrationError):
+    """Exceção para falhas de autenticação com a API do TWS.
+
+    Esta exceção é lançada quando uma chamada ao serviço TWS falha devido a
+    problemas de autenticação, como credenciais inválidas ou ausentes. Ela
+    estende :class:`IntegrationError` para preservar o contexto de serviço
+    externo, mas define um código de erro específico e um status HTTP 401.
+    """
+
+    def __init__(
+        self,
+        message: str = "TWS authentication error",
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
+    ):
+        if details is None:
+            details = {}
+        # Indicar serviço para rastreamento
+        details.setdefault("service_name", "TWS")
+        super().__init__(
+            message=message,
+            service_name="TWS",
+            details=details,
+            correlation_id=correlation_id,
+            original_exception=original_exception,
+        )
+        # Substituir código de erro e status HTTP
+        self.error_code = ErrorCode.TWS_AUTHENTICATION_ERROR
+        self.status_code = 401
+
+
+class TWSTimeoutError(IntegrationError):
+    """Exceção para timeouts em operações com o serviço TWS.
+
+    Esta exceção indica que uma operação contra o TWS excedeu o tempo limite
+    configurado. Ela inclui opcionalmente o número de segundos de timeout
+    utilizado para auxiliar no diagnóstico.
+    """
+
+    def __init__(
+        self,
+        message: str = "TWS timeout error",
+        timeout_seconds: float | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
+    ):
+        if details is None:
+            details = {}
+        if timeout_seconds:
+            details["timeout_seconds"] = timeout_seconds
+        # Indicar serviço para rastreamento
+        details.setdefault("service_name", "TWS")
+        super().__init__(
+            message=message,
+            service_name="TWS",
+            details=details,
+            correlation_id=correlation_id,
+            original_exception=original_exception,
+        )
+        # Atribuir código de erro e status de gateway timeout (504)
+        self.error_code = ErrorCode.TWS_TIMEOUT_ERROR
+        self.status_code = 504
+
+
 class AgentExecutionError(BaseAppException):
     """Exceção para erros durante a execução de um agente de IA."""
 
@@ -986,6 +1063,109 @@ class LLMError(IntegrationError):
         self.error_code = ErrorCode.LLM_ERROR
 
 
+# Additional LLM-specific exceptions
+class LLMAuthenticationError(IntegrationError):
+    """Exceção para falhas de autenticação com provedores de LLM.
+
+    Esta exceção é usada quando uma requisição ao serviço de LLM falha por
+    problemas de autenticação, como chaves de API inválidas. Ela estende
+    :class:`IntegrationError` para manter o contexto de serviço externo, mas
+    configura um código de erro e status HTTP apropriados (401).
+    """
+
+    def __init__(
+        self,
+        message: str = "LLM authentication error",
+        model_name: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
+    ):
+        if details is None:
+            details = {}
+        if model_name:
+            details["model_name"] = model_name
+        # Indicar serviço para rastreamento
+        details.setdefault("service_name", "LLM")
+        super().__init__(
+            message=message,
+            service_name="LLM",
+            details=details,
+            correlation_id=correlation_id,
+            original_exception=original_exception,
+        )
+        self.error_code = ErrorCode.LLM_AUTHENTICATION_ERROR
+        self.status_code = 401
+
+
+class LLMTimeoutError(IntegrationError):
+    """Exceção para timeouts em chamadas ao serviço LLM.
+
+    Disparada quando uma chamada para o serviço de LLM excede o tempo limite
+    configurado. Inclui opcionalmente o tempo limite para ajudar na análise.
+    """
+
+    def __init__(
+        self,
+        message: str = "LLM timeout error",
+        timeout_seconds: float | None = None,
+        model_name: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
+    ):
+        if details is None:
+            details = {}
+        if timeout_seconds:
+            details["timeout_seconds"] = timeout_seconds
+        if model_name:
+            details["model_name"] = model_name
+        # Indicar serviço para rastreamento
+        details.setdefault("service_name", "LLM")
+        super().__init__(
+            message=message,
+            service_name="LLM",
+            details=details,
+            correlation_id=correlation_id,
+            original_exception=original_exception,
+        )
+        self.error_code = ErrorCode.LLM_TIMEOUT_ERROR
+        self.status_code = 504
+
+
+class LLMRateLimitError(RateLimitError):
+    """Exceção para limites de taxa excedidos em provedores de LLM.
+
+    Utilizada quando o serviço de LLM retorna um erro de rate limiting (por
+    exemplo, HTTP 429). Herda de :class:`RateLimitError` para reutilizar a
+    semântica de limite excedido, adicionando contexto de modelo e serviço.
+    """
+
+    def __init__(
+        self,
+        message: str = "LLM rate limit exceeded",
+        retry_after: int | None = None,
+        model_name: str | None = None,
+        details: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        original_exception: Exception | None = None,
+    ):
+        if details is None:
+            details = {}
+        if model_name:
+            details["model_name"] = model_name
+        # Indicar serviço para rastreamento
+        details.setdefault("service_name", "LLM")
+        super().__init__(
+            message=message,
+            retry_after=retry_after,
+            details=details,
+            correlation_id=correlation_id,
+            original_exception=original_exception,
+        )
+        self.error_code = ErrorCode.LLM_RATE_LIMIT_ERROR
+
+
 class ParsingError(BaseAppException):
     """Exceção para erros de parsing de dados (JSON, etc.)."""
 
@@ -1128,7 +1308,9 @@ class PoolExhaustedError(CacheError):
         if pool_name:
             details["pool_name"] = pool_name
 
-        super().__init__(
+        # Call BaseAppException directly to allow custom error_code/status_code
+        BaseAppException.__init__(
+            self,
             message=message,
             error_code=ErrorCode.POOL_EXHAUSTED,
             status_code=503,
@@ -1345,10 +1527,19 @@ def get_exception_by_error_code(error_code: ErrorCode) -> type[BaseAppException]
         ErrorCode.LLM_ERROR: LLMError,
         ErrorCode.NETWORK_ERROR: NetworkError,
         ErrorCode.WEBSOCKET_ERROR: WebSocketError,
+        # TWS specific errors
+        ErrorCode.TWS_AUTHENTICATION_ERROR: TWSAuthenticationError,
+        ErrorCode.TWS_TIMEOUT_ERROR: TWSTimeoutError,
+        # LLM specific errors
+        ErrorCode.LLM_AUTHENTICATION_ERROR: LLMAuthenticationError,
+        ErrorCode.LLM_TIMEOUT_ERROR: LLMTimeoutError,
+        ErrorCode.LLM_RATE_LIMIT_ERROR: LLMRateLimitError,
     }
 
     return mapping.get(error_code, InternalError)
 
+
+# =============================================================================
 
 __all__ = [
     # Enums
@@ -1387,6 +1578,8 @@ __all__ = [
     "RedisTimeoutError",
     "AgentError",
     "TWSConnectionError",
+    "TWSAuthenticationError",
+    "TWSTimeoutError",
     "AgentExecutionError",
     "ToolExecutionError",
     "ToolConnectionError",
@@ -1397,6 +1590,9 @@ __all__ = [
     "FileIngestionError",
     "FileProcessingError",
     "LLMError",
+    "LLMAuthenticationError",
+    "LLMTimeoutError",
+    "LLMRateLimitError",
     "ParsingError",
     "DataParsingError",
     "NetworkError",

@@ -177,16 +177,18 @@ class CircuitBreaker:
         self.metrics.consecutive_failures += 1
         self.metrics.last_failure_time = datetime.utcnow()
 
-        if self.metrics.consecutive_failures >= self.config.failure_threshold:
-            if self.state != CircuitBreakerState.OPEN:
-                self.state = CircuitBreakerState.OPEN
-                self.metrics.state_changes += 1
-                logger.error(
-                    "Circuit breaker opened due to consecutive failures",
-                    name=self.config.name,
-                    failures=self.metrics.consecutive_failures,
-                    threshold=self.config.failure_threshold,
-                )
+        if (
+            self.metrics.consecutive_failures >= self.config.failure_threshold
+            and self.state != CircuitBreakerState.OPEN
+        ):
+            self.state = CircuitBreakerState.OPEN
+            self.metrics.state_changes += 1
+            logger.error(
+                "Circuit breaker opened due to consecutive failures",
+                name=self.config.name,
+                failures=self.metrics.consecutive_failures,
+                threshold=self.config.failure_threshold,
+            )
 
     def get_metrics(self) -> dict[str, Any]:
         """Retorna métricas atuais do circuit breaker"""

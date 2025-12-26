@@ -29,7 +29,6 @@ from resync.core.langgraph.parallel_graph import (
     tws_status_node,
 )
 
-
 # =============================================================================
 # FIXTURES
 # =============================================================================
@@ -237,8 +236,8 @@ async def test_aggregator_handles_failures(sample_state):
 async def test_parallel_execution_is_concurrent():
     """
     Test that parallel nodes actually run concurrently.
-    
-    This is a critical test - if execution is sequential, 
+
+    This is a critical test - if execution is sequential,
     total time would be ~1.5s. If parallel, ~0.5s.
     """
 
@@ -276,7 +275,7 @@ async def test_parallel_execution_is_concurrent():
         response_generator_node=AsyncMock(return_value={"response": "test"}),
     ):
         start = time.time()
-        result = await graph.ainvoke({"message": "test"})
+        await graph.ainvoke({"message": "test"})
         elapsed = time.time() - start
 
         # If truly parallel, should take ~0.5s, not 1.5s
@@ -337,20 +336,20 @@ async def test_parallel_troubleshoot_convenience_function():
 async def test_parallel_vs_sequential_performance():
     """
     Benchmark test comparing parallel vs sequential execution.
-    
+
     Expected results:
     - Sequential: ~2-3 seconds (sum of all node delays)
     - Parallel: ~0.5-1 second (max of node delays)
     - Speedup: 2-4x
-    
+
     Note: Mark with @pytest.mark.slow to skip in fast test runs.
     """
     # Simulate realistic node delays
     delays = {
         "tws_status": 0.3,  # API call
         "rag_search": 0.5,  # Vector search
-        "log_cache": 0.1,   # Redis lookup
-        "metrics": 0.1,     # In-memory
+        "log_cache": 0.1,  # Redis lookup
+        "metrics": 0.1,  # In-memory
     }
 
     sequential_time = sum(delays.values())
@@ -387,7 +386,7 @@ async def test_parallel_vs_sequential_performance():
 
         speedup = sequential_time / parallel_time
 
-        print(f"\n📊 Performance Comparison:")
+        print("\n📊 Performance Comparison:")
         print(f"   Sequential equivalent: {sequential_time * 1000:.0f}ms")
         print(f"   Parallel execution: {parallel_time * 1000:.0f}ms")
         print(f"   Speedup: {speedup:.2f}x")
@@ -408,9 +407,9 @@ async def test_full_parallel_pipeline(sample_state):
     with patch.multiple(
         "resync.core.langgraph.parallel_graph",
         tws_status_tool=AsyncMock(return_value={"status": "ok"}),
-        RAGClient=MagicMock(return_value=AsyncMock(
-            search=AsyncMock(return_value={"results": [], "total": 0})
-        )),
+        RAGClient=MagicMock(
+            return_value=AsyncMock(search=AsyncMock(return_value={"results": [], "total": 0}))
+        ),
         get_redis_client=AsyncMock(return_value=None),
         RuntimeMetrics=MagicMock(get_snapshot=MagicMock(return_value={})),
         call_llm=AsyncMock(return_value="Análise completa do problema."),

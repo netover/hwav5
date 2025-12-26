@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
+from resync.core.dependencies import get_tws_client
 
 from resync.core.agent_manager import AgentManager
-from resync.core.dependencies import get_tws_client
 from resync.services.mock_tws_service import MockTWSClient
 
 

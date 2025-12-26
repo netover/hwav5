@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import asyncio
 
-from resync.core.connection_pool_manager import ConnectionPoolStats
 from resync.core.health_models import HealthCheckConfig
 from resync.core.health_service import HealthCheckService
+
+from resync.core.connection_pool_manager import ConnectionPoolStats
 
 
 async def test_threshold_logic() -> None:

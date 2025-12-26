@@ -1,0 +1,182 @@
+# =============================================================================
+# Systemd Service File for Resync v5.9.6
+# =============================================================================
+#
+# Installation:
+#   1. Copy this file to: /etc/systemd/system/resync.service
+#   2. Update paths and user in [Service] section
+#   3. Reload systemd: sudo systemctl daemon-reload
+#   4. Enable service: sudo systemctl enable resync
+#   5. Start service: sudo systemctl start resync
+#
+# Management:
+#   Status:  sudo systemctl status resync
+#   Logs:    sudo journalctl -u resync -f
+#   Restart: sudo systemctl restart resync
+#   Stop:    sudo systemctl stop resync
+#
+# =============================================================================
+
+[Unit]
+Description=Resync v5.9.6 - AI-Powered HCL Workload Automation Interface
+Documentation=https://github.com/resync/resync
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=notify  # Gunicorn sends readiness notification
+
+# User and Group
+User=resync
+Group=resync
+
+# Working Directory
+WorkingDirectory=/opt/resync
+
+# Environment Files
+EnvironmentFile=/opt/resync/.env
+
+# Environment Variables (can override .env)
+Environment="PATH=/opt/resync/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONDONTWRITEBYTECODE=1"
+Environment="ENVIRONMENT=production"
+
+# Command to Start Application
+ExecStart=/opt/resync/venv/bin/gunicorn \
+    -c /opt/resync/gunicorn_config.py \
+    --bind 127.0.0.1:8000 \
+    --workers 4 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --timeout 60 \
+    --graceful-timeout 30 \
+    --keepalive 10 \
+    --preload \
+    --access-logfile /var/log/resync/access.log \
+    --error-logfile /var/log/resync/error.log \
+    --log-level info \
+    resync.main:app
+
+# Restart Policy
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+StartLimitInterval=60s
+
+# Timeouts
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+# Resource Limits
+# Adjust based on your server capacity
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Memory limits (optional - adjust for your VM)
+# MemoryMax=4G
+# MemoryHigh=3G
+
+# CPU limits (optional - adjust for your VM)
+# CPUQuota=200%  # 2 cores
+
+# =============================================================================
+# Security Hardening
+# =============================================================================
+
+# Filesystem Protection
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/resync/logs /opt/resync/backups /opt/resync/uploads /var/log/resync
+
+# Prevent privilege escalation
+NoNewPrivileges=true
+
+# Private /tmp directory
+PrivateTmp=true
+
+# Restrict network access (remove if using external APIs)
+# RestrictAddressFamilies=AF_INET AF_INET6
+
+# Restrict system calls (comment out if issues)
+# SystemCallFilter=@system-service
+# SystemCallErrorNumber=EPERM
+
+# Prevent writing to certain paths
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Prevent changing execution permissions
+# MemoryDenyWriteExecute=true  # May break some Python libraries
+
+# Lock down directories
+RestrictRealtime=true
+RestrictSUIDSGID=true
+
+# Namespace isolation (comment out if issues)
+# PrivateDevices=true
+# PrivateUsers=true
+
+# Capabilities
+AmbientCapabilities=
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target
+
+# =============================================================================
+# Setup Instructions
+# =============================================================================
+#
+# 1. CREATE USER AND DIRECTORIES:
+#    sudo useradd -r -s /bin/false resync
+#    sudo mkdir -p /opt/resync /var/log/resync
+#    sudo chown -R resync:resync /opt/resync /var/log/resync
+#
+# 2. INSTALL APPLICATION:
+#    cd /opt/resync
+#    python3 -m venv venv
+#    source venv/bin/activate
+#    pip install -r requirements.txt
+#
+# 3. CONFIGURE ENVIRONMENT:
+#    cp .env.example .env
+#    # Edit .env with production values
+#    chmod 600 .env
+#
+# 4. DATABASE MIGRATIONS:
+#    sudo -u resync /opt/resync/venv/bin/alembic upgrade head
+#
+# 5. TEST MANUALLY:
+#    sudo -u resync /opt/resync/venv/bin/gunicorn -c gunicorn_config.py resync.main:app
+#
+# 6. INSTALL AND START SERVICE:
+#    sudo cp resync.service /etc/systemd/system/
+#    sudo systemctl daemon-reload
+#    sudo systemctl enable resync
+#    sudo systemctl start resync
+#
+# 7. VERIFY:
+#    sudo systemctl status resync
+#    curl http://localhost:8000/health/ready
+#
+# 8. SETUP LOG ROTATION (optional):
+#    Create /etc/logrotate.d/resync:
+#    ---
+#    /var/log/resync/*.log {
+#        daily
+#        rotate 14
+#        compress
+#        delaycompress
+#        notifempty
+#        create 0640 resync resync
+#        sharedscripts
+#        postrotate
+#            systemctl reload resync > /dev/null 2>&1 || true
+#        endscript
+#    }
+#    ---
+#
+# =============================================================================

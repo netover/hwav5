@@ -9,7 +9,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from typing import Any
 
-from resync.core.async_cache import AsyncTTLCache
+from resync.core.cache import AsyncTTLCache
 from resync.core.utils.llm import call_llm
 
 logger = logging.getLogger(__name__)

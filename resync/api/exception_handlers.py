@@ -24,9 +24,9 @@ from resync.core.exceptions import (
     RateLimitError,
     ResourceConflictError,
     ResourceNotFoundError,
+    ResyncException,
     ValidationError,
 )
-from resync.core.exceptions_enhanced import ResyncException
 from resync.core.structured_logger import get_logger
 
 logger = get_logger(__name__)

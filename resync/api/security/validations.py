@@ -24,7 +24,10 @@ class SensitiveFieldValidator:
 
     @staticmethod
     def validate_email(email: str) -> str:
-        if not EmailStr.validate(email):
+        # Basic email format validation
+        import re
+        email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+        if not email_pattern.match(email):
             raise ValueError("Invalid email format")
         if "@" not in email:
             raise ValueError("Email must contain '@'")

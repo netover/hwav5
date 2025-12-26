@@ -57,6 +57,15 @@ Optional but Recommended:
     LOG_LEVEL, SERVER_HOST, SERVER_PORT
 """
 
+# =============================================================================
+# CRITICAL: Load environment variables BEFORE any resync imports
+# This prevents the "Import Trap" where Pydantic BaseSettings reads os.getenv
+# before .env file is loaded.
+# =============================================================================
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Standard library imports
 import asyncio
 import platform
@@ -65,12 +74,12 @@ import sys
 import threading
 from typing import TYPE_CHECKING, Any, Optional
 
-import aiohttp
+import httpx
 import structlog
 import uvicorn
 
-# Third-party imports
-from dotenv import load_dotenv
+# v5.8.0: Use unified app from app_factory instead of fastapi_app
+from resync.app_factory import ApplicationFactory
 
 # Local imports
 from resync.core.encoding_utils import symbol
@@ -81,13 +90,13 @@ from resync.core.startup_validation import (
     validate_all_settings,
     validate_redis_connection,
 )
-from resync.fastapi_app.main import app
+
+# Create app instance using factory
+_factory = ApplicationFactory()
+app = _factory.create_application()
 
 if TYPE_CHECKING:
     from resync.settings import Settings
-
-# Load environment variables from .env file before any other imports
-load_dotenv()
 # Configure startup logger
 startup_logger = structlog.get_logger("resync.startup")
 
@@ -96,15 +105,21 @@ startup_logger = structlog.get_logger("resync.startup")
 
 
 class SettingsCache:
-    """Thread-safe cache for validated settings."""
+    """Thread-safe cache for validated settings with lazy lock initialization."""
 
     def __init__(self) -> None:
         self._cache: Settings | None = None
-        self._lock = asyncio.Lock()
+        self._lock: asyncio.Lock | None = None  # Lazy init to avoid event loop issues
+
+    def _get_lock(self) -> asyncio.Lock:
+        """Get or create lock in current event loop."""
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
     async def get_validated_settings(self, fail_fast: bool = True) -> "Settings":
-        """Get validated settings with caching."""
-        async with self._lock:
+        """Get validated settings with caching and proper lock management."""
+        async with self._get_lock():
             if self._cache is None:
                 startup_logger.info("performing_initial_settings_validation")
                 self._cache = await validate_configuration_on_startup(fail_fast=fail_fast)
@@ -112,8 +127,9 @@ class SettingsCache:
             return self._cache
 
     def clear_cache(self) -> None:
-        """Clear the cached settings."""
+        """Clear the cached settings and lock."""
         self._cache = None
+        self._lock = None  # Also clear lock to avoid stale event loop references
 
 
 # Global settings cache instance
@@ -127,20 +143,48 @@ async def get_validated_settings(fail_fast: bool = True) -> "Settings":
 
 async def _check_tcp(host: str, port: int, timeout: float = 3.0) -> bool:
     """
-    Verifica reachability TCP de forma 100% assíncrona.
-    Usa asyncio.open_connection com timeout explícito e fechamento adequado de recursos.
+    Verifica reachability TCP de forma 100% assíncrona com proper cleanup.
+    
+    Usa asyncio.open_connection com timeout explícito e garantia de fechamento de recursos.
+    
+    Args:
+        host: Hostname or IP address
+        port: Port number
+        timeout: Timeout in seconds (default: 3.0)
+        
+    Returns:
+        True if connection successful, False otherwise
     """
+    reader, writer = None, None
     try:
-        _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
-        writer.close()
-        try:
-            await writer.wait_closed()
-        except (OSError, ConnectionError, RuntimeError):
-            # alguns transports podem não suportar wait_closed; ignore
-            pass
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(host, port),
+            timeout=timeout
+        )
         return True
-    except (asyncio.TimeoutError, ConnectionError, OSError):
+    except (asyncio.TimeoutError, ConnectionError, OSError) as e:
+        startup_logger.debug(
+            "tcp_check_failed",
+            host=host,
+            port=port,
+            error=type(e).__name__,
+            error_message=str(e)
+        )
         return False
+    finally:
+        # Always cleanup writer to avoid file descriptor leaks
+        if writer:
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception as e:
+                startup_logger.warning(
+                    "tcp_connection_cleanup_failed",
+                    host=host,
+                    port=port,
+                    error=type(e).__name__,
+                    error_message=str(e)
+                )
 
 
 async def run_startup_health_checks(settings: "Settings") -> dict[str, Any]:
@@ -184,29 +228,29 @@ async def run_startup_health_checks(settings: "Settings") -> dict[str, Any]:
             )
             health_results["tws_reachability"] = False
 
-        # LLM service basic check (GET curto; HEAD pode retornar 405 em alguns provedores)
+        # LLM service basic check
         if getattr(settings, "llm_endpoint", None):
             try:
-                timeout = aiohttp.ClientTimeout(total=5.0)
-                async with aiohttp.ClientSession(timeout=timeout) as session:
+                timeout = httpx.Timeout(5.0)
+                async with httpx.AsyncClient(timeout=timeout) as client:
                     endpoint = settings.llm_endpoint.rstrip("/")
-                    async with session.get(endpoint, allow_redirects=True) as resp:
-                        # Considera apenas status 200-399 como saudável (mais rigoroso)
-                        health_results["llm_service"] = 200 <= resp.status < 400
-                        if not health_results["llm_service"]:
-                            startup_logger.warning(
-                                "llm_service_unhealthy_status",
-                                status=resp.status,
-                                reason="Status code not in 200-399 range",
-                            )
+                    resp = await client.get(endpoint, follow_redirects=True)
+                    # Considera apenas status 200-399 como saudável
+                    health_results["llm_service"] = 200 <= resp.status_code < 400
+                    if not health_results["llm_service"]:
+                        startup_logger.warning(
+                            "llm_service_unhealthy_status",
+                            status=resp.status_code,
+                            reason="Status code not in 200-399 range",
+                        )
             except (
-                aiohttp.ClientPayloadError,
-                aiohttp.ServerDisconnectedError,
-                aiohttp.ClientConnectionError,
+                httpx.ConnectError,
+                httpx.TimeoutException,
+                httpx.RequestError,
             ) as e:
                 startup_logger.warning("llm_service_check_unexpected_error", error=str(e))
                 health_results["llm_service"] = False
-            except aiohttp.ClientError as e:
+            except httpx.HTTPError as e:
                 startup_logger.warning("llm_service_check_failed", error=str(e))
                 health_results["llm_service"] = False
             except RuntimeError as e:
@@ -355,16 +399,16 @@ async def validate_configuration_on_startup(fail_fast: bool = True) -> "Settings
         if isinstance(e, ConfigurationValidationError):
             startup_logger.warning(
                 "configuration_setup_required",
-                admin_username="admin",
-                admin_password="suasenha123",
+                hint="Copy .env.example to .env and configure your settings",
+                admin_username="<SET_IN_ENV>",
+                admin_password="<SET_IN_ENV>",
                 secret_key_generation=(
                     "python -c 'import secrets; print(secrets.token_urlsafe(32))'"
                 ),
                 redis_url="redis://localhost:6379",
-                tws_host="localhost",
+                tws_host="<SET_IN_ENV>",
                 tws_port=31111,
-                tws_user="twsuser",
-                tws_password="twspass",
+                tws_credentials="<SET_IN_ENV>",
             )
 
         if fail_fast:

@@ -80,11 +80,12 @@ class LoginRequest(BaseValidatedModel):
         has_upper = any(c.isupper() for c in v)
         has_lower = any(c.islower() for c in v)
         has_digit = any(c.isdigit() for c in v)
-        any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in v)
-        if not (has_upper and has_lower and has_digit):
+        # v5.9.6: Fixed - was no-op (result discarded)
+        has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in v)
+        if not (has_upper and has_lower and has_digit and has_special):
             raise ValueError(
                 "Password must contain at least one uppercase letter, "
-                "one lowercase letter, and one digit"
+                "one lowercase letter, one digit, and one special character"
             )
         # Check for common weak passwords
         weak_passwords = {
@@ -156,8 +157,8 @@ class TokenRequest(BaseValidatedModel):
         """Validate credential fields based on grant type."""
         grant_type = info.data.get("grant_type")
         if grant_type == "password" and not v:
-            field_name = "username" if "username" in str(v) else "password"
-            raise ValueError(f"{field_name} is required for password grant type")
+            # v5.9.6: Fixed - use info.field_name instead of broken str(v) logic
+            raise ValueError(f"{info.field_name} is required for password grant type")
         return v
 
     @field_validator("refresh_token")
@@ -175,8 +176,8 @@ class TokenRequest(BaseValidatedModel):
         """Validate client credential fields."""
         grant_type = info.data.get("grant_type")
         if grant_type == "client_credentials" and not v:
-            field_name = "client_id" if "client_id" in str(v) else "client_secret"
-            raise ValueError(f"{field_name} is required for client_credentials grant type")
+            # v5.9.6: Fixed - use info.field_name instead of broken str(v) logic
+            raise ValueError(f"{info.field_name} is required for client_credentials grant type")
         return v
 
 

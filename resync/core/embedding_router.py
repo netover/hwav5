@@ -24,7 +24,6 @@ Usage:
     # result.confidence = 0.92
 """
 
-import json
 import os
 from dataclasses import dataclass, field
 from enum import Enum
@@ -40,24 +39,24 @@ logger = get_logger(__name__)
 
 class RouterIntent(str, Enum):
     """Supported intents for classification."""
-    
+
     # Graph-oriented intents
     DEPENDENCY_CHAIN = "dependency_chain"
     IMPACT_ANALYSIS = "impact_analysis"
     RESOURCE_CONFLICT = "resource_conflict"
     CRITICAL_JOBS = "critical_jobs"
     JOB_LINEAGE = "job_lineage"
-    
+
     # RAG-oriented intents
     DOCUMENTATION = "documentation"
     EXPLANATION = "explanation"
     TROUBLESHOOTING = "troubleshooting"
     ERROR_LOOKUP = "error_lookup"
-    
+
     # Hybrid intents
     ROOT_CAUSE = "root_cause"
     JOB_DETAILS = "job_details"
-    
+
     # General
     GENERAL = "general"
     GREETING = "greeting"
@@ -205,7 +204,7 @@ INTENT_EXAMPLES = {
 @dataclass
 class ClassificationResult:
     """Result of intent classification."""
-    
+
     intent: RouterIntent
     confidence: float
     all_scores: dict[str, float] = field(default_factory=dict)
@@ -216,11 +215,11 @@ class ClassificationResult:
 class EmbeddingRouter:
     """
     Fast intent classification using embedding similarity.
-    
+
     Pre-computes embeddings for intent examples at initialization,
     then classifies new queries by finding the most similar examples.
     """
-    
+
     def __init__(
         self,
         confidence_threshold: float = 0.75,
@@ -229,7 +228,7 @@ class EmbeddingRouter:
     ):
         """
         Initialize the embedding router.
-        
+
         Args:
             confidence_threshold: Minimum confidence to accept classification
             use_llm_fallback: Fall back to LLM for low confidence
@@ -238,26 +237,25 @@ class EmbeddingRouter:
         self.confidence_threshold = confidence_threshold
         self.use_llm_fallback = use_llm_fallback
         self.cache_dir = Path(cache_dir) if cache_dir else None
-        
+
         self._embedding_model = None
         self._intent_embeddings: dict[RouterIntent, list[np.ndarray]] = {}
         self._initialized = False
-        
+
         logger.info(
             "embedding_router_created",
             threshold=confidence_threshold,
             fallback=use_llm_fallback,
         )
-    
+
     def _get_embedding_model(self):
         """Get embedding model (lazy load)."""
         if self._embedding_model is None:
             try:
                 from sentence_transformers import SentenceTransformer
-                
+
                 model_name = os.getenv(
-                    "ROUTER_EMBEDDING_MODEL",
-                    "sentence-transformers/all-MiniLM-L6-v2"
+                    "ROUTER_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
                 )
                 self._embedding_model = SentenceTransformer(model_name)
                 logger.info(f"router_embedding_model_loaded: {model_name}")
@@ -265,15 +263,16 @@ class EmbeddingRouter:
                 logger.error("sentence_transformers_not_available")
                 raise
         return self._embedding_model
-    
+
     def initialize(self):
         """Pre-compute embeddings for all intent examples."""
         if self._initialized:
             return
-        
+
         import time
+
         start = time.perf_counter()
-        
+
         # Try to load from cache
         if self._load_from_cache():
             self._initialized = True
@@ -282,36 +281,36 @@ class EmbeddingRouter:
                 intents=len(self._intent_embeddings),
             )
             return
-        
+
         # Compute embeddings
         model = self._get_embedding_model()
-        
+
         for intent, examples in INTENT_EXAMPLES.items():
             embeddings = model.encode(examples, convert_to_numpy=True)
             self._intent_embeddings[intent] = [emb for emb in embeddings]
-        
+
         # Save to cache
         self._save_to_cache()
-        
+
         self._initialized = True
         elapsed = (time.perf_counter() - start) * 1000
-        
+
         logger.info(
             "intent_embeddings_computed",
             intents=len(self._intent_embeddings),
             examples=sum(len(v) for v in self._intent_embeddings.values()),
             time_ms=elapsed,
         )
-    
+
     def _load_from_cache(self) -> bool:
         """Try to load embeddings from cache."""
         if not self.cache_dir:
             return False
-        
+
         cache_file = self.cache_dir / "intent_embeddings.npz"
         if not cache_file.exists():
             return False
-        
+
         try:
             data = np.load(cache_file, allow_pickle=True)
             for intent in RouterIntent:
@@ -321,16 +320,16 @@ class EmbeddingRouter:
         except Exception as e:
             logger.warning(f"cache_load_failed: {e}")
             return False
-    
+
     def _save_to_cache(self):
         """Save embeddings to cache."""
         if not self.cache_dir:
             return
-        
+
         try:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
             cache_file = self.cache_dir / "intent_embeddings.npz"
-            
+
             data = {
                 intent.value: np.array(embeddings)
                 for intent, embeddings in self._intent_embeddings.items()
@@ -339,7 +338,7 @@ class EmbeddingRouter:
             logger.info("intent_embeddings_cached")
         except Exception as e:
             logger.warning(f"cache_save_failed: {e}")
-    
+
     async def classify(
         self,
         query: str,
@@ -347,52 +346,51 @@ class EmbeddingRouter:
     ) -> ClassificationResult:
         """
         Classify query intent using embedding similarity.
-        
+
         Args:
             query: User query to classify
             context: Optional context (not used in embedding mode)
-            
+
         Returns:
             ClassificationResult with intent and confidence
         """
         import time
+
         start = time.perf_counter()
-        
+
         # Ensure initialized
         if not self._initialized:
             self.initialize()
-        
+
         # Get query embedding
         model = self._get_embedding_model()
         query_embedding = model.encode(query, convert_to_numpy=True)
-        
+
         # Compute similarity to all intent examples
         intent_scores: dict[RouterIntent, float] = {}
-        
+
         for intent, example_embeddings in self._intent_embeddings.items():
             # Compute cosine similarity to each example
             similarities = [
-                self._cosine_similarity(query_embedding, ex_emb)
-                for ex_emb in example_embeddings
+                self._cosine_similarity(query_embedding, ex_emb) for ex_emb in example_embeddings
             ]
             # Take max similarity as intent score
             intent_scores[intent] = max(similarities) if similarities else 0.0
-        
+
         # Get best intent
         best_intent = max(intent_scores, key=intent_scores.get)
         best_score = intent_scores[best_intent]
-        
+
         elapsed = (time.perf_counter() - start) * 1000
-        
+
         # Check confidence
         if best_score < self.confidence_threshold:
             if self.use_llm_fallback:
                 # Fall back to LLM
                 return await self._llm_classify(query, intent_scores, elapsed)
-            else:
-                # Return low confidence result
-                best_intent = RouterIntent.GENERAL
-        
+            # Return low confidence result
+            best_intent = RouterIntent.GENERAL
+
         return ClassificationResult(
             intent=best_intent,
             confidence=best_score,
@@ -400,7 +398,7 @@ class EmbeddingRouter:
             used_llm_fallback=False,
             classification_time_ms=elapsed,
         )
-    
+
     def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
         """Compute cosine similarity between two vectors."""
         norm_a = np.linalg.norm(a)
@@ -408,7 +406,7 @@ class EmbeddingRouter:
         if norm_a == 0 or norm_b == 0:
             return 0.0
         return float(np.dot(a, b) / (norm_a * norm_b))
-    
+
     async def _llm_classify(
         self,
         query: str,
@@ -417,32 +415,29 @@ class EmbeddingRouter:
     ) -> ClassificationResult:
         """Fall back to LLM for classification."""
         import time
+
         start = time.perf_counter()
-        
+
         try:
             from resync.services.llm_service import get_llm_service
-            
+
             llm = get_llm_service()
-            
+
             # Create prompt with top candidates from embedding
-            top_candidates = sorted(
-                embedding_scores.items(),
-                key=lambda x: x[1],
-                reverse=True
-            )[:5]
-            
+            top_candidates = sorted(embedding_scores.items(), key=lambda x: x[1], reverse=True)[:5]
+
             candidates_str = ", ".join(c[0].value for c in top_candidates)
-            
+
             prompt = f"""Classify this query into ONE of these intents:
 {candidates_str}, general
 
 Query: {query}
 
 Respond with ONLY the intent name, nothing else."""
-            
+
             response = await llm.generate(prompt, max_tokens=20)
             response = response.strip().lower()
-            
+
             # Parse response
             for intent in RouterIntent:
                 if intent.value in response:
@@ -454,10 +449,10 @@ Respond with ONLY the intent name, nothing else."""
                         used_llm_fallback=True,
                         classification_time_ms=embedding_time_ms + elapsed,
                     )
-            
+
         except Exception as e:
             logger.warning(f"llm_fallback_failed: {e}")
-        
+
         # Default to general
         return ClassificationResult(
             intent=RouterIntent.GENERAL,
@@ -466,7 +461,7 @@ Respond with ONLY the intent name, nothing else."""
             used_llm_fallback=True,
             classification_time_ms=embedding_time_ms,
         )
-    
+
     def get_info(self) -> dict[str, Any]:
         """Get router information."""
         return {
@@ -502,11 +497,11 @@ async def classify_intent(
 ) -> ClassificationResult:
     """
     Convenience function for intent classification.
-    
+
     Args:
         query: User query
         context: Optional context
-        
+
     Returns:
         ClassificationResult
     """

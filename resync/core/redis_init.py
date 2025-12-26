@@ -66,7 +66,8 @@ def get_redis_client() -> "redis.Redis":  # type: ignore
         raise RuntimeError("redis-py not installed (redis.asyncio).")
     global _REDIS_CLIENT  # pylint: disable=W0603
     if _REDIS_CLIENT is None:
-        url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        # v5.9.7: Prefer pydantic settings (supports APP_REDIS_URL and legacy REDIS_URL)
+        url = getattr(settings, "redis_url", None) or os.getenv("REDIS_URL", "redis://localhost:6379/0")
         _REDIS_CLIENT = redis.from_url(url, encoding="utf-8", decode_responses=True)
         logger.info("Initialized Redis client (lazy).")
     return _REDIS_CLIENT
@@ -216,15 +217,21 @@ class RedisInitializer:
                     "TCP_KEEPINTVL": 10,
                     "TCP_KEEPCNT": 3,
                 }[name]
+        # v5.9.7: Use consolidated settings field names
+        url = redis_url or getattr(settings, "redis_url", "redis://localhost:6379/0")
+        max_conns = getattr(settings, "redis_pool_max_size", None) or getattr(settings, "redis_max_connections", 50)
+        socket_connect_timeout = getattr(settings, "redis_pool_connect_timeout", 5)
+        health_interval = getattr(settings, "redis_health_check_interval", 30)
+
         return redis.Redis.from_url(
-            redis_url or settings.redis_url,
+            url,
             encoding="utf-8",
             decode_responses=True,
-            max_connections=getattr(settings, "redis_max_connections", 50),
-            socket_connect_timeout=getattr(settings, "redis_socket_connect_timeout", 5),
+            max_connections=max_conns,
+            socket_connect_timeout=socket_connect_timeout,
             socket_keepalive=True,
             socket_keepalive_options=keepalive_opts or None,
-            health_check_interval=getattr(settings, "redis_health_check_interval", 30),
+            health_check_interval=health_interval,
             retry_on_timeout=True,
             retry_on_error=[RedisConnError, RedisTimeoutError, BusyLoadingError],
         )

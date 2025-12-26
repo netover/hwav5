@@ -31,8 +31,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from watchdog.events import FileModifiedEvent, FileSystemEventHandler
-from watchdog.observers import Observer
+try:
+    from watchdog.events import FileModifiedEvent, FileSystemEventHandler
+    from watchdog.observers import Observer
+
+    WATCHDOG_AVAILABLE = True
+except Exception:  # pragma: no cover
+    # Allow this module to be imported without watchdog; hot-reload watching will be disabled.
+    FileModifiedEvent = object  # type: ignore[assignment]
+
+    class FileSystemEventHandler:  # type: ignore[misc]
+        pass
+
+    Observer = None  # type: ignore[assignment]
+    WATCHDOG_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +126,10 @@ class ConfigManager:
     def _start_watching(self):
         """Start watching config files for changes."""
         if self._watching:
+            return
+
+        if not WATCHDOG_AVAILABLE or Observer is None:
+            logger.warning("config_hot_reload_disabled_watchdog_missing")
             return
 
         handler = ConfigFileHandler(self._on_file_change)

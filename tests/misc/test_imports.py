@@ -3,7 +3,7 @@
 
 print("Testing imports for refactored cache...")
 try:
-    from resync.core.async_cache_refactored import AsyncTTLCache
+    from resync.core.cache.async_cache import AsyncTTLCache
 
     print("✅ All imports successful!")
 

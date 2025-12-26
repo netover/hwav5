@@ -14,7 +14,7 @@ from resync.core.exceptions import (
     ToolProcessingError,
     TWSConnectionError,
 )
-from resync.tool_definitions.tws_tools import (
+from resync.tools.definitions.tws import (
     TWSStatusTool,
     TWSTroubleshootingTool,
     tws_status_tool,

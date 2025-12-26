@@ -143,7 +143,7 @@ class WriteAheadLog:
                 raise RuntimeError(
                     "aiofiles is required for async WAL operations but is not installed."
                 )
-            self._file_handle = await aiofiles.open(self.file_path, mode="a", encoding="utf-8")
+            self._file_handle = await aiofiles.open(self.current_log_file_path, mode="a", encoding="utf-8")
             self._current_file_path = self.current_log_file_path
             # Get current file size
             if self.current_log_file_path.exists():

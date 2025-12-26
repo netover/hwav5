@@ -1,19 +1,51 @@
 """
-Cache module for the resync system.
+Cache Module - Consolidated Cache Implementations
 
-This package provides caching functionality including:
-- AsyncTTLCache: Main async cache implementation
-- Cache mixins for modular functionality
+v5.4.9: All cache implementations consolidated here.
+
+This package provides:
+- AsyncTTLCache: Main async cache with TTL support
+- AdvancedCacheManager: Multi-tier caching with dependencies
+- QueryCacheManager: Database query result caching
+- CacheHierarchy: L1/L2 hierarchical caching
+- ImprovedAsyncCache: Enhanced async cache
+- StampedeProtection: Cache stampede prevention
 """
 
-# Import from core async_cache
-try:
-    from ..async_cache import AsyncTTLCache, CacheEntry
-except ImportError:
-    AsyncTTLCache = None
-    CacheEntry = None
+# Main async cache implementation
+# Advanced cache with dependencies
+from .advanced_cache import (
+    AdvancedCacheManager,
+    get_advanced_cache_manager,
+)
+from .async_cache import (
+    AsyncTTLCache,
+    CacheEntry,
+    get_redis_client,
+)
 
-# Import mixins
+# Other cache utilities
+from .base_cache import BaseCache
+from .cache_factory import CacheFactory
+
+# Hierarchical cache (L1/L2)
+from .cache_hierarchy import (
+    CacheHierarchy,
+    get_cache_hierarchy,
+)
+
+# Stampede protection
+from .cache_with_stampede_protection import (
+    CacheConfig,
+    CacheWithStampedeProtection,
+)
+
+# Improved async cache
+from .improved_cache import (
+    ImprovedAsyncCache,
+)
+
+# Cache mixins
 from .mixins import (
     CacheHealthMixin,
     CacheMetricsMixin,
@@ -21,21 +53,43 @@ from .mixins import (
     CacheTransactionMixin,
 )
 
-
-# Create a basic RobustCacheManager for compatibility
-class RobustCacheManager:
-    """Basic robust cache manager implementation."""
-
-    def __init__(self, cache_backend=None):
-        self.cache_backend = cache_backend
-
+# Query cache for database results
+from .query_cache import (
+    QueryCacheManager,
+    QueryFingerprint,
+    QueryResult,
+    get_query_cache_manager,
+)
+from .semantic_cache import SemanticCache
 
 __all__ = [
+    # Main cache
     "AsyncTTLCache",
     "CacheEntry",
+    "get_redis_client",
+    # Advanced cache
+    "AdvancedCacheManager",
+    "get_advanced_cache_manager",
+    # Query cache
+    "QueryCacheManager",
+    "QueryFingerprint",
+    "QueryResult",
+    "get_query_cache_manager",
+    # Hierarchy
+    "CacheHierarchy",
+    "get_cache_hierarchy",
+    # Improved
+    "ImprovedAsyncCache",
+    # Stampede
+    "CacheConfig",
+    "CacheWithStampedeProtection",
+    # Mixins
     "CacheHealthMixin",
     "CacheMetricsMixin",
     "CacheSnapshotMixin",
     "CacheTransactionMixin",
-    "RobustCacheManager",
+    # Other
+    "BaseCache",
+    "CacheFactory",
+    "SemanticCache",
 ]

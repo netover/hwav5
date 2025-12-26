@@ -12,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 # Import enhanced ResyncException from the core exceptions module. The
 # original import referred to the non‑existent `resync_new.utils` package.
-from resync.core.exceptions_enhanced import ResyncException
+from resync.core.exceptions import ResyncException
 from resync.core.utils.error_utils import (
     ErrorResponseBuilder,
     create_error_response_from_exception,
@@ -208,7 +208,7 @@ def register_exception_handlers(app: Any) -> None:
     """Register all exception handlers with the FastAPI application."""
     from fastapi import HTTPException
 
-    from resync.core.exceptions_enhanced import ResyncException
+    from resync.core.exceptions import ResyncException
 
     # Add the global exception handler middleware
     add_global_exception_handler(app)

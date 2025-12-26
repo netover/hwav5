@@ -36,11 +36,15 @@ class RuntimeMetricsCollector:
         """Initialize all metrics."""
         # API Metrics
         self.api_requests_total = create_counter("api_requests_total", "Total API requests")
-        self.api_requests_success = create_counter("api_requests_success", "Successful API requests")
+        self.api_requests_success = create_counter(
+            "api_requests_success", "Successful API requests"
+        )
         self.api_requests_failed = create_counter("api_requests_failed", "Failed API requests")
         self.api_errors_total = create_counter("api_errors_total", "Total API errors")
         self.api_response_time = create_histogram("api_response_time", "API response time")
-        self.api_request_duration_histogram = create_histogram("api_request_duration", "API request duration")
+        self.api_request_duration_histogram = create_histogram(
+            "api_request_duration", "API request duration"
+        )
 
         # Cache Metrics
         self.cache_hits = create_counter("cache_hits", "Cache hits")
@@ -52,16 +56,24 @@ class RuntimeMetricsCollector:
 
         # TWS Metrics
         self.tws_requests_total = create_counter("tws_requests_total", "Total TWS requests")
-        self.tws_requests_success = create_counter("tws_requests_success", "Successful TWS requests")
+        self.tws_requests_success = create_counter(
+            "tws_requests_success", "Successful TWS requests"
+        )
         self.tws_requests_failed = create_counter("tws_requests_failed", "Failed TWS requests")
-        self.tws_status_requests_failed = create_counter("tws_status_requests_failed", "Failed TWS status requests")
+        self.tws_status_requests_failed = create_counter(
+            "tws_status_requests_failed", "Failed TWS status requests"
+        )
         self.tws_response_time = create_histogram("tws_response_time", "TWS response time")
 
         # Health Check Metrics
         self.health_checks_total = create_counter("health_checks_total", "Total health checks")
-        self.health_checks_success = create_counter("health_checks_success", "Successful health checks")
+        self.health_checks_success = create_counter(
+            "health_checks_success", "Successful health checks"
+        )
         self.health_checks_failed = create_counter("health_checks_failed", "Failed health checks")
-        self.health_check_duration = create_histogram("health_check_duration", "Health check duration")
+        self.health_check_duration = create_histogram(
+            "health_check_duration", "Health check duration"
+        )
 
         # Agent Metrics
         self.agent_requests_total = create_counter("agent_requests_total", "Total agent requests")
@@ -69,7 +81,9 @@ class RuntimeMetricsCollector:
         self.agent_response_time = create_histogram("agent_response_time", "Agent response time")
 
         # Connection Pool Metrics
-        self.pool_connections_active = create_gauge("pool_connections_active", "Active pool connections")
+        self.pool_connections_active = create_gauge(
+            "pool_connections_active", "Active pool connections"
+        )
         self.pool_connections_idle = create_gauge("pool_connections_idle", "Idle pool connections")
 
         # Correlation tracking
@@ -91,8 +105,7 @@ class RuntimeMetricsCollector:
         """Close a correlation ID and return duration in ms."""
         if correlation_id in self._correlations:
             data = self._correlations.pop(correlation_id)
-            duration_ms = (time.time() - data["start_time"]) * 1000
-            return duration_ms
+            return (time.time() - data["start_time"]) * 1000
         return 0.0
 
     def record_health_check(

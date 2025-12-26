@@ -19,9 +19,9 @@ from unittest.mock import patch
 
 from resync.core import get_environment_tags, get_global_correlation_id
 from resync.core.agent_manager import AgentManager
-from resync.core.async_cache import AsyncTTLCache
 from resync.core.audit_db import add_audit_records_batch
 from resync.core.audit_log import get_audit_log_manager
+from resync.core.cache import AsyncTTLCache
 from resync.core.metrics import log_with_correlation, runtime_metrics
 
 logger = logging.getLogger(__name__)
@@ -1049,16 +1049,81 @@ class FuzzingEngine:
         return results
 
 
-# Global instances for easy access
-chaos_engineer = ChaosEngineer()
-fuzzing_engine = FuzzingEngine()
+# =============================================================================
+# Lazy Initialization (v5.2.3.25)
+# =============================================================================
+# IMPORTANT: Instances are created on-demand to avoid resource allocation
+# at import time. This prevents accidental initialization in production.
+# =============================================================================
+
+_chaos_engineer: ChaosEngineer | None = None
+_fuzzing_engine: FuzzingEngine | None = None
+
+
+def get_chaos_engineer() -> ChaosEngineer:
+    """
+    Get ChaosEngineer instance (lazy initialization).
+    
+    WARNING: This module should only be used in staging/test environments.
+    Enabling chaos engineering in production can cause outages.
+    
+    Returns:
+        ChaosEngineer instance
+    """
+    global _chaos_engineer
+    if _chaos_engineer is None:
+        logger.warning(
+            "⚠️ ChaosEngineer initialized - ensure this is NOT production!",
+            extra={"component": "chaos_engineering", "action": "initialization"},
+        )
+        _chaos_engineer = ChaosEngineer()
+    return _chaos_engineer
+
+
+def get_fuzzing_engine() -> FuzzingEngine:
+    """
+    Get FuzzingEngine instance (lazy initialization).
+    
+    WARNING: This module should only be used in staging/test environments.
+    
+    Returns:
+        FuzzingEngine instance
+    """
+    global _fuzzing_engine
+    if _fuzzing_engine is None:
+        logger.warning(
+            "⚠️ FuzzingEngine initialized - ensure this is NOT production!",
+            extra={"component": "fuzzing_engine", "action": "initialization"},
+        )
+        _fuzzing_engine = FuzzingEngine()
+    return _fuzzing_engine
 
 
 async def run_chaos_engineering_suite(duration_minutes: float = 5.0) -> dict[str, Any]:
-    """Convenience function to run chaos engineering suite."""
-    return await chaos_engineer.run_full_chaos_suite(duration_minutes)
+    """
+    Convenience function to run chaos engineering suite.
+    
+    WARNING: Only use in staging/test environments!
+    
+    Args:
+        duration_minutes: How long to run the chaos suite
+        
+    Returns:
+        Summary dict with test results
+    """
+    return await get_chaos_engineer().run_full_chaos_suite(duration_minutes)
 
 
 async def run_fuzzing_campaign(max_duration: float = 60.0) -> dict[str, Any]:
-    """Convenience function to run fuzzing campaign."""
-    return await fuzzing_engine.run_fuzzing_campaign(max_duration)
+    """
+    Convenience function to run fuzzing campaign.
+    
+    WARNING: Only use in staging/test environments!
+    
+    Args:
+        max_duration: Maximum duration in seconds
+        
+    Returns:
+        Summary dict with fuzzing results
+    """
+    return await get_fuzzing_engine().run_fuzzing_campaign(max_duration)

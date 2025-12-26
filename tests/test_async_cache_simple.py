@@ -3,7 +3,6 @@ Simple tests for AsyncTTLCache to verify basic functionality.
 """
 
 import pytest
-
 from resync.core.async_cache import AsyncTTLCache
 
 

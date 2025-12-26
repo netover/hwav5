@@ -47,11 +47,15 @@ def create_container() -> DIContainer:
     else:
         # Register factory function for OptimizedTWSClient with proper configuration
         def create_tws_client(container_instance):
+            hostname = settings.TWS_HOST or "localhost"
+            port = settings.TWS_PORT or 31111
+            base_url = f"http://{hostname}:{port}"
             return OptimizedTWSClient(
-                hostname=settings.TWS_HOST or "localhost",
-                port=settings.TWS_PORT or 31111,
+                base_url=base_url,
                 username=settings.TWS_USER or "tws_user",
                 password=settings.TWS_PASSWORD or "tws_password",
+                engine_name=settings.TWS_ENGINE_NAME,
+                engine_owner=settings.TWS_ENGINE_OWNER,
             )
 
         container.register_factory(ITWSClient, create_tws_client, ServiceLifetime.SINGLETON)

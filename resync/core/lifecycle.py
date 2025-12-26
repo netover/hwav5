@@ -147,16 +147,8 @@ async def lifespan(app: FastAPI):
     # --- Startup ---
     logger.info("Application startup: Initializing services...")
 
-    # Import here to avoid circular imports
-    from resync.core.audit_queue import migrate_from_sqlite
-
-    # Run the migration from SQLite to Redis if needed
-    try:
-        await migrate_from_sqlite()
-        logger.info("Audit queue migration completed.")
-    except Exception as e:
-        logger.error(f"Error during audit queue migration: {e}", exc_info=True)
-        # Continue startup even if migration fails
+    # NOTE: SQLite migration removed in v5.8.0 - all data now in PostgreSQL
+    # The audit_queue and context_store modules use PostgreSQL backend
 
     # Initialize connection pool manager
     try:

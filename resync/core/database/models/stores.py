@@ -22,12 +22,10 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-
-class Base(DeclarativeBase):
-    """Base class for all models."""
+from resync.core.database.engine import Base
 
 
 # =============================================================================
@@ -84,7 +82,11 @@ class TWSSnapshot(Base):
     workstation_count: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relationships
-    job_statuses: Mapped[list["TWSJobStatus"]] = relationship(back_populates="snapshot")
+    # lazy="raise" força erro se acessar sem eager loading (previne N+1 queries)
+    job_statuses: Mapped[list["TWSJobStatus"]] = relationship(
+        back_populates="snapshot",
+        lazy="raise"  # Força uso de selectinload() para prevenir N+1
+    )
 
 
 class TWSJobStatus(Base):
@@ -114,7 +116,11 @@ class TWSJobStatus(Base):
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB)
 
     # Relationships
-    snapshot: Mapped[Optional["TWSSnapshot"]] = relationship(back_populates="job_statuses")
+    # lazy="raise" força erro se acessar sem eager loading (previne N+1 queries)
+    snapshot: Mapped[Optional["TWSSnapshot"]] = relationship(
+        back_populates="job_statuses",
+        lazy="raise"  # Força uso de joinedload() para prevenir N+1
+    )
 
 
 class TWSWorkstationStatus(Base):
@@ -375,6 +381,7 @@ class Feedback(Base):
         Index("idx_feedback_session", "session_id"),
         Index("idx_feedback_rating", "rating"),
         Index("idx_feedback_timestamp", "created_at"),
+        Index("idx_feedback_curation_status", "curation_status"),
         {"schema": "learning"},
     )
 
@@ -391,6 +398,15 @@ class Feedback(Base):
     is_positive: Mapped[bool | None] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB)
+
+    # v5.2.3.20: Golden Record fields for knowledge incorporation
+    user_correction: Mapped[str | None] = mapped_column(Text)  # Expert's correct answer
+    curation_status: Mapped[str] = mapped_column(
+        String(50), default="pending"
+    )  # pending, approved, rejected, incorporated
+    approved_by: Mapped[str | None] = mapped_column(String(255))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    incorporated_doc_id: Mapped[str | None] = mapped_column(String(255))  # Vector store doc ID
 
 
 class LearningThreshold(Base):

@@ -38,7 +38,7 @@ class SOC2ComplianceManager:
     """
 
     def __init__(self):
-        # Basic initialization - full implementation in soc2_compliance_refactored.py
+        # Basic initialization - full implementation in soc2_compliance.py
         self.config = None
         self.controls = {}
         self.control_tests = {}

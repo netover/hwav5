@@ -252,7 +252,7 @@ class TestAgentToolTWSIntegration:
         """Testa execução bem-sucedida de ferramenta TWS"""
         # Arrange
         from resync.core.agent_manager import AgentManager
-        from resync.tool_definitions.tws_tools import tws_status_tool
+        from resync.tools.definitions.tws import tws_status_tool
 
         manager = AgentManager()
 

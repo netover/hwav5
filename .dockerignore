@@ -1,0 +1,116 @@
+# =============================================================================
+# Docker Ignore - Optimize Build Context
+# =============================================================================
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+*.cover
+.hypothesis/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+*.md
+!README.md
+!CHANGELOG.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Environment files (NEVER copy .env to image!)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Databases (local development)
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads and temporary files
+uploads/
+temp/
+tmp/
+backups/
+reports/
+
+# Docker files (don't copy themselves)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Static analysis
+.mypy_cache/
+.ruff_cache/
+.pyright/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Large files
+*.tar
+*.tar.gz
+*.zip
+*.rar
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Data files (large)
+*.csv
+*.parquet
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+
+# ML models (usually large)
+models/
+*.pt
+*.pth
+*.onnx
+*.pb
+
+# Node modules (if any frontend)
+node_modules/

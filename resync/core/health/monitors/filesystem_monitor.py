@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from resync.core.health_models import HealthStatus
+from resync.core.health.health_models import HealthStatus
 from resync.core.structured_logger import get_logger
 
 logger = get_logger(__name__)
@@ -351,9 +351,11 @@ class FileSystemHealthMonitor:
                             elif not os.access(item, os.R_OK):
                                 status.corrupted_files += 1
                             # Checksum verification for critical files
-                            elif self._should_verify_checksum(item):
-                                if not self._verify_file_checksum(item):
-                                    status.corrupted_files += 1
+                            elif (
+                                self._should_verify_checksum(item)
+                                and not self._verify_file_checksum(item)
+                            ):
+                                status.corrupted_files += 1
                         except (OSError, PermissionError):
                             status.corrupted_files += 1
 

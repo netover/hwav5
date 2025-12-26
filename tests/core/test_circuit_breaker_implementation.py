@@ -11,9 +11,9 @@ from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from resync.core.async_cache import get_redis_client
 from resync.core.circuit_breakers import llm_breaker, redis_breaker, tws_breaker
 
-from resync.core.async_cache import get_redis_client
 from resync.core.exceptions import AuthenticationError, RedisAuthError, RedisConnectionError
 from resync.lifespan import initialize_redis_with_retry
 
@@ -327,9 +327,8 @@ async def test_circuit_breaker_decorator_applied_to_initialize_redis_with_retry(
 @pytest.mark.asyncio
 async def test_circuit_breaker_decorator_applied_to_get_redis_client():
     """Test that the circuit breaker decorator is actually applied to get_redis_client."""
-    from resync.core.circuit_breakers import redis_breaker
-
     from resync.core.async_cache import get_redis_client
+    from resync.core.circuit_breakers import redis_breaker
 
     # Check that the function has the circuit breaker decorator
     # Similar to above

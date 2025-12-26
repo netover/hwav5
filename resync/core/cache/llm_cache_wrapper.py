@@ -16,7 +16,7 @@ Design philosophy (30 years taught me):
 Usage:
     # Instead of calling LLM directly:
     response = await llm_service.generate(prompt)
-    
+
     # Use the cached wrapper:
     response = await cached_llm_call(prompt, llm_service.generate)
 """
@@ -25,9 +25,10 @@ import asyncio
 import functools
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, TypeVar
 
 from .semantic_cache import CacheResult, SemanticCache, get_semantic_cache
 
@@ -40,7 +41,7 @@ T = TypeVar("T")
 class CachedResponse:
     """
     Response from cached LLM call.
-    
+
     Attributes:
         content: The actual response text
         cached: Whether this came from cache
@@ -50,6 +51,7 @@ class CachedResponse:
         llm_call_ms: Time spent on LLM call (0 if cached)
         metadata: Additional info
     """
+
     content: str
     cached: bool = False
     cache_distance: float = 1.0
@@ -63,18 +65,47 @@ class CachedResponse:
 _TTL_PATTERNS = {
     # Queries about current state - cache briefly
     "short": [
-        "hoje", "agora", "atual", "último", "última", "recente",
-        "today", "now", "current", "last", "recent", "running",
+        "hoje",
+        "agora",
+        "atual",
+        "último",
+        "última",
+        "recente",
+        "today",
+        "now",
+        "current",
+        "last",
+        "recent",
+        "running",
     ],
     # FAQ / documentation queries - cache longer
     "long": [
-        "o que é", "como fazer", "como funciona", "explicar", "definição",
-        "what is", "how to", "how do", "explain", "definition", "difference between",
+        "o que é",
+        "como fazer",
+        "como funciona",
+        "explicar",
+        "definição",
+        "what is",
+        "how to",
+        "how do",
+        "explain",
+        "definition",
+        "difference between",
     ],
     # Action commands - don't cache
     "no_cache": [
-        "executar", "rodar", "parar", "cancelar", "restart", "rerun",
-        "run", "stop", "cancel", "execute", "kill", "abort",
+        "executar",
+        "rodar",
+        "parar",
+        "cancelar",
+        "restart",
+        "rerun",
+        "run",
+        "stop",
+        "cancel",
+        "execute",
+        "kill",
+        "abort",
     ],
 }
 
@@ -82,27 +113,27 @@ _TTL_PATTERNS = {
 def classify_ttl(query: str) -> int | None:
     """
     Classify query to determine appropriate TTL.
-    
+
     Returns:
         TTL in seconds, or None for no-cache queries
     """
     query_lower = query.lower()
-    
+
     # Check no-cache patterns first
     for pattern in _TTL_PATTERNS["no_cache"]:
         if pattern in query_lower:
             return None  # Don't cache action commands
-    
+
     # Check short-TTL patterns
     for pattern in _TTL_PATTERNS["short"]:
         if pattern in query_lower:
             return 3600  # 1 hour
-    
+
     # Check long-TTL patterns
     for pattern in _TTL_PATTERNS["long"]:
         if pattern in query_lower:
             return 604800  # 7 days
-    
+
     # Default: 24 hours
     return 86400
 
@@ -119,7 +150,7 @@ async def cached_llm_call(
 ) -> CachedResponse:
     """
     Execute LLM call with semantic caching.
-    
+
     Args:
         query: User's query (used as cache key)
         llm_func: Async function that calls the LLM
@@ -129,42 +160,42 @@ async def cached_llm_call(
         ttl: TTL override (None = auto-classify)
         metadata: Additional metadata to store with cache entry
         **kwargs: Keyword arguments for llm_func
-        
+
     Returns:
         CachedResponse with content and cache metadata
     """
     start_time = time.perf_counter()
     cache_lookup_ms = 0.0
     llm_call_ms = 0.0
-    
+
     # Classify TTL if not provided
     effective_ttl = ttl
     if effective_ttl is None:
         effective_ttl = classify_ttl(query)
-    
+
     # If TTL is None (no-cache pattern), skip cache
     if effective_ttl is None:
         cache_enabled = False
         logger.debug(f"Cache disabled for action query: '{query[:50]}...'")
-    
+
     # Try cache first if enabled
     if cache_enabled:
         try:
             if cache is None:
                 cache = await get_semantic_cache()
-            
+
             cache_start = time.perf_counter()
             result: CacheResult = await cache.get(query)
             cache_lookup_ms = (time.perf_counter() - cache_start) * 1000
-            
+
             if result.hit and result.response:
                 total_ms = (time.perf_counter() - start_time) * 1000
-                
+
                 logger.info(
                     f"Cache HIT: distance={result.distance:.4f}, "
                     f"latency={total_ms:.1f}ms, query='{query[:50]}...'"
                 )
-                
+
                 return CachedResponse(
                     content=result.response,
                     cached=True,
@@ -179,20 +210,20 @@ async def cached_llm_call(
                         "hit_count": result.entry.hit_count if result.entry else 0,
                     },
                 )
-                
+
         except Exception as e:
             logger.warning(f"Cache lookup failed, proceeding to LLM: {e}")
-    
+
     # Cache miss or cache disabled - call LLM
     try:
         llm_start = time.perf_counter()
         response = await llm_func(*args, **kwargs)
         llm_call_ms = (time.perf_counter() - llm_start) * 1000
-        
+
     except Exception as e:
         logger.error(f"LLM call failed: {e}")
         raise
-    
+
     # Store in cache for future (async, don't wait)
     if cache_enabled and effective_ttl:
         asyncio.create_task(
@@ -208,14 +239,14 @@ async def cached_llm_call(
                 },
             )
         )
-    
+
     total_ms = (time.perf_counter() - start_time) * 1000
-    
+
     logger.info(
         f"Cache MISS: llm_latency={llm_call_ms:.1f}ms, "
         f"total={total_ms:.1f}ms, query='{query[:50]}...'"
     )
-    
+
     return CachedResponse(
         content=response,
         cached=False,
@@ -254,20 +285,21 @@ def with_semantic_cache(
 ):
     """
     Decorator to add semantic caching to an async function.
-    
+
     The function must accept a query parameter (configurable name)
     and return a string response.
-    
+
     Args:
         query_param: Name of the parameter containing the query text
         cache_enabled: Whether caching is enabled
         ttl: TTL override (None = auto-classify)
-        
+
     Usage:
         @with_semantic_cache(query_param="message")
         async def chat_endpoint(message: str, context: dict) -> str:
             return await llm.generate(message, context)
     """
+
     def decorator(func: Callable[..., Awaitable[str]]) -> Callable[..., Awaitable[CachedResponse]]:
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> CachedResponse:
@@ -276,45 +308,47 @@ def with_semantic_cache(
             if query is None and args:
                 # Try to find by position using function signature
                 import inspect
+
                 sig = inspect.signature(func)
                 params = list(sig.parameters.keys())
                 if query_param in params:
                     idx = params.index(query_param)
                     if idx < len(args):
                         query = args[idx]
-            
+
             if query is None:
                 raise ValueError(f"Could not find query parameter '{query_param}'")
-            
+
             # Create a wrapper function that calls the original
             async def call_original() -> str:
                 return await func(*args, **kwargs)
-            
+
             return await cached_llm_call(
                 query=query,
                 llm_func=call_original,
                 cache_enabled=cache_enabled,
                 ttl=ttl,
             )
-        
+
         return wrapper
+
     return decorator
 
 
 class CachedLLMService:
     """
     Wrapper around existing LLM service to add semantic caching.
-    
+
     Use this to wrap your existing LLM service without modifying it.
-    
+
     Example:
         original_service = LLMService()
         cached_service = CachedLLMService(original_service)
-        
+
         # Use cached_service instead of original_service
         response = await cached_service.generate(query)
     """
-    
+
     def __init__(
         self,
         llm_service: Any,
@@ -325,7 +359,7 @@ class CachedLLMService:
     ):
         """
         Initialize cached LLM service wrapper.
-        
+
         Args:
             llm_service: The original LLM service instance
             generate_method: Name of the method that generates responses
@@ -339,7 +373,7 @@ class CachedLLMService:
         self._cache_enabled = cache_enabled
         self._default_ttl = default_ttl
         self._cache: SemanticCache | None = None
-    
+
     @staticmethod
     def _default_query_extractor(args: tuple, kwargs: dict) -> str:
         """Default: first positional arg or 'query'/'prompt'/'message' kwarg."""
@@ -349,7 +383,7 @@ class CachedLLMService:
             if key in kwargs:
                 return str(kwargs[key])
         raise ValueError("Could not extract query from arguments")
-    
+
     async def generate(
         self,
         *args: Any,
@@ -359,21 +393,21 @@ class CachedLLMService:
     ) -> CachedResponse:
         """
         Generate response with caching.
-        
+
         Accepts same arguments as the wrapped service's generate method.
         """
         # Extract query
         query = self._query_extractor(args, kwargs)
-        
+
         # Get original method
         original_method = getattr(self._service, self._generate_method)
-        
+
         # Use provided or default cache settings
         effective_cache_enabled = (
             cache_enabled if cache_enabled is not None else self._cache_enabled
         )
         effective_ttl = ttl if ttl is not None else self._default_ttl
-        
+
         return await cached_llm_call(
             query=query,
             llm_func=original_method,
@@ -383,29 +417,29 @@ class CachedLLMService:
             ttl=effective_ttl,
             **kwargs,
         )
-    
+
     def disable_cache(self) -> None:
         """Disable caching."""
         self._cache_enabled = False
         logger.info("LLM cache disabled")
-    
+
     def enable_cache(self) -> None:
         """Enable caching."""
         self._cache_enabled = True
         logger.info("LLM cache enabled")
-    
+
     async def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         if self._cache is None:
             self._cache = await get_semantic_cache()
         return await self._cache.get_stats()
-    
+
     async def clear_cache(self) -> bool:
         """Clear all cached responses."""
         if self._cache is None:
             self._cache = await get_semantic_cache()
         return await self._cache.clear()
-    
+
     def __getattr__(self, name: str) -> Any:
         """Proxy all other attributes to wrapped service."""
         return getattr(self._service, name)
@@ -420,18 +454,18 @@ async def query_with_cache(
 ) -> str:
     """
     Simple wrapper for making a cached LLM query.
-    
+
     This is the simplest way to add caching to an existing LLM call.
-    
+
     Args:
         query: The user's query
         llm_func: Async function that takes query and returns response
         cache_enabled: Whether to use cache
         ttl: TTL in seconds
-        
+
     Returns:
         The response string (from cache or LLM)
-        
+
     Example:
         response = await query_with_cache(
             "How do I restart a TWS job?",

@@ -14,21 +14,21 @@ from resync.core.exceptions import (
     TWSConnectionError,
 )
 from resync.core.exceptions import (
-    ResyncException as BaseResyncException,
-)
-from resync.core.exceptions_enhanced import (
     DatabaseError as EnhancedDatabaseError,
 )
-from resync.core.exceptions_enhanced import (
+from resync.core.exceptions import (
     LLMError as EnhancedLLMError,
 )
-from resync.core.exceptions_enhanced import (
+from resync.core.exceptions import (
     NotFoundError as EnhancedNotFoundError,
 )
-from resync.core.exceptions_enhanced import (
+from resync.core.exceptions import (
+    ResyncException as BaseResyncException,
+)
+from resync.core.exceptions import (
     ResyncException as EnhancedResyncException,
 )
-from resync.core.exceptions_enhanced import (
+from resync.core.exceptions import (
     TWSConnectionError as EnhancedTWSConnectionError,
 )
 from resync.models.error_models import (
@@ -68,8 +68,8 @@ class ErrorFactory:
         correlation_id: str | None = None,
     ) -> BaseErrorResponse:
         """Factory method to create appropriate error response based on exception type."""
-        ErrorResponseBuilder = _get_error_response_builder()
-        builder = ErrorResponseBuilder()
+        error_response_builder_cls = _get_error_response_builder()
+        builder = error_response_builder_cls()
 
         # Set correlation ID
         if correlation_id:
@@ -132,14 +132,13 @@ class EnhancedResyncExceptionFactory:
         if is_production:
             # Remove potentially sensitive information
             details.pop("original_exception", None)
-            if "details" in details:
+            if "details" in details and isinstance(details["details"], dict):
                 # Further sanitize nested details
-                if isinstance(details["details"], dict):
-                    details["details"] = {
-                        k: v
-                        for k, v in details["details"].items()
-                        if k not in ["password", "token", "credentials", "key"]
-                    }
+                details["details"] = {
+                    k: v
+                    for k, v in details["details"].items()
+                    if k not in ["password", "token", "credentials", "key"]
+                }
 
         # Map the enhanced exception to the appropriate response type based on category
         if exception.error_category == "VALIDATION":
@@ -273,7 +272,7 @@ def _handle_business_logic_exception(
     is_production: bool,
 ) -> BaseErrorResponse:
     """Handle business logic exceptions."""
-    from resync.core.exceptions_enhanced import NotFoundError as EnhancedNotFoundError
+    from resync.core.exceptions import NotFoundError as EnhancedNotFoundError
 
     if isinstance(exception, EnhancedNotFoundError):
         return builder.build_business_logic_error("resource_not_found", resource="Resource")

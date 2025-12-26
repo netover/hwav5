@@ -39,6 +39,49 @@
   temperature_hint: 0.1
   max_tokens_hint: 10
   is_active: true
+  is_default: false
+
+
+# NEW v5.9.1: Enhanced router with entity extraction
+- id: intent-router-v2
+  name: Intent Router with Entity Extraction
+  type: router
+  version: "2.0.0"
+  description: "Classifies user intent AND extracts entities (job names, workstations, etc.)"
+  
+  content: |
+    Analise a mensagem do usuário e extraia:
+    1. A intenção (intent)
+    2. As entidades mencionadas (entities)
+    
+    ## Categorias de Intenção
+    - STATUS: Consultas sobre status de jobs, workstations, ou sistema
+    - TROUBLESHOOT: Diagnóstico de problemas, erros, falhas
+    - QUERY: Perguntas sobre documentação, conceitos, procedimentos
+    - ACTION: Solicitações para executar ações no sistema
+    - GENERAL: Conversas gerais, saudações, ajuda
+    
+    ## Entidades a Extrair
+    - job_name: Nome do job mencionado (geralmente em MAIÚSCULAS com underscores)
+    - workstation: Nome da workstation mencionada
+    - action_type: Tipo de ação solicitada (cancelar, reiniciar, executar, etc.)
+    - error_code: Código de erro mencionado (ex: AWSB1234E, RC=12)
+    
+    ## Mensagem do Usuário
+    "{{user_message}}"
+    
+    ## Resposta (JSON)
+    Responda APENAS com um objeto JSON no formato:
+    {"intent": "INTENT_NAME", "entities": {"entity_name": "value"}, "confidence": 0.85}
+    
+    Se não encontrar entidades, retorne entities como objeto vazio {}.
+  
+  variables:
+    - user_message
+  model_hint: "meta/llama-3.1-8b-instruct"
+  temperature_hint: 0.1
+  max_tokens_hint: 100
+  is_active: true
   is_default: true
 
 

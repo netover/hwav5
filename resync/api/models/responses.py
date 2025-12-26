@@ -181,9 +181,23 @@ def create_success_response(message: str, data: Any | None = None) -> SuccessRes
 
 
 def create_paginated_response(
-    items: list[Any], total: int, page: int, page_size: int
+    items: list[Any],
+    total: int,
+    page: int,
+    page_size: int,
+    base_path: str | None = None,
+    query_params: dict[str, Any] | None = None,
 ) -> PaginatedResponse:
-    """Create a PaginatedResponse instance."""
+    """Create a PaginatedResponse instance.
+    
+    Args:
+        items: List of items for the current page
+        total: Total number of items
+        page: Current page number
+        page_size: Number of items per page
+        base_path: Optional base path for pagination links (unused, kept for compatibility)
+        query_params: Optional query parameters for pagination links (unused, kept for compatibility)
+    """
     total_pages = (total + page_size - 1) // page_size  # Ceiling division
     return PaginatedResponse(
         items=items,

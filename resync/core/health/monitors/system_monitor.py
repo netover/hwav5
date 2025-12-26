@@ -12,7 +12,7 @@ from datetime import datetime
 import psutil
 import structlog
 
-from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
+from resync.core.health.health_models import ComponentHealth, ComponentType, HealthStatus
 
 logger = structlog.get_logger(__name__)
 

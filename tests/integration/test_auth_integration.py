@@ -13,7 +13,7 @@ class TestAuthenticationFlow:
 
     def test_token_creation(self):
         """Test JWT token creation."""
-        from resync.fastapi_app.core.security import create_access_token
+        from resync.api.core.security import create_access_token
 
         token = create_access_token(
             data={"sub": "testuser", "role": "user"},
@@ -26,7 +26,7 @@ class TestAuthenticationFlow:
 
     def test_token_verification_valid(self):
         """Test valid token verification."""
-        from resync.fastapi_app.core.security import create_access_token, verify_token
+        from resync.api.core.security import create_access_token, verify_token
 
         token = create_access_token(
             data={"sub": "testuser", "username": "testuser"},
@@ -39,14 +39,14 @@ class TestAuthenticationFlow:
 
     def test_token_verification_invalid(self):
         """Test invalid token verification returns None."""
-        from resync.fastapi_app.core.security import verify_token
+        from resync.api.core.security import verify_token
 
         payload = verify_token("invalid_token")
         assert payload is None
 
     def test_token_contains_expiration(self):
         """Test token contains expiration claim."""
-        from resync.fastapi_app.core.security import create_access_token, verify_token
+        from resync.api.core.security import create_access_token, verify_token
 
         token = create_access_token(
             data={"sub": "testuser"},
@@ -60,7 +60,7 @@ class TestAuthenticationFlow:
     def test_password_hashing(self):
         """Test password hashing and verification."""
         try:
-            from resync.fastapi_app.core.security import get_password_hash, verify_password
+            from resync.api.core.security import get_password_hash, verify_password
 
             password = "pw"  # Very short to avoid bcrypt issues
             hashed = get_password_hash(password)
@@ -72,7 +72,7 @@ class TestAuthenticationFlow:
 
     def test_permission_check(self):
         """Test permission checking."""
-        from resync.fastapi_app.core.security import check_permissions
+        from resync.api.core.security import check_permissions
 
         user_perms = ["read", "write"]
 
@@ -86,7 +86,7 @@ class TestDependencies:
 
     def test_database_connection(self):
         """Test database dependency returns connection."""
-        from resync.fastapi_app.api.v1.dependencies import get_database
+        from resync.api.dependencies_v2 import get_database
 
         db = get_database()
         assert db is not None
@@ -96,7 +96,7 @@ class TestDependencies:
 
     def test_rate_limit_under_limit(self):
         """Test rate limiting allows requests under limit."""
-        from resync.fastapi_app.api.v1.dependencies import check_rate_limit, reset_rate_limits
+        from resync.api.dependencies_v2 import check_rate_limit, reset_rate_limits
 
         reset_rate_limits()
 
@@ -109,7 +109,7 @@ class TestDependencies:
 
     def test_rate_limit_cleanup(self):
         """Test rate limit store can be reset."""
-        from resync.fastapi_app.api.v1.dependencies import _rate_limit_store, reset_rate_limits
+        from resync.api.dependencies_v2 import _rate_limit_store, reset_rate_limits
 
         reset_rate_limits()
         assert len(_rate_limit_store) == 0
@@ -120,14 +120,14 @@ class TestSecurityConfiguration:
 
     def test_security_module_imports(self):
         """Test security module can be imported."""
-        from resync.fastapi_app.core import security
+        from resync.api.core import security
 
         assert hasattr(security, "create_access_token")
         assert hasattr(security, "verify_token")
 
     def test_settings_configured(self):
         """Test settings are properly configured."""
-        from resync.fastapi_app.core.config import settings
+        from resync.settings import settings
 
         assert hasattr(settings, "secret_key")
         assert hasattr(settings, "algorithm")
@@ -139,7 +139,7 @@ class TestRAGServiceIntegration:
     @pytest.mark.asyncio
     async def test_rag_service_initialization(self):
         """Test RAG service can be initialized."""
-        from resync.fastapi_app.services.rag_service import RAGIntegrationService
+        from resync.api.services.rag_service import RAGIntegrationService
 
         service = RAGIntegrationService(use_mock=True)
         assert service is not None
@@ -148,7 +148,7 @@ class TestRAGServiceIntegration:
     @pytest.mark.asyncio
     async def test_rag_document_ingestion(self):
         """Test document ingestion in RAG service."""
-        from resync.fastapi_app.services.rag_service import RAGIntegrationService
+        from resync.api.services.rag_service import RAGIntegrationService
 
         service = RAGIntegrationService(use_mock=True)
 
@@ -165,7 +165,7 @@ class TestRAGServiceIntegration:
     @pytest.mark.asyncio
     async def test_rag_document_deletion(self):
         """Test document deletion in RAG service."""
-        from resync.fastapi_app.services.rag_service import RAGIntegrationService
+        from resync.api.services.rag_service import RAGIntegrationService
 
         service = RAGIntegrationService(use_mock=True)
 
@@ -180,7 +180,7 @@ class TestRAGServiceIntegration:
 
     def test_rag_stats(self):
         """Test RAG statistics."""
-        from resync.fastapi_app.services.rag_service import RAGIntegrationService
+        from resync.api.services.rag_service import RAGIntegrationService
 
         service = RAGIntegrationService(use_mock=True)
         stats = service.get_stats()

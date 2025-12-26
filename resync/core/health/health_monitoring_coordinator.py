@@ -10,7 +10,7 @@ import contextlib
 
 import structlog
 
-from resync.core.health_models import HealthCheckConfig
+from resync.core.health.health_models import HealthCheckConfig
 
 logger = structlog.get_logger(__name__)
 

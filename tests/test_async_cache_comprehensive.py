@@ -12,7 +12,6 @@ import time
 from unittest.mock import patch
 
 import pytest
-
 from resync.core.async_cache import AsyncTTLCache, CacheEntry, get_redis_client
 
 

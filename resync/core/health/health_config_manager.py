@@ -11,7 +11,7 @@ from typing import Any
 
 import structlog
 
-from resync.core.health_models import HealthCheckConfig
+from resync.core.health.health_models import HealthCheckConfig
 
 logger = structlog.get_logger(__name__)
 
@@ -48,9 +48,9 @@ class HealthCheckConfigurationManager:
             enable_memory_monitoring=True,
             max_history_entries=10000,
             history_retention_days=30,
-            memory_usage_threshold_mb=100.0,
+            memory_usage_threshold_mb=100,
             history_cleanup_threshold=0.8,
-            cleanup_batch_size=100,
+            history_cleanup_batch_size=100,
         )
 
     def update_config(self, **kwargs) -> None:

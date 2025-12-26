@@ -2,10 +2,9 @@
 Database Configuration - PostgreSQL Unified Stack.
 
 Production-ready database configuration with PostgreSQL as the only backend.
-Supports three PostgreSQL extensions:
+Supports PostgreSQL extensions:
 - pgvector: Vector similarity search for RAG
-- Apache AGE: Graph queries via Cypher
-- Standard: Relational data
+- pg_trgm: Full-text search with trigrams
 
 All operations are async-only (no psycopg2 sync driver).
 
@@ -50,10 +49,13 @@ class DatabaseConfig:
     password: str = ""
 
     # Connection pool settings
-    pool_size: int = 10
-    max_overflow: int = 20
-    pool_timeout: int = 30
-    pool_recycle: int = 3600
+    # Otimizado para <100 req/s, 20 usuários simultâneos
+    # Total máximo de conexões: pool_size + max_overflow = 15
+    pool_size: int = 5  # Conexões mantidas abertas (reduzido de 10)
+    max_overflow: int = 10  # Conexões adicionais sob demanda (reduzido de 20)
+    pool_timeout: int = 30  # Timeout aguardando conexão disponível
+    pool_recycle: int = 1800  # Reciclar conexões após 30min (reduzido de 1h)
+    pool_pre_ping: bool = True  # Verificar conexões antes de usar
 
     # SSL settings
     ssl_mode: str = "prefer"  # disable, allow, prefer, require, verify-ca, verify-full

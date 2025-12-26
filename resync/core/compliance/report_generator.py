@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 # Lazy imports to avoid circular dependency
 def _get_soc2_compliance_manager():
     """Lazy import to avoid circular dependency."""
-    from resync.core.soc2_compliance_refactored import SOC2ComplianceManager
+    from resync.core.soc2_compliance import SOC2ComplianceManager
 
     return SOC2ComplianceManager
 
@@ -57,11 +57,11 @@ class ComplianceReportGenerator:
             soc2_manager: Optional SOC 2 compliance manager instance.
                          If not provided, uses the global instance.
         """
-        SOC2ComplianceManager = _get_soc2_compliance_manager()
-        ComplianceReport = _get_compliance_report()
-        self.soc2_manager = soc2_manager or SOC2ComplianceManager()
+        soc2_compliance_manager_cls = _get_soc2_compliance_manager()
+        compliance_report_cls = _get_compliance_report()
+        self.soc2_manager = soc2_manager or soc2_compliance_manager_cls()
         # Use a forward reference for ComplianceReport to avoid NameError during runtime
-        self._report_cache: dict[str, ComplianceReport] = {}
+        self._report_cache: dict[str, compliance_report_cls] = {}
 
     async def generate_soc2_report(
         self, start_date: datetime, end_date: datetime
@@ -101,8 +101,8 @@ class ComplianceReportGenerator:
         soc2_data = self.soc2_manager.generate_compliance_report()
 
         # Create the compliance report
-        ComplianceReport = _get_compliance_report()
-        report = ComplianceReport(
+        compliance_report_cls = _get_compliance_report()
+        report = compliance_report_cls(
             report_id=report_id,
             report_type="soc2_compliance",
             period_start=start_date.timestamp(),
@@ -160,8 +160,8 @@ class ComplianceReportGenerator:
         gdpr_data = self._collect_gdpr_data(start_date, end_date)
 
         # Create the compliance report
-        ComplianceReport = _get_compliance_report()
-        report = ComplianceReport(
+        compliance_report_cls = _get_compliance_report()
+        report = compliance_report_cls(
             report_id=report_id,
             report_type="gdpr_compliance",
             period_start=start_date.timestamp(),

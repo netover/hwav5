@@ -116,9 +116,9 @@ class MemoryUsageTracker:
             # Add garbage collection information
             gc_stats = gc.get_stats()
             memory_data["gc_collections"] = {
-                "generation_0": gc_stats[0].collections,
-                "generation_1": gc_stats[1].collections,
-                "generation_2": gc_stats[2].collections,
+                "generation_0": gc_stats[0]["collections"],
+                "generation_1": gc_stats[1]["collections"],
+                "generation_2": gc_stats[2]["collections"],
             }
 
             # Add to history

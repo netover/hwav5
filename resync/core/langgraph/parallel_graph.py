@@ -36,7 +36,7 @@ Architecture:
 
 Usage:
     from resync.core.langgraph.parallel_graph import create_parallel_troubleshoot_graph
-    
+
     graph = await create_parallel_troubleshoot_graph()
     result = await graph.ainvoke({"message": "Job BATCH001 falhou"})
 """
@@ -47,8 +47,7 @@ import asyncio
 import json
 import operator
 import time
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
 from typing import Annotated, Any, TypedDict
 
 from resync.core.structured_logger import get_logger
@@ -85,7 +84,7 @@ class DataSourceResult(TypedDict):
 class ParallelState(TypedDict, total=False):
     """
     State for parallel execution graph.
-    
+
     Uses Annotated types with operator.add for automatic list merging
     when multiple nodes write to the same field.
     """
@@ -108,7 +107,7 @@ class ParallelState(TypedDict, total=False):
 
     # Aggregated data
     aggregated_data: dict[str, Any]
-    
+
     # Timing metrics
     total_latency_ms: float
     parallel_latency_ms: float  # Time for parallel phase only
@@ -150,17 +149,17 @@ class ParallelConfig:
 async def tws_status_node(state: ParallelState) -> dict[str, Any]:
     """
     Fetch TWS status in parallel.
-    
+
     This node runs concurrently with other data fetching nodes.
     Returns results that will be automatically merged via operator.add.
     """
     start_time = time.time()
     source_name = "tws_status"
-    
+
     logger.debug("parallel_node_start", node=source_name)
 
     try:
-        from resync.tool_definitions.tws_tools import tws_status_tool
+        from resync.tools.definitions.tws import tws_status_tool
 
         tws_instance = state.get("tws_instance_id")
         result = await asyncio.wait_for(
@@ -218,7 +217,7 @@ async def tws_status_node(state: ParallelState) -> dict[str, Any]:
 async def rag_search_node(state: ParallelState) -> dict[str, Any]:
     """
     Search RAG knowledge base in parallel.
-    
+
     Searches for relevant documentation and historical solutions.
     """
     start_time = time.time()
@@ -297,7 +296,7 @@ async def rag_search_node(state: ParallelState) -> dict[str, Any]:
 async def log_cache_node(state: ParallelState) -> dict[str, Any]:
     """
     Fetch historical logs from cache in parallel.
-    
+
     Retrieves recent job execution logs and error patterns.
     """
     start_time = time.time()
@@ -309,11 +308,11 @@ async def log_cache_node(state: ParallelState) -> dict[str, Any]:
         from resync.core.redis_init import get_redis_client
 
         job_name = state.get("job_name")
-        message = state.get("message", "")
+        state.get("message", "")
 
         # Try to get cached logs
         redis_client = await get_redis_client()
-        
+
         logs_data = {}
         if redis_client:
             # Get recent error patterns
@@ -322,10 +321,10 @@ async def log_cache_node(state: ParallelState) -> dict[str, Any]:
                 redis_client.get(error_key),
                 timeout=2.0,
             )
-            
+
             if cached_errors:
                 logs_data["recent_errors"] = json.loads(cached_errors)
-            
+
             # Get job history if job_name provided
             if job_name:
                 history_key = f"resync:job:history:{job_name}"
@@ -386,7 +385,7 @@ async def log_cache_node(state: ParallelState) -> dict[str, Any]:
 async def metrics_node(state: ParallelState) -> dict[str, Any]:
     """
     Fetch relevant metrics in parallel.
-    
+
     Gets performance metrics, SLO data, and anomaly indicators.
     """
     start_time = time.time()
@@ -398,7 +397,7 @@ async def metrics_node(state: ParallelState) -> dict[str, Any]:
         from resync.core.metrics import RuntimeMetrics
 
         metrics = RuntimeMetrics.get_snapshot()
-        
+
         latency_ms = (time.time() - start_time) * 1000
 
         return {
@@ -443,14 +442,14 @@ async def metrics_node(state: ParallelState) -> dict[str, Any]:
 async def aggregator_node(state: ParallelState) -> dict[str, Any]:
     """
     Aggregate results from all parallel nodes.
-    
+
     This is the "reduce" phase of map-reduce pattern.
     Combines data from multiple sources into a unified structure.
     """
     logger.debug("aggregator_node_start")
 
     parallel_results = state.get("parallel_results", [])
-    
+
     # Calculate parallel phase latency
     if parallel_results:
         max_latency = max(r.get("latency_ms", 0) for r in parallel_results)
@@ -471,10 +470,10 @@ async def aggregator_node(state: ParallelState) -> dict[str, Any]:
 
     for result in parallel_results:
         source = result.get("source", "unknown")
-        
+
         if result.get("success"):
             aggregated["sources_available"].append(source)
-            
+
             if source == "tws_status":
                 aggregated["tws_status"] = result.get("data", {})
             elif source == "rag_search":
@@ -484,10 +483,12 @@ async def aggregator_node(state: ParallelState) -> dict[str, Any]:
             elif source == "metrics":
                 aggregated["metrics"] = result.get("data", {})
         else:
-            aggregated["sources_failed"].append({
-                "source": source,
-                "error": result.get("error"),
-            })
+            aggregated["sources_failed"].append(
+                {
+                    "source": source,
+                    "error": result.get("error"),
+                }
+            )
 
     # Calculate performance improvement
     speedup_factor = total_sequential_latency / max_latency if max_latency > 0 else 1
@@ -523,16 +524,16 @@ async def aggregator_node(state: ParallelState) -> dict[str, Any]:
 async def response_generator_node(state: ParallelState) -> dict[str, Any]:
     """
     Generate final response from aggregated data.
-    
+
     Uses LLM to synthesize insights from multiple sources.
     """
     logger.debug("response_generator_start")
 
     aggregated = state.get("aggregated_data", {})
     message = state.get("message", "")
-    
+
     try:
-        from resync.core.langfuse import PromptType, get_prompt_manager
+        from resync.core.langfuse import get_prompt_manager
         from resync.core.utils.llm import call_llm
 
         # Build context from aggregated data
@@ -541,22 +542,28 @@ async def response_generator_node(state: ParallelState) -> dict[str, Any]:
         # Add TWS status
         if aggregated.get("tws_status"):
             status = aggregated["tws_status"]
-            context_parts.append(f"**Status do TWS:**\n{json.dumps(status, indent=2, ensure_ascii=False)}")
+            context_parts.append(
+                f"**Status do TWS:**\n{json.dumps(status, indent=2, ensure_ascii=False)}"
+            )
 
         # Add RAG results
         rag_results = aggregated.get("rag_results", [])
         if rag_results:
-            rag_context = "\n".join([
-                f"- [{r.get('source', 'Doc')}]: {r.get('content', '')[:200]}..."
-                for r in rag_results[:3]
-            ])
+            rag_context = "\n".join(
+                [
+                    f"- [{r.get('source', 'Doc')}]: {r.get('content', '')[:200]}..."
+                    for r in rag_results[:3]
+                ]
+            )
             context_parts.append(f"**Documentação Relevante:**\n{rag_context}")
 
         # Add historical data
         if aggregated.get("log_data"):
             log_data = aggregated["log_data"]
             if log_data.get("recent_errors"):
-                context_parts.append(f"**Erros Recentes:**\n{json.dumps(log_data['recent_errors'][:3], indent=2)}")
+                context_parts.append(
+                    f"**Erros Recentes:**\n{json.dumps(log_data['recent_errors'][:3], indent=2)}"
+                )
 
         # Add metrics
         if aggregated.get("metrics"):
@@ -571,8 +578,8 @@ async def response_generator_node(state: ParallelState) -> dict[str, Any]:
         full_context = "\n\n".join(context_parts)
 
         # Get troubleshooting prompt
-        prompt_manager = get_prompt_manager()
-        
+        get_prompt_manager()
+
         system_prompt = f"""Você é um especialista em troubleshooting do TWS (Tivoli Workload Scheduler) / HCL Workload Automation.
 
 Com base nos dados coletados de múltiplas fontes, analise o problema e forneça:
@@ -597,7 +604,7 @@ Responda de forma estruturada e acionável."""
         # Add performance note
         parallel_latency = state.get("parallel_latency_ms", 0)
         sources_count = len(aggregated.get("sources_available", []))
-        
+
         performance_note = (
             f"\n\n---\n"
             f"*Análise paralela: {sources_count} fontes consultadas em {parallel_latency:.0f}ms*"
@@ -609,17 +616,15 @@ Responda de forma estruturada e acionável."""
 
     except Exception as e:
         logger.error("response_generation_failed", error=str(e), exc_info=True)
-        
+
         # Fallback response using raw data
         available_sources = aggregated.get("sources_available", [])
         if available_sources:
-            fallback_response = (
-                f"Não foi possível gerar análise completa, mas coletei dados de: {', '.join(available_sources)}.\n\n"
-            )
+            fallback_response = f"Não foi possível gerar análise completa, mas coletei dados de: {', '.join(available_sources)}.\n\n"
             if aggregated.get("tws_status"):
                 fallback_response += f"Status TWS: {json.dumps(aggregated['tws_status'], indent=2)}"
             return {"response": fallback_response}
-        
+
         return {
             "response": f"Erro na análise de troubleshooting: {str(e)}",
             "errors": [str(e)],
@@ -636,13 +641,13 @@ async def create_parallel_troubleshoot_graph(
 ) -> Any:
     """
     Create a parallelized troubleshooting graph.
-    
+
     This graph executes data fetching in parallel (fan-out),
     then aggregates results (fan-in) before generating response.
-    
+
     Args:
         config: Configuration for parallel execution
-        
+
     Returns:
         Compiled StateGraph with parallel execution
     """
@@ -713,7 +718,7 @@ async def create_parallel_troubleshoot_graph(
 class FallbackParallelGraph:
     """
     Fallback when LangGraph is not available.
-    
+
     Uses asyncio.gather for parallel execution instead of LangGraph's
     native parallelization.
     """
@@ -804,31 +809,33 @@ async def parallel_troubleshoot(
 ) -> dict[str, Any]:
     """
     High-level function for parallel troubleshooting.
-    
+
     Usage:
         result = await parallel_troubleshoot(
             message="Job BATCH001 falhou com ABEND",
             job_name="BATCH001",
         )
         print(result["response"])
-    
+
     Args:
         message: User's troubleshooting query
         job_name: Optional job name for targeted search
         tws_instance_id: Optional TWS instance ID
         config: Optional configuration
-        
+
     Returns:
         Dict with response, metadata, and timing information
     """
     graph = await create_parallel_troubleshoot_graph(config)
-    
-    result = await graph.ainvoke({
-        "message": message,
-        "job_name": job_name,
-        "tws_instance_id": tws_instance_id,
-    })
-    
+
+    result = await graph.ainvoke(
+        {
+            "message": message,
+            "job_name": job_name,
+            "tws_instance_id": tws_instance_id,
+        }
+    )
+
     return {
         "response": result.get("response", ""),
         "metadata": result.get("metadata", {}),

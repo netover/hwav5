@@ -2,7 +2,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 
-from resync.core.health_models import ComponentHealth, ComponentType, HealthStatus
+from resync.core.health.health_models import ComponentHealth, ComponentType, HealthStatus
 from resync.core.structured_logger import get_logger
 
 logger = get_logger(__name__)

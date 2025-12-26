@@ -744,7 +744,7 @@ class TestAdminAIMonitoringAPI:
 
     def test_default_config_structure(self):
         """Test default configuration structure."""
-        from resync.fastapi_app.api.v1.routes.admin_ai_monitoring import DEFAULT_AI_CONFIG
+        from resync.api.routes.monitoring.ai_monitoring import DEFAULT_AI_CONFIG
 
         assert "specialists" in DEFAULT_AI_CONFIG
         assert "monitoring" in DEFAULT_AI_CONFIG
@@ -766,7 +766,7 @@ class TestAdminAIMonitoringAPI:
 
     def test_config_models_validation(self):
         """Test Pydantic model validation."""
-        from resync.fastapi_app.api.v1.routes.admin_ai_monitoring import (
+        from resync.api.routes.monitoring.ai_monitoring import (
             AIMonitoringConfig,
             ResourceLimitsConfig,
             SpecialistsConfig,

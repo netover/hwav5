@@ -19,6 +19,8 @@ async def test_observer_pattern():
     print("=" * 50)
 
     try:
+        from resync.core.health_models import HealthStatus
+
         from resync.core.health.health_monitoring_observer import (
             AlertingHealthObserver,
             HealthMonitoringEvent,
@@ -26,7 +28,6 @@ async def test_observer_pattern():
             LoggingHealthObserver,
             MetricsHealthObserver,
         )
-        from resync.core.health_models import HealthStatus
 
         # Create subject and observers
         subject = HealthMonitoringSubject()

@@ -215,19 +215,19 @@ class TestTWSInstanceRoutes:
 
     def test_routes_import(self):
         """Test routes module import."""
-        from resync.fastapi_app.api.v1.routes import admin_tws_instances
+        from resync.api.routes.admin import tws_instances as admin_tws_instances
 
         assert admin_tws_instances is not None
 
     def test_router_exists(self):
         """Test router exists."""
-        from resync.fastapi_app.api.v1.routes.admin_tws_instances import router
+        from resync.api.routes.admin.tws_instances import router
 
         assert router is not None
 
     def test_models_import(self):
         """Test Pydantic models import."""
-        from resync.fastapi_app.api.v1.routes.admin_tws_instances import (
+        from resync.api.routes.admin.tws_instances import (
             SessionCreate,
             TWSInstanceCreate,
             TWSInstanceUpdate,
@@ -238,7 +238,7 @@ class TestTWSInstanceRoutes:
 
     def test_create_model(self):
         """Test TWSInstanceCreate model."""
-        from resync.fastapi_app.api.v1.routes.admin_tws_instances import TWSInstanceCreate
+        from resync.api.routes.admin.tws_instances import TWSInstanceCreate
 
         instance = TWSInstanceCreate(
             name="SAZ",

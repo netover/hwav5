@@ -6,9 +6,18 @@ operations such as listing objects, retrieving the current plan and its
 relationships, and fetching configuration details. Each request is measured
 and counted using Prometheus metrics for observability. HTTPX is instrumented
 with OpenTelemetry if the instrumentation library is available.
+
+v5.9.3: Added TTL-differentiated caching:
+- Job status: 10s (near real-time)
+- Logs: 30s (semi-live)
+- Static structure: 1h (rarely changes)
+- Graph dependencies: 5min
+
+Cache injects _fetched_at for UI transparency.
 """
 
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -23,6 +32,11 @@ except Exception as _e:
     pass
 
 from resync.core.metrics_compat import Counter, Histogram
+from resync.services.tws_cache import (
+    CacheCategory,
+    enrich_response_with_cache_meta,
+    get_tws_cache,
+)
 
 
 class OptimizedTWSClient:
@@ -79,10 +93,38 @@ class OptimizedTWSClient:
             auth=self.auth,
             trust_env=trust_env,
         )
+        # v5.9.3: TTL-differentiated cache
+        self._cache = get_tws_cache()
 
     async def close(self) -> None:
         """Close the underlying httpx client."""
         await self.client.aclose()
+
+    # -------------------------------------------------------------------------
+    # Cache Management (v5.9.3)
+    # -------------------------------------------------------------------------
+    def configure_cache(
+        self,
+        job_status_ttl: int | None = None,
+        job_logs_ttl: int | None = None,
+        static_ttl: int | None = None,
+        graph_ttl: int | None = None,
+    ):
+        """Configure cache TTLs."""
+        self._cache.configure_ttls(
+            job_status=job_status_ttl,
+            job_logs=job_logs_ttl,
+            static_structure=static_ttl,
+            graph=graph_ttl,
+        )
+
+    def get_cache_stats(self) -> dict[str, Any]:
+        """Get cache statistics."""
+        return self._cache.get_stats()
+
+    def clear_cache(self):
+        """Clear all cached data."""
+        self._cache.clear()
 
     async def _get(
         self,
@@ -379,3 +421,213 @@ class OptimizedTWSClient:
         if limit is not None:
             params["limit"] = limit
         return await self._get("/twsd/api/v2/plan/consumed-jobs/runs", params=params)
+
+    # =========================================================================
+    # CACHED METHODS (v5.9.3 - Near Real-Time Strategy)
+    # =========================================================================
+    # These methods use TTL-differentiated caching for optimal balance between
+    # API protection and data freshness. All responses include _fetched_at
+    # timestamp for UI transparency.
+
+    async def get_job_status_cached(
+        self,
+        job_id: str,
+        with_meta: bool = False,
+    ) -> Any:
+        """
+        Get job status with 10-second cache (near real-time).
+
+        Args:
+            job_id: Job identifier
+            with_meta: If True, returns {data, meta} with cache info
+
+        Returns:
+            Job status dict with _fetched_at timestamp
+            If with_meta=True: {data: {...}, meta: {cached, age_seconds, freshness}}
+        """
+        cache_key = f"job_status:{job_id}"
+
+        async def fetch():
+            data = await self.get_current_plan_job(job_id)
+            data["_fetched_at"] = datetime.now(timezone.utc).isoformat()
+            return data
+
+        value, is_cached, age = await self._cache.get_or_fetch(
+            cache_key, fetch, CacheCategory.JOB_STATUS
+        )
+
+        if with_meta:
+            return enrich_response_with_cache_meta(value, is_cached, age)
+        return value
+
+    async def get_job_logs_cached(
+        self,
+        job_id: str,
+        with_meta: bool = False,
+    ) -> Any:
+        """
+        Get job logs with 30-second cache.
+
+        Returns:
+            Job logs with _fetched_at timestamp
+        """
+        cache_key = f"job_logs:{job_id}"
+
+        async def fetch():
+            data = await self.get_current_plan_job_joblog()
+            if isinstance(data, dict):
+                data["_fetched_at"] = datetime.now(timezone.utc).isoformat()
+            return data
+
+        value, is_cached, age = await self._cache.get_or_fetch(
+            cache_key, fetch, CacheCategory.JOB_LOGS
+        )
+
+        if with_meta:
+            return enrich_response_with_cache_meta(value, is_cached, age)
+        return value
+
+    async def get_job_dependencies_cached(
+        self,
+        job_id: str,
+        depth: int = 1,
+        with_meta: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Get job dependencies with 5-minute cache.
+
+        Returns:
+            Dict with predecessors and successors
+        """
+        cache_key = f"job_deps:{job_id}:d{depth}"
+
+        async def fetch():
+            preds = await self.get_current_plan_job_predecessors(job_id, depth)
+            succs = await self.get_current_plan_job_successors(job_id, depth)
+            return {
+                "job_id": job_id,
+                "predecessors": preds or [],
+                "successors": succs or [],
+                "_fetched_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        value, is_cached, age = await self._cache.get_or_fetch(
+            cache_key, fetch, CacheCategory.GRAPH
+        )
+
+        if with_meta:
+            return enrich_response_with_cache_meta(value, is_cached, age)
+        return value
+
+    async def get_jobdefinition_cached(
+        self,
+        jobdef_id: str,
+        with_meta: bool = False,
+    ) -> Any:
+        """
+        Get job definition with 1-hour cache (static structure).
+
+        Returns:
+            Job definition with _fetched_at timestamp
+        """
+        cache_key = f"jobdef:{jobdef_id}"
+
+        async def fetch():
+            data = await self.get_jobdefinition(jobdef_id)
+            if isinstance(data, dict):
+                data["_fetched_at"] = datetime.now(timezone.utc).isoformat()
+            return data
+
+        value, is_cached, age = await self._cache.get_or_fetch(
+            cache_key, fetch, CacheCategory.STATIC_STRUCTURE
+        )
+
+        if with_meta:
+            return enrich_response_with_cache_meta(value, is_cached, age)
+        return value
+
+    async def get_workstation_cached(
+        self,
+        workstation_id: str,
+        with_meta: bool = False,
+    ) -> Any:
+        """
+        Get workstation with 1-hour cache (static structure).
+
+        Returns:
+            Workstation data with _fetched_at timestamp
+        """
+        cache_key = f"ws:{workstation_id}"
+
+        async def fetch():
+            data = await self.get_workstation(workstation_id)
+            if isinstance(data, dict):
+                data["_fetched_at"] = datetime.now(timezone.utc).isoformat()
+            return data
+
+        value, is_cached, age = await self._cache.get_or_fetch(
+            cache_key, fetch, CacheCategory.STATIC_STRUCTURE
+        )
+
+        if with_meta:
+            return enrich_response_with_cache_meta(value, is_cached, age)
+        return value
+
+    async def query_jobs_cached(
+        self,
+        q: str | None = None,
+        status: str | None = None,
+        limit: int = 50,
+        with_meta: bool = False,
+    ) -> Any:
+        """
+        Query jobs with 10-second cache.
+
+        Returns:
+            List of jobs with _fetched_at timestamp
+        """
+        cache_key = f"jobs_query:q={q}:s={status}:l={limit}"
+
+        async def fetch():
+            data = await self.query_current_plan_jobs(q, None, status, limit)
+            return {
+                "jobs": data if isinstance(data, list) else data.get("items", []),
+                "query": q,
+                "status_filter": status,
+                "_fetched_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        value, is_cached, age = await self._cache.get_or_fetch(
+            cache_key, fetch, CacheCategory.JOB_STATUS
+        )
+
+        if with_meta:
+            return enrich_response_with_cache_meta(value, is_cached, age)
+        return value
+
+
+# =============================================================================
+# HELPER FUNCTION
+# =============================================================================
+
+
+async def get_tws_client() -> OptimizedTWSClient:
+    """
+    Get or create TWS client instance.
+
+    Returns:
+        OptimizedTWSClient instance
+    """
+    from resync.settings import settings
+
+    hostname = settings.TWS_HOST or "localhost"
+    port = settings.TWS_PORT or 31111
+    base_url = f"http://{hostname}:{port}"
+
+    return OptimizedTWSClient(
+        base_url=base_url,
+        username=settings.TWS_USER or "tws_user",
+        password=settings.TWS_PASSWORD or "tws_password",
+        engine_name=settings.TWS_ENGINE_NAME,
+        engine_owner=settings.TWS_ENGINE_OWNER,
+    )

@@ -191,21 +191,20 @@ class PerformanceMetricsCollector:
             # Analyze connection pool metrics
             pool_metrics = metrics.get("connection_pools", {})
 
-            if "error" not in pool_metrics:
+            if "error" not in pool_metrics and "auto_scaling" in pool_metrics:
                 # Check for pool-specific issues
-                if "auto_scaling" in pool_metrics:
-                    auto_scaling = pool_metrics["auto_scaling"]
-                    utilization = auto_scaling.get("load_score", 0)
+                auto_scaling = pool_metrics["auto_scaling"]
+                utilization = auto_scaling.get("load_score", 0)
 
-                    if utilization > 0.9:
-                        summary["warnings"].append(
-                            f"High connection pool utilization: {utilization:.1%}"
-                        )
-                        summary["status"] = "degraded"
-                    elif utilization > 0.8:
-                        summary["warnings"].append(
-                            f"Elevated connection pool utilization: {utilization:.1%}"
-                        )
+                if utilization > 0.9:
+                    summary["warnings"].append(
+                        f"High connection pool utilization: {utilization:.1%}"
+                    )
+                    summary["status"] = "degraded"
+                elif utilization > 0.8:
+                    summary["warnings"].append(
+                        f"Elevated connection pool utilization: {utilization:.1%}"
+                    )
 
             # Generate recommendations
             if summary["status"] == "degraded":

@@ -636,8 +636,34 @@ class BackupService:
         backup = self._backups.get(backup_id)
         if backup and backup.filepath:
             path = Path(backup.filepath)
-            if path.exists():
-                return path
+            try:
+                # v5.9.7: Prevent path traversal by ensuring the backup file lives
+                # under the configured backup directory.
+                resolved = path.resolve()
+                backup_root = self._backup_dir.resolve()
+                if not str(resolved).startswith(str(backup_root) + os.sep):
+                    logger.warning(
+                        "backup_filepath_outside_root",
+                        backup_id=backup_id,
+                        path=str(resolved),
+                        root=str(backup_root),
+                    )
+                    return None
+
+                # Optional: ensure filename matches metadata
+                if backup.filename and resolved.name != backup.filename:
+                    logger.warning(
+                        "backup_filename_mismatch",
+                        backup_id=backup_id,
+                        resolved_name=resolved.name,
+                        expected=backup.filename,
+                    )
+                    return None
+
+                if resolved.exists():
+                    return resolved
+            except Exception as e:
+                logger.warning("backup_filepath_validation_failed", backup_id=backup_id, error=str(e))
         return None
 
     async def delete_backup(self, backup_id: str) -> bool:

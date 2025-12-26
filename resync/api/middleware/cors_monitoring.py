@@ -218,12 +218,11 @@ class CORSMonitoringMiddleware:
         request = Request(scope)
 
         async def send_wrapper(message):
-            if message["type"] == "http.response.start":
+            if message["type"] == "http.response.start" and request.method == "OPTIONS":
                 # Check if this is a CORS preflight request
-                if request.method == "OPTIONS":
-                    origin = request.headers.get("origin")
-                    access_method = request.headers.get("access-control-request-method")
-                    if origin:
+                origin = request.headers.get("origin")
+                access_method = request.headers.get("access-control-request-method")
+                if origin:
                         # Log preflight request
                         self.cors_monitor.monitor_request(request, CORSOperation.PREFLIGHT)
 

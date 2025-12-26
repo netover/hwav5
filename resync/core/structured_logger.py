@@ -178,6 +178,8 @@ def censor_sensitive_data(
     sensitive_patterns = {
         # Exact key matches
         "password",
+        "passwd",
+        "pwd",
         "token",
         "secret",
         "api_key",
@@ -194,16 +196,36 @@ def censor_sensitive_data(
         "ssn",
         "credit_card",
         "card_number",
+        # Database connection strings
+        "database_url",
+        "db_url",
+        "connection_string",
+        "conn_str",
+        "redis_url",
+        "redis_password",
+        # Additional sensitive fields
+        "encryption_key",
+        "signing_key",
+        "jwt_secret",
+        "session_secret",
+        "cookie_secret",
+        "admin_password",
+        "tws_password",
     }
 
     # Patterns to detect sensitive values
     sensitive_value_patterns = [
-        r'(?:password|pwd)=["\'][^"\']*["\']',
-        r'(?:token|secret|key)=["\'][^"\']*["\']',
+        r'(?:password|pwd|passwd)=["\']?[^"\'&\s]*["\']?',
+        r'(?:token|secret|key)=["\']?[^"\'&\s]*["\']?',
         r"(?:authorization)[:\s]*bearer\s+[^\s]+",
         r"(?:basic)\s+[a-zA-Z0-9+/=]+",
         r"\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}",  # Credit card pattern
         r"\b\d{3}-?\d{2}-?\d{4}\b",  # SSN pattern
+        # Database connection string patterns
+        r"postgresql(?:\+asyncpg)?://[^@]+@[^\s]+",  # PostgreSQL URL
+        r"redis://[^@]*@?[^\s]+",  # Redis URL
+        r"mysql://[^@]+@[^\s]+",  # MySQL URL
+        r"mongodb://[^@]+@[^\s]+",  # MongoDB URL
     ]
 
     import re

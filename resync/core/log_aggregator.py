@@ -412,10 +412,13 @@ class LogAggregator:
         """Add a log source configuration."""
         self.sources[config.name] = config
 
-        if config.source_type == LogSource.FILE and config.file_path:
+        if (
+            config.source_type == LogSource.FILE
+            and config.file_path
+            and os.path.exists(config.file_path)
+        ):
             # Initialize file position
-            if os.path.exists(config.file_path):
-                self.file_positions[config.name] = os.path.getsize(config.file_path)
+            self.file_positions[config.name] = os.path.getsize(config.file_path)
 
         logger.info(f"Added log source: {config.name} ({config.source_type.value})")
 
@@ -735,13 +738,15 @@ class LogAggregator:
     async def _process_log_line(self, line: str, source_config: LogSourceConfig) -> None:
         """Process a single log line."""
         # Apply filters
-        if source_config.include_patterns:
-            if not any(re.search(pattern, line) for pattern in source_config.include_patterns):
-                return
+        if source_config.include_patterns and not any(
+            re.search(pattern, line) for pattern in source_config.include_patterns
+        ):
+            return
 
-        if source_config.exclude_patterns:
-            if any(re.search(pattern, line) for pattern in source_config.exclude_patterns):
-                return
+        if source_config.exclude_patterns and any(
+            re.search(pattern, line) for pattern in source_config.exclude_patterns
+        ):
+            return
 
         # Create log entry
         log_entry = LogEntry(

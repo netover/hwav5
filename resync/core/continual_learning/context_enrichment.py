@@ -145,7 +145,7 @@ class ContextEnricher:
             return self._kg
 
         try:
-            from resync.core.knowledge_graph.graph import get_knowledge_graph
+            from resync.knowledge.retrieval.graph import get_knowledge_graph
 
             self._kg = await get_knowledge_graph()
             return self._kg

@@ -7,7 +7,7 @@ import pytest
 from resync.core.exceptions import ToolProcessingError
 from resync.models.tws import SystemStatus
 from resync.services.tws_service import OptimizedTWSClient
-from resync.tool_definitions.tws_tools import (
+from resync.tools.definitions.tws import (
     TWSStatusTool,
     TWSTroubleshootingTool,
 )

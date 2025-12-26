@@ -4,6 +4,8 @@ Este módulo fornece funções de dependência para injeção em endpoints,
 incluindo gerenciamento de idempotência, autenticação, e obtenção de IDs de contexto.
 """
 
+from typing import Any
+
 from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -21,6 +23,10 @@ logger = get_logger(__name__)
 
 # Global idempotency manager instance
 _idempotency_manager: IdempotencyManager | None = None
+
+# Rate limit configuration (module-level constants)
+RATE_LIMIT_REQUESTS = 100  # requests per window
+RATE_LIMIT_WINDOW = 60  # seconds
 
 # ============================================================================
 # IDEMPOTENCY DEPENDENCIES
@@ -190,7 +196,7 @@ async def get_current_user(
 
     try:
         # Import security module for JWT validation
-        from resync.fastapi_app.core.security import verify_token
+        from resync.api.core.security import verify_token
 
         token = credentials.credentials
         payload = verify_token(token)
@@ -232,12 +238,38 @@ async def require_authentication(
 
 
 # ============================================================================
-# RATE LIMITING DEPENDENCIES
+# RATE LIMITING DEPENDENCIES (v5.9.4 - Redis-based with TTL)
 # ============================================================================
+
+# Redis client for rate limiting (initialized lazily)
+_rate_limit_redis: "Any | None" = None
+
+
+async def _get_rate_limit_redis():
+    """Get or create Redis client for rate limiting."""
+    global _rate_limit_redis
+    if _rate_limit_redis is None:
+        try:
+            import redis.asyncio as redis
+            from resync.settings import settings
+            
+            _rate_limit_redis = redis.from_url(
+                settings.redis_url,
+                encoding="utf-8",
+                decode_responses=True,
+            )
+        except Exception as e:
+            logger.warning("rate_limit_redis_unavailable", error=str(e))
+            return None
+    return _rate_limit_redis
 
 
 async def check_rate_limit(request: Request) -> None:
-    """Verifica rate limit usando sliding window.
+    """Verifica rate limit usando Redis com sliding window e TTL automático.
+    
+    v5.9.4: Migrado de memória RAM para Redis para evitar memory leak
+    em cenários de DDoS com IP spoofing. Chaves expiram automaticamente
+    via TTL, eliminando necessidade de garbage collection manual.
 
     Args:
         request: Request object
@@ -245,28 +277,97 @@ async def check_rate_limit(request: Request) -> None:
     Raises:
         RateLimitError: Se o limite de taxa for excedido.
     """
-    from collections import defaultdict
+    import time
+    
+    client_ip = request.client.host if request.client else "unknown"
+    redis_client = await _get_rate_limit_redis()
+    
+    # Fallback para rate limiting básico se Redis indisponível
+    if redis_client is None:
+        await _check_rate_limit_fallback(request)
+        return
+    
+    try:
+        now = time.time()
+        window_start = now - RATE_LIMIT_WINDOW
+        key = f"ratelimit:{client_ip}"
+        
+        # Usar pipeline para atomicidade
+        async with redis_client.pipeline(transaction=True) as pipe:
+            # Remove timestamps antigos (fora da janela)
+            await pipe.zremrangebyscore(key, 0, window_start)
+            # Conta requests na janela atual
+            await pipe.zcard(key)
+            # Adiciona timestamp atual
+            await pipe.zadd(key, {str(now): now})
+            # Define TTL para limpeza automática (evita memory leak)
+            await pipe.expire(key, RATE_LIMIT_WINDOW + 10)
+            results = await pipe.execute()
+        
+        request_count = results[1]  # Resultado do ZCARD
+        
+        if request_count >= RATE_LIMIT_REQUESTS:
+            # Calcular tempo até próxima janela disponível
+            async with redis_client.pipeline() as pipe:
+                await pipe.zrange(key, 0, 0, withscores=True)
+                oldest = await pipe.execute()
+            
+            retry_after = RATE_LIMIT_WINDOW
+            if oldest and oldest[0]:
+                oldest_ts = oldest[0][0][1]
+                retry_after = max(1, int(oldest_ts + RATE_LIMIT_WINDOW - now))
+            
+            raise RateLimitError(
+                message="Rate limit exceeded",
+                details={
+                    "retry_after": retry_after,
+                    "limit": RATE_LIMIT_REQUESTS,
+                    "window": RATE_LIMIT_WINDOW,
+                },
+            )
+            
+    except RateLimitError:
+        raise
+    except Exception as e:
+        # Em caso de erro Redis, permite requisição (fail-open)
+        # mas loga para monitoramento
+        logger.warning("rate_limit_redis_error", error=str(e), client_ip=client_ip)
+
+
+async def _check_rate_limit_fallback(request: Request) -> None:
+    """Fallback rate limiting com LRU cache limitado (proteção contra OOM).
+    
+    Usado apenas quando Redis está indisponível. Implementa cache com
+    tamanho máximo fixo para evitar memory leak.
+    """
+    from collections import OrderedDict
     from datetime import datetime, timedelta
-
-    # Rate limit configuration
-    RATE_LIMIT_REQUESTS = 100  # requests per window
-    RATE_LIMIT_WINDOW = 60  # seconds
-
-    # In-memory store (use Redis in production)
-    if not hasattr(check_rate_limit, "_store"):
-        check_rate_limit._store = defaultdict(list)
-
+    
+    # LRU cache com tamanho máximo (evita OOM)
+    MAX_TRACKED_IPS = 10000
+    
+    if not hasattr(_check_rate_limit_fallback, "_store"):
+        _check_rate_limit_fallback._store = OrderedDict()
+    
+    store = _check_rate_limit_fallback._store
     client_ip = request.client.host if request.client else "unknown"
     now = datetime.now()
     window_start = now - timedelta(seconds=RATE_LIMIT_WINDOW)
-
-    # Clean old entries
-    check_rate_limit._store[client_ip] = [
-        ts for ts in check_rate_limit._store[client_ip] if ts > window_start
-    ]
-
-    # Check limit
-    if len(check_rate_limit._store[client_ip]) >= RATE_LIMIT_REQUESTS:
+    
+    # Limpar IPs mais antigos se exceder limite (LRU eviction)
+    while len(store) >= MAX_TRACKED_IPS:
+        store.popitem(last=False)
+    
+    # Limpar timestamps antigos do IP atual
+    if client_ip in store:
+        store[client_ip] = [ts for ts in store[client_ip] if ts > window_start]
+        # Move para o final (mais recente)
+        store.move_to_end(client_ip)
+    else:
+        store[client_ip] = []
+    
+    # Verificar limite
+    if len(store[client_ip]) >= RATE_LIMIT_REQUESTS:
         raise RateLimitError(
             message="Rate limit exceeded",
             details={
@@ -274,6 +375,6 @@ async def check_rate_limit(request: Request) -> None:
                 "limit": RATE_LIMIT_REQUESTS,
             },
         )
-
-    # Record request
-    check_rate_limit._store[client_ip].append(now)
+    
+    # Registrar requisição
+    store[client_ip].append(now)

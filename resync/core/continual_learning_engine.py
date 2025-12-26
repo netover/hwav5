@@ -180,11 +180,11 @@ class ContinualLearningEngine:
     async def _get_feedback_retriever(self):
         """Get feedback-aware retriever."""
         if self._feedback_retriever is None:
-            from resync.RAG.microservice.core.embedding_service import get_embedder
-            from resync.RAG.microservice.core.feedback_retriever import (
+            from resync.knowledge.ingestion.embedding_service import get_embedder
+            from resync.knowledge.retrieval.feedback_retriever import (
                 create_feedback_aware_retriever,
             )
-            from resync.RAG.microservice.core.vector_store import get_vector_store
+            from resync.knowledge.store.pgvector_store import get_vector_store
 
             embedder = get_embedder()
             store = get_vector_store()
@@ -214,7 +214,7 @@ class ContinualLearningEngine:
     async def _get_embedder(self):
         """Get embedder."""
         if self._embedder is None:
-            from resync.RAG.microservice.core.embedding_service import get_embedder
+            from resync.knowledge.ingestion.embedding_service import get_embedder
 
             self._embedder = get_embedder()
         return self._embedder
@@ -575,32 +575,36 @@ class ContinualLearningEngine:
             },
         }
 
-        # Get component statistics
+        # Get component statistics - log errors but don't fail
         try:
             if self.enable_enrichment and self._enricher:
                 stats["enrichment"] = self._enricher.get_statistics()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("enrichment_stats_failed", error=str(e))
+            stats["enrichment"] = {"error": str(e)}
 
         try:
             if self.enable_feedback_rag and self._feedback_retriever:
                 stats["feedback_rag"] = self._feedback_retriever.get_retriever_stats()
                 stats["feedback_store"] = await self._feedback_retriever.get_feedback_stats()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("feedback_rag_stats_failed", error=str(e))
+            stats["feedback_rag"] = {"error": str(e)}
 
         try:
             if self.enable_active_learning and self._active_learning:
                 stats["active_learning"] = self._active_learning.get_statistics()
                 stats["review_queue"] = await self._active_learning.get_queue_statistics()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("active_learning_stats_failed", error=str(e))
+            stats["active_learning"] = {"error": str(e)}
 
         try:
             if self.enable_audit_pipeline and self._audit_pipeline:
                 stats["audit_pipeline"] = self._audit_pipeline.get_statistics()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("audit_pipeline_stats_failed", error=str(e))
+            stats["audit_pipeline"] = {"error": str(e)}
 
         return stats
 

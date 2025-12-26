@@ -294,3 +294,119 @@ class ScopedMiddleware:
                 await self.app(scope, receive, send)
         else:
             await self.app(scope, receive, send)
+
+
+# =============================================================================
+# v5.7.1: SINGLETON PROVIDERS FOR CORE COMPONENTS
+# Fix for Bug #3: HybridRouter without AgentManager
+# =============================================================================
+
+# Module-level singletons for lazy initialization
+_agent_manager_instance: Any = None
+_hybrid_router_instance: Any = None
+_agent_manager_lock = asyncio.Lock()
+_hybrid_router_lock = asyncio.Lock()
+
+
+def get_agent_manager() -> Any:
+    """
+    Get or create AgentManager singleton.
+
+    v5.7.1: Provides centralized AgentManager for dependency injection.
+
+    Returns:
+        AgentManager instance
+    """
+    global _agent_manager_instance
+
+    if _agent_manager_instance is None:
+        from resync.core.agent_manager import AgentManager
+        _agent_manager_instance = AgentManager()
+        logger.info("agent_manager_singleton_created")
+
+    return _agent_manager_instance
+
+
+def get_hybrid_router() -> Any:
+    """
+    Get or create HybridRouter singleton with proper AgentManager injection.
+
+    v5.7.1 FIX: Ensures HybridRouter is created with AgentManager,
+    fixing the bug where agents returned empty responses.
+
+    Returns:
+        HybridRouter instance with AgentManager
+    """
+    global _hybrid_router_instance
+
+    if _hybrid_router_instance is None:
+        from resync.core.agent_router import HybridRouter
+
+        # Get or create AgentManager first
+        agent_manager = get_agent_manager()
+
+        # Create HybridRouter WITH AgentManager (Bug #3 fix)
+        _hybrid_router_instance = HybridRouter(agent_manager=agent_manager)
+
+        logger.info(
+            "hybrid_router_singleton_created",
+            has_agent_manager=_hybrid_router_instance.agent_manager is not None,
+        )
+
+    return _hybrid_router_instance
+
+
+def reset_singletons() -> None:
+    """
+    Reset all module-level singletons.
+
+    Use for testing or hot-reload scenarios.
+    """
+    global _agent_manager_instance, _hybrid_router_instance
+    _agent_manager_instance = None
+    _hybrid_router_instance = None
+    logger.info("singletons_reset")
+
+
+async def get_agent_manager_async() -> Any:
+    """
+    Async version of get_agent_manager with proper locking.
+
+    Use this in async contexts to ensure thread-safety.
+    """
+    global _agent_manager_instance
+
+    if _agent_manager_instance is not None:
+        return _agent_manager_instance
+
+    async with _agent_manager_lock:
+        if _agent_manager_instance is None:
+            from resync.core.agent_manager import AgentManager
+            _agent_manager_instance = AgentManager()
+            logger.info("agent_manager_singleton_created_async")
+        return _agent_manager_instance
+
+
+async def get_hybrid_router_async() -> Any:
+    """
+    Async version of get_hybrid_router with proper locking.
+
+    Use this in async contexts to ensure thread-safety.
+    """
+    global _hybrid_router_instance
+
+    if _hybrid_router_instance is not None:
+        return _hybrid_router_instance
+
+    async with _hybrid_router_lock:
+        if _hybrid_router_instance is None:
+            from resync.core.agent_router import HybridRouter
+
+            agent_manager = await get_agent_manager_async()
+            _hybrid_router_instance = HybridRouter(agent_manager=agent_manager)
+
+            logger.info(
+                "hybrid_router_singleton_created_async",
+                has_agent_manager=_hybrid_router_instance.agent_manager is not None,
+            )
+        return _hybrid_router_instance

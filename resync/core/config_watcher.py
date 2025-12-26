@@ -30,10 +30,10 @@ async def handle_config_change() -> None:
         from resync.core.connection_manager import ConnectionManager
 
         container = _get_container()
-        IAgentManager, IConnectionManager = _get_interfaces()
+        i_agent_manager, i_connection_manager = _get_interfaces()
 
-        agent_manager = cast(AgentManager, container.get(IAgentManager))
-        connection_manager = cast(ConnectionManager, container.get(IConnectionManager))
+        agent_manager = cast(AgentManager, container.get(i_agent_manager))
+        connection_manager = cast(ConnectionManager, container.get(i_connection_manager))
     except Exception as e:
         logger.error(
             "Failed to resolve dependencies from DI container", error=str(e), exc_info=True

@@ -24,7 +24,7 @@ import yaml
 # Lazy import para evitar circular import
 # from resync.core.fastapi_di import get_service
 from resync.core.interfaces import ITWSClient
-from resync.tool_definitions.tws_tools import (
+from resync.tools.definitions.tws import (
     tws_status_tool,
     tws_troubleshooting_tool,
 )
@@ -33,128 +33,116 @@ from resync.tool_definitions.tws_tools import (
 agent_logger = structlog.get_logger("resync.agent_manager")
 
 
-try:
-    from agno.agent import Agent
+# =============================================================================
+# NATIVE AGENT IMPLEMENTATION (v5.2.3.24 - Replaces Agno)
+# =============================================================================
 
-    AGNO_AVAILABLE = True
-except ImportError:
-    AGNO_AVAILABLE = False
+class Agent:
+    """
+    Native Agent class that uses LiteLLM directly.
+    
+    v5.2.3.24: Replaces agno.agent.Agent dependency.
+    Compatible interface for seamless migration.
+    """
 
-    class MockAgent:
-        """Mock Agent class compatible with agno.Agent interface."""
+    def __init__(
+        self,
+        tools: Any = None,
+        model: Any = None,
+        instructions: Any = None,
+        name: str = "TWS Agent",
+        description: str = "TWS operations agent",
+        **kwargs: Any,
+    ) -> None:
+        self.tools = tools or []
+        self.model = model or "ollama/qwen2.5:3b"
+        self.llm_model = self.model
+        self.instructions = instructions if isinstance(instructions, str) else "\n".join(instructions or [])
+        self.name = name
+        self.description = description
+        self.role = name
+        self.goal = "Assist with TWS operations"
+        self.backstory = description
 
-        def __init__(
-            self,
-            tools: Any = None,
-            model: Any = None,
-            instructions: Any = None,
-            name: str = "Mock Agent",
-            description: str = "Mock agent for testing",
-            **kwargs: Any,
-        ) -> None:
-            # Initialize all required attributes
-            self.tools = tools or []
-            self.model = model
-            self.llm_model = model  # Alias para compatibilidade com FastAPI
-            self.instructions = instructions
-            self.name = name
-            self.description = description
+    async def arun(self, message: str) -> str:
+        """Process a message using LiteLLM."""
+        try:
+            import litellm
+            litellm.suppress_debug_info = True
+            
+            # Build system prompt
+            system_prompt = f"""You are {self.name}.
+{self.instructions}
 
-            # Additional attributes that FastAPI might expect
-            self.role = "Mock Agent"
-            self.goal = "Provide mock responses for testing"
-            self.backstory = description
+Available tools: {', '.join(str(t) for t in self.tools) if self.tools else 'None'}
 
-        async def arun(self, message: str) -> str:
-            """Process a message and return a response."""
-            agent_logger.debug(
-                "mock_agent_processing_message", message=message, agent_name=self.name
+Respond in Portuguese (Brazilian) unless the user writes in English."""
+
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message},
+            ]
+            
+            response = await litellm.acompletion(
+                model=self.model,
+                messages=messages,
+                max_tokens=1024,
+                temperature=0.1,
             )
-            try:
-                msg = message.lower()
-                agent_logger.debug(
-                    "mock_agent_message_normalized",
-                    original_message=message,
-                    normalized_message=msg,
-                )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            agent_logger.error("agent_arun_error", error=str(e), agent=self.name)
+            # Fallback to simple response
+            return self._fallback_response(message, str(e))
 
-                if "job" in msg and ("abend" in msg or "erro" in msg):
-                    result = "Jobs em estado ABEND encontrados:\\n- Data Processing (ID: JOB002) na workstation TWS_AGENT2\\n\\nRecomendo investigar o log do job e verificar dependências."
-                    agent_logger.info(
-                        "mock_agent_abend_response",
-                        agent_name=self.name,
-                        result_preview=result[:50],
-                    )
-                    return result
+    def _fallback_response(self, message: str, error: str) -> str:
+        """Provide fallback response when LLM fails."""
+        msg = message.lower()
+        
+        if "job" in msg and ("abend" in msg or "erro" in msg):
+            return "Jobs em estado ABEND encontrados. Recomendo investigar o log do job e verificar dependências."
+        
+        if "status" in msg or "workstation" in msg:
+            return "Para verificar o status, use o comando 'conman' ou consulte a interface web do TWS."
+        
+        if "tws" in msg:
+            return f"Como {self.name}, posso ajudar com questões relacionadas ao TWS. O que você precisa?"
+        
+        return f"Entendi sua mensagem. Como {self.name}, estou aqui para ajudar com operações TWS. (Nota: LLM temporariamente indisponível)"
 
-                if "status" in msg or "workstation" in msg:
-                    result = "Status atual do ambiente TWS:\\n\\nWorkstations:\\n- TWS_MASTER: ONLINE\\n- TWS_AGENT1: ONLINE\\n- TWS_AGENT2: OFFLINE\\n\\nJobs:\\n- Daily Backup: SUCC (TWS_AGENT1)\\n- Data Processing: ABEND (TWS_AGENT2)\\n- Report Generation: SUCC (TWS_AGENT1)"
-                    agent_logger.info(
-                        "mock_agent_status_response",
-                        agent_name=self.name,
-                        result_preview=result[:50],
-                    )
-                    return result
+    def run(self, message: str) -> str:
+        """Synchronous version of arun."""
+        import asyncio
+        
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self.arun(message))
+        
+        raise RuntimeError(
+            "Agent.run() cannot be called from an async event loop; "
+            "use `await Agent.arun()` instead."
+        )
 
-                if "tws" in msg:
-                    result = f"Como {self.name}, posso ajudar com questões relacionadas ao TWS. Que informações você precisa?"
-                    agent_logger.info(
-                        "mock_agent_tws_response",
-                        agent_name=self.name,
-                        result_preview=result[:50],
-                    )
-                    return result
+    def to_dict(self) -> dict:
+        """Convert agent to dictionary for serialization."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "model": str(self.model) if self.model else None,
+            "llm_model": str(self.llm_model) if self.llm_model else None,
+            "role": self.role,
+            "goal": self.goal,
+            "backstory": self.backstory,
+            "tools": [str(t) for t in self.tools] if self.tools else [],
+        }
 
-                result = f"Entendi sua mensagem: '{message}'. Como {self.name}, estou aqui para ajudar com questões do TWS."
-                agent_logger.info(
-                    "mock_agent_default_response",
-                    agent_name=self.name,
-                    result_preview=result[:50],
-                )
-                return result
 
-            except Exception as e:
-                result = f"Erro simples: {str(e)}"
-                agent_logger.error(
-                    "mock_agent_processing_error",
-                    agent_name=self.name,
-                    error=str(e),
-                    error_type=type(e).__name__,
-                )
-                return result
-
-        def run(self, message: str) -> str:
-            """Synchronous version of arun for compatibility."""
-            import asyncio
-
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    import asyncio
-
-                    async def run_async():
-                        return await self.arun(message)
-
-                    return asyncio.create_task(run_async())
-                return loop.run_until_complete(self.arun(message))
-            except Exception as e:
-                logger.error("exception_caught", error=str(e), exc_info=True)
-                import asyncio
-
-                return asyncio.run(self.arun(message))
-
-        def to_dict(self) -> dict:
-            """Convert agent to dictionary for serialization - required by FastAPI."""
-            return {
-                "name": self.name,
-                "description": self.description,
-                "model": str(self.model) if self.model else None,
-                "llm_model": str(self.llm_model) if self.llm_model else None,
-                "role": self.role,
-                "goal": self.goal,
-                "backstory": self.backstory,
-                "tools": [str(t) for t in self.tools] if self.tools else [],
-            }
+# For backward compatibility
+MockAgent = Agent  # MockAgent is now the same as Agent
+AGNO_AVAILABLE = True  # Always "available" since we have native implementation
 
 
 from pydantic import BaseModel
@@ -365,26 +353,20 @@ class AgentManager:
                             logger.warning(f"Failed to get TWS client: {e}")
                             self.tws_client = None
 
-            # Create agent with tools
-            if AGNO_AVAILABLE:
-                # Create real agent with tools
-                agent = Agent(
-                    model=agent_config.model_name,
-                    tools=list(self.tools.values()),
-                    instructions=f"You are a {agent_config.name} assistant for TWS operations. {agent_config.backstory}",
-                    name=agent_config.name,
-                )
-                logger.info(f"Created real agent: {agent}")
-                return agent
-            # Create mock agent with ALL required attributes - FIXED
-            agent = MockAgent(
-                tools=list(self.tools.values()),
+            # Create agent with tools (v5.2.3.24: Native Agent implementation)
+            agent = Agent(
                 model=agent_config.model_name,
+                tools=list(self.tools.values()),
                 instructions=f"You are a {agent_config.name} assistant for TWS operations. {agent_config.backstory}",
                 name=agent_config.name,
-                description=agent_config.backstory,  # ✅ PASSAR DESCRIPTION
+                description=agent_config.backstory,
             )
-            logger.info(f"Created mock agent: {agent}, has arun: {hasattr(agent, 'arun')}")
+            logger.info(
+                "agent_created",
+                agent_name=agent_config.name,
+                model=agent_config.model_name,
+                tools_count=len(self.tools),
+            )
             return agent
 
         except Exception as e:
@@ -455,37 +437,12 @@ class AgentManager:
                 )
 
                 try:
-                    # Fail-fast check: No MockAgent in production
-                    if not AGNO_AVAILABLE:
-                        runtime_metrics.agent_mock_fallbacks.increment()
-                        is_production = (
-                            getattr(settings_module, "ENVIRONMENT", "development").lower()
-                            == "production"
-                        )
-                        if is_production:
-                            error_msg = "CRITICAL: agno.agent not available in production environment. Cannot proceed with MockAgent fallback."
-                            logger.critical(
-                                "agno_agent_unavailable_production",
-                                error=error_msg,
-                                correlation_id=correlation_id,
-                            )
-                            runtime_metrics.record_health_check(
-                                "agent_manager",
-                                "critical",
-                                {"error": "agno_unavailable_production"},
-                            )
-                            raise AgentError(error_msg)
-
-                        logger.warning(
-                            "agno_agent_not_available_non_production",
-                            message="agno.agent not available in non-production environment. Using MockAgent fallback.",
-                            correlation_id=correlation_id,
-                        )
-                        runtime_metrics.record_health_check(
-                            "agent_manager", "degraded", {"mock_fallback": True}
-                        )
-
-                    logger.info("initializing_agent_manager")
+                    # v5.2.3.24: Native Agent implementation always available
+                    logger.info(
+                        "initializing_agent_manager",
+                        native_agent=True,
+                        correlation_id=correlation_id,
+                    )
                     runtime_metrics.record_health_check("agent_manager", "initializing")
 
                     self.settings = settings_module
@@ -602,7 +559,7 @@ class UnifiedAgent:
         Args:
             message: The user's input message
             include_history: Whether to include conversation history in context
-            use_llm_classification: Whether to use LLM for intent classification
+            use_llm_classification: Whether to use LLM for intent classification (currently unused)
 
         Returns:
             The assistant's response
@@ -612,10 +569,12 @@ class UnifiedAgent:
         if include_history and self._conversation_history:
             context["history"] = self._conversation_history[-10:]  # Last 10 messages
 
+        # Note: use_llm_classification is currently not used by the router
+        # It's kept in the signature for future extensibility
+        _ = use_llm_classification
+
         # Route the message
-        result = await self._router.route(
-            message, context=context, use_llm_classification=use_llm_classification
-        )
+        result = await self._router.route(message, context=context)
 
         # Update history
         self._conversation_history.append({"role": "user", "content": message})
@@ -636,7 +595,11 @@ class UnifiedAgent:
         return result.response
 
     async def chat_with_metadata(
-        self, message: str, include_history: bool = True, tws_instance_id: str | None = None
+        self,
+        message: str,
+        include_history: bool = True,
+        tws_instance_id: str | None = None,
+        extra_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Send a message and get response with full metadata.
@@ -645,6 +608,7 @@ class UnifiedAgent:
             message: The user's message
             include_history: Include conversation history in context
             tws_instance_id: Optional TWS instance ID for multi-server queries
+            extra_context: Optional extra context to pass to the router
 
         Returns dict with: response, intent, confidence, handler, tools_used, processing_time_ms
         """
@@ -656,6 +620,10 @@ class UnifiedAgent:
         if tws_instance_id:
             context["tws_instance_id"] = tws_instance_id
             logger.debug("tws_instance_context_set", instance_id=tws_instance_id)
+
+        # Merge extra context if provided
+        if extra_context:
+            context.update(extra_context)
 
         result = await self._router.route(message, context=context)
 
